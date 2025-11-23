@@ -975,102 +975,116 @@ void setupServerRoutes() {
     
     // ✅ 4.1 Get list of cities from cities.json
     server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request){
-        Serial.println("📥 GET /getcities");
+        Serial.println("📥 GET /getcities - Chunked");
         
         if (!LittleFS.exists("/cities.json")) {
-            Serial.println("❌ cities.json not found");
             request->send(404, "application/json", "[]");
             return;
         }
         
-        // ✅ Direct file serving (streaming)
-        AsyncWebServerResponse *response = request->beginResponse(
-            LittleFS, 
-            "/cities.json", 
-            "application/json"
+        // ✅ Gunakan chunked response
+        AsyncWebServerResponse *response = request->beginChunkedResponse(
+            "application/json",
+            [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+                static fs::File file;
+                
+                // Open file on first chunk
+                if (index == 0) {
+                    file = LittleFS.open("/cities.json", "r");
+                    if (!file) return 0;
+                }
+                
+                // Read chunk
+                size_t bytesRead = file.read(buffer, maxLen);
+                
+                // Close file on last chunk
+                if (bytesRead == 0 || !file.available()) {
+                    file.close();
+                }
+                
+                return bytesRead;
+            }
         );
         
         response->addHeader("Access-Control-Allow-Origin", "*");
         response->addHeader("Cache-Control", "public, max-age=3600");
-        
         request->send(response);
-        
-        Serial.println("✅ cities.json served");
     });
     
     // ✅ 4.2 Set selected city
     server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request){
-        if (request->hasParam("city", true)) {
-            String cityName = request->getParam("city", true)->value();
+        if (!request->hasParam("city", true)) {
+            request->send(400, "text/plain", "Missing city parameter");
+            return;
+        }
+        
+        String cityApi = request->getParam("city", true)->value();
+        
+        Serial.println("\n📥 POST /setcity: " + cityApi);
+        
+        // ✅ Quick validation
+        if (cityApi.length() == 0 || cityApi.length() > 50) {
+            request->send(400, "text/plain", "Invalid city name");
+            return;
+        }
+        
+        // ✅ Find city in cities.json - OPTIMIZED
+        String displayName = cityApi;  // Fallback
+        bool found = false;
+        
+        if (LittleFS.exists("/cities.json")) {
+            fs::File file = LittleFS.open("/cities.json", "r");
             
-            Serial.println("\n📥 POST /setcity received: " + cityName);
-            
-            // ✅ Basic validation
-            if (cityName.length() == 0 || cityName.length() > 50) {
-                request->send(400, "text/plain", "Invalid city name");
-                return;
-            }
-            
-            // ✅ Load cities.json and find display name
-            String displayName = cityName;  // Default fallback
-            
-            if (LittleFS.exists("/cities.json")) {
-                fs::File f = LittleFS.open("/cities.json", "r");
+            if (file) {
+                // ✅ Use indexOf for faster search
+                String searchPattern = "\"api\":\"" + cityApi + "\"";
                 
-                if (f) {
-                    // Search for city in JSON (line by line to save memory)
-                    bool found = false;
+                while (file.available() && !found) {
+                    String line = file.readStringUntil('\n');
                     
-                    while (f.available()) {
-                        String line = f.readStringUntil('\n');
-                        
-                        // Check if this line contains our city
-                        if (line.indexOf("\"api\":\"" + cityName + "\"") > 0) {
-                            // Extract display name
-                            int displayStart = line.indexOf("\"display\":\"");
-                            if (displayStart > 0) {
-                                displayStart += 11;  // Length of "display":"
-                                int displayEnd = line.indexOf("\"", displayStart);
-                                
-                                if (displayEnd > displayStart) {
-                                    displayName = line.substring(displayStart, displayEnd);
-                                    found = true;
-                                    Serial.println("✅ Found city: " + displayName);
-                                    break;
-                                }
+                    if (line.indexOf(searchPattern) >= 0) {
+                        // Extract display name
+                        int displayStart = line.indexOf("\"display\":\"");
+                        if (displayStart >= 0) {
+                            displayStart += 11;
+                            int displayEnd = line.indexOf("\"", displayStart);
+                            
+                            if (displayEnd > displayStart) {
+                                displayName = line.substring(displayStart, displayEnd);
+                                found = true;
+                                Serial.println("✅ Found: " + displayName);
                             }
                         }
-                    }
-                    
-                    f.close();
-                    
-                    if (!found) {
-                        Serial.println("⚠️ City not found in cities.json, using API name");
+                        break;
                     }
                 }
+                
+                file.close();
             }
-            
-            // Save city selection
-            prayerConfig.selectedCity = cityName;
-            prayerConfig.selectedCityName = displayName;
-            saveCitySelection();
-            
-            Serial.println("✅ City saved: " + displayName + " (" + cityName + ")");
-            
-            // Update prayer times immediately if WiFi connected
-            if (WiFi.status() == WL_CONNECTED) {
-                Serial.println("🔄 Fetching prayer times for: " + cityName);
-                getPrayerTimesByCity(cityName);
-            } else {
-                Serial.println("⚠️ WiFi not connected, prayer times will update when online");
-            }
-            
-            request->send(200, "text/plain", "OK");
-        } else {
-            request->send(400, "text/plain", "Missing city parameter");
         }
+        
+        if (!found) {
+            Serial.println("⚠️ City not found in database");
+            request->send(404, "text/plain", "City not found");
+            return;
+        }
+        
+        // Save selection
+        prayerConfig.selectedCity = cityApi;
+        prayerConfig.selectedCityName = displayName;
+        saveCitySelection();
+        
+        Serial.println("✅ City saved: " + displayName);
+        
+        // Update prayer times if online
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.println("🔄 Fetching prayer times...");
+            getPrayerTimesByCity(cityApi);
+        }
+        
+        request->send(200, "text/plain", "OK");
     });
-    
+
     // ✅ 4.3 Get current city selection
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request){
         String json = "{";
