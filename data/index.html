@@ -1,0 +1,748 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Islamic Prayer Clock Settings</title>
+    <link rel="stylesheet" href="assets/css/foundation.css">
+    <style>
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,.1);
+            border-radius: 50%;
+            border-top-color: #1779ba;
+            animation: spinner 1s ease-in-out infinite;
+        }
+        @keyframes spinner {
+            to {transform: rotate(360deg);}
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-online {
+            background-color: #3adb76;
+            color: white;
+        }
+        .status-offline {
+            background-color: #cc4b37;
+            color: white;
+        }
+        .status-loading {
+            background-color: #ffae00;
+            color: white;
+        }
+        .prayer-time-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 10px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .prayer-time-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .prayer-time-item:last-child {
+            border-bottom: none;
+        }
+        .prayer-name {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .prayer-time {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #1779ba;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .auto-badge {
+            display: inline-block;
+            background: #3adb76;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #3adb76;
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            z-index: 9999;
+            font-size: 16px;
+            font-weight: bold;
+            transition: top 0.5s ease-in-out;
+            min-width: 300px;
+            text-align: center;
+        }
+        .toast.show {
+            top: 30px;
+        }
+        .toast.error {
+            background: #cc4b37;
+        }
+        .toast.warning {
+            background: #ffae00;
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <div class="grid-container">
+        <div class="grid-x grid-padding-x">
+            <div class="large-12 text-center cell">
+                
+                <!-- Header -->
+                <div class="grid-x grid-padding-y">
+                    <div class="large-12 cell">
+                        <h3>🕌 Islamic Prayer Clock Settings</h3>
+                        <p style="color: #666; font-size: 14px;">Semua pengaturan otomatis - tinggal sambungkan WiFi!</p>
+                    </div>
+                </div>
+
+                <!-- WiFi & Device Status Section -->
+                <div class="grid-x grid-padding-x">
+                    <div class="large-10 center cell">
+                        <div class="callout">
+                            
+                            <!-- WiFi Settings -->
+                            <div class="grid-x grid-margin-x align-middle">
+                                <div class="large-6 medium-6 cell">
+                                    <div class="grid-x grid-padding-x">
+                                        <div class="large-12 medium-12 small-12 cell">
+                                            <h5>📡 WiFi Settings</h5>
+                                            <div class="grid-x grid-margin-x">
+                                                <div class="large-12 medium-12 small-12 cell">
+                                                    <input type="text" id="wifiSSID" placeholder="WiFi SSID">
+                                                </div>
+                                                <div class="large-12 medium-12 small-12 cell">
+                                                    <input type="password" id="wifiPassword" placeholder="WiFi Password">
+                                                </div>
+                                                <div class="large-12 medium-12 small-12 cell">
+                                                    <button class="submit success button expanded" onclick="setWiFi()">
+                                                        💾 Set WiFi & Restart
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Access Point Settings -->
+                                <div class="large-6 medium-6 cell">
+                                    <h5>📶 Access Point Settings</h5>
+                                    <div class="grid-x grid-margin-x">
+                                        <div class="large-12 medium-12 small-12 cell">
+                                            <input type="text" id="apSSID" placeholder="AP SSID">
+                                        </div>
+                                        <div class="large-12 medium-12 small-12 cell">
+                                            <input type="password" id="apPassword" placeholder="AP Password">
+                                        </div>
+                                        <div class="large-12 medium-12 small-12 cell">
+                                            <button class="submit success button expanded" onclick="setAP()">
+                                                💾 Set AP Config
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Device Status -->
+                            <div class="grid-x grid-padding-y" style="margin-top: 20px;">
+                                <div class="large-12 medium-12 small-12 cell">
+                                    <div class="callout secondary">
+                                        <h5>📊 Device Status</h5>
+                                        <div class="grid-x grid-margin-x">
+                                            <div class="large-6 medium-6 small-12 cell" style="text-align: left;">
+                                                <p><strong>WiFi Network:</strong> <span id="wifiName">-</span></p>
+                                                <p><strong>IP Address:</strong> <span id="ipAddress">-</span></p>
+                                                <p><strong>Internet:</strong> <span id="internetStatus" class="status-badge status-loading">Checking...</span></p>
+                                            </div>
+                                            <div class="large-6 medium-6 small-12 cell" style="text-align: left;">
+                                                <p><strong>NTP Status:</strong> <span id="ntpStatus">-</span></p>
+                                                <p><strong>NTP Server:</strong> <span id="ntpServerUsed">-</span></p>
+                                                <p><strong>Current Time:</strong> <span id="currentTime">-</span></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Time Sync Section -->
+                <div class="grid-x grid-padding-x">
+                    <div class="large-10 center cell">
+                        <div class="callout">
+                            <h5>⏰ Time Synchronization</h5>
+                            <div class="grid-x grid-margin-x">
+                                
+                                <!-- Manual Sync -->
+                                <div class="large-6 medium-6 cell">
+                                    <div class="info-box">
+                                        <h6>📱 Manual Sync from Browser</h6>
+                                        <p style="font-size: 13px; margin: 10px 0; color: #666;">
+                                            Sinkronkan waktu dari perangkat Anda
+                                        </p>
+                                        <button class="button expanded" style="color: #999;" onclick="syncTime()">
+                                            🔄 Sync Time Now
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Auto NTP Info -->
+                                <div class="large-6 medium-6 cell">
+                                    <div class="info-box" style="border-left-color: #3adb76;">
+                                        <h6>🌐 Auto NTP Sync <span class="auto-badge">AUTO</span></h6>
+                                        <p style="font-size: 13px; margin: 10px 0; color: #666;">
+                                            Waktu otomatis sync saat WiFi terhubung
+                                        </p>
+                                        <p style="font-size: 12px; margin: 0; color: #999;">
+                                            ✓ Auto-sync setiap 1 jam<br>
+                                            ✓ Multi-server fallback<br>
+                                            ✓ Timezone: WIB (UTC+7)
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ✅ SECTION BARU: City Selection -->
+                <div class="grid-x grid-padding-x">
+                    <div class="large-10 center cell">
+                        <div class="callout">
+                            <h5>📍 Pilih Kota</h5>
+                            
+                            <div class="info-box" style="text-align: center;">
+                                <p style="margin: 0; font-size: 14px;">
+                                    <strong>Kota Terpilih:</strong><br>
+                                    <span id="currentCity" style="font-size: 18px; font-weight: bold; color: #1779ba;">Belum dipilih</span>
+                                </p>
+                            </div>
+
+                            <div class="grid-x grid-margin-x">
+                                <div class="large-8 medium-8 small-12 cell">
+                                    <select id="cityDropdown" style="width: 100%; padding: 10px; font-size: 14px; border-radius: 5px; border: 2px solid #e0e0e0;">
+                                        <option value="">-- Pilih Kota --</option>
+                                    </select>
+                                </div>
+                                <div class="large-4 medium-4 small-12 cell">
+                                    <button class="button success expanded" onclick="saveCity()">
+                                        💾 Simpan Kota
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+                                <p style="margin: 0; font-size: 12px; color: #666;">
+                                    ℹ️ Pilih kota untuk mendapatkan jadwal shalat yang akurat<br>
+                                    🔄 Jadwal akan otomatis update setelah kota dipilih
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prayer Times Section -->
+                <div class="grid-x grid-padding-x">
+                    <div class="large-10 center cell">
+                        <div class="callout">
+                            <h5>🕌 Jadwal Shalat</h5>
+
+                            <!-- Prayer Times Display -->
+                            <div class="prayer-time-box" id="prayerTimesBox">
+                                <div class="prayer-time-item">
+                                    <span class="prayer-name">🌅 Subuh (Fajr)</span>
+                                    <span class="prayer-time" id="subuhTime">--:--</span>
+                                </div>
+                                <div class="prayer-time-item">
+                                    <span class="prayer-name">☀️ Dzuhur (Dhuhr)</span>
+                                    <span class="prayer-time" id="dzuhurTime">--:--</span>
+                                </div>
+                                <div class="prayer-time-item">
+                                    <span class="prayer-name">🌤️ Ashar (Asr)</span>
+                                    <span class="prayer-time" id="asharTime">--:--</span>
+                                </div>
+                                <div class="prayer-time-item">
+                                    <span class="prayer-name">🌆 Maghrib</span>
+                                    <span class="prayer-time" id="maghribTime">--:--</span>
+                                </div>
+                                <div class="prayer-time-item">
+                                    <span class="prayer-name">🌙 Isya (Isha)</span>
+                                    <span class="prayer-time" id="isyaTime">--:--</span>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+                                <p style="margin: 0; font-size: 12px; color: #666;">
+                                    ℹ️ Jadwal shalat berdasarkan kota yang dipilih<br>
+                                    📅 Auto-refresh setiap tengah malam (00:00 WIB)<br>
+                                    🕋 Metode kalkulasi: Kementerian Agama RI (Method 20)<br>
+                                    🔄 Update otomatis saat device online tanpa restart
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Factory Reset Section -->
+                <div class="grid-x grid-padding-x">
+                    <div class="large-10 center cell">
+                        <div class="callout alert">
+                            <h5>⚠️ Factory Reset</h5>
+                            <p style="font-size: 14px; margin-bottom: 15px;">
+                                Reset semua pengaturan (WiFi, waktu, jadwal shalat) ke default. Device akan restart.
+                            </p>
+                            <div style="background: #fff3cd; padding: 12px; border-radius: 5px; margin-bottom: 15px;">
+                                <p style="margin: 0; font-size: 13px; color: #856404;">
+                                    <strong>⚠️ Peringatan:</strong> Ini akan menghapus semua data tersimpan:
+                                </p>
+                                <p style="margin: 8px 0 0 20px; font-size: 12px; color: #856404;">
+                                    📡 WiFi credentials<br>
+                                    🕋 Jadwal shalat tersimpan<br>
+                                    📶 AP settings<br>
+                                    📍 Pilihan kota
+                                </p>
+                            </div>
+                            <button class="alert button expanded" onclick="resetSettings()">
+                                🔄 Reset All Settings & Restart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let isOnline = false;
+        let cityList = [];
+
+        // Toast notification function
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show';
+            
+            if (type === 'error') {
+                toast.classList.add('error');
+            } else if (type === 'warning') {
+                toast.classList.add('warning');
+            }
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // ✅ Load cities from ESP32
+        function loadCities() {
+            console.log('📥 Loading cities from ESP32...');
+            
+            fetch('/getcities')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('HTTP error ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!Array.isArray(data)) {
+                        throw new Error('Invalid data format');
+                    }
+                    
+                    if (data.length === 0) {
+                        throw new Error('No cities found');
+                    }
+                    
+                    cityList = data;
+                    const dropdown = document.getElementById('cityDropdown');
+                    dropdown.innerHTML = '<option value="">-- Pilih Kota --</option>';
+                    
+                    // ✅ GROUP BY PROVINCE (OPTIONAL, LEBIH RAPI)
+                    let currentProvince = '';
+                    data.forEach(city => {
+                        if (city.province !== currentProvince) {
+                            currentProvince = city.province;
+                            const optgroup = document.createElement('optgroup');
+                            optgroup.label = '━━ ' + currentProvince + ' ━━';
+                            dropdown.appendChild(optgroup);
+                        }
+                        
+                        const option = document.createElement('option');
+                        option.value = city.api;
+                        option.textContent = city.display;
+                        dropdown.appendChild(option);
+                    });
+                    
+                    console.log('✅ Loaded', data.length, 'cities');
+                    
+                    // ✅ SETELAH CITIES LOADED, LOAD CURRENT CITY
+                    setTimeout(() => {
+                        loadCurrentCity();
+                    }, 100);
+                })
+                .catch(error => {
+                    console.error('❌ Error loading cities:', error);
+                    showToast('❌ Gagal load daftar kota', 'error');
+                });
+        }
+
+        // ✅ Load current city selection
+        function loadCurrentCity() {
+            console.log('🔄 Loading current city selection...');
+            
+            fetch('/getcityinfo')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('📥 City info received:', data);
+                    
+                    const currentCitySpan = document.getElementById('currentCity');
+                    const dropdown = document.getElementById('cityDropdown');
+                    
+                    if (data.hasSelection && data.selectedCityApi) {
+                        // ✅ UPDATE DISPLAY
+                        currentCitySpan.textContent = data.selectedCity || data.selectedCityApi;
+                        currentCitySpan.style.color = '#1779ba';
+                        
+                        // ✅ SET DROPDOWN VALUE MENGGUNAKAN API NAME
+                        dropdown.value = data.selectedCityApi;
+                        
+                        if (dropdown.value !== data.selectedCityApi) {
+                            console.warn('⚠️ City not found in dropdown:', data.selectedCityApi);
+                            console.log('Available options:', Array.from(dropdown.options).map(o => o.value));
+                        } else {
+                            console.log('✅ Dropdown set to:', data.selectedCityApi);
+                        }
+                    } else {
+                        currentCitySpan.textContent = 'Belum dipilih';
+                        currentCitySpan.style.color = '#999';
+                        dropdown.selectedIndex = 0;
+                        console.log('ℹ️ No city selected');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error loading current city:', error);
+                    document.getElementById('currentCity').textContent = 'Error loading';
+                });
+        }
+
+        // ✅ Save city selection
+        function saveCity() {
+            const dropdown = document.getElementById('cityDropdown');
+            const selectedCity = dropdown.value;
+            
+            if (!selectedCity) {
+                showToast('❌ Pilih kota terlebih dahulu', 'error');
+                return;
+            }
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Menyimpan...';
+            
+            fetch('/setcity', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `city=${encodeURIComponent(selectedCity)}`
+            })
+            .then(response => {
+                if (response.ok) {
+                    showToast('✅ Kota berhasil disimpan!', 'success');
+                    loadCurrentCity();
+                    
+                    // Refresh prayer times
+                    setTimeout(() => {
+                        loadSavedPrayerTimes();
+                    }, 2000);
+                } else {
+                    throw new Error('Save failed');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('❌ Gagal menyimpan kota', 'error');
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Page loaded - Islamic Prayer Clock (City Selection Mode)');
+            
+            loadCities();
+            loadCurrentCity();
+            updateDeviceStatus();
+            loadSavedPrayerTimes();
+            
+            setInterval(updateDeviceStatus, 5000);
+            setInterval(loadSavedPrayerTimes, 10000);
+        });
+
+        // Update device status
+        function updateDeviceStatus() {
+            fetch('/devicestatus')
+                .then(response => response.json())
+                .then(data => {
+                    isOnline = data.connected === true;
+                    
+                    document.getElementById('wifiName').textContent = data.ssid || 'Tidak Terhubung';
+                    document.getElementById('ipAddress').textContent = data.ip || '-';
+                    document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Synced' : '❌ Not Synced';
+                    document.getElementById('currentTime').textContent = data.currentTime || '-';
+                    
+                    if (document.getElementById('ntpServerUsed')) {
+                        document.getElementById('ntpServerUsed').textContent = data.ntpServer || '-';
+                    }
+                    
+                    const statusBadge = document.getElementById('internetStatus');
+                    
+                    if (isOnline) {
+                        statusBadge.textContent = '✅ Online';
+                        statusBadge.className = 'status-badge status-online';
+                    } else {
+                        statusBadge.textContent = '❌ Offline';
+                        statusBadge.className = 'status-badge status-offline';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching device status:', error);
+                    isOnline = false;
+                    document.getElementById('internetStatus').textContent = '❌ Error';
+                    document.getElementById('internetStatus').className = 'status-badge status-offline';
+                });
+        }
+
+        // Load saved prayer times
+        function loadSavedPrayerTimes() {
+            fetch('/getprayertimes')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('subuhTime').textContent = data.subuh || '--:--';
+                    document.getElementById('dzuhurTime').textContent = data.dzuhur || '--:--';
+                    document.getElementById('asharTime').textContent = data.ashar || '--:--';
+                    document.getElementById('maghribTime').textContent = data.maghrib || '--:--';
+                    document.getElementById('isyaTime').textContent = data.isya || '--:--';
+                })
+                .catch(error => console.error('Error loading prayer times:', error));
+        }
+
+        function setWiFi() {
+            const ssid = document.getElementById('wifiSSID').value.trim();
+            const password = document.getElementById('wifiPassword').value;
+
+            if (!ssid) {
+                showToast('❌ SSID tidak boleh kosong', 'error');
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Menyimpan...';
+
+            fetch('/setwifi', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `ssid=${encodeURIComponent(ssid)}&password=${encodeURIComponent(password)}`
+            })
+            .then(response => {
+                if (response.ok) {
+                    showToast('✅ WiFi berhasil disimpan!', 'success');
+                    
+                    setTimeout(() => {
+                        showToast('🔄 Device akan restart dalam 5 detik...', 'warning');
+                    }, 1500);
+                    
+                    setTimeout(() => {
+                        showToast('⏳ Tunggu 15-20 detik untuk koneksi ke: ' + ssid, 'warning');
+                    }, 3500);
+                    
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }, 6000);
+                } else {
+                    throw new Error('Save failed');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('❌ Gagal menyimpan WiFi', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            });
+        }
+
+        function setAP() {
+            const ssid = document.getElementById('apSSID').value.trim();
+            const password = document.getElementById('apPassword').value;
+
+            if (!ssid) {
+                showToast('❌ SSID AP tidak boleh kosong', 'error');
+                return;
+            }
+
+            if (password.length > 0 && password.length < 8) {
+                showToast('❌ Password minimal 8 karakter', 'error');
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Menyimpan...';
+
+            fetch('/setap', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `ssid=${encodeURIComponent(ssid)}&password=${encodeURIComponent(password)}`
+            })
+            .then(response => {
+                if (response.ok) {
+                    showToast('✅ AP Settings berhasil disimpan!', 'success');
+                    
+                    setTimeout(() => {
+                        showToast('🔄 Device akan restart dalam 5 detik...', 'warning');
+                    }, 1500);
+                    
+                    setTimeout(() => {
+                        showToast('📡 Setelah restart, sambungkan ke AP: ' + ssid, 'warning');
+                    }, 3500);
+                    
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }, 6000);
+                } else {
+                    return response.text().then(text => {
+                        throw new Error(text);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('❌ ' + error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            });
+        }
+
+        function syncTime() {
+            const d = new Date();
+            
+            const year = d.getFullYear();
+            const month = d.getMonth() + 1;
+            const day = d.getDate();
+            const hour = d.getHours();
+            const minute = d.getMinutes();
+            const second = d.getSeconds();
+
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Syncing...';
+
+            fetch('/synctime', { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `y=${year}&m=${month}&d=${day}&h=${hour}&i=${minute}&s=${second}`
+            })
+            .then(response => response.text())
+            .then(data => {
+                showToast('✅ Waktu berhasil di-sync!', 'success');
+                updateDeviceStatus();
+                btn.disabled = false;
+                btn.textContent = '🔄 Sync Time Now';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('❌ Gagal sync waktu', 'error');
+                btn.disabled = false;
+                btn.textContent = '🔄 Sync Time Now';
+            });
+        }
+
+        function resetSettings() {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Resetting...';
+
+            fetch('/reset', { method: 'POST' })
+            .then(response => {
+                if (response.ok) {
+                    showToast('✅ Reset berhasil!', 'success');
+                    
+                    setTimeout(() => {
+                        showToast('🔄 Device akan restart dalam 5 detik...', 'warning');
+                    }, 1500);
+                    
+                    setTimeout(() => {
+                        showToast('📡 Sambungkan kembali ke AP: JWS ESP32', 'warning');
+                    }, 3500);
+                    
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }, 6000);
+                } else {
+                    throw new Error('Reset failed');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('❌ Gagal reset device', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            });
+        }
+
+        console.log('%c🕌 Islamic Prayer Clock Web Interface', 'color: #667eea; font-size: 16px; font-weight: bold;');
+        console.log('%c✓ Manual City Selection', 'color: #3adb76;');
+        console.log('%c✓ Auto NTP Sync', 'color: #3adb76;');
+        console.log('%c✓ Auto Prayer Times Update (midnight)', 'color: #3adb76;');
+    </script>
+
+</body>
+</html>
