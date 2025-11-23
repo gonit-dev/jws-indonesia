@@ -905,7 +905,7 @@ void scheduleRestart(int delaySeconds) {
 }
 
 // ================================
-// WEB SERVER ROUTES
+// WEB SERVER ROUTES - OPTIMIZED FOR LARGE FILES
 // ================================
 
 void setupServerRoutes() {
@@ -970,10 +970,10 @@ void setupServerRoutes() {
     });
 
     // ================================
-    // 4. CITY SELECTION ENDPOINTS
+    // 4. CITY SELECTION ENDPOINTS - FIXED!
     // ================================
     
-    // ✅ 4.1 Get list of cities from cities.json
+    // ✅ 4.1 Get list of cities - CHUNKED STREAMING
     server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request){
         Serial.println("📥 GET /getcities");
         
@@ -983,22 +983,68 @@ void setupServerRoutes() {
             return;
         }
         
-        // ✅ Direct file serving (streaming)
+        // ✅ METHOD 1: AsyncWebServerResponse with proper headers
         AsyncWebServerResponse *response = request->beginResponse(
             LittleFS, 
             "/cities.json", 
             "application/json"
         );
         
+        // ✅ CRITICAL: Disable chunked encoding for large files
+        response->addHeader("Connection", "close");
         response->addHeader("Access-Control-Allow-Origin", "*");
         response->addHeader("Cache-Control", "public, max-age=3600");
         
+        // ✅ Force ESP32 to buffer less aggressively
+        response->setContentLength(LittleFS.open("/cities.json", "r").size());
+        
         request->send(response);
         
-        Serial.println("✅ cities.json served");
+        Serial.println("✅ cities.json sent");
     });
     
-    // ✅ 4.2 Set selected city
+    // ✅ 4.2 ALTERNATIVE: Chunked streaming endpoint (fallback)
+    server.on("/getcities_chunked", HTTP_GET, [](AsyncWebServerRequest *request){
+        Serial.println("📥 GET /getcities_chunked (streaming)");
+        
+        if (!LittleFS.exists("/cities.json")) {
+            request->send(404, "application/json", "[]");
+            return;
+        }
+        
+        AsyncWebServerResponse *response = request->beginChunkedResponse(
+            "application/json",
+            [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+                static fs::File file;
+                
+                // Open file on first chunk
+                if (index == 0) {
+                    file = LittleFS.open("/cities.json", "r");
+                    if (!file) return 0;
+                }
+                
+                // Read chunk
+                size_t bytesRead = 0;
+                if (file && file.available()) {
+                    bytesRead = file.read(buffer, maxLen);
+                }
+                
+                // Close file when done
+                if (!file.available()) {
+                    file.close();
+                }
+                
+                return bytesRead;
+            }
+        );
+        
+        response->addHeader("Access-Control-Allow-Origin", "*");
+        request->send(response);
+        
+        Serial.println("✅ Chunked response started");
+    });
+    
+    // ✅ 4.3 Set selected city
     server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request){
         if (request->hasParam("city", true)) {
             String cityName = request->getParam("city", true)->value();
@@ -1071,7 +1117,7 @@ void setupServerRoutes() {
         }
     });
     
-    // ✅ 4.3 Get current city selection
+    // ✅ 4.4 Get current city selection
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request){
         String json = "{";
         

@@ -345,11 +345,17 @@
     </div>
 
     <script>
+        // ================================
+        // OPTIMIZED CITY LOADER WITH RETRY
+        // ================================
+
         // Global state
         let isOnline = false;
         let cityList = [];
+        let loadAttempts = 0;
+        const MAX_LOAD_ATTEMPTS = 3;
 
-        // Toast notification function
+        // ✅ Toast notification function
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             toast.textContent = message;
@@ -366,100 +372,172 @@
             }, 4000);
         }
 
-        // ✅ Load cities from ESP32
-        function loadCities() {
-            console.log('📥 Loading cities from ESP32...');
+        // ✅ Load cities with retry and timeout handling
+        async function loadCities() {
+            console.log(`📥 Loading cities (Attempt ${loadAttempts + 1}/${MAX_LOAD_ATTEMPTS})...`);
             
-            fetch('/getcities')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('HTTP error ' + response.status);
+            const dropdown = document.getElementById('cityDropdown');
+            dropdown.innerHTML = '<option value="">⏳ Loading cities...</option>';
+            
+            try {
+                // ✅ Increase timeout for large file
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+                
+                const response = await fetch('/getcities', {
+                    method: 'GET',
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
                     }
-                    return response.json();
-                })
-                .then(data => {
-                    if (!Array.isArray(data)) {
-                        throw new Error('Invalid data format');
-                    }
-                    
-                    if (data.length === 0) {
-                        throw new Error('No cities found');
-                    }
-                    
-                    cityList = data;
-                    const dropdown = document.getElementById('cityDropdown');
-                    dropdown.innerHTML = '<option value="">-- Pilih Kota --</option>';
-                    
-                    // ✅ GROUP BY PROVINCE (OPTIONAL, LEBIH RAPI)
-                    let currentProvince = '';
-                    data.forEach(city => {
-                        if (city.province !== currentProvince) {
-                            currentProvince = city.province;
-                            const optgroup = document.createElement('optgroup');
-                            optgroup.label = '━━ ' + currentProvince + ' ━━';
-                            dropdown.appendChild(optgroup);
-                        }
-                        
-                        const option = document.createElement('option');
-                        option.value = city.api;
-                        option.textContent = city.display;
-                        dropdown.appendChild(option);
-                    });
-                    
-                    console.log('✅ Loaded', data.length, 'cities');
-                    
-                    // ✅ SETELAH CITIES LOADED, LOAD CURRENT CITY
-                    setTimeout(() => {
-                        loadCurrentCity();
-                    }, 100);
-                })
-                .catch(error => {
-                    console.error('❌ Error loading cities:', error);
-                    showToast('❌ Gagal load daftar kota', 'error');
                 });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                // ✅ Check content type
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Invalid content type: ' + contentType);
+                }
+                
+                // ✅ Get file size
+                const contentLength = response.headers.get('content-length');
+                if (contentLength) {
+                    console.log(`📦 File size: ${(contentLength / 1024).toFixed(2)} KB`);
+                }
+                
+                // ✅ Parse JSON
+                const data = await response.json();
+                
+                if (!Array.isArray(data)) {
+                    throw new Error('Invalid data format - not an array');
+                }
+                
+                if (data.length === 0) {
+                    throw new Error('Empty city list received');
+                }
+                
+                // ✅ SUCCESS - Populate dropdown
+                cityList = data;
+                dropdown.innerHTML = '<option value="">-- Pilih Kota --</option>';
+                
+                // Group by province
+                let currentProvince = '';
+                data.forEach(city => {
+                    if (city.province !== currentProvince) {
+                        currentProvince = city.province;
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = '━━ ' + currentProvince + ' ━━';
+                        dropdown.appendChild(optgroup);
+                    }
+                    
+                    const option = document.createElement('option');
+                    option.value = city.api;
+                    option.textContent = city.display;
+                    
+                    // Add to last optgroup or directly to dropdown
+                    const lastOptgroup = dropdown.querySelector('optgroup:last-of-type');
+                    if (lastOptgroup && lastOptgroup.label.includes(currentProvince)) {
+                        lastOptgroup.appendChild(option);
+                    } else {
+                        dropdown.appendChild(option);
+                    }
+                });
+                
+                console.log(`✅ Successfully loaded ${data.length} cities`);
+                loadAttempts = 0; // Reset counter on success
+                
+                // Load current city selection after cities loaded
+                setTimeout(() => {
+                    loadCurrentCity();
+                }, 100);
+                
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Error loading cities:', error.message);
+                
+                loadAttempts++;
+                
+                if (loadAttempts < MAX_LOAD_ATTEMPTS) {
+                    // Retry with exponential backoff
+                    const retryDelay = 2000 * loadAttempts; // 2s, 4s, 6s
+                    console.log(`🔄 Retrying in ${retryDelay/1000}s...`);
+                    
+                    dropdown.innerHTML = `<option value="">⏳ Retrying (${loadAttempts}/${MAX_LOAD_ATTEMPTS})...</option>`;
+                    
+                    setTimeout(() => {
+                        loadCities();
+                    }, retryDelay);
+                } else {
+                    // Max attempts reached
+                    console.error('❌ Failed to load cities after', MAX_LOAD_ATTEMPTS, 'attempts');
+                    dropdown.innerHTML = '<option value="">❌ Gagal load kota - Refresh halaman</option>';
+                    showToast('❌ Gagal load daftar kota. Refresh halaman untuk retry.', 'error');
+                    loadAttempts = 0; // Reset for next page load
+                }
+                
+                return false;
+            }
         }
 
         // ✅ Load current city selection
-        function loadCurrentCity() {
+        async function loadCurrentCity() {
             console.log('🔄 Loading current city selection...');
             
-            fetch('/getcityinfo')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('📥 City info received:', data);
-                    
-                    const currentCitySpan = document.getElementById('currentCity');
-                    const dropdown = document.getElementById('cityDropdown');
-                    
-                    if (data.hasSelection && data.selectedCityApi) {
-                        // ✅ UPDATE DISPLAY
-                        currentCitySpan.textContent = data.selectedCity || data.selectedCityApi;
-                        currentCitySpan.style.color = '#1779ba';
-                        
-                        // ✅ SET DROPDOWN VALUE MENGGUNAKAN API NAME
-                        dropdown.value = data.selectedCityApi;
-                        
-                        if (dropdown.value !== data.selectedCityApi) {
-                            console.warn('⚠️ City not found in dropdown:', data.selectedCityApi);
-                            console.log('Available options:', Array.from(dropdown.options).map(o => o.value));
-                        } else {
-                            console.log('✅ Dropdown set to:', data.selectedCityApi);
-                        }
-                    } else {
-                        currentCitySpan.textContent = 'Belum dipilih';
-                        currentCitySpan.style.color = '#999';
-                        dropdown.selectedIndex = 0;
-                        console.log('ℹ️ No city selected');
+            try {
+                const response = await fetch('/getcityinfo', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
                     }
-                })
-                .catch(error => {
-                    console.error('❌ Error loading current city:', error);
-                    document.getElementById('currentCity').textContent = 'Error loading';
                 });
+                
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                
+                const data = await response.json();
+                console.log('📥 City info received:', data);
+                
+                const currentCitySpan = document.getElementById('currentCity');
+                const dropdown = document.getElementById('cityDropdown');
+                
+                if (data.hasSelection && data.selectedCityApi) {
+                    // ✅ UPDATE DISPLAY
+                    currentCitySpan.textContent = data.selectedCity || data.selectedCityApi;
+                    currentCitySpan.style.color = '#1779ba';
+                    
+                    // ✅ SET DROPDOWN VALUE
+                    dropdown.value = data.selectedCityApi;
+                    
+                    if (dropdown.value !== data.selectedCityApi) {
+                        console.warn('⚠️ City not found in dropdown:', data.selectedCityApi);
+                        console.log('Available options sample:', 
+                            Array.from(dropdown.options).slice(0, 5).map(o => o.value));
+                    } else {
+                        console.log('✅ Dropdown set to:', data.selectedCityApi);
+                    }
+                } else {
+                    currentCitySpan.textContent = 'Belum dipilih';
+                    currentCitySpan.style.color = '#999';
+                    dropdown.selectedIndex = 0;
+                    console.log('ℹ️ No city selected');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error loading current city:', error);
+                document.getElementById('currentCity').textContent = 'Error loading';
+            }
         }
 
         // ✅ Save city selection
-        function saveCity() {
+        async function saveCity() {
             const dropdown = document.getElementById('cityDropdown');
             const selectedCity = dropdown.value;
             
@@ -473,12 +551,15 @@
             btn.disabled = true;
             btn.textContent = '⏳ Menyimpan...';
             
-            fetch('/setcity', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: `city=${encodeURIComponent(selectedCity)}`
-            })
-            .then(response => {
+            try {
+                const response = await fetch('/setcity', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `city=${encodeURIComponent(selectedCity)}`
+                });
+                
                 if (response.ok) {
                     showToast('✅ Kota berhasil disimpan!', 'success');
                     loadCurrentCity();
@@ -490,78 +571,66 @@
                 } else {
                     throw new Error('Save failed');
                 }
-            })
-            .catch(error => {
+            } catch (error) {
                 console.error('Error:', error);
                 showToast('❌ Gagal menyimpan kota', 'error');
-            })
-            .finally(() => {
+            } finally {
                 btn.disabled = false;
                 btn.textContent = originalText;
-            });
+            }
         }
 
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Page loaded - Islamic Prayer Clock (City Selection Mode)');
-            
-            loadCities();
-            loadCurrentCity();
-            updateDeviceStatus();
-            loadSavedPrayerTimes();
-            
-            setInterval(updateDeviceStatus, 5000);
-            setInterval(loadSavedPrayerTimes, 10000);
-        });
-
-        // Update device status
-        function updateDeviceStatus() {
-            fetch('/devicestatus')
-                .then(response => response.json())
-                .then(data => {
-                    isOnline = data.connected === true;
-                    
-                    document.getElementById('wifiName').textContent = data.ssid || 'Tidak Terhubung';
-                    document.getElementById('ipAddress').textContent = data.ip || '-';
-                    document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Synced' : '❌ Not Synced';
-                    document.getElementById('currentTime').textContent = data.currentTime || '-';
-                    
-                    if (document.getElementById('ntpServerUsed')) {
-                        document.getElementById('ntpServerUsed').textContent = data.ntpServer || '-';
-                    }
-                    
-                    const statusBadge = document.getElementById('internetStatus');
-                    
-                    if (isOnline) {
-                        statusBadge.textContent = '✅ Online';
-                        statusBadge.className = 'status-badge status-online';
-                    } else {
-                        statusBadge.textContent = '❌ Offline';
-                        statusBadge.className = 'status-badge status-offline';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching device status:', error);
-                    isOnline = false;
-                    document.getElementById('internetStatus').textContent = '❌ Error';
-                    document.getElementById('internetStatus').className = 'status-badge status-offline';
-                });
+        // ✅ Load saved prayer times
+        async function loadSavedPrayerTimes() {
+            try {
+                const response = await fetch('/getprayertimes');
+                const data = await response.json();
+                
+                document.getElementById('subuhTime').textContent = data.subuh || '--:--';
+                document.getElementById('dzuhurTime').textContent = data.dzuhur || '--:--';
+                document.getElementById('asharTime').textContent = data.ashar || '--:--';
+                document.getElementById('maghribTime').textContent = data.maghrib || '--:--';
+                document.getElementById('isyaTime').textContent = data.isya || '--:--';
+            } catch (error) {
+                console.error('Error loading prayer times:', error);
+            }
         }
 
-        // Load saved prayer times
-        function loadSavedPrayerTimes() {
-            fetch('/getprayertimes')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('subuhTime').textContent = data.subuh || '--:--';
-                    document.getElementById('dzuhurTime').textContent = data.dzuhur || '--:--';
-                    document.getElementById('asharTime').textContent = data.ashar || '--:--';
-                    document.getElementById('maghribTime').textContent = data.maghrib || '--:--';
-                    document.getElementById('isyaTime').textContent = data.isya || '--:--';
-                })
-                .catch(error => console.error('Error loading prayer times:', error));
+        // ✅ Update device status
+        async function updateDeviceStatus() {
+            try {
+                const response = await fetch('/devicestatus');
+                const data = await response.json();
+                
+                isOnline = data.connected === true;
+                
+                document.getElementById('wifiName').textContent = data.ssid || 'Tidak Terhubung';
+                document.getElementById('ipAddress').textContent = data.ip || '-';
+                document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Synced' : '❌ Not Synced';
+                document.getElementById('currentTime').textContent = data.currentTime || '-';
+                
+                if (document.getElementById('ntpServerUsed')) {
+                    document.getElementById('ntpServerUsed').textContent = data.ntpServer || '-';
+                }
+                
+                const statusBadge = document.getElementById('internetStatus');
+                
+                if (isOnline) {
+                    statusBadge.textContent = '✅ Online';
+                    statusBadge.className = 'status-badge status-online';
+                } else {
+                    statusBadge.textContent = '❌ Offline';
+                    statusBadge.className = 'status-badge status-offline';
+                }
+            } catch (error) {
+                console.error('Error fetching device status:', error);
+                isOnline = false;
+                document.getElementById('internetStatus').textContent = '❌ Error';
+                document.getElementById('internetStatus').className = 'status-badge status-offline';
+            }
         }
 
+        // ✅ WiFi Settings
         function setWiFi() {
             const ssid = document.getElementById('wifiSSID').value.trim();
             const password = document.getElementById('wifiPassword').value;
@@ -611,6 +680,7 @@
             });
         }
 
+        // ✅ AP Settings
         function setAP() {
             const ssid = document.getElementById('apSSID').value.trim();
             const password = document.getElementById('apPassword').value;
@@ -667,6 +737,7 @@
             });
         }
 
+        // ✅ Time Sync
         function syncTime() {
             const d = new Date();
             
@@ -703,7 +774,12 @@
             });
         }
 
+        // ✅ Factory Reset
         function resetSettings() {
+            if (!confirm('⚠️ Yakin ingin reset semua pengaturan? Device akan restart dan kembali ke default.')) {
+                return;
+            }
+
             const btn = event.target;
             const originalText = btn.textContent;
             btn.disabled = true;
@@ -738,8 +814,31 @@
             });
         }
 
+        // ✅ Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Page loaded - Islamic Prayer Clock (City Selection Mode)');
+            console.log('📊 Initialization sequence:');
+            console.log('  1. Loading cities...');
+            console.log('  2. Loading device status...');
+            console.log('  3. Loading prayer times...');
+            
+            // Initial loads
+            loadCities();
+            updateDeviceStatus();
+            loadSavedPrayerTimes();
+            
+            // Periodic updates
+            setInterval(updateDeviceStatus, 5000);
+            setInterval(loadSavedPrayerTimes, 10000);
+            
+            console.log('✅ Auto-refresh configured');
+        });
+
+        // Console branding
         console.log('%c🕌 Islamic Prayer Clock Web Interface', 'color: #667eea; font-size: 16px; font-weight: bold;');
-        console.log('%c✓ Manual City Selection', 'color: #3adb76;');
+        console.log('%c✓ Optimized City Loading', 'color: #3adb76;');
+        console.log('%c✓ Retry Mechanism (3 attempts)', 'color: #3adb76;');
+        console.log('%c✓ 15s timeout per request', 'color: #3adb76;');
         console.log('%c✓ Auto NTP Sync', 'color: #3adb76;');
         console.log('%c✓ Auto Prayer Times Update (midnight)', 'color: #3adb76;');
     </script>
