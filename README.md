@@ -1,7 +1,5 @@
 # ESP32 Islamic Prayer Clock
 
-# ESP32 Islamic Prayer Clock
-
 Jam Waktu Sholat Digital berbasis ESP32-2432S024 dengan antarmuka touchscreen, sinkronisasi NTP otomatis, dan pemilihan kota manual via web interface.
 
 ![Version](https://img.shields.io/badge/version-2.0-blue)
