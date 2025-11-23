@@ -370,10 +370,6 @@
         function loadCities() {
             console.log('📥 Loading cities from ESP32...');
             
-            const dropdown = document.getElementById('cityDropdown');
-            dropdown.innerHTML = '<option value="">⏳ Loading cities...</option>';
-            dropdown.disabled = true; // ← TAMBAH INI
-            
             fetch('/getcities')
                 .then(response => {
                     if (!response.ok) {
@@ -391,10 +387,10 @@
                     }
                     
                     cityList = data;
+                    const dropdown = document.getElementById('cityDropdown');
                     dropdown.innerHTML = '<option value="">-- Pilih Kota --</option>';
-                    dropdown.disabled = false; // ← TAMBAH INI
                     
-                    // ✅ GROUP BY PROVINCE
+                    // ✅ GROUP BY PROVINCE (OPTIONAL, LEBIH RAPI)
                     let currentProvince = '';
                     data.forEach(city => {
                         if (city.province !== currentProvince) {
@@ -407,10 +403,6 @@
                         const option = document.createElement('option');
                         option.value = city.api;
                         option.textContent = city.display;
-                        
-                        // ← TAMBAH INI: Simpan juga display name sebagai data attribute
-                        option.setAttribute('data-display', city.display);
-                        
                         dropdown.appendChild(option);
                     });
                     
@@ -423,9 +415,7 @@
                 })
                 .catch(error => {
                     console.error('❌ Error loading cities:', error);
-                    dropdown.innerHTML = '<option value="">❌ Gagal load kota</option>';
-                    dropdown.disabled = false; // ← TAMBAH INI
-                    showToast('❌ Gagal load daftar kota. Coba refresh halaman.', 'error');
+                    showToast('❌ Gagal load daftar kota', 'error');
                 });
         }
 
@@ -446,23 +436,12 @@
                         currentCitySpan.textContent = data.selectedCity || data.selectedCityApi;
                         currentCitySpan.style.color = '#1779ba';
                         
-                        // ✅ SET DROPDOWN VALUE
+                        // ✅ SET DROPDOWN VALUE MENGGUNAKAN API NAME
                         dropdown.value = data.selectedCityApi;
                         
                         if (dropdown.value !== data.selectedCityApi) {
                             console.warn('⚠️ City not found in dropdown:', data.selectedCityApi);
-                            
-                            // ← TAMBAH INI: Fallback - cari city di data attribute
-                            const options = Array.from(dropdown.options);
-                            const matchedOption = options.find(opt => 
-                                opt.getAttribute('data-display') === data.selectedCity ||
-                                opt.textContent.includes(data.selectedCity)
-                            );
-                            
-                            if (matchedOption) {
-                                dropdown.value = matchedOption.value;
-                                console.log('✅ Found city via fallback search');
-                            }
+                            console.log('Available options:', Array.from(dropdown.options).map(o => o.value));
                         } else {
                             console.log('✅ Dropdown set to:', data.selectedCityApi);
                         }
@@ -476,7 +455,6 @@
                 .catch(error => {
                     console.error('❌ Error loading current city:', error);
                     document.getElementById('currentCity').textContent = 'Error loading';
-                    document.getElementById('currentCity').style.color = '#cc4b37';
                 });
         }
 
@@ -487,15 +465,6 @@
             
             if (!selectedCity) {
                 showToast('❌ Pilih kota terlebih dahulu', 'error');
-                return;
-            }
-            
-            // ← TAMBAH INI: Ambil display name dari selected option
-            const selectedOption = dropdown.options[dropdown.selectedIndex];
-            const cityDisplayName = selectedOption.textContent;
-            
-            // ← TAMBAH INI: Konfirmasi
-            if (!confirm(`Simpan kota: ${cityDisplayName}?\n\nJadwal shalat akan otomatis diupdate.`)) {
                 return;
             }
             
@@ -512,10 +481,7 @@
             .then(response => {
                 if (response.ok) {
                     showToast('✅ Kota berhasil disimpan!', 'success');
-                    
-                    // ← TAMBAH INI: Update current city display immediately
-                    document.getElementById('currentCity').textContent = cityDisplayName;
-                    document.getElementById('currentCity').style.color = '#1779ba';
+                    loadCurrentCity();
                     
                     // Refresh prayer times
                     setTimeout(() => {
