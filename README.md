@@ -1,5 +1,7 @@
 # ESP32 Islamic Prayer Clock
 
+# ESP32 Islamic Prayer Clock
+
 Jam Waktu Sholat Digital berbasis ESP32-2432S024 dengan antarmuka touchscreen, sinkronisasi NTP otomatis, dan pemilihan kota manual via web interface.
 
 ![Version](https://img.shields.io/badge/version-2.0-blue)
@@ -8,9 +10,7 @@ Jam Waktu Sholat Digital berbasis ESP32-2432S024 dengan antarmuka touchscreen, s
 ![License](https://img.shields.io/badge/license-MIT-yellow)
 
 ## 📸 Screenshot
-
-<img width="1366" height="2001" alt="FireShot Capture 090 - Islamic Prayer Clock Settings - 192 168 4 1" src="https://github.com/user-attachments/assets/8d2a3082-8903-4b09-837b-4daeb2d084ec" />
-ini_
+<img width="1366" height="2001" alt="FireShot Capture 090 - Islamic Prayer Clock Settings - 192 168 4 1" src="https://github.com/user-attachments/assets/2c69772f-4b74-494f-a232-7f3435539377" />
 
 ## ✨ Fitur
 
@@ -18,7 +18,8 @@ ini_
 - ⏰ **Jam Digital** - Sinkronisasi NTP dengan 5 server fallback
 - 🌐 **Web Interface** - Konfigurasi via browser
 - 📍 **Pemilihan Kota** - Pilih dari 500+ kota di Indonesia
-- 🔄 **Auto Update** - Update otomatis setiap tengah malam
+- 🔄 **Auto Update Midnight** - Update otomatis waktu sholat jam 00:00-00:05
+- ⏱️ **Hourly NTP Sync** - Sinkronisasi jam otomatis setiap 1 jam
 - 🖥️ **Touchscreen UI** - Antarmuka LVGL 9.2.0
 - 📱 **Access Point** - Mode AP untuk setup awal
 - 💾 **LittleFS** - Penyimpanan persisten
@@ -404,7 +405,7 @@ POST /reset
 | WiFi Task | 2 | 0 | 8KB | WiFi management |
 | NTP Task | 2 | 0 | 8KB | Time sync |
 | Web Task | 1 | 0 | 16KB | Web server |
-| Prayer Task | 1 | 0 | 8KB | Auto update |
+| Prayer Task | 1 | 0 | 8KB | Midnight auto-update (00:00) |
 | Clock Task | 2 | 0 | 4KB | Clock tick |
 
 ### Semaphores & Mutexes
@@ -420,6 +421,54 @@ spiMutex        // Proteksi SPI bus
 ```cpp
 displayQueue    // Update display (10 items)
 ```
+
+## ⏰ Auto-Update System
+
+### 1️⃣ Midnight Prayer Times Update
+```cpp
+// prayerTask - Berjalan setiap 10 detik
+// Cek: Jam 00:00 - 00:05 + WiFi connected + City selected
+if (currentHour == 0 && currentMinute < 5 && !hasUpdatedToday) {
+    getPrayerTimesByCity(selectedCity);
+    hasUpdatedToday = true;
+}
+```
+**Cara Kerja**:
+- ✅ Task cek waktu setiap 10 detik
+- ✅ Jika jam 00:00-00:05 dan belum update hari ini
+- ✅ Auto-fetch prayer times dari API Aladhan
+- ✅ Flag `hasUpdatedToday` reset saat ganti hari
+- ✅ Hanya update jika WiFi connected dan city sudah dipilih
+
+### 2️⃣ Hourly NTP Sync
+```cpp
+// clockTickTask - Counter setiap 1 detik
+// Auto-sync setiap 3600 detik (1 jam)
+if (autoSyncCounter >= 3600) {
+    xTaskNotifyGive(ntpTaskHandle);  // Trigger NTP sync
+    autoSyncCounter = 0;
+}
+```
+**Cara Kerja**:
+- ✅ Counter increment setiap detik
+- ✅ Setiap 1 jam (3600 detik) trigger NTP sync
+- ✅ Cegah clock drift
+- ✅ Hanya jika WiFi connected
+
+### 3️⃣ WiFi Auto-Update saat Connect
+```cpp
+// wifiTask - Saat WiFi baru connected
+if (wifiState == WIFI_CONNECTED && !autoUpdateDone) {
+    vTaskDelay(3000);  // Tunggu 3 detik
+    getPrayerTimesByCity(selectedCity);
+    autoUpdateDone = true;
+}
+```
+**Cara Kerja**:
+- ✅ Setelah WiFi connect, tunggu 3 detik
+- ✅ Auto-update prayer times
+- ✅ Flag reset jika WiFi disconnect
+- ✅ Hanya jika city sudah dipilih
 
 ## ⚙️ Konfigurasi
 
@@ -499,11 +548,29 @@ const char* ntpServers[] = {
 ```
 
 ### Waktu Sholat Tidak Update
+
+**Cek Kondisi Auto-Update:**
 ```
-✅ Pastikan WiFi terhubung
-✅ Pilih kota via web interface
-✅ Cek serial monitor untuk error
-✅ Pastikan API Aladhan tidak down
+✅ WiFi harus terhubung
+✅ City harus sudah dipilih via web interface
+✅ Tunggu hingga jam 00:00-00:05 (midnight update)
+✅ Atau restart device (auto-update saat WiFi connect)
+```
+
+**Manual Update:**
+```
+✅ Buka web interface
+✅ Pilih ulang city dari dropdown
+✅ Prayer times akan update langsung
+```
+
+**Debug via Serial Monitor:**
+```cpp
+// Cek pesan berikut:
+"🕌 Midnight prayer times update for: [CityName]"     // ✅ Update berjalan
+"⚠️ No city selected"                                  // ❌ Pilih city dulu
+"❌ WiFi not connected"                                // ❌ Cek WiFi
+"🕌 Auto-updating prayer times for: [CityName]"       // ✅ Update saat connect
 ```
 
 ### Touchscreen Tidak Responsif
@@ -597,16 +664,15 @@ Kontribusi sangat diterima! Silakan:
 - [ ] Calendar (Hijriyah)
 - [ ] Qibla direction
 - [ ] Dark/Light theme
+- [ ] Manual refresh button untuk prayer times
+- [ ] Configurable auto-update time (selain midnight)
 
 ## 📄 Lisensi
 
 MIT License - lihat file [LICENSE](LICENSE)
 
 ## 👨‍💻 Author
-
-**Your Name**
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: your.email@example.com
+Bimo
 
 ## 🙏 Credits
 
