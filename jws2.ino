@@ -231,7 +231,6 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data)
     static unsigned long lastTouchRead = 0;
     unsigned long now = millis();
     
-    // ✅ UBAH: 20ms → 50ms (kurangi CPU usage)
     if (now - lastTouchRead < 50) {
         data->state = touchPressed ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
         if (touchPressed) {
@@ -366,10 +365,7 @@ void savePrayerTimes() {
             file.println(prayerConfig.asarTime);
             file.println(prayerConfig.maghribTime);
             file.println(prayerConfig.isyaTime);
-            // ❌ HAPUS INI:
-            // file.println(prayerConfig.selectedCityId);
-            
-            // ✅ GANTI DENGAN:
+
             file.println(prayerConfig.selectedCity);
             file.println(prayerConfig.selectedCityName);
             file.flush();
@@ -419,7 +415,6 @@ void loadPrayerTimes() {
 // ================================
 // AUTO LOCATION DETECTION
 // ================================
-
 void saveCitySelection() {
     if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
         fs::File file = LittleFS.open("/city_selection.txt", "w");
@@ -460,7 +455,6 @@ void getPrayerTimesByCity(String cityName) {
         return;
     }
 
-    // ✅ URL ENCODE: Replace spaces with +
     String encodedCity = cityName;
     encodedCity.replace(" ", "+");
     
@@ -491,14 +485,12 @@ void getPrayerTimesByCity(String cityName) {
         if (!error) {
             JsonObject timings = doc["data"]["timings"];
             
-            // ✅ GUNAKAN TEMPORARY VARIABLES
             String tempSubuh   = timings["Fajr"].as<String>().substring(0, 5);
             String tempZuhur   = timings["Dhuhr"].as<String>().substring(0, 5);
             String tempAsar    = timings["Asr"].as<String>().substring(0, 5);
             String tempMaghrib = timings["Maghrib"].as<String>().substring(0, 5);
             String tempIsya    = timings["Isha"].as<String>().substring(0, 5);
             
-            // ✅ VALIDATE SEBELUM UPDATE
             bool allValid = true;
             
             if (tempSubuh.length() != 5 || tempSubuh.indexOf(':') != 2) {
@@ -522,7 +514,6 @@ void getPrayerTimesByCity(String cityName) {
                 allValid = false;
             }
             
-            // ✅ UPDATE HANYA JIKA SEMUA VALID
             if (allValid) {
                 prayerConfig.subuhTime = tempSubuh;
                 prayerConfig.zuhurTime = tempZuhur;
@@ -537,7 +528,6 @@ void getPrayerTimesByCity(String cityName) {
                 Serial.println("   Maghrib: " + prayerConfig.maghribTime);
                 Serial.println("   Isya: " + prayerConfig.isyaTime);
                 
-                // Save dan update display
                 savePrayerTimes();
                 
                 DisplayUpdate update;
@@ -555,7 +545,6 @@ void getPrayerTimesByCity(String cityName) {
         Serial.printf("❌ HTTP request failed: %d\n", httpResponseCode);
         Serial.println("⚠️ Keeping existing prayer times");
         
-        // ✅ TAMBAHAN: Log detail error untuk debugging
         if (httpResponseCode < 0) {
             Serial.println("   Network error (timeout/connection failed)");
         } else if (httpResponseCode == 404) {
@@ -573,7 +562,6 @@ void getPrayerTimesByCity(String cityName) {
 // ================================
 // TASKS
 // ================================
-
 void uiTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xFrequency = pdMS_TO_TICKS(50);
@@ -670,8 +658,7 @@ void wifiTask(void *parameter) {
                 break;
                 
             case WIFI_CONNECTED:
-                // ✅ TAMBAH VARIABLE STATIC INI:
-                static bool autoUpdateDone = false;  // ← TAMBAH BARIS INI
+                static bool autoUpdateDone = false;
                 
                 if (!autoUpdateDone && wifiConfig.isConnected) {
                     vTaskDelay(pdMS_TO_TICKS(3000));
@@ -691,7 +678,7 @@ void wifiTask(void *parameter) {
                     if (xSemaphoreTake(wifiMutex, portMAX_DELAY) == pdTRUE) {
                         wifiConfig.isConnected = false;
                         wifiState = WIFI_IDLE;
-                        autoUpdateDone = false;  // ← RESET FLAG
+                        autoUpdateDone = false;
                         
                         WiFi.mode(WIFI_AP_STA);
                         
@@ -804,11 +791,10 @@ void prayerTask(void *parameter) {
                 lastDay = currentDay;
             }
             
-            // ✅ TAMBAH CEK INI:
             bool shouldUpdate = (currentHour == 0 && currentMinute < 5 &&
                                 !hasUpdatedToday &&
                                 wifiConfig.isConnected &&
-                                prayerConfig.selectedCity.length() > 0); // ← TAMBAH BARIS INI
+                                prayerConfig.selectedCity.length() > 0);
             
             xSemaphoreGive(timeMutex);
             
@@ -854,7 +840,6 @@ void clockTickTask(void *parameter) {
 // ================================
 // HELPER FUNCTIONS
 // ================================
-
 void updateTimeDisplay() {
     if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
         char timeStr[20];
@@ -919,7 +904,6 @@ void scheduleRestart(int delaySeconds) {
 // ================================
 // WEB SERVER ROUTES - OPTIMIZED FOR LARGE FILES
 // ================================
-
 void setupServerRoutes() {
     // ================================
     // 1. SERVE HTML & CSS FILES
@@ -984,8 +968,6 @@ void setupServerRoutes() {
     // ================================
     // 4. CITY SELECTION ENDPOINTS - FIXED!
     // ================================
-    
-    // ✅ 4.1 Get list of cities - CHUNKED STREAMING
     server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request){
         Serial.println("📥 GET /getcities");
         
@@ -995,99 +977,49 @@ void setupServerRoutes() {
             return;
         }
         
-        // ✅ METHOD 1: AsyncWebServerResponse with proper headers
         AsyncWebServerResponse *response = request->beginResponse(
             LittleFS, 
             "/cities.json", 
             "application/json"
         );
         
-        // ✅ CRITICAL: Disable chunked encoding for large files
         response->addHeader("Connection", "close");
         response->addHeader("Access-Control-Allow-Origin", "*");
         response->addHeader("Cache-Control", "public, max-age=3600");
         
-        // ✅ Force ESP32 to buffer less aggressively
         response->setContentLength(LittleFS.open("/cities.json", "r").size());
         
         request->send(response);
         
         Serial.println("✅ cities.json sent");
     });
-    
-    // ✅ 4.2 ALTERNATIVE: Chunked streaming endpoint (fallback)
-    server.on("/getcities_chunked", HTTP_GET, [](AsyncWebServerRequest *request){
-        Serial.println("📥 GET /getcities_chunked (streaming)");
-        
-        if (!LittleFS.exists("/cities.json")) {
-            request->send(404, "application/json", "[]");
-            return;
-        }
-        
-        AsyncWebServerResponse *response = request->beginChunkedResponse(
-            "application/json",
-            [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-                static fs::File file;
-                
-                // Open file on first chunk
-                if (index == 0) {
-                    file = LittleFS.open("/cities.json", "r");
-                    if (!file) return 0;
-                }
-                
-                // Read chunk
-                size_t bytesRead = 0;
-                if (file && file.available()) {
-                    bytesRead = file.read(buffer, maxLen);
-                }
-                
-                // Close file when done
-                if (!file.available()) {
-                    file.close();
-                }
-                
-                return bytesRead;
-            }
-        );
-        
-        response->addHeader("Access-Control-Allow-Origin", "*");
-        request->send(response);
-        
-        Serial.println("✅ Chunked response started");
-    });
-    
-    // ✅ 4.3 Set selected city
+
     server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request){
         if (request->hasParam("city", true)) {
             String cityName = request->getParam("city", true)->value();
             
             Serial.println("\n📥 POST /setcity received: " + cityName);
             
-            // ✅ Basic validation
             if (cityName.length() == 0 || cityName.length() > 50) {
                 request->send(400, "text/plain", "Invalid city name");
                 return;
             }
             
-            // ✅ Load cities.json and find display name
-            String displayName = cityName;  // Default fallback
+            String displayName = cityName;
             
             if (LittleFS.exists("/cities.json")) {
                 fs::File f = LittleFS.open("/cities.json", "r");
                 
                 if (f) {
-                    // Search for city in JSON (line by line to save memory)
                     bool found = false;
                     
                     while (f.available()) {
                         String line = f.readStringUntil('\n');
                         
-                        // Check if this line contains our city
                         if (line.indexOf("\"api\":\"" + cityName + "\"") > 0) {
-                            // Extract display name
                             int displayStart = line.indexOf("\"display\":\"");
                             if (displayStart > 0) {
-                                displayStart += 11;  // Length of "display":"
+                                displayStart += 11;
                                 int displayEnd = line.indexOf("\"", displayStart);
                                 
                                 if (displayEnd > displayStart) {
@@ -1108,14 +1040,12 @@ void setupServerRoutes() {
                 }
             }
             
-            // Save city selection
             prayerConfig.selectedCity = cityName;
             prayerConfig.selectedCityName = displayName;
             saveCitySelection();
             
             Serial.println("✅ City saved: " + displayName + " (" + cityName + ")");
             
-            // Update prayer times immediately if WiFi connected
             if (WiFi.status() == WL_CONNECTED) {
                 Serial.println("🔄 Fetching prayer times for: " + cityName);
                 getPrayerTimesByCity(cityName);
@@ -1129,7 +1059,6 @@ void setupServerRoutes() {
         }
     });
     
-    // ✅ 4.4 Get current city selection
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request){
         String json = "{";
         
@@ -1242,7 +1171,6 @@ void setupServerRoutes() {
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
         Serial.println("\n⚠️ Factory reset requested from web interface...");
         
-        // Delete all saved files
         if (LittleFS.exists("/wifi_creds.txt")) {
             LittleFS.remove("/wifi_creds.txt");
             Serial.println("✅ WiFi creds deleted");
@@ -1263,7 +1191,6 @@ void setupServerRoutes() {
             Serial.println("✅ City selection deleted");
         }
         
-        // Clear RAM variables
         if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
             wifiConfig.routerSSID = "";
             wifiConfig.routerPassword = "";
@@ -1334,7 +1261,7 @@ void setup()
     init_littlefs();
     loadWiFiCredentials();
     loadPrayerTimes();
-    loadCitySelection(); // ✅ LOAD CITY SELECTION
+    loadCitySelection();
     
     // ================================
     // DISPLAY INIT - PWM BACKLIGHT (ESP32 CORE 3.x)
