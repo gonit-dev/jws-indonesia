@@ -9,6 +9,7 @@ Jam Waktu Sholat Digital berbasis ESP32-2432S024 dengan antarmuka touchscreen, s
 
 ## 📸 Screenshot
 <img width="1366" height="2001" alt="FireShot Capture 090 - Islamic Prayer Clock Settings - 192 168 4 1" src="https://github.com/user-attachments/assets/2c69772f-4b74-494f-a232-7f3435539377" />
+[![Watch the video]([https://i.sstatic.net/Vp2cE.png)](https://youtu.be/vt5fpE0bzSY](https://github.com/user-attachments/assets/41762c43-a747-4f28-a8c6-31c39b51008f))
 
 ## ✨ Fitur
 
