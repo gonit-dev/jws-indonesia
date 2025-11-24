@@ -578,9 +578,21 @@ void uiTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xFrequency = pdMS_TO_TICKS(50);
     
+    static bool initialDisplayDone = false;
+    
     while (true) {
         if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(20)) == pdTRUE) {
             lv_timer_handler();
+            
+            if (!initialDisplayDone && objects.subuh_time != NULL) {
+                initialDisplayDone = true;
+                
+                if (prayerConfig.subuhTime.length() > 0) {
+                    updatePrayerDisplay();
+                    Serial.println("✅ Initial prayer times displayed");
+                }
+            }
+            
             xSemaphoreGive(displayMutex);
         }
         
@@ -1403,12 +1415,12 @@ void setup()
         Serial.println("   Ashar: " + prayerConfig.asarTime);
         Serial.println("   Maghrib: " + prayerConfig.maghribTime);
         Serial.println("   Isya: " + prayerConfig.isyaTime);
-        
+
         DisplayUpdate update;
         update.type = DisplayUpdate::PRAYER_UPDATE;
         xQueueSend(displayQueue, &update, 0);
     } else {
-        Serial.println("\nℹ️ No city selected");
+        Serial.println("\n No city selected");
         Serial.println("   Please select city via web interface");
     }
 
