@@ -240,11 +240,11 @@
                 <div class="grid-x grid-padding-x">
                     <div class="large-10 center cell">
                         <div class="callout">
-                            <h5>📍 Pilih Kota</h5>
+                            <h5>📍 Pilih Kota/Kabupaten</h5>
                             
                             <div class="info-box" style="text-align: center;">
                                 <p style="margin: 0; font-size: 14px;">
-                                    <strong>Kota Terpilih:</strong><br>
+                                    <strong>Kota/Kabupaten Terpilih:</strong><br>
                                     <span id="currentCity" style="font-size: 18px; font-weight: bold; color: #1779ba;">Belum dipilih</span>
                                 </p>
                             </div>
@@ -252,20 +252,20 @@
                             <div class="grid-x grid-margin-x">
                                 <div class="large-8 medium-8 small-12 cell">
                                     <select id="cityDropdown" style="width: 100%; padding: 10px; font-size: 14px; border-radius: 5px; border: 2px solid #e0e0e0;">
-                                        <option value="">-- Pilih Kota --</option>
+                                        <option value="">-- Pilih Kota/Kabupaten --</option>
                                     </select>
                                 </div>
                                 <div class="large-4 medium-4 small-12 cell">
                                     <button class="button success expanded" onclick="saveCity()">
-                                        💾 Simpan Kota
+                                        💾 Simpan Kota/Kabupaten
                                     </button>
                                 </div>
                             </div>
 
                             <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
                                 <p style="margin: 0; font-size: 12px; color: #666;">
-                                    ℹ️ Pilih kota untuk mendapatkan jadwal shalat yang akurat<br>
-                                    🔄 Jadwal akan otomatis update setelah kota dipilih
+                                    ℹ️ Pilih kota/Kabupaten untuk mendapatkan jadwal shalat yang akurat<br>
+                                    🔄 Jadwal akan otomatis update setelah kota/Kabupaten dipilih
                                 </p>
                             </div>
                         </div>
@@ -304,7 +304,7 @@
 
                             <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
                                 <p style="margin: 0; font-size: 12px; color: #666;">
-                                    ℹ️ Jadwal shalat berdasarkan kota yang dipilih<br>
+                                    ℹ️ Jadwal shalat berdasarkan kota/Kabupaten yang dipilih<br>
                                     📅 Auto-refresh setiap tengah malam (00:00 WIB)<br>
                                     🕋 Metode kalkulasi: Kementerian Agama RI (Method 20)<br>
                                     🔄 Update otomatis saat device online tanpa restart
@@ -330,7 +330,7 @@
                                     📡 WiFi credentials<br>
                                     🕋 Jadwal shalat tersimpan<br>
                                     📶 AP settings<br>
-                                    📍 Pilihan kota
+                                    📍 Pilihan kota/Kabupaten
                                 </p>
                             </div>
                             <button class="alert button expanded" onclick="resetSettings()">
@@ -412,7 +412,7 @@
                 }
                 
                 cityList = data;
-                dropdown.innerHTML = '<option value="">-- Pilih Kota --</option>';
+                dropdown.innerHTML = '<option value="">-- Pilih Kota/Kabupaten --</option>';
                 
                 let currentProvince = '';
                 data.forEach(city => {
@@ -460,8 +460,8 @@
                     }, retryDelay);
                 } else {
                     console.error('❌ Failed to load cities after', MAX_LOAD_ATTEMPTS, 'attempts');
-                    dropdown.innerHTML = '<option value="">❌ Gagal load kota - Refresh halaman</option>';
-                    showToast('❌ Gagal load daftar kota. Refresh halaman untuk retry.', 'error');
+                    dropdown.innerHTML = '<option value="">❌ Gagal load kota/Kabupaten - Refresh halaman</option>';
+                    showToast('❌ Gagal load daftar kota/Kabupaten. Refresh halaman untuk retry.', 'error');
                     loadAttempts = 0;
                 }
                 
@@ -521,7 +521,7 @@
             const selectedCity = dropdown.value;
             
             if (!selectedCity) {
-                showToast('❌ Pilih kota terlebih dahulu', 'error');
+                showToast('❌ Pilih kota/Kabupaten terlebih dahulu', 'error');
                 return;
             }
             
@@ -540,7 +540,7 @@
                 });
                 
                 if (response.ok) {
-                    showToast('✅ Kota berhasil disimpan!', 'success');
+                    showToast('✅ Kota/Kabupaten berhasil disimpan!', 'success');
                     loadCurrentCity();
                     
                     setTimeout(() => {
@@ -551,7 +551,7 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('❌ Gagal menyimpan kota', 'error');
+                showToast('❌ Gagal menyimpan kota/Kabupaten', 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = originalText;

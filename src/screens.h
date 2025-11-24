@@ -20,6 +20,7 @@ typedef struct _objects_t {
     lv_obj_t *obj4;
     lv_obj_t *isya_time;
     lv_obj_t *date_time;
+    lv_obj_t *city_time;
 } objects_t;
 
 extern objects_t objects;

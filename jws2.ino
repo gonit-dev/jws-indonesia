@@ -154,7 +154,7 @@ struct DisplayUpdate {
     enum Type {
         TIME_UPDATE,
         PRAYER_UPDATE,
-        STATUS_UPDATE
+        STATUS_UPDATEz
     } type;
     String data;
 };
@@ -427,6 +427,8 @@ void saveCitySelection() {
         }
         xSemaphoreGive(settingsMutex);
     }
+    
+    updateCityDisplay();
 }
 
 void loadCitySelection() {
@@ -441,8 +443,14 @@ void loadCitySelection() {
                 file.close();
                 Serial.println("✅ City selection loaded: " + prayerConfig.selectedCityName);
             }
+        } else {
+            prayerConfig.selectedCity = "";
+            prayerConfig.selectedCityName = "";
+            Serial.println("ℹ️ No city selection found");
         }
         xSemaphoreGive(settingsMutex);
+        
+        updateCityDisplay();
     }
 }
 
@@ -575,6 +583,8 @@ void uiTask(void *parameter) {
             if (!initialDisplayDone && objects.subuh_time != NULL) {
                 initialDisplayDone = true;
                 
+                updateCityDisplay();
+                
                 if (prayerConfig.subuhTime.length() > 0) {
                     updatePrayerDisplay();
                     Serial.println("✅ Initial prayer times displayed");
@@ -588,9 +598,15 @@ void uiTask(void *parameter) {
         if (xQueueReceive(displayQueue, &update, 0) == pdTRUE) {
             if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
                 switch (update.type) {
-                    case DisplayUpdate::TIME_UPDATE: updateTimeDisplay(); break;
-                    case DisplayUpdate::PRAYER_UPDATE: updatePrayerDisplay(); break;
-                    default: break;
+                    case DisplayUpdate::TIME_UPDATE: 
+                        updateTimeDisplay(); 
+                        break;
+                    case DisplayUpdate::PRAYER_UPDATE: 
+                        updatePrayerDisplay(); 
+                        updateCityDisplay();
+                        break;
+                    default: 
+                        break;
                 }
                 xSemaphoreGive(displayMutex);
             }
@@ -840,6 +856,22 @@ void clockTickTask(void *parameter) {
 // ================================
 // HELPER FUNCTIONS
 // ================================
+void updateCityDisplay() {
+    if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+        String displayText = "--";
+        
+        if (prayerConfig.selectedCityName.length() > 0) {
+            displayText = prayerConfig.selectedCityName;
+        }
+        
+        if (objects.city_time) {
+            lv_label_set_text(objects.city_time, displayText.c_str());
+        }
+        
+        xSemaphoreGive(settingsMutex);
+    }
+}
+
 void updateTimeDisplay() {
     if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
         char timeStr[20];
@@ -1058,7 +1090,7 @@ void setupServerRoutes() {
             request->send(400, "text/plain", "Missing city parameter");
         }
     });
-    
+
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request){
         String json = "{";
         
@@ -1209,6 +1241,8 @@ void setupServerRoutes() {
             
             xSemaphoreGive(settingsMutex);
         }
+        
+        updateCityDisplay();
         
         WiFi.disconnect(true);
         
