@@ -31,6 +31,7 @@
 // EEZ generated files
 #include "src/ui.h"
 #include "src/screens.h"
+#include "src/images.h"
 
 // ================================
 // PIN DEFINITIONS
