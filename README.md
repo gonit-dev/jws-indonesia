@@ -11,7 +11,7 @@
 
 <img width="683" height="1000" alt="Web Interface" src="https://github.com/user-attachments/assets/2c69772f-4b74-494f-a232-7f3435539377" />
 
-**Video Demo**: [Watch on Streamable](https://streamable.com/mbb13l)
+**Video Demo**: [Watch on Tutorial](https://streamable.com/mbb13l)
 
 ## ✨ Fitur Utama
 
@@ -93,8 +93,8 @@ platform = espressif32@6.9.0  ; ESP32 Core 3.0.7
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/yourusername/esp32-prayer-clock.git
-cd esp32-prayer-clock
+git clone https://github.com/gonit-dev/jws-indonesia.git
+cd jws-indonesia
 
 # 2. Upload File System (LittleFS)
 # Arduino IDE: Tools > ESP32 Sketch Data Upload
