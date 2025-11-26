@@ -270,41 +270,6 @@ esp32-prayer-clock/
 
 ## 📝 API Reference
 
-### GET /devicestatus
-```json
-{
-  "connected": true,
-  "ssid": "MyWiFi",
-  "ip": "192.168.1.100",
-  "ntpSynced": true,
-  "ntpServer": "pool.ntp.org",
-  "currentTime": "14:30:25",
-  "freeHeap": "180000",
-  "rtcAvailable": true
-}
-```
-
-### GET /getprayertimes
-```json
-{
-  "subuh": "04:30",
-  "dzuhur": "12:05",
-  "ashar": "15:20",
-  "maghrib": "18:10",
-  "isya": "19:25"
-}
-```
-
-### POST /setcity
-```
-city=Jakarta
-```
-
-### POST /setwifi
-```
-ssid=MyWiFi&password=MyPassword123
-```
-
 # 📡 REST API - IoT Integration
 
 ## 🎯 Endpoint: `/api/data`
