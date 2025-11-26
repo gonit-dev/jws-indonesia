@@ -12,6 +12,8 @@
  */
 
 #include <WiFiClientSecure.h>
+#include <Wire.h>
+#include <RTClib.h>
 #include <lvgl.h>
 #include <TFT_eSPI.h>
 #include <XPT2046_Touchscreen.h>
@@ -45,6 +47,9 @@
 #define SCREEN_WIDTH   320
 #define SCREEN_HEIGHT  240
 
+#define RTC_SDA    21
+#define RTC_SCL    22
+
 // PWM Backlight Configuration
 #define TFT_BL_CHANNEL    0
 #define TFT_BL_FREQ       5000
@@ -73,6 +78,7 @@
 #define PRAYER_TASK_PRIORITY    1
 
 // Task Handles
+TaskHandle_t rtcTaskHandle = NULL;
 TaskHandle_t uiTaskHandle = NULL;
 TaskHandle_t wifiTaskHandle = NULL;
 TaskHandle_t ntpTaskHandle = NULL;
@@ -101,6 +107,9 @@ static uint8_t buf[SCREEN_WIDTH * 10];
 TFT_eSPI tft = TFT_eSPI();
 SPIClass touchSPI = SPIClass(VSPI);
 XPT2046_Touchscreen touch(TOUCH_CS, TOUCH_IRQ);
+
+RTC_DS3231 rtc;
+bool rtcAvailable = false;
 
 // ================================
 // NTP SERVER LIST (FALLBACK)
@@ -357,6 +366,28 @@ void saveAPCredentials() {
     }
 }
 
+void saveTimeToRTC() {
+    if (!rtcAvailable) return;
+    
+    if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+        DateTime dt(year(timeConfig.currentTime),
+                   month(timeConfig.currentTime),
+                   day(timeConfig.currentTime),
+                   hour(timeConfig.currentTime),
+                   minute(timeConfig.currentTime),
+                   second(timeConfig.currentTime));
+        
+        rtc.adjust(dt);
+        
+        Serial.println("💾 Time saved to RTC:");
+        Serial.printf("   %02d:%02d:%02d %02d/%02d/%04d\n",
+                     dt.hour(), dt.minute(), dt.second(),
+                     dt.day(), dt.month(), dt.year());
+        
+        xSemaphoreGive(timeMutex);
+    }
+}
+
 void savePrayerTimes() {
     if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
         fs::File file = LittleFS.open("/prayer_times.txt", "w");
@@ -453,6 +484,62 @@ void loadCitySelection() {
         
         updateCityDisplay();
     }
+}
+
+bool initRTC() {
+    Serial.println("\n⏰ Initializing DS3231 RTC...");
+    
+    Wire.begin(RTC_SDA, RTC_SCL);
+    
+    if (!rtc.begin(&Wire)) {
+        Serial.println("❌ DS3231 not found!");
+        Serial.println("   Check wiring:");
+        Serial.println("   - SDA → GPIO21");
+        Serial.println("   - SCL → GPIO22");
+        Serial.println("   - VCC → 3.3V");
+        Serial.println("   - GND → GND");
+        return false;
+    }
+    
+    Serial.println("✅ DS3231 detected!");
+    
+    // Cek apakah RTC kehilangan power
+    if (rtc.lostPower()) {
+        Serial.println("⚠️ RTC lost power, needs time sync");
+        return true;  // RTC ada tapi perlu sync
+    }
+    
+    // Baca waktu dari RTC
+    DateTime now = rtc.now();
+    
+    // Validasi waktu RTC (harus > 2024)
+    if (now.year() < 2024) {
+        Serial.println("⚠️ RTC time invalid, needs sync");
+        return true;
+    }
+    
+    // Set system time dari RTC
+    if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+        setTime(now.hour(), now.minute(), now.second(), 
+                now.day(), now.month(), now.year());
+        timeConfig.currentTime = now.unixtime();
+        
+        xSemaphoreGive(timeMutex);
+        
+        Serial.println("✅ Time loaded from RTC:");
+        Serial.printf("   %02d:%02d:%02d %02d/%02d/%04d\n",
+                     now.hour(), now.minute(), now.second(),
+                     now.day(), now.month(), now.year());
+        
+        // ✅ PERBAIKAN: Cek apakah displayQueue sudah dibuat
+        if (displayQueue != NULL) {
+            DisplayUpdate update;
+            update.type = DisplayUpdate::TIME_UPDATE;
+            xQueueSend(displayQueue, &update, 0);
+        }
+    }
+    
+    return true;
 }
 
 // ================================
@@ -759,6 +846,12 @@ void ntpTask(void *parameter) {
                     syncSuccess = true;
                     timeConfig.ntpServer = String(ntpServers[serverIndex]);
                     
+                    // **TAMBAHAN BARU: Save ke RTC setelah NTP sync**
+                    if (rtcAvailable) {
+                        saveTimeToRTC();
+                        Serial.println("✅ NTP time saved to RTC");
+                    }
+                    
                     DisplayUpdate update;
                     update.type = DisplayUpdate::TIME_UPDATE;
                     xQueueSend(displayQueue, &update, 0);
@@ -821,6 +914,38 @@ void prayerTask(void *parameter) {
                 hasUpdatedToday = true;
             }
         }
+    }
+}
+
+void rtcSyncTask(void *parameter) {
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xFrequency = pdMS_TO_TICKS(60000);  // Setiap 1 menit
+    
+    while (true) {
+        if (rtcAvailable) {
+            DateTime rtcTime = rtc.now();
+            
+            if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                time_t systemTime = timeConfig.currentTime;
+                time_t rtcUnix = rtcTime.unixtime();
+                
+                // Jika selisih > 2 detik, sync system time ke RTC time
+                if (abs(systemTime - rtcUnix) > 2) {
+                    timeConfig.currentTime = rtcUnix;
+                    setTime(rtcUnix);
+                    
+                    Serial.println("🔄 System time synced from RTC");
+                    
+                    DisplayUpdate update;
+                    update.type = DisplayUpdate::TIME_UPDATE;
+                    xQueueSend(displayQueue, &update, 0);
+                }
+                
+                xSemaphoreGive(timeMutex);
+            }
+        }
+        
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
     
@@ -1183,6 +1308,12 @@ void setupServerRoutes() {
                 timeConfig.currentTime = now(); 
                 timeConfig.ntpSynced = true;
                 
+                // **TAMBAHAN BARU: Save ke RTC**
+                if (rtcAvailable) {
+                    saveTimeToRTC();
+                    Serial.println("💾 Browser time saved to RTC");
+                }
+                
                 DisplayUpdate update;
                 update.type = DisplayUpdate::TIME_UPDATE;
                 xQueueSend(displayQueue, &update, 0);
@@ -1266,6 +1397,9 @@ void setupServerRoutes() {
 // ================================
 // SETUP - ESP32 CORE 3.x COMPATIBLE
 // ================================
+// ================================
+// SETUP - ESP32 CORE 3.x COMPATIBLE
+// ================================
 void setup()
 {
     Serial.begin(115200);
@@ -1297,6 +1431,16 @@ void setup()
     loadWiFiCredentials();
     loadPrayerTimes();
     loadCitySelection();
+    
+    // ================================
+    // RTC DS3231 INIT - TAMBAHAN BARU!
+    // ================================
+    rtcAvailable = initRTC();
+    if (rtcAvailable) {
+        Serial.println("✅ RTC DS3231 module ready");
+    } else {
+        Serial.println("⚠️ Running without RTC (will lose time on power off)");
+    }
     
     // ================================
     // DISPLAY INIT - PWM BACKLIGHT (ESP32 CORE 3.x)
@@ -1369,7 +1513,7 @@ void setup()
     // DISPLAY LOADED CITY & PRAYER TIMES
     // ================================
     if (prayerConfig.selectedCity.length() > 0) {
-        Serial.println("\n📍 Selected City: " + prayerConfig.selectedCityName);
+        Serial.println("\n🏙️ Selected City: " + prayerConfig.selectedCityName);
         Serial.println("\n📋 Loaded Prayer Times:");
         Serial.println("   City: " + prayerConfig.selectedCityName);
         Serial.println("   Subuh: " + prayerConfig.subuhTime);
@@ -1382,7 +1526,7 @@ void setup()
         update.type = DisplayUpdate::PRAYER_UPDATE;
         xQueueSend(displayQueue, &update, 0);
     } else {
-        Serial.println("\n No city selected");
+        Serial.println("\nℹ️ No city selected");
         Serial.println("   Please select city via web interface");
     }
 
@@ -1469,6 +1613,22 @@ void setup()
         0  // Core 0
     );
     
+    // ================================
+    // RTC SYNC TASK - TAMBAHAN BARU!
+    // ================================
+    if (rtcAvailable) {
+        xTaskCreatePinnedToCore(
+            rtcSyncTask,
+            "RTC Sync",
+            4096,
+            NULL,
+            1,
+            &rtcTaskHandle,
+            0  // Core 0
+        );
+        Serial.println("✅ RTC Sync task started");
+    }
+    
     vTaskDelay(pdMS_TO_TICKS(500));
     
     // ================================
@@ -1490,7 +1650,7 @@ void setup()
     // ================================
     Serial.println("\n========================================");
     Serial.println("🎉 System Ready!");
-    Serial.println("📍 MANUAL CITY SELECTION MODE");
+    Serial.println("🏙️ MANUAL CITY SELECTION MODE");
     Serial.println("========================================\n");
     
     if (wifiConfig.routerSSID.length() > 0) {
