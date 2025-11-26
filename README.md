@@ -305,6 +305,534 @@ city=Jakarta
 ssid=MyWiFi&password=MyPassword123
 ```
 
+# 📡 REST API - IoT Integration
+
+## 🎯 Endpoint: `/api/data`
+
+Endpoint ini memberikan **semua data lengkap** dalam satu request untuk integrasi dengan perangkat lain.
+
+**URL Access:**
+```
+http://192.168.4.1/api/data        # Via Hotspot AP
+http://192.168.1.100/api/data      # Via WiFi Router (ganti IP sesuai device)
+```
+
+### 📥 Response Format
+
+```json
+{
+  "time": "14:30:45",
+  "date": "26/11/2025",
+  "day": "Wednesday",
+  "timestamp": 1732612245,
+  "prayerTimes": {
+    "subuh": "04:30",
+    "dzuhur": "12:05",
+    "ashar": "15:20",
+    "maghrib": "18:10",
+    "isya": "19:25"
+  },
+  "location": {
+    "city": "Jakarta",
+    "cityId": "Jakarta"
+  },
+  "device": {
+    "wifiConnected": true,
+    "wifiSSID": "MyWiFi",
+    "ip": "192.168.1.100",
+    "apIP": "192.168.4.1",
+    "ntpSynced": true,
+    "freeHeap": 180000
+  }
+}
+```
+
+---
+
+## 💻 Cara Mengakses API dari Berbagai Bahasa
+
+### 🐍 Python
+
+```python
+import requests
+import json
+
+# Fetch data from ESP32
+url = "http://192.168.1.100/api/data"
+response = requests.get(url)
+
+if response.status_code == 200:
+    data = response.json()
+    
+    print(f"⏰ Current Time: {data['time']}")
+    print(f"📅 Date: {data['date']} ({data['day']})")
+    print(f"🕌 Prayer Times:")
+    print(f"   Subuh: {data['prayerTimes']['subuh']}")
+    print(f"   Dzuhur: {data['prayerTimes']['dzuhur']}")
+    print(f"   Ashar: {data['prayerTimes']['ashar']}")
+    print(f"   Maghrib: {data['prayerTimes']['maghrib']}")
+    print(f"   Isya: {data['prayerTimes']['isya']}")
+    print(f"📍 Location: {data['location']['city']}")
+else:
+    print(f"❌ Error: {response.status_code}")
+```
+
+**Advanced: Auto-refresh setiap 1 detik**
+```python
+import requests
+import time
+import os
+
+def display_prayer_clock():
+    url = "http://192.168.1.100/api/data"
+    
+    while True:
+        try:
+            response = requests.get(url, timeout=5)
+            data = response.json()
+            
+            os.system('clear' if os.name == 'posix' else 'cls')
+            print("=" * 50)
+            print(f"🕌 PRAYER CLOCK - {data['location']['city']}")
+            print("=" * 50)
+            print(f"⏰ {data['time']}  📅 {data['date']}")
+            print(f"📡 WiFi: {data['device']['wifiSSID']}")
+            print("-" * 50)
+            print(f"Subuh   : {data['prayerTimes']['subuh']}")
+            print(f"Dzuhur  : {data['prayerTimes']['dzuhur']}")
+            print(f"Ashar   : {data['prayerTimes']['ashar']}")
+            print(f"Maghrib : {data['prayerTimes']['maghrib']}")
+            print(f"Isya    : {data['prayerTimes']['isya']}")
+            print("=" * 50)
+            
+            time.sleep(1)
+        except Exception as e:
+            print(f"❌ Connection error: {e}")
+            time.sleep(5)
+
+display_prayer_clock()
+```
+
+---
+
+### 🟦 JavaScript (Node.js)
+
+```javascript
+const axios = require('axios');
+
+async function getPrayerData() {
+    try {
+        const response = await axios.get('http://192.168.1.100/api/data');
+        const data = response.data;
+        
+        console.log(`⏰ Current Time: ${data.time}`);
+        console.log(`📅 Date: ${data.date} (${data.day})`);
+        console.log(`🕌 Prayer Times:`);
+        console.log(`   Subuh: ${data.prayerTimes.subuh}`);
+        console.log(`   Dzuhur: ${data.prayerTimes.dzuhur}`);
+        console.log(`   Ashar: ${data.prayerTimes.ashar}`);
+        console.log(`   Maghrib: ${data.prayerTimes.maghrib}`);
+        console.log(`   Isya: ${data.prayerTimes.isya}`);
+        console.log(`📍 Location: ${data.location.city}`);
+    } catch (error) {
+        console.error('❌ Error:', error.message);
+    }
+}
+
+getPrayerData();
+```
+
+**Auto-refresh:**
+```javascript
+setInterval(getPrayerData, 1000); // Refresh setiap 1 detik
+```
+
+---
+
+### 🌐 JavaScript (Browser / HTML)
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Prayer Clock Dashboard</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #1a1a1a; color: white; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .time { font-size: 48px; font-weight: bold; text-align: center; }
+        .prayer { padding: 10px; margin: 5px; background: #2a2a2a; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🕌 Prayer Clock</h1>
+        <div class="time" id="time">--:--:--</div>
+        <div id="date">--/--/----</div>
+        <h3>Prayer Times - <span id="city">--</span></h3>
+        <div id="prayers"></div>
+    </div>
+
+    <script>
+        async function fetchData() {
+            try {
+                const response = await fetch('http://192.168.1.100/api/data');
+                const data = await response.json();
+                
+                document.getElementById('time').textContent = data.time;
+                document.getElementById('date').textContent = `${data.date} (${data.day})`;
+                document.getElementById('city').textContent = data.location.city;
+                
+                const prayersHtml = `
+                    <div class="prayer">Subuh: ${data.prayerTimes.subuh}</div>
+                    <div class="prayer">Dzuhur: ${data.prayerTimes.dzuhur}</div>
+                    <div class="prayer">Ashar: ${data.prayerTimes.ashar}</div>
+                    <div class="prayer">Maghrib: ${data.prayerTimes.maghrib}</div>
+                    <div class="prayer">Isya: ${data.prayerTimes.isya}</div>
+                `;
+                document.getElementById('prayers').innerHTML = prayersHtml;
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        
+        // Refresh setiap 1 detik
+        fetchData();
+        setInterval(fetchData, 1000);
+    </script>
+</body>
+</html>
+```
+
+---
+
+### 🖥️ PHP
+
+```php
+<?php
+$url = "http://192.168.1.100/api/data";
+$response = file_get_contents($url);
+$data = json_decode($response, true);
+
+echo "⏰ Current Time: " . $data['time'] . "\n";
+echo "📅 Date: " . $data['date'] . " (" . $data['day'] . ")\n";
+echo "🕌 Prayer Times:\n";
+echo "   Subuh: " . $data['prayerTimes']['subuh'] . "\n";
+echo "   Dzuhur: " . $data['prayerTimes']['dzuhur'] . "\n";
+echo "   Ashar: " . $data['prayerTimes']['ashar'] . "\n";
+echo "   Maghrib: " . $data['prayerTimes']['maghrib'] . "\n";
+echo "   Isya: " . $data['prayerTimes']['isya'] . "\n";
+echo "📍 Location: " . $data['location']['city'] . "\n";
+?>
+```
+
+**Web Dashboard (PHP + HTML):**
+```php
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Prayer Clock Dashboard</title>
+    <meta http-equiv="refresh" content="5">
+    <style>
+        body { font-family: Arial; padding: 20px; background: #1a1a1a; color: white; }
+        .time { font-size: 48px; text-align: center; }
+        .prayer { padding: 15px; margin: 10px 0; background: #2a2a2a; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <?php
+    $url = "http://192.168.1.100/api/data";
+    $response = @file_get_contents($url);
+    
+    if ($response) {
+        $data = json_decode($response, true);
+        ?>
+        <h1>🕌 Prayer Clock - <?php echo $data['location']['city']; ?></h1>
+        <div class="time"><?php echo $data['time']; ?></div>
+        <div style="text-align: center;"><?php echo $data['date'] . " (" . $data['day'] . ")"; ?></div>
+        
+        <h3>Prayer Times</h3>
+        <div class="prayer">Subuh: <?php echo $data['prayerTimes']['subuh']; ?></div>
+        <div class="prayer">Dzuhur: <?php echo $data['prayerTimes']['dzuhur']; ?></div>
+        <div class="prayer">Ashar: <?php echo $data['prayerTimes']['ashar']; ?></div>
+        <div class="prayer">Maghrib: <?php echo $data['prayerTimes']['maghrib']; ?></div>
+        <div class="prayer">Isya: <?php echo $data['prayerTimes']['isya']; ?></div>
+        <?php
+    } else {
+        echo "<p style='color: red;'>❌ Cannot connect to device</p>";
+    }
+    ?>
+</body>
+</html>
+```
+
+---
+
+### 🔵 Go (Golang)
+
+```go
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+)
+
+type PrayerData struct {
+    Time   string `json:"time"`
+    Date   string `json:"date"`
+    Day    string `json:"day"`
+    PrayerTimes struct {
+        Subuh   string `json:"subuh"`
+        Dzuhur  string `json:"dzuhur"`
+        Ashar   string `json:"ashar"`
+        Maghrib string `json:"maghrib"`
+        Isya    string `json:"isya"`
+    } `json:"prayerTimes"`
+    Location struct {
+        City string `json:"city"`
+    } `json:"location"`
+}
+
+func main() {
+    url := "http://192.168.1.100/api/data"
+    
+    resp, err := http.Get(url)
+    if err != nil {
+        fmt.Println("❌ Error:", err)
+        return
+    }
+    defer resp.Body.Close()
+    
+    body, _ := io.ReadAll(resp.Body)
+    
+    var data PrayerData
+    json.Unmarshal(body, &data)
+    
+    fmt.Printf("⏰ Current Time: %s\n", data.Time)
+    fmt.Printf("📅 Date: %s (%s)\n", data.Date, data.Day)
+    fmt.Println("🕌 Prayer Times:")
+    fmt.Printf("   Subuh: %s\n", data.PrayerTimes.Subuh)
+    fmt.Printf("   Dzuhur: %s\n", data.PrayerTimes.Dzuhur)
+    fmt.Printf("   Ashar: %s\n", data.PrayerTimes.Ashar)
+    fmt.Printf("   Maghrib: %s\n", data.PrayerTimes.Maghrib)
+    fmt.Printf("   Isya: %s\n", data.PrayerTimes.Isya)
+    fmt.Printf("📍 Location: %s\n", data.Location.City)
+}
+```
+
+---
+
+### 🔵 C# (.NET)
+
+```csharp
+using System;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        var client = new HttpClient();
+        var url = "http://192.168.1.100/api/data";
+        
+        try
+        {
+            var response = await client.GetStringAsync(url);
+            var data = JsonSerializer.Deserialize<PrayerData>(response);
+            
+            Console.WriteLine($"⏰ Current Time: {data.time}");
+            Console.WriteLine($"📅 Date: {data.date} ({data.day})");
+            Console.WriteLine("🕌 Prayer Times:");
+            Console.WriteLine($"   Subuh: {data.prayerTimes.subuh}");
+            Console.WriteLine($"   Dzuhur: {data.prayerTimes.dzuhur}");
+            Console.WriteLine($"   Ashar: {data.prayerTimes.ashar}");
+            Console.WriteLine($"   Maghrib: {data.prayerTimes.maghrib}");
+            Console.WriteLine($"   Isya: {data.prayerTimes.isya}");
+            Console.WriteLine($"📍 Location: {data.location.city}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error: {ex.Message}");
+        }
+    }
+}
+
+public class PrayerData
+{
+    public string time { get; set; }
+    public string date { get; set; }
+    public string day { get; set; }
+    public PrayerTimes prayerTimes { get; set; }
+    public Location location { get; set; }
+}
+
+public class PrayerTimes
+{
+    public string subuh { get; set; }
+    public string dzuhur { get; set; }
+    public string ashar { get; set; }
+    public string maghrib { get; set; }
+    public string isya { get; set; }
+}
+
+public class Location
+{
+    public string city { get; set; }
+}
+```
+
+---
+
+### 💡 cURL (Command Line)
+
+```bash
+# Simple GET request
+curl http://192.168.1.100/api/data
+
+# Pretty print dengan jq
+curl -s http://192.168.1.100/api/data | jq '.'
+
+# Extract specific data
+curl -s http://192.168.1.100/api/data | jq '.prayerTimes'
+
+# Get only Subuh time
+curl -s http://192.168.1.100/api/data | jq -r '.prayerTimes.subuh'
+
+# Save to file
+curl -s http://192.168.1.100/api/data -o prayer_data.json
+
+# Watch mode (update every 1 second)
+watch -n 1 'curl -s http://192.168.1.100/api/data | jq "."'
+```
+
+**Advanced bash script:**
+```bash
+#!/bin/bash
+
+URL="http://192.168.1.100/api/data"
+
+while true; do
+    clear
+    DATA=$(curl -s $URL)
+    
+    TIME=$(echo $DATA | jq -r '.time')
+    DATE=$(echo $DATA | jq -r '.date')
+    CITY=$(echo $DATA | jq -r '.location.city')
+    SUBUH=$(echo $DATA | jq -r '.prayerTimes.subuh')
+    DZUHUR=$(echo $DATA | jq -r '.prayerTimes.dzuhur')
+    ASHAR=$(echo $DATA | jq -r '.prayerTimes.ashar')
+    MAGHRIB=$(echo $DATA | jq -r '.prayerTimes.maghrib')
+    ISYA=$(echo $DATA | jq -r '.prayerTimes.isya')
+    
+    echo "=================================="
+    echo "🕌 PRAYER CLOCK - $CITY"
+    echo "=================================="
+    echo "⏰ $TIME  📅 $DATE"
+    echo "----------------------------------"
+    echo "Subuh   : $SUBUH"
+    echo "Dzuhur  : $DZUHUR"
+    echo "Ashar   : $ASHAR"
+    echo "Maghrib : $MAGHRIB"
+    echo "Isya    : $ISYA"
+    echo "=================================="
+    
+    sleep 1
+done
+```
+
+---
+
+## 🔌 Use Cases
+
+### 1. **Smart Home Integration**
+- Trigger adzan speaker via Home Assistant
+- Turn on lights before prayer time
+- Send notification to phone
+
+### 2. **Digital Signage**
+- Display prayer times on TV/Monitor
+- School/Office prayer schedule board
+- Mosque information display
+
+### 3. **Mobile App Backend**
+- Android/iOS app data source
+- React Native integration
+- Flutter app backend
+
+### 4. **IoT Projects**
+- LED Matrix display
+- ESP8266/ESP32 secondary display
+- Arduino-based prayer reminder
+
+### 5. **Web Dashboard**
+- Corporate intranet prayer times
+- Community website integration
+- Mosque website widget
+
+---
+
+## 📊 Response Fields Description
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `time` | string | Current time (HH:MM:SS) |
+| `date` | string | Current date (DD/MM/YYYY) |
+| `day` | string | Day name (Monday, Tuesday, etc) |
+| `timestamp` | number | Unix timestamp |
+| `prayerTimes.subuh` | string | Fajr prayer time (HH:MM) |
+| `prayerTimes.dzuhur` | string | Dhuhr prayer time (HH:MM) |
+| `prayerTimes.ashar` | string | Asr prayer time (HH:MM) |
+| `prayerTimes.maghrib` | string | Maghrib prayer time (HH:MM) |
+| `prayerTimes.isya` | string | Isha prayer time (HH:MM) |
+| `location.city` | string | Selected city name (display) |
+| `location.cityId` | string | City ID for API reference |
+| `device.wifiConnected` | boolean | WiFi connection status |
+| `device.wifiSSID` | string | Connected WiFi name |
+| `device.ip` | string | Device IP address (STA mode) |
+| `device.apIP` | string | Access Point IP (192.168.4.1) |
+| `device.ntpSynced` | boolean | NTP sync status |
+| `device.freeHeap` | number | Free RAM in bytes |
+
+---
+
+## ⚠️ Important Notes
+
+1. **CORS**: API mendukung Cross-Origin requests
+2. **Rate Limiting**: Tidak ada rate limit, tapi gunakan dengan bijak
+3. **Authentication**: Tidak ada autentikasi (local network only)
+4. **SSL/HTTPS**: Tidak support HTTPS (HTTP only)
+5. **Caching**: Tidak ada caching, data selalu real-time
+6. **Timeout**: Set timeout 5-10 detik untuk request yang aman
+
+---
+
+## 🆘 Troubleshooting
+
+**Cannot connect to API:**
+```bash
+# Check IP address
+ping 192.168.1.100
+
+# Test connection
+curl -v http://192.168.1.100/api/data
+
+# Check if device is on same network
+```
+
+**Empty/Invalid JSON:**
+- Pastikan WiFi terhubung
+- Cek apakah city sudah dipilih
+- Restart device jika perlu
+
+**Timeout errors:**
+- Tingkatkan timeout di code (misal: 10 detik)
+- Cek kualitas sinyal WiFi
+- Pastikan tidak ada firewall blocking
+
 ## 🤝 Contributing
 
 Contributions welcome! Please:
