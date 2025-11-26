@@ -201,13 +201,13 @@
                 <div class="grid-x grid-padding-x">
                     <div class="large-10 center cell">
                         <div class="callout">
-                            <h5>⏰ Time Synchronization</h5>
+                             <h5>⏰ Time Synchronization</h5>
                             <div class="grid-x grid-margin-x">
                                 
                                 <!-- Manual Sync -->
                                 <div class="large-6 medium-6 cell">
                                     <div class="info-box">
-                                        <h6>📱 Manual Sync from Browser</h6>
+                                         <h6>📱 Manual Sync from Browser</h6>
                                         <p style="font-size: 13px; margin: 10px 0; color: #666;">
                                             Sinkronkan waktu dari perangkat Anda
                                         </p>
@@ -236,7 +236,7 @@
                     </div>
                 </div>
 
-                <!-- ✅ SECTION BARU: City Selection -->
+                <!-- City Selection -->
                 <div class="grid-x grid-padding-x">
                     <div class="large-10 center cell">
                         <div class="callout">
@@ -271,6 +271,7 @@
                         </div>
                     </div>
                 </div>
+
 
                 <!-- Prayer Times Section -->
                 <div class="grid-x grid-padding-x">
@@ -345,6 +346,40 @@
     </div>
 
     <script>
+        // ================================
+        // SECURE FETCH - Auto menggunakan session cookie
+        // ================================
+        async function secureFetch(url, options = {}) {
+            // Public endpoint - no session needed
+            if (url.includes('/api/data')) {
+                return fetch(url, options);
+            }
+            
+            // Protected endpoints - browser automatically sends cookie
+            // credentials: 'same-origin' ensures cookie is sent
+            if (!options.credentials) {
+                options.credentials = 'same-origin';
+            }
+            
+            try {
+                const response = await fetch(url, options);
+                
+                // If 403, session might be invalid
+                if (response.status === 403) {
+                    showToast('🔄 Session expired - refreshing page...', 'warning');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                    throw new Error('Session expired');
+                }
+                
+                return response;
+            } catch (error) {
+                console.error('Fetch error:', error);
+                throw error;
+            }
+        }
+
         let isOnline = false;
         let cityList = [];
         let loadAttempts = 0;
@@ -370,13 +405,13 @@
             console.log(`📥 Loading cities (Attempt ${loadAttempts + 1}/${MAX_LOAD_ATTEMPTS})...`);
             
             const dropdown = document.getElementById('cityDropdown');
-            dropdown.innerHTML = '<option value="">⏳ Loading cities...</option>';
+            dropdown.innerHTML = '<option value="">â³ Loading cities...</option>';
             
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 15000);
                 
-                const response = await fetch('/getcities', {
+                const response = await secureFetch('/getcities', {
                     method: 'GET',
                     signal: controller.signal,
                     headers: {
@@ -391,24 +426,10 @@
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    throw new Error('Invalid content type: ' + contentType);
-                }
-                
-                const contentLength = response.headers.get('content-length');
-                if (contentLength) {
-                    console.log(`📦 File size: ${(contentLength / 1024).toFixed(2)} KB`);
-                }
-                
                 const data = await response.json();
                 
-                if (!Array.isArray(data)) {
-                    throw new Error('Invalid data format - not an array');
-                }
-                
-                if (data.length === 0) {
-                    throw new Error('Empty city list received');
+                if (!Array.isArray(data) || data.length === 0) {
+                    throw new Error('Invalid or empty city list');
                 }
                 
                 cityList = data;
@@ -473,7 +494,7 @@
             console.log('🔄 Loading current city selection...');
             
             try {
-                const response = await fetch('/getcityinfo', {
+                const response = await secureFetch('/getcityinfo', {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json'
@@ -485,7 +506,6 @@
                 }
                 
                 const data = await response.json();
-                console.log('📥 City info received:', data);
                 
                 const currentCitySpan = document.getElementById('currentCity');
                 const dropdown = document.getElementById('cityDropdown');
@@ -493,21 +513,11 @@
                 if (data.hasSelection && data.selectedCityApi) {
                     currentCitySpan.textContent = data.selectedCity || data.selectedCityApi;
                     currentCitySpan.style.color = '#1779ba';
-                    
                     dropdown.value = data.selectedCityApi;
-                    
-                    if (dropdown.value !== data.selectedCityApi) {
-                        console.warn('⚠️ City not found in dropdown:', data.selectedCityApi);
-                        console.log('Available options sample:', 
-                            Array.from(dropdown.options).slice(0, 5).map(o => o.value));
-                    } else {
-                        console.log('✅ Dropdown set to:', data.selectedCityApi);
-                    }
                 } else {
                     currentCitySpan.textContent = 'Belum dipilih';
                     currentCitySpan.style.color = '#999';
                     dropdown.selectedIndex = 0;
-                    console.log('ℹ️ No city selected');
                 }
                 
             } catch (error) {
@@ -531,7 +541,7 @@
             btn.textContent = '⏳ Menyimpan...';
             
             try {
-                const response = await fetch('/setcity', {
+                const response = await secureFetch('/setcity', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
@@ -551,7 +561,7 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('❌ Gagal menyimpan kota/Kabupaten', 'error');
+                 showToast('❌ Gagal menyimpan kota/Kabupaten', 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = originalText;
@@ -560,7 +570,7 @@
 
         async function loadSavedPrayerTimes() {
             try {
-                const response = await fetch('/getprayertimes');
+                const response = await secureFetch('/getprayertimes');
                 const data = await response.json();
                 
                 document.getElementById('subuhTime').textContent = data.subuh || '--:--';
@@ -575,14 +585,14 @@
 
         async function updateDeviceStatus() {
             try {
-                const response = await fetch('/devicestatus');
+                const response = await secureFetch('/devicestatus');
                 const data = await response.json();
                 
                 isOnline = data.connected === true;
                 
                 document.getElementById('wifiName').textContent = data.ssid || 'Tidak Terhubung';
                 document.getElementById('ipAddress').textContent = data.ip || '-';
-                document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Synced' : '❌ Not Synced';
+                 document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Synced' : '❌ Not Synced';
                 document.getElementById('currentTime').textContent = data.currentTime || '-';
                 
                 if (document.getElementById('ntpServerUsed')) {
@@ -605,7 +615,7 @@
                 document.getElementById('internetStatus').className = 'status-badge status-offline';
             }
         }
-
+        
         function setWiFi() {
             const ssid = document.getElementById('wifiSSID').value.trim();
             const password = document.getElementById('wifiPassword').value;
@@ -620,7 +630,7 @@
             btn.disabled = true;
             btn.textContent = '⏳ Menyimpan...';
 
-            fetch('/setwifi', {
+            secureFetch('/setwifi', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -674,7 +684,7 @@
             btn.disabled = true;
             btn.textContent = '⏳ Menyimpan...';
 
-            fetch('/setap', {
+            secureFetch('/setap', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -725,7 +735,7 @@
             btn.disabled = true;
             btn.textContent = '⏳ Syncing...';
 
-            fetch('/synctime', { 
+            secureFetch('/synctime', { 
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -802,14 +812,14 @@
             
             console.log('✅ Auto-refresh configured');
         });
-
+        
         console.log('%c🕌 Islamic Prayer Clock Web Interface', 'color: #667eea; font-size: 16px; font-weight: bold;');
         console.log('%c✓ Optimized City Loading', 'color: #3adb76;');
         console.log('%c✓ Retry Mechanism (3 attempts)', 'color: #3adb76;');
         console.log('%c✓ 15s timeout per request', 'color: #3adb76;');
         console.log('%c✓ Auto NTP Sync', 'color: #3adb76;');
         console.log('%c✓ Auto Prayer Times Update (midnight)', 'color: #3adb76;');
+        console.log('%c✓ Security: Token-based authentication', 'color: #ffae00;');
     </script>
-
 </body>
 </html>

@@ -198,6 +198,20 @@ enum WiFiState {
 };
 volatile WiFiState wifiState = WIFI_IDLE;
 
+// ================================
+// AUTO SESSION MANAGEMENT
+// ================================
+
+struct Session {
+    String token;
+    unsigned long expiry;
+    IPAddress clientIP;
+};
+
+const int MAX_SESSIONS = 5;
+Session activeSessions[MAX_SESSIONS];
+const unsigned long SESSION_DURATION = 3600000; // 1 hour
+
 // Forward Declarations
 void updateTimeDisplay();
 void updatePrayerDisplay();
@@ -232,9 +246,6 @@ void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 
 // ================================
 // TOUCH CALLBACK
-// ================================
-// ================================
-// TOUCH CALLBACK - OPTIMIZED
 // ================================
 void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data)
 {
@@ -279,16 +290,107 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data)
     touchPressed = false;
 }
 
+// Generate random session token
+String generateSessionToken() {
+    String token = "";
+    const char chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    
+    for (int i = 0; i < 32; i++) {
+        token += chars[random(0, sizeof(chars) - 1)];
+    }
+    
+    return token;
+}
+
+// Find or create session for client
+String getOrCreateSession(IPAddress clientIP) {
+    unsigned long now = millis();
+    
+    // Check if client already has valid session
+    for (int i = 0; i < MAX_SESSIONS; i++) {
+        if (activeSessions[i].clientIP == clientIP && 
+            activeSessions[i].expiry > now) {
+            // Refresh session
+            activeSessions[i].expiry = now + SESSION_DURATION;
+            return activeSessions[i].token;
+        }
+    }
+    
+    // Find empty slot or oldest session
+    int slot = -1;
+    unsigned long oldestExpiry = ULONG_MAX;
+    
+    for (int i = 0; i < MAX_SESSIONS; i++) {
+        if (activeSessions[i].token.length() == 0 || 
+            activeSessions[i].expiry < now) {
+            slot = i;
+            break;
+        }
+        if (activeSessions[i].expiry < oldestExpiry) {
+            oldestExpiry = activeSessions[i].expiry;
+            slot = i;
+        }
+    }
+    
+    // Create new session
+    if (slot >= 0) {
+        activeSessions[slot].token = generateSessionToken();
+        activeSessions[slot].expiry = now + SESSION_DURATION;
+        activeSessions[slot].clientIP = clientIP;
+        
+        Serial.printf("New session created for %s\n", clientIP.toString().c_str());
+        return activeSessions[slot].token;
+    }
+    
+    return "";
+}
+
+// Validate session token
+bool validateSession(AsyncWebServerRequest *request) {
+    unsigned long now = millis();
+    
+    // Get session token from cookie or header
+    String token = "";
+    
+    if (request->hasHeader("X-Session-Token")) {
+        token = request->getHeader("X-Session-Token")->value();
+    } else if (request->hasHeader("Cookie")) {
+        String cookies = request->getHeader("Cookie")->value();
+        int pos = cookies.indexOf("session=");
+        if (pos >= 0) {
+            int endPos = cookies.indexOf(";", pos);
+            if (endPos < 0) endPos = cookies.length();
+            token = cookies.substring(pos + 8, endPos);
+        }
+    }
+    
+    if (token.length() == 0) {
+        return false;
+    }
+    
+    // Validate token
+    for (int i = 0; i < MAX_SESSIONS; i++) {
+        if (activeSessions[i].token == token && 
+            activeSessions[i].expiry > now) {
+            // Refresh session
+            activeSessions[i].expiry = now + SESSION_DURATION;
+            return true;
+        }
+    }
+    
+    return false;
+}
+
 // ================================
 // LITTLEFS FUNCTIONS
 // ================================
 bool init_littlefs() {
-    Serial.println("💾 Initializing LittleFS...");
+    Serial.println("Initializing LittleFS...");
     if (!LittleFS.begin(true)) {
-        Serial.println("❌ LittleFS Mount Failed!");
+        Serial.println("LittleFS Mount Failed!");
         return false;
     }
-    Serial.println("✅ LittleFS Mounted");
+    Serial.println("LittleFS Mounted");
     return true;
 }
 
@@ -302,7 +404,7 @@ void loadWiFiCredentials() {
                 wifiConfig.routerSSID.trim();
                 wifiConfig.routerPassword.trim();
                 file.close();
-                Serial.println("✅ WiFi credentials loaded");
+                Serial.println("WiFi credentials loaded");
             }
         }
         if (LittleFS.exists("/ap_creds.txt")) {
@@ -332,14 +434,14 @@ void saveWiFiCredentials() {
             file.println(wifiConfig.routerPassword);
             file.flush();
             file.close();
-            Serial.println("✅ WiFi credentials saved");
+            Serial.println("WiFi credentials saved");
             
             vTaskDelay(pdMS_TO_TICKS(100));
             if (LittleFS.exists("/wifi_creds.txt")) {
-                Serial.println("✅ WiFi file verified");
+                Serial.println("WiFi file verified");
             }
         } else {
-            Serial.println("❌ Failed to open wifi_creds.txt for writing");
+            Serial.println("Failed to open wifi_creds.txt for writing");
         }
         xSemaphoreGive(settingsMutex);
     }
@@ -353,14 +455,14 @@ void saveAPCredentials() {
             file.println(wifiConfig.apPassword);
             file.flush();
             file.close();
-            Serial.println("✅ AP credentials saved");
+            Serial.println("AP credentials saved");
             
             vTaskDelay(pdMS_TO_TICKS(100));
             if (LittleFS.exists("/ap_creds.txt")) {
-                Serial.println("✅ AP file verified");
+                Serial.println("AP file verified");
             }
         } else {
-            Serial.println("❌ Failed to open ap_creds.txt for writing");
+            Serial.println("Failed to open ap_creds.txt for writing");
         }
         xSemaphoreGive(settingsMutex);
     }
@@ -379,7 +481,7 @@ void saveTimeToRTC() {
         
         rtc.adjust(dt);
         
-        Serial.println("💾 Time saved to RTC:");
+        Serial.println("Time saved to RTC:");
         Serial.printf("   %02d:%02d:%02d %02d/%02d/%04d\n",
                      dt.hour(), dt.minute(), dt.second(),
                      dt.day(), dt.month(), dt.year());
@@ -402,14 +504,14 @@ void savePrayerTimes() {
             file.println(prayerConfig.selectedCityName);
             file.flush();
             file.close();
-            Serial.println("✅ Prayer times saved");
+            Serial.println("Prayer times saved");
             
             vTaskDelay(pdMS_TO_TICKS(100));
             if (LittleFS.exists("/prayer_times.txt")) {
-                Serial.println("✅ Prayer times file verified");
+                Serial.println("Prayer times file verified");
             }
         } else {
-            Serial.println("❌ Failed to open prayer_times.txt for writing");
+            Serial.println("Failed to open prayer_times.txt for writing");
         }
         xSemaphoreGive(settingsMutex);
     }
@@ -436,7 +538,7 @@ void loadPrayerTimes() {
                 }
                 
                 file.close();
-                Serial.println("✅ Prayer times loaded");
+                Serial.println("Prayer times loaded");
                 Serial.println("  City: " + prayerConfig.selectedCityName);
             }
         }
@@ -455,7 +557,7 @@ void saveCitySelection() {
             file.println(prayerConfig.selectedCityName);
             file.flush();
             file.close();
-            Serial.println("✅ City selection saved");
+            Serial.println("City selection saved");
         }
         xSemaphoreGive(settingsMutex);
     }
@@ -473,12 +575,12 @@ void loadCitySelection() {
                 prayerConfig.selectedCity.trim();
                 prayerConfig.selectedCityName.trim();
                 file.close();
-                Serial.println("✅ City selection loaded: " + prayerConfig.selectedCityName);
+                Serial.println("City selection loaded: " + prayerConfig.selectedCityName);
             }
         } else {
             prayerConfig.selectedCity = "";
             prayerConfig.selectedCityName = "";
-            Serial.println("ℹ️ No city selection found");
+            Serial.println("No city selection found");
         }
         xSemaphoreGive(settingsMutex);
         
@@ -487,25 +589,25 @@ void loadCitySelection() {
 }
 
 bool initRTC() {
-    Serial.println("\n⏰ Initializing DS3231 RTC...");
+    Serial.println("\nInitializing DS3231 RTC...");
     
     Wire.begin(RTC_SDA, RTC_SCL);
     
     if (!rtc.begin(&Wire)) {
-        Serial.println("❌ DS3231 not found!");
+        Serial.println("DS3231 not found!");
         Serial.println("   Check wiring:");
-        Serial.println("   - SDA → GPIO21");
-        Serial.println("   - SCL → GPIO22");
-        Serial.println("   - VCC → 3.3V");
-        Serial.println("   - GND → GND");
+        Serial.println("   - SDA GPIO21");
+        Serial.println("   - SCL GPIO22");
+        Serial.println("   - VCC 3.3V");
+        Serial.println("   - GND GND");
         return false;
     }
     
-    Serial.println("✅ DS3231 detected!");
+    Serial.println("DS3231 detected!");
     
     // Cek apakah RTC kehilangan power
     if (rtc.lostPower()) {
-        Serial.println("⚠️ RTC lost power, needs time sync");
+        Serial.println("RTC lost power, needs time sync");
         return true;  // RTC ada tapi perlu sync
     }
     
@@ -514,7 +616,7 @@ bool initRTC() {
     
     // Validasi waktu RTC (harus > 2024)
     if (now.year() < 2024) {
-        Serial.println("⚠️ RTC time invalid, needs sync");
+        Serial.println("RTC time invalid, needs sync");
         return true;
     }
     
@@ -526,12 +628,12 @@ bool initRTC() {
         
         xSemaphoreGive(timeMutex);
         
-        Serial.println("✅ Time loaded from RTC:");
+        Serial.println("Time loaded from RTC:");
         Serial.printf("   %02d:%02d:%02d %02d/%02d/%04d\n",
                      now.hour(), now.minute(), now.second(),
                      now.day(), now.month(), now.year());
         
-        // ✅ PERBAIKAN: Cek apakah displayQueue sudah dibuat
+        // PERBAIKAN: Cek apakah displayQueue sudah dibuat
         if (displayQueue != NULL) {
             DisplayUpdate update;
             update.type = DisplayUpdate::TIME_UPDATE;
@@ -547,7 +649,7 @@ bool initRTC() {
 // ================================
 void getPrayerTimesByCity(String cityName) {
     if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("❌ WiFi not connected - keeping existing prayer times");
+        Serial.println("WiFi not connected - keeping existing prayer times");
         return;
     }
 
@@ -557,7 +659,7 @@ void getPrayerTimesByCity(String cityName) {
     String url = "http://api.aladhan.com/v1/timingsByCity?city=" + encodedCity + 
                  "&country=Indonesia&method=20";
     
-    Serial.println("\n🕌 Fetching prayer times...");
+    Serial.println("\nFetching prayer times...");
     Serial.println("   City: " + cityName);
     Serial.println("   Encoded: " + encodedCity);
     Serial.println("   URL: " + url);
@@ -590,23 +692,23 @@ void getPrayerTimesByCity(String cityName) {
             bool allValid = true;
             
             if (tempSubuh.length() != 5 || tempSubuh.indexOf(':') != 2) {
-                Serial.println("⚠️ Invalid Subuh time format");
+                Serial.println("Invalid Subuh time format");
                 allValid = false;
             }
             if (tempZuhur.length() != 5 || tempZuhur.indexOf(':') != 2) {
-                Serial.println("⚠️ Invalid Zuhur time format");
+                Serial.println("Invalid Zuhur time format");
                 allValid = false;
             }
             if (tempAsar.length() != 5 || tempAsar.indexOf(':') != 2) {
-                Serial.println("⚠️ Invalid Asar time format");
+                Serial.println("Invalid Asar time format");
                 allValid = false;
             }
             if (tempMaghrib.length() != 5 || tempMaghrib.indexOf(':') != 2) {
-                Serial.println("⚠️ Invalid Maghrib time format");
+                Serial.println("Invalid Maghrib time format");
                 allValid = false;
             }
             if (tempIsya.length() != 5 || tempIsya.indexOf(':') != 2) {
-                Serial.println("⚠️ Invalid Isya time format");
+                Serial.println("Invalid Isya time format");
                 allValid = false;
             }
             
@@ -617,7 +719,7 @@ void getPrayerTimesByCity(String cityName) {
                 prayerConfig.maghribTime = tempMaghrib;
                 prayerConfig.isyaTime = tempIsya;
                 
-                Serial.println("\n✅ Prayer times updated successfully:");
+                Serial.println("\nPrayer times updated successfully:");
                 Serial.println("   Subuh: " + prayerConfig.subuhTime);
                 Serial.println("   Dzuhur: " + prayerConfig.zuhurTime);
                 Serial.println("   Ashar: " + prayerConfig.asarTime);
@@ -630,16 +732,16 @@ void getPrayerTimesByCity(String cityName) {
                 update.type = DisplayUpdate::PRAYER_UPDATE;
                 xQueueSend(displayQueue, &update, 0);
             } else {
-                Serial.println("❌ Invalid prayer times data - keeping existing times");
+                Serial.println("Invalid prayer times data - keeping existing times");
             }
         } else {
-            Serial.print("❌ JSON parse error: ");
+            Serial.print("JSON parse error: ");
             Serial.println(error.c_str());
-            Serial.println("⚠️ Keeping existing prayer times");
+            Serial.println("Keeping existing prayer times");
         }
     } else {
-        Serial.printf("❌ HTTP request failed: %d\n", httpResponseCode);
-        Serial.println("⚠️ Keeping existing prayer times");
+        Serial.printf("HTTP request failed: %d\n", httpResponseCode);
+        Serial.println("Keeping existing prayer times");
         
         if (httpResponseCode < 0) {
             Serial.println("   Network error (timeout/connection failed)");
@@ -675,7 +777,7 @@ void uiTask(void *parameter) {
                 
                 if (prayerConfig.subuhTime.length() > 0) {
                     updatePrayerDisplay();
-                    Serial.println("✅ Initial prayer times displayed");
+                    Serial.println("Initial prayer times displayed");
                 }
             }
             
@@ -714,7 +816,7 @@ void wifiTask(void *parameter) {
             case WIFI_IDLE:
                 if (wifiConfig.routerSSID.length() > 0 && !wifiConfig.isConnected) {
                     if (xSemaphoreTake(wifiMutex, portMAX_DELAY) == pdTRUE) {
-                        Serial.println("🔄 Connecting to WiFi: " + wifiConfig.routerSSID);
+                        Serial.println("Connecting to WiFi: " + wifiConfig.routerSSID);
                         
                         WiFi.setTxPower(WIFI_POWER_19_5dBm);
                         
@@ -735,13 +837,13 @@ void wifiTask(void *parameter) {
                         wifiConfig.isConnected = true;
                         wifiConfig.localIP = WiFi.localIP();
                         wifiState = WIFI_CONNECTED;
-                        Serial.println("✅ WiFi Connected!");
+                        Serial.println("WiFi Connected!");
                         Serial.print("   IP: ");
                         Serial.println(wifiConfig.localIP);
                         xSemaphoreGive(wifiMutex);
                         
                         if (ntpTaskHandle != NULL) {
-                            Serial.println("⏰ Auto-triggering NTP sync...");
+                            Serial.println("Auto-triggering NTP sync...");
                             xTaskNotifyGive(ntpTaskHandle);
                         }
                     }
@@ -753,8 +855,8 @@ void wifiTask(void *parameter) {
                         WiFi.disconnect(true);
                         WiFi.mode(WIFI_AP);
                         
-                        Serial.println("❌ WiFi connection timeout");
-                        Serial.println("🔥 WiFi disconnected to prevent overheating");
+                        Serial.println("WiFi connection timeout");
+                        Serial.println("ðŸ”¥ WiFi disconnected to prevent overheating");
                     }
                 }
                 
@@ -769,10 +871,10 @@ void wifiTask(void *parameter) {
                     esp_task_wdt_reset();
                     
                     if (prayerConfig.selectedCity.length() > 0) {
-                        Serial.println("🕌 Auto-updating prayer times for: " + prayerConfig.selectedCityName);
+                        Serial.println("Auto-updating prayer times for: " + prayerConfig.selectedCityName);
                         getPrayerTimesByCity(prayerConfig.selectedCity);
                     } else {
-                        Serial.println("ℹ️ No city selected - please select via web interface");
+                        Serial.println("No city selected - please select via web interface");
                     }
                     
                     autoUpdateDone = true;
@@ -786,7 +888,7 @@ void wifiTask(void *parameter) {
                         
                         WiFi.mode(WIFI_AP_STA);
                         
-                        Serial.println("⚠️ WiFi disconnected!");
+                        Serial.println("WiFi disconnected!");
                         xSemaphoreGive(wifiMutex);
                     }
                 }
@@ -794,7 +896,7 @@ void wifiTask(void *parameter) {
                 break;
                 
             case WIFI_FAILED:
-                Serial.println("⏳ Waiting 60s before retry...");
+                Serial.println("Waiting 60s before retry...");
                 
                 WiFi.disconnect(true);
                 WiFi.mode(WIFI_AP);
@@ -817,14 +919,14 @@ void ntpTask(void *parameter) {
             continue;
         }
         
-        Serial.println("🔄 Auto NTP Sync...");
+        Serial.println("Auto NTP Sync...");
 
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
             bool syncSuccess = false;
             int serverIndex = 0;
             
             while (!syncSuccess && serverIndex < NTP_SERVER_COUNT) {
-                Serial.printf("⏰ Trying: %s\n", ntpServers[serverIndex]);
+                Serial.printf("Trying: %s\n", ntpServers[serverIndex]);
                 
                 timeClient.setPoolServerName(ntpServers[serverIndex]);
                 timeClient.setTimeOffset(25200);
@@ -849,14 +951,14 @@ void ntpTask(void *parameter) {
                     // **TAMBAHAN BARU: Save ke RTC setelah NTP sync**
                     if (rtcAvailable) {
                         saveTimeToRTC();
-                        Serial.println("✅ NTP time saved to RTC");
+                        Serial.println("NTP time saved to RTC");
                     }
                     
                     DisplayUpdate update;
                     update.type = DisplayUpdate::TIME_UPDATE;
                     xQueueSend(displayQueue, &update, 0);
                     
-                    Serial.printf("✅ NTP Success with %s!\n", ntpServers[serverIndex]);
+                    Serial.printf("NTP Success with %s!\n", ntpServers[serverIndex]);
                     break;
                 }
                 
@@ -865,7 +967,7 @@ void ntpTask(void *parameter) {
             }
             
             if (!syncSuccess) {
-                Serial.println("❌ All NTP servers failed!");
+                Serial.println("All NTP servers failed!");
             }
             
             xSemaphoreGive(timeMutex);
@@ -876,7 +978,7 @@ void ntpTask(void *parameter) {
 void webTask(void *parameter) {
     setupServerRoutes();
     server.begin();
-    Serial.println("✅ Web server started");
+    Serial.println("Web server started");
     
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -909,7 +1011,7 @@ void prayerTask(void *parameter) {
             xSemaphoreGive(timeMutex);
             
             if (shouldUpdate) {
-                Serial.println("🕌 Midnight prayer times update for: " + prayerConfig.selectedCityName);
+                Serial.println("Midnight prayer times update for: " + prayerConfig.selectedCityName);
                 getPrayerTimesByCity(prayerConfig.selectedCity);
                 hasUpdatedToday = true;
             }
@@ -934,7 +1036,7 @@ void rtcSyncTask(void *parameter) {
                     timeConfig.currentTime = rtcUnix;
                     setTime(rtcUnix);
                     
-                    Serial.println("🔄 System time synced from RTC");
+                    Serial.println("System time synced from RTC");
                     
                     DisplayUpdate update;
                     update.type = DisplayUpdate::TIME_UPDATE;
@@ -969,7 +1071,7 @@ void clockTickTask(void *parameter) {
             if (autoSyncCounter >= 3600) {
                 autoSyncCounter = 0;
                 if (ntpTaskHandle != NULL) {
-                    Serial.println("⏰ Auto NTP sync (hourly)");
+                    Serial.println("Auto NTP sync (hourly)");
                     xTaskNotifyGive(ntpTaskHandle);
                 }
             }
@@ -1034,14 +1136,14 @@ void updatePrayerDisplay() {
 void delayedRestart(void *parameter) {
     int delaySeconds = *((int*)parameter);
     
-    Serial.printf("⏱️ Restarting in %d seconds...\n", delaySeconds);
+    Serial.printf("Restarting in %d seconds...\n", delaySeconds);
     
     for (int i = delaySeconds; i > 0; i--) {
         Serial.printf("   Restart in %d...\n", i);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
     
-    Serial.println("🔄 Restarting NOW!");
+    Serial.println("Restarting NOW!");
     ESP.restart();
     
     vTaskDelete(NULL);
@@ -1060,9 +1162,6 @@ void scheduleRestart(int delaySeconds) {
 }
 
 // ================================
-// WEB SERVER ROUTES - OPTIMIZED FOR LARGE FILES
-// ================================
-// ================================
 // WEB SERVER ROUTES - COMPLETE
 // ================================
 void setupServerRoutes() {
@@ -1070,7 +1169,18 @@ void setupServerRoutes() {
     // 1. SERVE HTML & CSS FILES
     // ================================
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-        request->send(LittleFS, "/index.html", "text/html");
+        IPAddress clientIP = request->client()->remoteIP();
+        String sessionToken = getOrCreateSession(clientIP);
+        
+        AsyncWebServerResponse *response = request->beginResponse(
+            LittleFS, "/index.html", "text/html"
+        );
+        
+        // Set session cookie (HttpOnly for security)
+        response->addHeader("Set-Cookie", 
+            "session=" + sessionToken + "; Max-Age=3600; Path=/; SameSite=Strict");
+        
+        request->send(response);
     });
     
     server.on("/assets/css/foundation.css", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -1081,6 +1191,12 @@ void setupServerRoutes() {
     // 2. DEVICE STATUS
     // ================================
     server.on("/devicestatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (!validateSession(request)) {
+            Serial.println("Unauthorized access to /devicestatus");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            return;
+        }
+
         char timeStr[20];
         sprintf(timeStr, "%02d:%02d:%02d",
                 hour(timeConfig.currentTime),
@@ -1116,6 +1232,12 @@ void setupServerRoutes() {
     // 3. PRAYER TIMES
     // ================================
     server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest *request){
+        if (!validateSession(request)) {
+            Serial.println("Unauthorized access to /getprayertimes");
+            request->send(403, "text/plain", "Forbidden");
+            return;
+        }
+
         String json = "{";
         json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
         json += "\"dzuhur\":\"" + prayerConfig.zuhurTime + "\",";
@@ -1130,10 +1252,16 @@ void setupServerRoutes() {
     // 4. CITY SELECTION ENDPOINTS
     // ================================
     server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request){
-        Serial.println("📥 GET /getcities");
+        if (!validateSession(request)) {
+            Serial.println("Unauthorized access to /getcities");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            return;
+        }
+
+        Serial.println("GET /getcities");
         
         if (!LittleFS.exists("/cities.json")) {
-            Serial.println("❌ cities.json not found");
+            Serial.println("cities.json not found");
             request->send(404, "application/json", "[]");
             return;
         }
@@ -1152,14 +1280,20 @@ void setupServerRoutes() {
         
         request->send(response);
         
-        Serial.println("✅ cities.json sent");
+        Serial.println("cities.json sent");
     });
 
     server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request){
+        if (!validateSession(request)) {
+            Serial.println("Unauthorized access to /setcity");
+            request->send(403, "text/plain", "Forbidden");
+            return;
+        }
+
         if (request->hasParam("city", true)) {
             String cityName = request->getParam("city", true)->value();
             
-            Serial.println("\n📥 POST /setcity received: " + cityName);
+            Serial.println("\nPOST /setcity received: " + cityName);
             
             if (cityName.length() == 0 || cityName.length() > 50) {
                 request->send(400, "text/plain", "Invalid city name");
@@ -1186,7 +1320,7 @@ void setupServerRoutes() {
                                 if (displayEnd > displayStart) {
                                     displayName = line.substring(displayStart, displayEnd);
                                     found = true;
-                                    Serial.println("✅ Found city: " + displayName);
+                                    Serial.println("Found city: " + displayName);
                                     break;
                                 }
                             }
@@ -1196,7 +1330,7 @@ void setupServerRoutes() {
                     f.close();
                     
                     if (!found) {
-                        Serial.println("⚠️ City not found in cities.json, using API name");
+                        Serial.println("City not found in cities.json, using API name");
                     }
                 }
             }
@@ -1205,13 +1339,13 @@ void setupServerRoutes() {
             prayerConfig.selectedCityName = displayName;
             saveCitySelection();
             
-            Serial.println("✅ City saved: " + displayName + " (" + cityName + ")");
+            Serial.println("City saved: " + displayName + " (" + cityName + ")");
             
             if (WiFi.status() == WL_CONNECTED) {
-                Serial.println("🔄 Fetching prayer times for: " + cityName);
+                Serial.println("Fetching prayer times for: " + cityName);
                 getPrayerTimesByCity(cityName);
             } else {
-                Serial.println("⚠️ WiFi not connected, prayer times will update when online");
+                Serial.println("WiFi not connected, prayer times will update when online");
             }
             
             request->send(200, "text/plain", "OK");
@@ -1221,6 +1355,12 @@ void setupServerRoutes() {
     });
 
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request){
+        if (!validateSession(request)) {
+            Serial.println("Unauthorized access to /getcityinfo");
+            request->send(403, "text/plain", "Forbidden");
+            return;
+        }
+
         String json = "{";
         
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
@@ -1240,7 +1380,7 @@ void setupServerRoutes() {
         
         json += "}";
         
-        Serial.println("📤 GET /getcityinfo: " + json);
+        Serial.println("GET /getcityinfo: " + json);
         request->send(200, "application/json", json);
     });
 
@@ -1248,13 +1388,19 @@ void setupServerRoutes() {
     // 5. WIFI SETTINGS
     // ================================
     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
+        if (!validateSession(request)) {
+            Serial.println("Unauthorized access to /setwifi");
+            request->send(403, "text/plain", "Forbidden");
+            return;
+        }
+
         if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
             wifiConfig.routerSSID = request->getParam("ssid", true)->value();
             wifiConfig.routerPassword = request->getParam("password", true)->value();
             
             saveWiFiCredentials();
             
-            Serial.println("✅ WiFi credentials saved successfully");
+            Serial.println("WiFi credentials saved successfully");
             
             request->send(200, "text/plain", "OK");
             
@@ -1268,6 +1414,12 @@ void setupServerRoutes() {
     // 6. ACCESS POINT SETTINGS
     // ================================
     server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
+        if (!validateSession(request)) {
+            Serial.println("Unauthorized access to /setap");
+            request->send(403, "text/plain", "Forbidden");
+            return;
+        }
+
         if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
             String ssid = request->getParam("ssid", true)->value();
             String pass = request->getParam("password", true)->value();
@@ -1281,7 +1433,7 @@ void setupServerRoutes() {
             pass.toCharArray(wifiConfig.apPassword, 65);
             saveAPCredentials();
             
-            Serial.println("✅ AP Settings berhasil disimpan");
+            Serial.println("AP Settings berhasil disimpan");
             
             request->send(200, "text/plain", "OK");
             
@@ -1295,6 +1447,12 @@ void setupServerRoutes() {
     // 7. TIME SYNCHRONIZATION
     // ================================
     server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest *request) {
+        if (!validateSession(request)) {
+            Serial.println("Unauthorized access to /synctime");
+            request->send(403, "text/plain", "Forbidden");
+            return;
+        }
+
         if (request->hasParam("y", true) && request->hasParam("m", true) &&
             request->hasParam("d", true) && request->hasParam("h", true) &&
             request->hasParam("i", true) && request->hasParam("s", true)) {
@@ -1314,7 +1472,7 @@ void setupServerRoutes() {
                 // Save to RTC if available
                 if (rtcAvailable) {
                     saveTimeToRTC();
-                    Serial.println("💾 Browser time saved to RTC");
+                    Serial.println("Browser time saved to RTC");
                 }
                 
                 DisplayUpdate update;
@@ -1323,7 +1481,7 @@ void setupServerRoutes() {
                 
                 xSemaphoreGive(timeMutex);
                 
-                Serial.printf("⏰ Time synced from browser: %02d:%02d:%02d %02d/%02d/%04d\n", h, i, s, d, m, y);
+                Serial.printf("Time synced from browser: %02d:%02d:%02d %02d/%02d/%04d\n", h, i, s, d, m, y);
             }
 
             request->send(200, "text/plain", "Waktu berhasil di-sync!");
@@ -1396,7 +1554,7 @@ void setupServerRoutes() {
         
         json += "}";
         
-        Serial.println("📤 API /api/data requested");
+        Serial.println("API /api/data requested");
         
         request->send(200, "application/json", json);
     });
@@ -1405,26 +1563,32 @@ void setupServerRoutes() {
     // 9. FACTORY RESET
     // ================================
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
-        Serial.println("\n⚠️ Factory reset requested from web interface...");
+        if (!validateSession(request)) {
+            Serial.println("Unauthorized access to /reset");
+            request->send(403, "text/plain", "Forbidden");
+            return;
+        }
+
+        Serial.println("\nFactory reset requested from web interface...");
         
         if (LittleFS.exists("/wifi_creds.txt")) {
             LittleFS.remove("/wifi_creds.txt");
-            Serial.println("✅ WiFi creds deleted");
+            Serial.println("WiFi creds deleted");
         }
         
         if (LittleFS.exists("/prayer_times.txt")) {
             LittleFS.remove("/prayer_times.txt");
-            Serial.println("✅ Prayer times deleted");
+            Serial.println("Prayer times deleted");
         }
         
         if (LittleFS.exists("/ap_creds.txt")) {
             LittleFS.remove("/ap_creds.txt");
-            Serial.println("✅ AP creds deleted");
+            Serial.println("AP creds deleted");
         }
         
         if (LittleFS.exists("/city_selection.txt")) {
             LittleFS.remove("/city_selection.txt");
-            Serial.println("✅ City selection deleted");
+            Serial.println("City selection deleted");
         }
         
         if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
@@ -1450,7 +1614,7 @@ void setupServerRoutes() {
         
         WiFi.disconnect(true);
         
-        Serial.println("✅ All settings cleared");
+        Serial.println("All settings cleared");
         
         request->send(200, "text/plain", "OK");
         
@@ -1469,9 +1633,6 @@ void setupServerRoutes() {
 // ================================
 // SETUP - ESP32 CORE 3.x COMPATIBLE
 // ================================
-// ================================
-// SETUP - ESP32 CORE 3.x COMPATIBLE
-// ================================
 void setup()
 {
     Serial.begin(115200);
@@ -1479,7 +1640,7 @@ void setup()
 
     Serial.println("\n\n");
     Serial.println("========================================");
-    Serial.println("   🕌 ESP32 Islamic Prayer Clock");
+    Serial.println("   ESP32 Islamic Prayer Clock");
     Serial.println("   LVGL 9.2.0 + FreeRTOS");
     Serial.println("   MANUAL CITY SELECTION");
     Serial.println("   VERSION 2.0 - CITY SELECTOR");
@@ -1509,9 +1670,9 @@ void setup()
     // ================================
     rtcAvailable = initRTC();
     if (rtcAvailable) {
-        Serial.println("✅ RTC DS3231 module ready");
+        Serial.println("RTC DS3231 module ready");
     } else {
-        Serial.println("⚠️ Running without RTC (will lose time on power off)");
+        Serial.println("Running without RTC (will lose time on power off)");
     }
     
     // ================================
@@ -1519,7 +1680,7 @@ void setup()
     // ================================
     ledcAttach(TFT_BL, TFT_BL_FREQ, TFT_BL_RESOLUTION);
     ledcWrite(TFT_BL, TFT_BL_BRIGHTNESS);
-    Serial.printf("✅ Backlight PWM: %d/255 (~%d%%)\n", TFT_BL_BRIGHTNESS, (TFT_BL_BRIGHTNESS * 100) / 255);
+    Serial.printf("Backlight PWM: %d/255 (~%d%%)\n", TFT_BL_BRIGHTNESS, (TFT_BL_BRIGHTNESS * 100) / 255);
     
     pinMode(TOUCH_IRQ, INPUT_PULLUP);
     
@@ -1563,13 +1724,13 @@ void setup()
     WiFi.setSleep(true);
     esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
 
-    Serial.println("✅ WiFi Balanced Mode:");
+    Serial.println("WiFi Balanced Mode:");
     Serial.println("   - Sleep: Enabled (Anti-Overheat)");
     Serial.println("   - Latency: ~3ms (Tidak terasa)");
-    Serial.println("   - Temperature: -10°C cooler");
+    Serial.println("   - Temperature: -10Â°C cooler");
     
     WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
-    Serial.printf("✅ AP Started: %s\n", wifiConfig.apSSID);
+    Serial.printf("AP Started: %s\n", wifiConfig.apSSID);
     Serial.printf("   Password: %s\n", wifiConfig.apPassword);
     Serial.print("   AP IP: ");
     Serial.println(WiFi.softAPIP());
@@ -1585,8 +1746,8 @@ void setup()
     // DISPLAY LOADED CITY & PRAYER TIMES
     // ================================
     if (prayerConfig.selectedCity.length() > 0) {
-        Serial.println("\n🏙️ Selected City: " + prayerConfig.selectedCityName);
-        Serial.println("\n📋 Loaded Prayer Times:");
+        Serial.println("\nSelected City: " + prayerConfig.selectedCityName);
+        Serial.println("\nðŸ“‹ Loaded Prayer Times:");
         Serial.println("   City: " + prayerConfig.selectedCityName);
         Serial.println("   Subuh: " + prayerConfig.subuhTime);
         Serial.println("   Dzuhur: " + prayerConfig.zuhurTime);
@@ -1598,14 +1759,14 @@ void setup()
         update.type = DisplayUpdate::PRAYER_UPDATE;
         xQueueSend(displayQueue, &update, 0);
     } else {
-        Serial.println("\nℹ️ No city selected");
+        Serial.println("\nNo city selected");
         Serial.println("   Please select city via web interface");
     }
 
     // ================================
     // WATCHDOG CONFIGURATION
     // ================================
-    Serial.println("\n🚀 Starting FreeRTOS Tasks...");
+    Serial.println("\nStarting FreeRTOS Tasks...");
     
     esp_task_wdt_deinit();
     
@@ -1617,9 +1778,9 @@ void setup()
     
     esp_err_t wdt_err = esp_task_wdt_init(&wdt_config);
     if (wdt_err == ESP_OK) {
-        Serial.println("✅ Watchdog configured (60s timeout)");
+        Serial.println("Watchdog configured (60s timeout)");
     } else {
-        Serial.printf("⚠️ Watchdog init error: %s\n", esp_err_to_name(wdt_err));
+        Serial.printf("Watchdog init error: %s\n", esp_err_to_name(wdt_err));
     }
     
     // ================================
@@ -1698,7 +1859,7 @@ void setup()
             &rtcTaskHandle,
             0  // Core 0
         );
-        Serial.println("✅ RTC Sync task started");
+        Serial.println("RTC Sync task started");
     }
     
     vTaskDelay(pdMS_TO_TICKS(500));
@@ -1715,20 +1876,20 @@ void setup()
         Serial.println("   Web task registered to WDT");
     }
     
-    Serial.println("✅ All tasks started");
+    Serial.println("All tasks started");
     
     // ================================
     // STARTUP COMPLETE
     // ================================
     Serial.println("\n========================================");
-    Serial.println("🎉 System Ready!");
-    Serial.println("🏙️ MANUAL CITY SELECTION MODE");
+    Serial.println("System Ready!");
+    Serial.println("MANUAL CITY SELECTION MODE");
     Serial.println("========================================\n");
     
     if (wifiConfig.routerSSID.length() > 0) {
-        Serial.println("💡 WiFi configured, will auto-connect...");
+        Serial.println("WiFi configured, will auto-connect...");
     } else {
-        Serial.println("💡 Connect to AP and configure WiFi");
+        Serial.println("Connect to AP and configure WiFi");
         Serial.println("   1. Connect to: " + String(wifiConfig.apSSID));
         Serial.println("   2. Open browser: http://192.168.4.1");
         Serial.println("   3. Set WiFi credentials");
@@ -1737,7 +1898,17 @@ void setup()
     }
     
     if (prayerConfig.selectedCity.length() == 0) {
-        Serial.println("\n⚠️ REMINDER: Please select a city via web interface");
+        Serial.println("\nREMINDER: Please select a city via web interface");
+    }
+
+    // Seed random generator for session tokens
+    randomSeed(analogRead(0) + millis());
+    
+    // Initialize sessions
+    for (int i = 0; i < MAX_SESSIONS; i++) {
+        activeSessions[i].token = "";
+        activeSessions[i].expiry = 0;
+        activeSessions[i].clientIP = IPAddress(0, 0, 0, 0);
     }
 }
 
