@@ -833,28 +833,15 @@ curl -v http://192.168.1.100/api/data
 - Cek kualitas sinyal WiFi
 - Pastikan tidak ada firewall blocking
 
-## 🤝 Contributing
-
-Contributions welcome! Please:
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
-
 ## 📋 TODO
 
-- [ ] HTTPS support
+- [ ] HTTP support
 - [ ] OTA updates
 - [ ] Adhan sound/notification
 - [ ] Hijri calendar
 - [ ] Qibla direction
 - [ ] Dark/Light theme
 - [ ] Manual prayer times refresh button
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file
 
 ## 🙏 Credits
 
@@ -863,10 +850,6 @@ MIT License - see [LICENSE](LICENSE) file
 - [TFT_eSPI](https://github.com/Bodmer/TFT_eSPI) - Display driver
 - [RTClib](https://github.com/adafruit/RTClib) - RTC driver
 
-## 💝 Support
-
-If this project helps you, please give it a ⭐ on GitHub!
-
 ---
 
-**Made with ❤️ for the Muslim Community**
+**Made with ❤️ for the GONIT Technology**
