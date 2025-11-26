@@ -268,8 +268,6 @@ esp32-prayer-clock/
 └── README.md
 ```
 
-## 📝 API Reference
-
 # 📡 REST API - IoT Integration
 
 ## 🎯 Endpoint: `/api/data`
