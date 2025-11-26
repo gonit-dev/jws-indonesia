@@ -1062,6 +1062,9 @@ void scheduleRestart(int delaySeconds) {
 // ================================
 // WEB SERVER ROUTES - OPTIMIZED FOR LARGE FILES
 // ================================
+// ================================
+// WEB SERVER ROUTES - COMPLETE
+// ================================
 void setupServerRoutes() {
     // ================================
     // 1. SERVE HTML & CSS FILES
@@ -1124,7 +1127,7 @@ void setupServerRoutes() {
     });
 
     // ================================
-    // 4. CITY SELECTION ENDPOINTS - FIXED!
+    // 4. CITY SELECTION ENDPOINTS
     // ================================
     server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request){
         Serial.println("📥 GET /getcities");
@@ -1308,7 +1311,7 @@ void setupServerRoutes() {
                 timeConfig.currentTime = now(); 
                 timeConfig.ntpSynced = true;
                 
-                // **TAMBAHAN BARU: Save ke RTC**
+                // Save to RTC if available
                 if (rtcAvailable) {
                     saveTimeToRTC();
                     Serial.println("💾 Browser time saved to RTC");
@@ -1330,7 +1333,76 @@ void setupServerRoutes() {
     });
 
     // ================================
-    // 8. FACTORY RESET
+    // 8. API ENDPOINT - FULL DATA JSON
+    // ================================
+    server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String json = "{";
+        
+        // Time data
+        if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            char timeStr[10], dateStr[12], dayStr[15];
+            
+            sprintf(timeStr, "%02d:%02d:%02d",
+                    hour(timeConfig.currentTime),
+                    minute(timeConfig.currentTime),
+                    second(timeConfig.currentTime));
+            
+            sprintf(dateStr, "%02d/%02d/%04d",
+                    day(timeConfig.currentTime),
+                    month(timeConfig.currentTime),
+                    year(timeConfig.currentTime));
+            
+            // Day of week
+            const char* dayNames[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+            int dayOfWeek = weekday(timeConfig.currentTime) - 1;
+            strcpy(dayStr, dayNames[dayOfWeek]);
+            
+            json += "\"time\":\"" + String(timeStr) + "\",";
+            json += "\"date\":\"" + String(dateStr) + "\",";
+            json += "\"day\":\"" + String(dayStr) + "\",";
+            json += "\"timestamp\":" + String(timeConfig.currentTime) + ",";
+            
+            xSemaphoreGive(timeMutex);
+        }
+        
+        // Prayer times
+        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            json += "\"prayerTimes\":{";
+            json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
+            json += "\"dzuhur\":\"" + prayerConfig.zuhurTime + "\",";
+            json += "\"ashar\":\"" + prayerConfig.asarTime + "\",";
+            json += "\"maghrib\":\"" + prayerConfig.maghribTime + "\",";
+            json += "\"isya\":\"" + prayerConfig.isyaTime + "\"";
+            json += "},";
+            
+            // Location
+            json += "\"location\":{";
+            json += "\"city\":\"" + prayerConfig.selectedCityName + "\",";
+            json += "\"cityId\":\"" + prayerConfig.selectedCity + "\"";
+            json += "},";
+            
+            xSemaphoreGive(settingsMutex);
+        }
+        
+        // Device info
+        json += "\"device\":{";
+        json += "\"wifiConnected\":" + String((WiFi.status() == WL_CONNECTED && wifiConfig.isConnected) ? "true" : "false") + ",";
+        json += "\"wifiSSID\":\"" + String(WiFi.SSID()) + "\",";
+        json += "\"ip\":\"" + wifiConfig.localIP.toString() + "\",";
+        json += "\"apIP\":\"" + WiFi.softAPIP().toString() + "\",";
+        json += "\"ntpSynced\":" + String(timeConfig.ntpSynced ? "true" : "false") + ",";
+        json += "\"freeHeap\":" + String(ESP.getFreeHeap());
+        json += "}";
+        
+        json += "}";
+        
+        Serial.println("📤 API /api/data requested");
+        
+        request->send(200, "application/json", json);
+    });
+
+    // ================================
+    // 9. FACTORY RESET
     // ================================
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
         Serial.println("\n⚠️ Factory reset requested from web interface...");
@@ -1386,7 +1458,7 @@ void setupServerRoutes() {
     });
 
     // ================================
-    // 9. 404 NOT FOUND HANDLER
+    // 10. 404 NOT FOUND HANDLER
     // ================================
     server.onNotFound([](AsyncWebServerRequest *request){
         Serial.printf("404: %s\n", request->url().c_str());
