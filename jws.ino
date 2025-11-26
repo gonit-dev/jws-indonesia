@@ -1614,7 +1614,7 @@ void setup()
     );
     
     // ================================
-    // RTC SYNC TASK - TAMBAHAN BARU!
+    // RTC SYNC TASK
     // ================================
     if (rtcAvailable) {
         xTaskCreatePinnedToCore(
