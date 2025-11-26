@@ -707,37 +707,6 @@ while true; do
 done
 ```
 
----
-
-## 🔌 Use Cases
-
-### 1. **Smart Home Integration**
-- Trigger adzan speaker via Home Assistant
-- Turn on lights before prayer time
-- Send notification to phone
-
-### 2. **Digital Signage**
-- Display prayer times on TV/Monitor
-- School/Office prayer schedule board
-- Mosque information display
-
-### 3. **Mobile App Backend**
-- Android/iOS app data source
-- React Native integration
-- Flutter app backend
-
-### 4. **IoT Projects**
-- LED Matrix display
-- ESP8266/ESP32 secondary display
-- Arduino-based prayer reminder
-
-### 5. **Web Dashboard**
-- Corporate intranet prayer times
-- Community website integration
-- Mosque website widget
-
----
-
 ## 📊 Response Fields Description
 
 | Field | Type | Description |
