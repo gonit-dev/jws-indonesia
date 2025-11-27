@@ -765,6 +765,7 @@ void uiTask(void *parameter) {
     const TickType_t xFrequency = pdMS_TO_TICKS(50);
     
     static bool initialDisplayDone = false;
+    static bool uiShown = false;
     
     while (true) {
         if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(20)) == pdTRUE) {
@@ -773,11 +774,19 @@ void uiTask(void *parameter) {
             if (!initialDisplayDone && objects.subuh_time != NULL) {
                 initialDisplayDone = true;
                 
+                // Update data dulu
                 updateCityDisplay();
                 
                 if (prayerConfig.subuhTime.length() > 0) {
                     updatePrayerDisplay();
                     Serial.println("Initial prayer times displayed");
+                }
+                
+                // **BARU TAMPILKAN UI SETELAH DATA SIAP**
+                if (!uiShown) {
+                    showAllUIElements();
+                    uiShown = true;
+                    Serial.println("UI elements shown");
                 }
             }
             
@@ -1080,10 +1089,34 @@ void clockTickTask(void *parameter) {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
-
 // ================================
 // HELPER FUNCTIONS
 // ================================
+void hideAllUIElements() {
+    // Sembunyikan semua elemen UI saat boot
+    if (objects.date_time) lv_obj_add_flag(objects.date_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.city_time) lv_obj_add_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.subuh_time) lv_obj_add_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.zuhur_time) lv_obj_add_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.ashar_time) lv_obj_add_flag(objects.ashar_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.maghrib_time) lv_obj_add_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.isya_time) lv_obj_add_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
+    
+    // Sembunyikan label lainnya jika ada (misal: "Subuh", "Dzuhur", dll)
+    // Sesuaikan dengan object names dari EEZ Studio
+}
+
+void showAllUIElements() {
+    // Tampilkan kembali semua elemen UI
+    if (objects.date_time) lv_obj_clear_flag(objects.date_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.city_time) lv_obj_clear_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.subuh_time) lv_obj_clear_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.zuhur_time) lv_obj_clear_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.ashar_time) lv_obj_clear_flag(objects.ashar_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.maghrib_time) lv_obj_clear_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.isya_time) lv_obj_clear_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
+}
+
 void updateCityDisplay() {
     if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
         String displayText = "--";
@@ -1725,6 +1758,12 @@ void setup()
     // ================================
     ui_init();
     Serial.println("EEZ UI initialized");
+
+    // ================================
+    // SEMBUNYIKAN UI ELEMENTS DULU
+    // ================================
+    hideAllUIElements();
+    Serial.println("UI elements hidden");
     
     // ================================
     // FORCE RENDER BLACK SCREEN
