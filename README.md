@@ -765,16 +765,6 @@ curl -v http://192.168.1.100/api/data
 - Cek kualitas sinyal WiFi
 - Pastikan tidak ada firewall blocking
 
-## 📋 TODO
-
-- [ ] HTTP support
-- [ ] OTA updates
-- [ ] Adhan sound/notification
-- [ ] Hijri calendar
-- [ ] Qibla direction
-- [ ] Dark/Light theme
-- [ ] Manual prayer times refresh button
-
 ## 🙏 Credits
 
 - [LVGL](https://lvgl.io/) - GUI library
