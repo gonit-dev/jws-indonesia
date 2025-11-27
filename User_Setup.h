@@ -20,7 +20,7 @@
 #define TFT_BACKLIGHT_ON HIGH  // Level untuk menyalakan backlight
 
 // Kecepatan SPI - MULAI DENGAN KECEPATAN RENDAH
-#define SPI_FREQUENCY  27000000  // 27MHz (lebih stabil)
+#define SPI_FREQUENCY  70000000
 // Jika masih tidak bekerja, coba: #define SPI_FREQUENCY  10000000
 #define SPI_READ_FREQUENCY  20000000
 #define SPI_TOUCH_FREQUENCY  2500000

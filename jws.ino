@@ -856,7 +856,7 @@ void wifiTask(void *parameter) {
                         WiFi.mode(WIFI_AP);
                         
                         Serial.println("WiFi connection timeout");
-                        Serial.println("ðŸ”¥ WiFi disconnected to prevent overheating");
+                        Serial.println("Ã°Å¸â€Â¥ WiFi disconnected to prevent overheating");
                     }
                 }
                 
@@ -1647,6 +1647,26 @@ void setup()
     Serial.println("========================================\n");
 
     // ================================
+    // MATIKAN BACKLIGHT TOTAL DULU
+    // ================================
+    pinMode(TFT_BL, OUTPUT);
+    digitalWrite(TFT_BL, LOW);  // OFF total
+    Serial.println("Backlight: OFF");
+    
+    // ================================
+    // INIT TFT
+    // ================================
+    pinMode(TOUCH_IRQ, INPUT_PULLUP);
+    
+    tft.begin();
+    tft.setRotation(1);
+    
+    // Fill hitam BEBERAPA KALI (force)
+    tft.fillScreen(TFT_BLACK);
+    
+    Serial.println("TFT initialized (triple black fill)");
+    
+    // ================================
     // CREATE SEMAPHORES & QUEUE
     // ================================
     displayMutex = xSemaphoreCreateMutex();
@@ -1666,7 +1686,7 @@ void setup()
     loadCitySelection();
     
     // ================================
-    // RTC DS3231 INIT - TAMBAHAN BARU!
+    // RTC DS3231 INIT
     // ================================
     rtcAvailable = initRTC();
     if (rtcAvailable) {
@@ -1676,24 +1696,12 @@ void setup()
     }
     
     // ================================
-    // DISPLAY INIT - PWM BACKLIGHT (ESP32 CORE 3.x)
-    // ================================
-    ledcAttach(TFT_BL, TFT_BL_FREQ, TFT_BL_RESOLUTION);
-    ledcWrite(TFT_BL, TFT_BL_BRIGHTNESS);
-    Serial.printf("Backlight PWM: %d/255 (~%d%%)\n", TFT_BL_BRIGHTNESS, (TFT_BL_BRIGHTNESS * 100) / 255);
-    
-    pinMode(TOUCH_IRQ, INPUT_PULLUP);
-    
-    tft.begin();
-    tft.setRotation(1);
-    tft.fillScreen(TFT_BLACK);
-    
-    // ================================
     // TOUCH INIT
     // ================================
     touchSPI.begin(TOUCH_CLK, TOUCH_MISO, TOUCH_MOSI, TOUCH_CS);
     touch.begin(touchSPI);
     touch.setRotation(1);
+    Serial.println("Touch initialized");
     
     // ================================
     // LVGL INIT
@@ -1710,10 +1718,36 @@ void setup()
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(indev, my_touchpad_read);
     
+    Serial.println("LVGL initialized");
+    
     // ================================
     // EEZ UI INIT
     // ================================
     ui_init();
+    Serial.println("EEZ UI initialized");
+    
+    // ================================
+    // FORCE RENDER BLACK SCREEN
+    // ================================
+    delay(100);
+    lv_timer_handler();  // Render frame pertama
+    delay(100);
+    lv_timer_handler();  // Render frame kedua
+    delay(100);
+    
+    // Fill hitam sekali lagi sebelum nyalakan backlight
+    tft.fillScreen(TFT_BLACK);
+    
+    Serial.println("UI rendered (black screen confirmed)");
+    
+    // ================================
+    // BARU NYALAKAN BACKLIGHT DENGAN FADE-IN
+    // ================================
+    Serial.println("Starting backlight...");
+    
+    ledcAttach(TFT_BL, TFT_BL_FREQ, TFT_BL_RESOLUTION);
+    ledcWrite(TFT_BL, TFT_BL_BRIGHTNESS);  // Langsung full brightness
+    Serial.printf("Backlight ON: %d/255\n", TFT_BL_BRIGHTNESS);
     
     // ================================
     // WIFI AP+STA MODE - BALANCED MODE
@@ -1727,7 +1761,7 @@ void setup()
     Serial.println("WiFi Balanced Mode:");
     Serial.println("   - Sleep: Enabled (Anti-Overheat)");
     Serial.println("   - Latency: ~3ms (Tidak terasa)");
-    Serial.println("   - Temperature: -10Â°C cooler");
+    Serial.println("   - Temperature: -10°C cooler");
     
     WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
     Serial.printf("AP Started: %s\n", wifiConfig.apSSID);
@@ -1747,7 +1781,7 @@ void setup()
     // ================================
     if (prayerConfig.selectedCity.length() > 0) {
         Serial.println("\nSelected City: " + prayerConfig.selectedCityName);
-        Serial.println("\nðŸ“‹ Loaded Prayer Times:");
+        Serial.println("\n🕌 Loaded Prayer Times:");
         Serial.println("   City: " + prayerConfig.selectedCityName);
         Serial.println("   Subuh: " + prayerConfig.subuhTime);
         Serial.println("   Dzuhur: " + prayerConfig.zuhurTime);
@@ -1910,6 +1944,8 @@ void setup()
         activeSessions[i].expiry = 0;
         activeSessions[i].clientIP = IPAddress(0, 0, 0, 0);
     }
+    
+    Serial.println("\n✅ Boot complete - Display ready!");
 }
 
 // ================================
