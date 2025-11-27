@@ -9,7 +9,7 @@
 
 ## 📸 Preview
 
-<img width="683" height="1000" alt="Web Interface" src="https://github.com/user-attachments/assets/2c69772f-4b74-494f-a232-7f3435539377" />
+<img width="1366" height="2001" alt="FireShot Capture 090 - Islamic Prayer Clock Settings - 192 168 4 1" src="https://github.com/user-attachments/assets/e16864c4-1194-4506-a684-6ae478ba6c0a" />
 
 **Video Demo**: [Watch on Tutorial](https://streamable.com/mbb13l)
 
