@@ -1,14 +1,6 @@
 /*
  * ESP32-2432S024 + LVGL 9.2.0 + EEZ Studio - Islamic Prayer Clock
  * ARCHITECTURE: FreeRTOS Multi-Task Design - FULLY AUTOMATED
- * 
- * Features:
- * - Auto NTP Sync (5 server fallback)
- * - Auto Location Detection (IP-based geolocation)
- * - Auto Prayer Times Update
- * - Daily auto-update at midnight
- * - Web configuration interface
- * - AP mode for initial setup
  */
 
 #include <WiFiClientSecure.h>
