@@ -346,17 +346,11 @@
     </div>
 
     <script>
-        // ================================
-        // SECURE FETCH - Auto menggunakan session cookie
-        // ================================
         async function secureFetch(url, options = {}) {
-            // Public endpoint - no session needed
             if (url.includes('/api/data')) {
                 return fetch(url, options);
             }
             
-            // Protected endpoints - browser automatically sends cookie
-            // credentials: 'same-origin' ensures cookie is sent
             if (!options.credentials) {
                 options.credentials = 'same-origin';
             }
@@ -364,7 +358,6 @@
             try {
                 const response = await fetch(url, options);
                 
-                // If 403, session might be invalid
                 if (response.status === 403) {
                     showToast('🔄 Session expired - refreshing page...', 'warning');
                     setTimeout(() => {

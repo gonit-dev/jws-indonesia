@@ -201,7 +201,6 @@ volatile WiFiState wifiState = WIFI_IDLE;
 // ================================
 // AUTO SESSION MANAGEMENT
 // ================================
-
 struct Session {
     String token;
     unsigned long expiry;
@@ -210,7 +209,7 @@ struct Session {
 
 const int MAX_SESSIONS = 5;
 Session activeSessions[MAX_SESSIONS];
-const unsigned long SESSION_DURATION = 3600000; // 1 hour
+const unsigned long SESSION_DURATION = 3600000;
 
 // Forward Declarations
 void updateTimeDisplay();
@@ -290,7 +289,6 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data)
     touchPressed = false;
 }
 
-// Generate random session token
 String generateSessionToken() {
     String token = "";
     const char chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -302,11 +300,9 @@ String generateSessionToken() {
     return token;
 }
 
-// Find or create session for client
 String getOrCreateSession(IPAddress clientIP) {
     unsigned long now = millis();
     
-    // Check if client already has valid session
     for (int i = 0; i < MAX_SESSIONS; i++) {
         if (activeSessions[i].clientIP == clientIP && 
             activeSessions[i].expiry > now) {
@@ -316,7 +312,6 @@ String getOrCreateSession(IPAddress clientIP) {
         }
     }
     
-    // Find empty slot or oldest session
     int slot = -1;
     unsigned long oldestExpiry = ULONG_MAX;
     
@@ -332,7 +327,6 @@ String getOrCreateSession(IPAddress clientIP) {
         }
     }
     
-    // Create new session
     if (slot >= 0) {
         activeSessions[slot].token = generateSessionToken();
         activeSessions[slot].expiry = now + SESSION_DURATION;
@@ -345,11 +339,9 @@ String getOrCreateSession(IPAddress clientIP) {
     return "";
 }
 
-// Validate session token
 bool validateSession(AsyncWebServerRequest *request) {
     unsigned long now = millis();
     
-    // Get session token from cookie or header
     String token = "";
     
     if (request->hasHeader("X-Session-Token")) {
@@ -368,11 +360,9 @@ bool validateSession(AsyncWebServerRequest *request) {
         return false;
     }
     
-    // Validate token
     for (int i = 0; i < MAX_SESSIONS; i++) {
         if (activeSessions[i].token == token && 
             activeSessions[i].expiry > now) {
-            // Refresh session
             activeSessions[i].expiry = now + SESSION_DURATION;
             return true;
         }
@@ -605,22 +595,18 @@ bool initRTC() {
     
     Serial.println("DS3231 detected!");
     
-    // Cek apakah RTC kehilangan power
     if (rtc.lostPower()) {
         Serial.println("RTC lost power, needs time sync");
-        return true;  // RTC ada tapi perlu sync
+        return true;
     }
     
-    // Baca waktu dari RTC
     DateTime now = rtc.now();
     
-    // Validasi waktu RTC (harus > 2024)
     if (now.year() < 2024) {
         Serial.println("RTC time invalid, needs sync");
         return true;
     }
     
-    // Set system time dari RTC
     if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
         setTime(now.hour(), now.minute(), now.second(), 
                 now.day(), now.month(), now.year());
@@ -633,7 +619,6 @@ bool initRTC() {
                      now.hour(), now.minute(), now.second(),
                      now.day(), now.month(), now.year());
         
-        // PERBAIKAN: Cek apakah displayQueue sudah dibuat
         if (displayQueue != NULL) {
             DisplayUpdate update;
             update.type = DisplayUpdate::TIME_UPDATE;
@@ -774,7 +759,6 @@ void uiTask(void *parameter) {
             if (!initialDisplayDone && objects.subuh_time != NULL) {
                 initialDisplayDone = true;
                 
-                // Update data dulu
                 updateCityDisplay();
                 
                 if (prayerConfig.subuhTime.length() > 0) {
@@ -782,7 +766,6 @@ void uiTask(void *parameter) {
                     Serial.println("Initial prayer times displayed");
                 }
                 
-                // **BARU TAMPILKAN UI SETELAH DATA SIAP**
                 if (!uiShown) {
                     showAllUIElements();
                     uiShown = true;
@@ -957,7 +940,6 @@ void ntpTask(void *parameter) {
                     syncSuccess = true;
                     timeConfig.ntpServer = String(ntpServers[serverIndex]);
                     
-                    // **TAMBAHAN BARU: Save ke RTC setelah NTP sync**
                     if (rtcAvailable) {
                         saveTimeToRTC();
                         Serial.println("NTP time saved to RTC");
@@ -1030,7 +1012,7 @@ void prayerTask(void *parameter) {
 
 void rtcSyncTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(60000);  // Setiap 1 menit
+    const TickType_t xFrequency = pdMS_TO_TICKS(60000);
     
     while (true) {
         if (rtcAvailable) {
@@ -1040,7 +1022,6 @@ void rtcSyncTask(void *parameter) {
                 time_t systemTime = timeConfig.currentTime;
                 time_t rtcUnix = rtcTime.unixtime();
                 
-                // Jika selisih > 2 detik, sync system time ke RTC time
                 if (abs(systemTime - rtcUnix) > 2) {
                     timeConfig.currentTime = rtcUnix;
                     setTime(rtcUnix);
@@ -1093,7 +1074,6 @@ void clockTickTask(void *parameter) {
 // HELPER FUNCTIONS
 // ================================
 void hideAllUIElements() {
-    // Sembunyikan semua elemen UI saat boot
     if (objects.time_now) lv_obj_add_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
     if (objects.date_now) lv_obj_add_flag(objects.date_now, LV_OBJ_FLAG_HIDDEN);
     if (objects.city_time) lv_obj_add_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
@@ -1105,7 +1085,6 @@ void hideAllUIElements() {
 }
 
 void showAllUIElements() {
-    // Tampilkan kembali semua elemen UI
     if (objects.time_now) lv_obj_clear_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
     if (objects.date_now) lv_obj_clear_flag(objects.date_now, LV_OBJ_FLAG_HIDDEN);
     if (objects.city_time) lv_obj_clear_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
@@ -1137,19 +1116,16 @@ void updateTimeDisplay() {
         char timeStr[10];
         char dateStr[15];
         
-        // Format waktu dengan efek colon berkedip
         sprintf(timeStr, "%02d%c%02d", 
                 hour(timeConfig.currentTime), 
                 colonOn ? ':' : ' ', 
                 minute(timeConfig.currentTime));
         
-        // Format tanggal
         sprintf(dateStr, "%02d/%02d/%04d", 
                 day(timeConfig.currentTime), 
                 month(timeConfig.currentTime), 
                 year(timeConfig.currentTime));
         
-        // Update objek terpisah sesuai screens.h
         if (objects.time_now) {
             lv_label_set_text(objects.time_now, timeStr);
         }
@@ -1217,7 +1193,6 @@ void setupServerRoutes() {
             LittleFS, "/index.html", "text/html"
         );
         
-        // Set session cookie (HttpOnly for security)
         response->addHeader("Set-Cookie", 
             "session=" + sessionToken + "; Max-Age=3600; Path=/; SameSite=Strict");
         
@@ -1510,7 +1485,6 @@ void setupServerRoutes() {
                 timeConfig.currentTime = now(); 
                 timeConfig.ntpSynced = true;
                 
-                // Save to RTC if available
                 if (rtcAvailable) {
                     saveTimeToRTC();
                     Serial.println("Browser time saved to RTC");
@@ -1537,7 +1511,6 @@ void setupServerRoutes() {
     server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request) {
         String json = "{";
         
-        // Time data
         if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
             char timeStr[10], dateStr[12], dayStr[15];
             
@@ -1551,7 +1524,6 @@ void setupServerRoutes() {
                     month(timeConfig.currentTime),
                     year(timeConfig.currentTime));
             
-            // Day of week
             const char* dayNames[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
             int dayOfWeek = weekday(timeConfig.currentTime) - 1;
             strcpy(dayStr, dayNames[dayOfWeek]);
@@ -1564,7 +1536,6 @@ void setupServerRoutes() {
             xSemaphoreGive(timeMutex);
         }
         
-        // Prayer times
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
             json += "\"prayerTimes\":{";
             json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
@@ -1574,7 +1545,6 @@ void setupServerRoutes() {
             json += "\"isya\":\"" + prayerConfig.isyaTime + "\"";
             json += "},";
             
-            // Location
             json += "\"location\":{";
             json += "\"city\":\"" + prayerConfig.selectedCityName + "\",";
             json += "\"cityId\":\"" + prayerConfig.selectedCity + "\"";
@@ -1583,7 +1553,6 @@ void setupServerRoutes() {
             xSemaphoreGive(settingsMutex);
         }
         
-        // Device info
         json += "\"device\":{";
         json += "\"wifiConnected\":" + String((WiFi.status() == WL_CONNECTED && wifiConfig.isConnected) ? "true" : "false") + ",";
         json += "\"wifiSSID\":\"" + String(WiFi.SSID()) + "\",";
@@ -1691,7 +1660,7 @@ void setup()
     // MATIKAN BACKLIGHT TOTAL DULU
     // ================================
     pinMode(TFT_BL, OUTPUT);
-    digitalWrite(TFT_BL, LOW);  // OFF total
+    digitalWrite(TFT_BL, LOW);
     Serial.println("Backlight: OFF");
     
     // ================================
@@ -1702,7 +1671,6 @@ void setup()
     tft.begin();
     tft.setRotation(1);
     
-    // Fill hitam BEBERAPA KALI (force)
     tft.fillScreen(TFT_BLACK);
     
     Serial.println("TFT initialized (triple black fill)");
@@ -1777,12 +1745,11 @@ void setup()
     // FORCE RENDER BLACK SCREEN
     // ================================
     delay(100);
-    lv_timer_handler();  // Render frame pertama
+    lv_timer_handler();
     delay(100);
-    lv_timer_handler();  // Render frame kedua
+    lv_timer_handler();
     delay(100);
     
-    // Fill hitam sekali lagi sebelum nyalakan backlight
     tft.fillScreen(TFT_BLACK);
     
     Serial.println("UI rendered (black screen confirmed)");
@@ -1793,7 +1760,7 @@ void setup()
     Serial.println("Starting backlight...");
     
     ledcAttach(TFT_BL, TFT_BL_FREQ, TFT_BL_RESOLUTION);
-    ledcWrite(TFT_BL, TFT_BL_BRIGHTNESS);  // Langsung full brightness
+    ledcWrite(TFT_BL, TFT_BL_BRIGHTNESS);
     Serial.printf("Backlight ON: %d/255\n", TFT_BL_BRIGHTNESS);
     
     // ================================
@@ -1801,7 +1768,6 @@ void setup()
     // ================================
     WiFi.mode(WIFI_AP_STA);
     
-    // Balanced mode - prevent overheating
     WiFi.setSleep(true);
     esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
 
@@ -1982,10 +1948,8 @@ void setup()
         Serial.println("\nREMINDER: Please select a city via web interface");
     }
 
-    // Seed random generator for session tokens
     randomSeed(analogRead(0) + millis());
     
-    // Initialize sessions
     for (int i = 0; i < MAX_SESSIONS; i++) {
         activeSessions[i].token = "";
         activeSessions[i].expiry = 0;
