@@ -1094,21 +1094,20 @@ void clockTickTask(void *parameter) {
 // ================================
 void hideAllUIElements() {
     // Sembunyikan semua elemen UI saat boot
-    if (objects.date_time) lv_obj_add_flag(objects.date_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.time_now) lv_obj_add_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
+    if (objects.date_now) lv_obj_add_flag(objects.date_now, LV_OBJ_FLAG_HIDDEN);
     if (objects.city_time) lv_obj_add_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.subuh_time) lv_obj_add_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.zuhur_time) lv_obj_add_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.ashar_time) lv_obj_add_flag(objects.ashar_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.maghrib_time) lv_obj_add_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.isya_time) lv_obj_add_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
-    
-    // Sembunyikan label lainnya jika ada (misal: "Subuh", "Dzuhur", dll)
-    // Sesuaikan dengan object names dari EEZ Studio
 }
 
 void showAllUIElements() {
     // Tampilkan kembali semua elemen UI
-    if (objects.date_time) lv_obj_clear_flag(objects.date_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.time_now) lv_obj_clear_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
+    if (objects.date_now) lv_obj_clear_flag(objects.date_now, LV_OBJ_FLAG_HIDDEN);
     if (objects.city_time) lv_obj_clear_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.subuh_time) lv_obj_clear_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.zuhur_time) lv_obj_clear_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
@@ -1135,25 +1134,35 @@ void updateCityDisplay() {
 
 void updateTimeDisplay() {
     if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-        char timeStr[20];
+        char timeStr[10];
         char dateStr[15];
         
+        // Format waktu dengan efek colon berkedip
         sprintf(timeStr, "%02d%c%02d", 
                 hour(timeConfig.currentTime), 
                 colonOn ? ':' : ' ', 
                 minute(timeConfig.currentTime));
+        
+        // Format tanggal
         sprintf(dateStr, "%02d/%02d/%04d", 
                 day(timeConfig.currentTime), 
                 month(timeConfig.currentTime), 
                 year(timeConfig.currentTime));
         
-        String dateTimeStr = String(timeStr) + " " + String(dateStr);
-        if (objects.date_time) lv_label_set_text(objects.date_time, dateTimeStr.c_str());
+        // Update objek terpisah sesuai screens.h
+        if (objects.time_now) {
+            lv_label_set_text(objects.time_now, timeStr);
+        }
+        
+        if (objects.date_now) {
+            lv_label_set_text(objects.date_now, dateStr);
+        }
         
         colonOn = !colonOn;
         xSemaphoreGive(timeMutex);
     }
 }
+
 
 void updatePrayerDisplay() {
     if(objects.subuh_time) lv_label_set_text(objects.subuh_time, prayerConfig.subuhTime.c_str());
