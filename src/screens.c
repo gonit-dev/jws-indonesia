@@ -46,13 +46,27 @@ void create_screen_main() {
                     lv_obj_set_style_pad_bottom(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_obj_set_style_border_width(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_obj_set_style_radius(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_obj_set_style_outline_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_obj_set_style_shadow_width(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_obj_set_style_shadow_ofs_y(obj, 10, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_obj_set_style_bg_color(obj, lv_color_hex(0xff000000), LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_obj_set_style_bg_opa(obj, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
                     {
                         lv_obj_t *parent_obj = obj;
+                        {
+                            lv_obj_t *obj = lv_line_create(parent_obj);
+                            objects.obj1 = obj;
+                            lv_obj_set_pos(obj, 0, LV_PCT(97));
+                            lv_obj_set_size(obj, LV_PCT(100), LV_SIZE_CONTENT);
+                            static lv_point_precise_t line_points[] = {
+                                { 320, 0 },
+                                { 90, 0 },
+                                { 0, 0 },
+                                { 0, 0 },
+                                { 0, 0 }
+                            };
+                            lv_line_set_points(obj, line_points, 5);
+                            lv_obj_set_style_line_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_line_opa(obj, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_line_width(obj, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+                        }
                         {
                             lv_obj_t *obj = lv_obj_create(parent_obj);
                             lv_obj_set_pos(obj, 5, 0);
@@ -77,7 +91,7 @@ void create_screen_main() {
                         {
                             lv_obj_t *obj = lv_obj_create(parent_obj);
                             lv_obj_set_pos(obj, 23, 0);
-                            lv_obj_set_size(obj, 292, 26);
+                            lv_obj_set_size(obj, 292, LV_PCT(100));
                             lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -137,8 +151,25 @@ void create_screen_main() {
                             {
                                 lv_obj_t *parent_obj = obj;
                                 {
+                                    lv_obj_t *obj = lv_line_create(parent_obj);
+                                    objects.obj2 = obj;
+                                    lv_obj_set_pos(obj, 4, LV_PCT(80));
+                                    lv_obj_set_size(obj, LV_PCT(95), LV_SIZE_CONTENT);
+                                    static lv_point_precise_t line_points[] = {
+                                        { 320, 0 },
+                                        { 90, 0 },
+                                        { 0, 0 },
+                                        { 0, 0 },
+                                        { 0, 0 }
+                                    };
+                                    lv_line_set_points(obj, line_points, 5);
+                                    lv_obj_set_style_line_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_line_opa(obj, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_line_width(obj, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                }
+                                {
                                     lv_obj_t *obj = lv_obj_create(parent_obj);
-                                    objects.obj1 = obj;
+                                    objects.obj3 = obj;
                                     lv_obj_set_pos(obj, 6, 0);
                                     lv_obj_set_size(obj, 85, LV_PCT(100));
                                     lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -153,7 +184,7 @@ void create_screen_main() {
                                         lv_obj_t *parent_obj = obj;
                                         {
                                             lv_obj_t *obj = lv_label_create(parent_obj);
-                                            objects.obj2 = obj;
+                                            objects.obj4 = obj;
                                             lv_obj_set_pos(obj, 0, 7);
                                             lv_obj_set_size(obj, LV_PCT(100), LV_SIZE_CONTENT);
                                             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -209,8 +240,25 @@ void create_screen_main() {
                             {
                                 lv_obj_t *parent_obj = obj;
                                 {
+                                    lv_obj_t *obj = lv_line_create(parent_obj);
+                                    objects.obj5 = obj;
+                                    lv_obj_set_pos(obj, 4, LV_PCT(80));
+                                    lv_obj_set_size(obj, LV_PCT(95), LV_SIZE_CONTENT);
+                                    static lv_point_precise_t line_points[] = {
+                                        { 320, 0 },
+                                        { 90, 0 },
+                                        { 0, 0 },
+                                        { 0, 0 },
+                                        { 0, 0 }
+                                    };
+                                    lv_line_set_points(obj, line_points, 5);
+                                    lv_obj_set_style_line_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_line_opa(obj, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_line_width(obj, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                }
+                                {
                                     lv_obj_t *obj = lv_obj_create(parent_obj);
-                                    objects.obj3 = obj;
+                                    objects.obj6 = obj;
                                     lv_obj_set_pos(obj, 6, 0);
                                     lv_obj_set_size(obj, 85, LV_PCT(100));
                                     lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -225,7 +273,7 @@ void create_screen_main() {
                                         lv_obj_t *parent_obj = obj;
                                         {
                                             lv_obj_t *obj = lv_label_create(parent_obj);
-                                            objects.obj4 = obj;
+                                            objects.obj7 = obj;
                                             lv_obj_set_pos(obj, 0, 7);
                                             lv_obj_set_size(obj, LV_PCT(100), LV_SIZE_CONTENT);
                                             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -281,8 +329,25 @@ void create_screen_main() {
                             {
                                 lv_obj_t *parent_obj = obj;
                                 {
+                                    lv_obj_t *obj = lv_line_create(parent_obj);
+                                    objects.obj8 = obj;
+                                    lv_obj_set_pos(obj, 4, LV_PCT(80));
+                                    lv_obj_set_size(obj, LV_PCT(95), LV_SIZE_CONTENT);
+                                    static lv_point_precise_t line_points[] = {
+                                        { 320, 0 },
+                                        { 90, 0 },
+                                        { 0, 0 },
+                                        { 0, 0 },
+                                        { 0, 0 }
+                                    };
+                                    lv_line_set_points(obj, line_points, 5);
+                                    lv_obj_set_style_line_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_line_opa(obj, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_line_width(obj, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                }
+                                {
                                     lv_obj_t *obj = lv_obj_create(parent_obj);
-                                    objects.obj5 = obj;
+                                    objects.obj9 = obj;
                                     lv_obj_set_pos(obj, 6, 0);
                                     lv_obj_set_size(obj, 85, LV_PCT(100));
                                     lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -297,7 +362,7 @@ void create_screen_main() {
                                         lv_obj_t *parent_obj = obj;
                                         {
                                             lv_obj_t *obj = lv_label_create(parent_obj);
-                                            objects.obj6 = obj;
+                                            objects.obj10 = obj;
                                             lv_obj_set_pos(obj, 0, 7);
                                             lv_obj_set_size(obj, LV_PCT(100), LV_SIZE_CONTENT);
                                             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -353,8 +418,25 @@ void create_screen_main() {
                             {
                                 lv_obj_t *parent_obj = obj;
                                 {
+                                    lv_obj_t *obj = lv_line_create(parent_obj);
+                                    objects.obj11 = obj;
+                                    lv_obj_set_pos(obj, 4, LV_PCT(80));
+                                    lv_obj_set_size(obj, LV_PCT(95), LV_SIZE_CONTENT);
+                                    static lv_point_precise_t line_points[] = {
+                                        { 320, 0 },
+                                        { 90, 0 },
+                                        { 0, 0 },
+                                        { 0, 0 },
+                                        { 0, 0 }
+                                    };
+                                    lv_line_set_points(obj, line_points, 5);
+                                    lv_obj_set_style_line_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_line_opa(obj, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_line_width(obj, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                }
+                                {
                                     lv_obj_t *obj = lv_obj_create(parent_obj);
-                                    objects.obj7 = obj;
+                                    objects.obj12 = obj;
                                     lv_obj_set_pos(obj, 6, 0);
                                     lv_obj_set_size(obj, 85, LV_PCT(100));
                                     lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -369,7 +451,7 @@ void create_screen_main() {
                                         lv_obj_t *parent_obj = obj;
                                         {
                                             lv_obj_t *obj = lv_label_create(parent_obj);
-                                            objects.obj8 = obj;
+                                            objects.obj13 = obj;
                                             lv_obj_set_pos(obj, 0, 7);
                                             lv_obj_set_size(obj, LV_PCT(100), LV_SIZE_CONTENT);
                                             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -425,8 +507,25 @@ void create_screen_main() {
                             {
                                 lv_obj_t *parent_obj = obj;
                                 {
+                                    lv_obj_t *obj = lv_line_create(parent_obj);
+                                    objects.obj14 = obj;
+                                    lv_obj_set_pos(obj, 4, LV_PCT(80));
+                                    lv_obj_set_size(obj, LV_PCT(95), LV_SIZE_CONTENT);
+                                    static lv_point_precise_t line_points[] = {
+                                        { 320, 0 },
+                                        { 90, 0 },
+                                        { 0, 0 },
+                                        { 0, 0 },
+                                        { 0, 0 }
+                                    };
+                                    lv_line_set_points(obj, line_points, 5);
+                                    lv_obj_set_style_line_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_line_opa(obj, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_line_width(obj, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                }
+                                {
                                     lv_obj_t *obj = lv_obj_create(parent_obj);
-                                    objects.obj9 = obj;
+                                    objects.obj15 = obj;
                                     lv_obj_set_pos(obj, 6, 0);
                                     lv_obj_set_size(obj, 85, LV_PCT(100));
                                     lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -441,7 +540,7 @@ void create_screen_main() {
                                         lv_obj_t *parent_obj = obj;
                                         {
                                             lv_obj_t *obj = lv_label_create(parent_obj);
-                                            objects.obj10 = obj;
+                                            objects.obj16 = obj;
                                             lv_obj_set_pos(obj, 0, 7);
                                             lv_obj_set_size(obj, LV_PCT(100), LV_SIZE_CONTENT);
                                             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
