@@ -865,7 +865,7 @@ void wifiTask(void *parameter) {
                         WiFi.mode(WIFI_AP);
                         
                         Serial.println("WiFi connection timeout");
-                        Serial.println("Ã°Å¸â€Â¥ WiFi disconnected to prevent overheating");
+                        Serial.println("ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¥ WiFi disconnected to prevent overheating");
                     }
                 }
                 
@@ -1162,7 +1162,6 @@ void updateTimeDisplay() {
         xSemaphoreGive(timeMutex);
     }
 }
-
 
 void updatePrayerDisplay() {
     if(objects.subuh_time) lv_label_set_text(objects.subuh_time, prayerConfig.subuhTime.c_str());
@@ -1809,7 +1808,7 @@ void setup()
     Serial.println("WiFi Balanced Mode:");
     Serial.println("   - Sleep: Enabled (Anti-Overheat)");
     Serial.println("   - Latency: ~3ms (Tidak terasa)");
-    Serial.println("   - Temperature: -10°C cooler");
+    Serial.println("   - Temperature: -10Â°C cooler");
     
     WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
     Serial.printf("AP Started: %s\n", wifiConfig.apSSID);
@@ -1829,7 +1828,7 @@ void setup()
     // ================================
     if (prayerConfig.selectedCity.length() > 0) {
         Serial.println("\nSelected City: " + prayerConfig.selectedCityName);
-        Serial.println("\n🕌 Loaded Prayer Times:");
+        Serial.println("\nðŸ•Œ Loaded Prayer Times:");
         Serial.println("   City: " + prayerConfig.selectedCityName);
         Serial.println("   Subuh: " + prayerConfig.subuhTime);
         Serial.println("   Dzuhur: " + prayerConfig.zuhurTime);
@@ -1993,7 +1992,7 @@ void setup()
         activeSessions[i].clientIP = IPAddress(0, 0, 0, 0);
     }
     
-    Serial.println("\n✅ Boot complete - Display ready!");
+    Serial.println("\nâœ… Boot complete - Display ready!");
 }
 
 // ================================
