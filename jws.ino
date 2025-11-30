@@ -1948,7 +1948,7 @@ void setup()
         activeSessions[i].clientIP = IPAddress(0, 0, 0, 0);
     }
     
-    Serial.println("\nâœ… Boot complete - Display ready!");
+    Serial.println("\nBoot complete - Display ready!");
 }
 
 // ================================
