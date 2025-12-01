@@ -1721,6 +1721,9 @@ void setupServerRoutes() {
     server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request) {
         String json = "{";
         
+        // ================================
+        // 1. TIME & DATE
+        // ================================
         if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
             char timeStr[10], dateStr[12], dayStr[15];
             
@@ -1746,6 +1749,9 @@ void setupServerRoutes() {
             xSemaphoreGive(timeMutex);
         }
         
+        // ================================
+        // 2. PRAYER TIMES & LOCATION
+        // ================================
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
             json += "\"prayerTimes\":{";
             json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
@@ -1756,20 +1762,28 @@ void setupServerRoutes() {
             json += "},";
             
             json += "\"location\":{";
-            json += "\"city\":\"" + prayerConfig.selectedCityName + "\",";
-            json += "\"cityId\":\"" + prayerConfig.selectedCity + "\"";
+            json += "\"city\":\"" + prayerConfig.selectedCity + "\",";
+            json += "\"cityId\":\"" + prayerConfig.selectedCity + "\",";
+            json += "\"displayName\":\"" + prayerConfig.selectedCityName + "\",";
+            json += "\"latitude\":\"" + prayerConfig.latitude + "\",";
+            json += "\"longitude\":\"" + prayerConfig.longitude + "\"";
             json += "},";
             
             xSemaphoreGive(settingsMutex);
         }
         
+        // ================================
+        // 3. DEVICE STATUS
+        // ================================
         json += "\"device\":{";
         json += "\"wifiConnected\":" + String((WiFi.status() == WL_CONNECTED && wifiConfig.isConnected) ? "true" : "false") + ",";
         json += "\"wifiSSID\":\"" + String(WiFi.SSID()) + "\",";
         json += "\"ip\":\"" + wifiConfig.localIP.toString() + "\",";
         json += "\"apIP\":\"" + WiFi.softAPIP().toString() + "\",";
         json += "\"ntpSynced\":" + String(timeConfig.ntpSynced ? "true" : "false") + ",";
-        json += "\"freeHeap\":" + String(ESP.getFreeHeap());
+        json += "\"ntpServer\":\"" + timeConfig.ntpServer + "\",";
+        json += "\"freeHeap\":" + String(ESP.getFreeHeap()) + ",";
+        json += "\"uptime\":" + String(millis() / 1000);
         json += "}";
         
         json += "}";
