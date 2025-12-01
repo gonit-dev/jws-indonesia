@@ -398,7 +398,7 @@
             console.log(`📥 Loading cities (Attempt ${loadAttempts + 1}/${MAX_LOAD_ATTEMPTS})...`);
             
             const dropdown = document.getElementById('cityDropdown');
-            dropdown.innerHTML = '<option value="">â³ Loading cities...</option>';
+            dropdown.innerHTML = '<option value="">⏳ Loading cities...</option>';
             
             try {
                 const controller = new AbortController();
@@ -433,13 +433,23 @@
                     if (city.province !== currentProvince) {
                         currentProvince = city.province;
                         const optgroup = document.createElement('optgroup');
-                        optgroup.label = '━━ ' + currentProvince + ' ━━';
+                        optgroup.label = '┏━ ' + currentProvince + ' ━┓';
                         dropdown.appendChild(optgroup);
                     }
                     
                     const option = document.createElement('option');
                     option.value = city.api;
-                    option.textContent = city.display;
+                    
+                    // Format: "Nama Kota (Lat, Lon)"
+                    let displayText = city.display;
+                    if (city.lat && city.lon) {
+                        displayText += ` (${parseFloat(city.lat).toFixed(2)}°, ${parseFloat(city.lon).toFixed(2)}°)`;
+                    }
+                    option.textContent = displayText;
+                    
+                    // Simpan koordinat sebagai data attribute
+                    option.setAttribute('data-lat', city.lat);
+                    option.setAttribute('data-lon', city.lon);
                     
                     const lastOptgroup = dropdown.querySelector('optgroup:last-of-type');
                     if (lastOptgroup && lastOptgroup.label.includes(currentProvince)) {
@@ -449,7 +459,7 @@
                     }
                 });
                 
-                console.log(`✅ Successfully loaded ${data.length} cities`);
+                console.log(`✅ Successfully loaded ${data.length} cities with coordinates`);
                 loadAttempts = 0;
                 
                 setTimeout(() => {
@@ -474,8 +484,8 @@
                     }, retryDelay);
                 } else {
                     console.error('❌ Failed to load cities after', MAX_LOAD_ATTEMPTS, 'attempts');
-                    dropdown.innerHTML = '<option value="">❌ Gagal load kota/Kabupaten - Refresh halaman</option>';
-                    showToast('❌ Gagal load daftar kota/Kabupaten. Refresh halaman untuk retry.', 'error');
+                    dropdown.innerHTML = '<option value="">❌ Gagal load kota/kabupaten - Refresh halaman</option>';
+                    showToast('❌ Gagal load daftar kota/kabupaten. Refresh halaman untuk retry.', 'error');
                     loadAttempts = 0;
                 }
                 
@@ -484,7 +494,7 @@
         }
 
         async function loadCurrentCity() {
-            console.log('🔄 Loading current city selection...');
+            console.log('📄 Loading current city selection...');
             
             try {
                 const response = await secureFetch('/getcityinfo', {
@@ -504,9 +514,19 @@
                 const dropdown = document.getElementById('cityDropdown');
                 
                 if (data.hasSelection && data.selectedCityApi) {
-                    currentCitySpan.textContent = data.selectedCity || data.selectedCityApi;
+                    // Tampilkan nama kota dengan koordinat
+                    let displayText = data.selectedCity || data.selectedCityApi;
+                    
+                    // Tambahkan koordinat jika ada
+                    if (data.latitude && data.longitude) {
+                        displayText += ` (${parseFloat(data.latitude).toFixed(4)}°, ${parseFloat(data.longitude).toFixed(4)}°)`;
+                    }
+                    
+                    currentCitySpan.textContent = displayText;
                     currentCitySpan.style.color = '#1779ba';
                     dropdown.value = data.selectedCityApi;
+                    
+                    console.log('✅ City loaded:', displayText);
                 } else {
                     currentCitySpan.textContent = 'Belum dipilih';
                     currentCitySpan.style.color = '#999';
@@ -520,11 +540,38 @@
         }
 
         async function saveCity() {
+            console.log('========================================');
+            console.log('saveCity() called');
+            console.log('========================================');
+            
             const dropdown = document.getElementById('cityDropdown');
             const selectedCity = dropdown.value;
             
+            console.log('Selected value:', selectedCity);
+            
+            // Validasi input
             if (!selectedCity) {
-                showToast('❌ Pilih kota/Kabupaten terlebih dahulu', 'error');
+                console.error('❌ No city selected');
+                showToast('❌ Pilih kota/kabupaten terlebih dahulu', 'error');
+                return;
+            }
+            
+            // Get coordinates dari option yang dipilih
+            const selectedOption = dropdown.options[dropdown.selectedIndex];
+            const lat = selectedOption.getAttribute('data-lat');
+            const lon = selectedOption.getAttribute('data-lon');
+            const displayName = selectedOption.textContent.split('(')[0].trim(); // Ambil nama tanpa koordinat
+            
+            console.log('City data:');
+            console.log('  API:', selectedCity);
+            console.log('  Display:', displayName);
+            console.log('  Lat:', lat);
+            console.log('  Lon:', lon);
+            
+            // Validasi koordinat
+            if (!lat || !lon) {
+                console.error('❌ Missing coordinates');
+                showToast('❌ Data koordinat tidak lengkap', 'error');
                 return;
             }
             
@@ -534,30 +581,106 @@
             btn.textContent = '⏳ Menyimpan...';
             
             try {
+                console.log('Sending POST request to /setcity...');
+                
+                // PERBAIKAN: Kirim semua data termasuk koordinat
+                const formData = new URLSearchParams();
+                formData.append('city', selectedCity);
+                formData.append('cityName', displayName);
+                formData.append('lat', lat);
+                formData.append('lon', lon);
+                
+                console.log('POST data:', formData.toString());
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+                
                 const response = await secureFetch('/setcity', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json'
                     },
-                    body: `city=${encodeURIComponent(selectedCity)}`
+                    body: formData.toString(),
+                    signal: controller.signal
                 });
                 
+                clearTimeout(timeoutId);
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
+                
+                const contentType = response.headers.get('content-type');
+                let responseData;
+                
+                if (contentType && contentType.includes('application/json')) {
+                    responseData = await response.json();
+                    console.log('Response JSON:', responseData);
+                } else {
+                    responseData = await response.text();
+                    console.log('Response text:', responseData);
+                }
+                
                 if (response.ok) {
+                    console.log('✅ City saved successfully');
                     showToast('✅ Kota/Kabupaten berhasil disimpan!', 'success');
-                    loadCurrentCity();
                     
                     setTimeout(() => {
-                        loadSavedPrayerTimes();
+                        showToast(`📍 ${displayName} - Koordinat: ${parseFloat(lat).toFixed(4)}°, ${parseFloat(lon).toFixed(4)}°`, 'success');
                     }, 2000);
+                    
+                    // Reload displays
+                    setTimeout(() => {
+                        console.log('Reloading city info...');
+                        loadCurrentCity();
+                    }, 1000);
+                    
+                    setTimeout(() => {
+                        console.log('Reloading prayer times...');
+                        loadSavedPrayerTimes();
+                    }, 3000);
+                    
                 } else {
-                    throw new Error('Save failed');
+                    // Handle error response
+                    let errorMsg = 'Unknown error';
+                    
+                    if (typeof responseData === 'object' && responseData.error) {
+                        errorMsg = responseData.error;
+                    } else if (typeof responseData === 'string') {
+                        errorMsg = responseData;
+                    }
+                    
+                    throw new Error(errorMsg);
                 }
+                
             } catch (error) {
-                console.error('Error:', error);
-                 showToast('❌ Gagal menyimpan kota/Kabupaten', 'error');
+                console.error('❌ Error saving city:', error);
+                console.error('Error details:', {
+                    message: error.message,
+                    stack: error.stack
+                });
+                
+                let errorMessage = 'Gagal menyimpan kota/kabupaten';
+                
+                if (error.name === 'AbortError') {
+                    errorMessage = 'Request timeout - coba lagi';
+                } else if (error.message.includes('Session expired')) {
+                    errorMessage = 'Session habis - refresh halaman';
+                    setTimeout(() => window.location.reload(), 2000);
+                } else if (error.message.includes('not found')) {
+                    errorMessage = 'Kota tidak ditemukan dalam database';
+                } else if (error.message.includes('Network')) {
+                    errorMessage = 'Koneksi bermasalah - cek WiFi';
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+                
+                showToast('❌ ' + errorMessage, 'error');
+                
             } finally {
                 btn.disabled = false;
                 btn.textContent = originalText;
+                console.log('========================================\n');
             }
         }
 
