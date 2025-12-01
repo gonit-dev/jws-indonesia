@@ -1332,7 +1332,7 @@ void setupServerRoutes() {
         if (!validateSession(request)) {
             Serial.println("ERROR: Session validation failed");
             
-            // Log headers for debugging (FIXED: tambah const)
+            // Log headers for debugging
             int headers = request->headers();
             Serial.printf("Request headers (%d):\n", headers);
             for(int i = 0; i < headers; i++) {
@@ -1393,14 +1393,14 @@ void setupServerRoutes() {
         
         // Validate city API name
         if (cityApi.length() == 0) {
-            Serial.println("ERROR: Empty city name");
+            Serial.println("ERROR: Empty city API name");
             request->send(400, "application/json", 
                 "{\"error\":\"City name cannot be empty\"}");
             return;
         }
         
         if (cityApi.length() > 100) {
-            Serial.println("ERROR: City name too long");
+            Serial.println("ERROR: City API name too long");
             request->send(400, "application/json", 
                 "{\"error\":\"City name too long (max 100 chars)\"}");
             return;
@@ -1426,7 +1426,7 @@ void setupServerRoutes() {
                 return;
             }
         } else {
-            Serial.println("WARNING: Coordinates not provided, will use city API name");
+            Serial.println("WARNING: Coordinates not provided");
         }
 
         // Save to memory with timeout protection
@@ -1434,13 +1434,16 @@ void setupServerRoutes() {
         
         bool memorySuccess = false;
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(5000)) == pdTRUE) {
-            prayerConfig.selectedCity = cityApi;
-            prayerConfig.selectedCityName = (cityName.length() > 0) ? cityName : cityApi;
+            // ✅ FIXED: Simpan cityApi sebagai identifier, bukan cityName
+            prayerConfig.selectedCity = cityApi;  // "Kabupaten Tangerang"
+            prayerConfig.selectedCityName = (cityName.length() > 0) ? cityName : cityApi;  // "Tangerang (Kabupaten)"
             prayerConfig.latitude = lat;
             prayerConfig.longitude = lon;
             
             xSemaphoreGive(settingsMutex);
             Serial.println("✓ Memory updated");
+            Serial.println("  selectedCity (API): " + prayerConfig.selectedCity);
+            Serial.println("  selectedCityName (Display): " + prayerConfig.selectedCityName);
             memorySuccess = true;
         } else {
             Serial.println("ERROR: Cannot acquire settings mutex (timeout)");
@@ -1467,10 +1470,11 @@ void setupServerRoutes() {
             if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(5000)) == pdTRUE) {
                 fs::File file = LittleFS.open("/city_selection.txt", "w");
                 if (file) {
-                    file.println(prayerConfig.selectedCity);
-                    file.println(prayerConfig.selectedCityName);
-                    file.println(prayerConfig.latitude);
-                    file.println(prayerConfig.longitude);
+                    // ✅ FIXED ORDER: Simpan cityApi dulu (identifier), baru cityName (display)
+                    file.println(prayerConfig.selectedCity);      // Line 1: "Kabupaten Tangerang" (API)
+                    file.println(prayerConfig.selectedCityName);  // Line 2: "Tangerang (Kabupaten)" (Display)
+                    file.println(prayerConfig.latitude);          // Line 3: Latitude
+                    file.println(prayerConfig.longitude);         // Line 4: Longitude
                     file.flush();
                     
                     // Verify write
@@ -1480,6 +1484,10 @@ void setupServerRoutes() {
                     if (bytesWritten > 0) {
                         fileSuccess = true;
                         Serial.printf("✓ File saved (%d bytes)\n", bytesWritten);
+                        Serial.println("  Line 1 (API): " + prayerConfig.selectedCity);
+                        Serial.println("  Line 2 (Display): " + prayerConfig.selectedCityName);
+                        Serial.println("  Line 3 (Lat): " + prayerConfig.latitude);
+                        Serial.println("  Line 4 (Lon): " + prayerConfig.longitude);
                     } else {
                         Serial.println("WARNING: File is empty after write");
                     }
@@ -1515,6 +1523,19 @@ void setupServerRoutes() {
             fs::File verifyFile = LittleFS.open("/city_selection.txt", "r");
             if (verifyFile) {
                 size_t fileSize = verifyFile.size();
+                
+                // Read and verify content
+                Serial.println("File content verification:");
+                String line1 = verifyFile.readStringUntil('\n'); line1.trim();
+                String line2 = verifyFile.readStringUntil('\n'); line2.trim();
+                String line3 = verifyFile.readStringUntil('\n'); line3.trim();
+                String line4 = verifyFile.readStringUntil('\n'); line4.trim();
+                
+                Serial.println("  Line 1: " + line1);
+                Serial.println("  Line 2: " + line2);
+                Serial.println("  Line 3: " + line3);
+                Serial.println("  Line 4: " + line4);
+                
                 verifyFile.close();
                 Serial.printf("✓ File verified (size: %d bytes)\n", fileSize);
             }
@@ -1533,6 +1554,7 @@ void setupServerRoutes() {
         if (WiFi.status() == WL_CONNECTED) {
             if (lat.length() > 0 && lon.length() > 0) {
                 Serial.println("Fetching prayer times with coordinates...");
+                Serial.println("  City: " + prayerConfig.selectedCityName);
                 Serial.println("  Lat: " + lat);
                 Serial.println("  Lon: " + lon);
                 
@@ -1550,6 +1572,8 @@ void setupServerRoutes() {
         
         Serial.println("========================================");
         Serial.println("SUCCESS: City saved successfully");
+        Serial.println("  API Name: " + prayerConfig.selectedCity);
+        Serial.println("  Display Name: " + prayerConfig.selectedCityName);
         if (willFetchPrayerTimes) {
             Serial.println("Prayer times will update shortly...");
         }
