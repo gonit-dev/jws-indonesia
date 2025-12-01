@@ -440,14 +440,12 @@
                     const option = document.createElement('option');
                     option.value = city.api;
                     
-                    // Format: "Nama Kota (Lat, Lon)"
                     let displayText = city.display;
                     if (city.lat && city.lon) {
                         displayText += ` (${parseFloat(city.lat).toFixed(2)}°, ${parseFloat(city.lon).toFixed(2)}°)`;
                     }
                     option.textContent = displayText;
                     
-                    // Simpan koordinat sebagai data attribute
                     option.setAttribute('data-lat', city.lat);
                     option.setAttribute('data-lon', city.lon);
                     
@@ -494,7 +492,7 @@
         }
 
         async function loadCurrentCity() {
-            console.log('📄 Loading current city selection...');
+            console.log('🔄 Loading current city selection...');
             
             try {
                 const response = await secureFetch('/getcityinfo', {
@@ -514,19 +512,19 @@
                 const dropdown = document.getElementById('cityDropdown');
                 
                 if (data.hasSelection && data.selectedCityApi) {
-                    // Tampilkan nama kota dengan koordinat
-                    let displayText = data.selectedCity || data.selectedCityApi;
+                    let displayText = data.selectedCity;
                     
-                    // Tambahkan koordinat jika ada
                     if (data.latitude && data.longitude) {
                         displayText += ` (${parseFloat(data.latitude).toFixed(4)}°, ${parseFloat(data.longitude).toFixed(4)}°)`;
                     }
                     
                     currentCitySpan.textContent = displayText;
                     currentCitySpan.style.color = '#1779ba';
+                    
                     dropdown.value = data.selectedCityApi;
                     
                     console.log('✅ City loaded:', displayText);
+                    console.log('   Dropdown value:', data.selectedCityApi);
                 } else {
                     currentCitySpan.textContent = 'Belum dipilih';
                     currentCitySpan.style.color = '#999';
@@ -549,18 +547,16 @@
             
             console.log('Selected value:', selectedCity);
             
-            // Validasi input
             if (!selectedCity) {
                 console.error('❌ No city selected');
                 showToast('❌ Pilih kota/kabupaten terlebih dahulu', 'error');
                 return;
             }
             
-            // Get coordinates dari option yang dipilih
             const selectedOption = dropdown.options[dropdown.selectedIndex];
             const lat = selectedOption.getAttribute('data-lat');
             const lon = selectedOption.getAttribute('data-lon');
-            const displayName = selectedOption.textContent.split('(')[0].trim(); // Ambil nama tanpa koordinat
+            const displayName = selectedOption.textContent.split('(')[0].trim();
             
             console.log('City data:');
             console.log('  API:', selectedCity);
@@ -568,7 +564,6 @@
             console.log('  Lat:', lat);
             console.log('  Lon:', lon);
             
-            // Validasi koordinat
             if (!lat || !lon) {
                 console.error('❌ Missing coordinates');
                 showToast('❌ Data koordinat tidak lengkap', 'error');
@@ -583,7 +578,6 @@
             try {
                 console.log('Sending POST request to /setcity...');
                 
-                // PERBAIKAN: Kirim semua data termasuk koordinat
                 const formData = new URLSearchParams();
                 formData.append('city', selectedCity);
                 formData.append('cityName', displayName);
@@ -593,7 +587,7 @@
                 console.log('POST data:', formData.toString());
                 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+                const timeoutId = setTimeout(() => controller.abort(), 10000); 
                 
                 const response = await secureFetch('/setcity', {
                     method: 'POST',
@@ -626,10 +620,9 @@
                     showToast('✅ Kota/Kabupaten berhasil disimpan!', 'success');
                     
                     setTimeout(() => {
-                        showToast(`📍 ${displayName} - Koordinat: ${parseFloat(lat).toFixed(4)}°, ${parseFloat(lon).toFixed(4)}°`, 'success');
+                        showToast(`📍 ${selectedCity} - Koordinat: ${parseFloat(lat).toFixed(4)}°, ${parseFloat(lon).toFixed(4)}°`, 'success');
                     }, 2000);
                     
-                    // Reload displays
                     setTimeout(() => {
                         console.log('Reloading city info...');
                         loadCurrentCity();
@@ -641,7 +634,6 @@
                     }, 3000);
                     
                 } else {
-                    // Handle error response
                     let errorMsg = 'Unknown error';
                     
                     if (typeof responseData === 'object' && responseData.error) {

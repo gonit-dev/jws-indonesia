@@ -300,7 +300,6 @@ String getOrCreateSession(IPAddress clientIP) {
     for (int i = 0; i < MAX_SESSIONS; i++) {
         if (activeSessions[i].clientIP == clientIP && 
             activeSessions[i].expiry > now) {
-            // Refresh session
             activeSessions[i].expiry = now + SESSION_DURATION;
             return activeSessions[i].token;
         }
@@ -882,7 +881,6 @@ void wifiTask(void *parameter) {
                     vTaskDelay(pdMS_TO_TICKS(3000));
                     esp_task_wdt_reset();
                     
-                    // GUNAKAN KOORDINAT (bukan city name)
                     if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
                         Serial.println("Auto-updating prayer times for: " + prayerConfig.selectedCityName);
                         getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
@@ -1120,8 +1118,8 @@ void updateCityDisplay() {
     if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
         String displayText = "--";
         
-        if (prayerConfig.selectedCityName.length() > 0) {
-            displayText = prayerConfig.selectedCityName;
+        if (prayerConfig.selectedCity.length() > 0) {
+            displayText = prayerConfig.selectedCity; 
         }
         
         if (objects.city_time) {
@@ -1321,18 +1319,15 @@ void setupServerRoutes() {
     });
 
     server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request){
-        // Enhanced logging
         Serial.println("\n========================================");
         Serial.println("POST /setcity received");
         Serial.print("Client IP: ");
         Serial.println(request->client()->remoteIP().toString());
         Serial.println("========================================");
         
-        // Validate session with detailed logging
         if (!validateSession(request)) {
             Serial.println("ERROR: Session validation failed");
             
-            // Log headers for debugging
             int headers = request->headers();
             Serial.printf("Request headers (%d):\n", headers);
             for(int i = 0; i < headers; i++) {
@@ -1346,11 +1341,9 @@ void setupServerRoutes() {
         }
         Serial.println("✓ Session validated");
 
-        // Check required parameters
         if (!request->hasParam("city", true)) {
             Serial.println("ERROR: Missing 'city' parameter");
             
-            // Log all received parameters
             int params = request->params();
             Serial.printf("Received parameters (%d):\n", params);
             for(int i = 0; i < params; i++) {
@@ -1363,7 +1356,6 @@ void setupServerRoutes() {
             return;
         }
 
-        // Get all parameters
         String cityApi = request->getParam("city", true)->value();
         cityApi.trim();
         
@@ -1391,7 +1383,6 @@ void setupServerRoutes() {
         Serial.println("  Latitude: " + lat);
         Serial.println("  Longitude: " + lon);
         
-        // Validate city API name
         if (cityApi.length() == 0) {
             Serial.println("ERROR: Empty city API name");
             request->send(400, "application/json", 
@@ -1406,9 +1397,7 @@ void setupServerRoutes() {
             return;
         }
 
-        // Validate coordinates if provided
         if (lat.length() > 0 && lon.length() > 0) {
-            // Basic validation - check if they're valid numbers
             float latVal = lat.toFloat();
             float lonVal = lon.toFloat();
             
@@ -1429,14 +1418,12 @@ void setupServerRoutes() {
             Serial.println("WARNING: Coordinates not provided");
         }
 
-        // Save to memory with timeout protection
         Serial.println("Saving to memory...");
         
         bool memorySuccess = false;
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(5000)) == pdTRUE) {
-            // ✅ FIXED: Simpan cityApi sebagai identifier, bukan cityName
-            prayerConfig.selectedCity = cityApi;  // "Kabupaten Tangerang"
-            prayerConfig.selectedCityName = (cityName.length() > 0) ? cityName : cityApi;  // "Tangerang (Kabupaten)"
+            prayerConfig.selectedCity = cityApi;
+            prayerConfig.selectedCityName = (cityName.length() > 0) ? cityName : cityApi; 
             prayerConfig.latitude = lat;
             prayerConfig.longitude = lon;
             
@@ -1459,7 +1446,6 @@ void setupServerRoutes() {
             return;
         }
         
-        // Save to file system with retry
         Serial.println("Writing to LittleFS...");
         
         bool fileSuccess = false;
@@ -1470,14 +1456,12 @@ void setupServerRoutes() {
             if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(5000)) == pdTRUE) {
                 fs::File file = LittleFS.open("/city_selection.txt", "w");
                 if (file) {
-                    // ✅ FIXED ORDER: Simpan cityApi dulu (identifier), baru cityName (display)
-                    file.println(prayerConfig.selectedCity);      // Line 1: "Kabupaten Tangerang" (API)
-                    file.println(prayerConfig.selectedCityName);  // Line 2: "Tangerang (Kabupaten)" (Display)
-                    file.println(prayerConfig.latitude);          // Line 3: Latitude
-                    file.println(prayerConfig.longitude);         // Line 4: Longitude
+                    file.println(prayerConfig.selectedCity);
+                    file.println(prayerConfig.selectedCityName);
+                    file.println(prayerConfig.latitude);
+                    file.println(prayerConfig.longitude);
                     file.flush();
                     
-                    // Verify write
                     size_t bytesWritten = file.size();
                     file.close();
                     
@@ -1516,7 +1500,6 @@ void setupServerRoutes() {
             return;
         }
         
-        // Verify file exists
         vTaskDelay(pdMS_TO_TICKS(100));
         
         if (LittleFS.exists("/city_selection.txt")) {
@@ -1524,7 +1507,6 @@ void setupServerRoutes() {
             if (verifyFile) {
                 size_t fileSize = verifyFile.size();
                 
-                // Read and verify content
                 Serial.println("File content verification:");
                 String line1 = verifyFile.readStringUntil('\n'); line1.trim();
                 String line2 = verifyFile.readStringUntil('\n'); line2.trim();
@@ -1543,12 +1525,10 @@ void setupServerRoutes() {
             Serial.println("WARNING: File verification failed - file not found");
         }
         
-        // Update display
         Serial.println("Updating display...");
         updateCityDisplay();
         Serial.println("✓ Display updated");
         
-        // Fetch prayer times if WiFi connected and coordinates available
         bool willFetchPrayerTimes = false;
         
         if (WiFi.status() == WL_CONNECTED) {
@@ -1558,7 +1538,6 @@ void setupServerRoutes() {
                 Serial.println("  Lat: " + lat);
                 Serial.println("  Lon: " + lon);
                 
-                // Trigger prayer time update
                 getPrayerTimesByCoordinates(lat, lon);
                 
                 Serial.println("✓ Prayer times update initiated");
@@ -1579,7 +1558,6 @@ void setupServerRoutes() {
         }
         Serial.println("========================================\n");
         
-        // Send success response with all data
         String response = "{";
         response += "\"success\":true,";
         response += "\"city\":\"" + prayerConfig.selectedCityName + "\",";
@@ -1609,21 +1587,20 @@ void setupServerRoutes() {
         String json = "{";
         
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            bool hasSelection = (prayerConfig.selectedCity.length() > 0 && 
-                                prayerConfig.selectedCityName.length() > 0);
+            bool hasSelection = (prayerConfig.selectedCity.length() > 0);
             
-            json += "\"selectedCity\":\"" + prayerConfig.selectedCityName + "\",";
+            json += "\"selectedCity\":\"" + prayerConfig.selectedCity + "\",";
             json += "\"selectedCityApi\":\"" + prayerConfig.selectedCity + "\",";
-            json += "\"latitude\":\"" + prayerConfig.latitude + "\",";      // TAMBAHAN
-            json += "\"longitude\":\"" + prayerConfig.longitude + "\",";    // TAMBAHAN
+            json += "\"latitude\":\"" + prayerConfig.latitude + "\",";
+            json += "\"longitude\":\"" + prayerConfig.longitude + "\",";
             json += "\"hasSelection\":" + String(hasSelection ? "true" : "false");
             
             xSemaphoreGive(settingsMutex);
         } else {
             json += "\"selectedCity\":\"\",";
             json += "\"selectedCityApi\":\"\",";
-            json += "\"latitude\":\"\",";       // TAMBAHAN
-            json += "\"longitude\":\"\",";      // TAMBAHAN
+            json += "\"latitude\":\"\",";
+            json += "\"longitude\":\"\",";
             json += "\"hasSelection\":false";
         }
         
@@ -1846,8 +1823,8 @@ void setupServerRoutes() {
             prayerConfig.isyaTime = "";
             prayerConfig.selectedCity = "";
             prayerConfig.selectedCityName = "";
-            prayerConfig.latitude = "";      // TAMBAHAN
-            prayerConfig.longitude = "";     // TAMBAHAN
+            prayerConfig.latitude = "";
+            prayerConfig.longitude = "";
             
             strcpy(wifiConfig.apSSID, "JWS ESP32");
             strcpy(wifiConfig.apPassword, "12345678");
