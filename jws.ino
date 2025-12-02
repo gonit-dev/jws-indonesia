@@ -203,7 +203,7 @@ struct Session {
 
 const int MAX_SESSIONS = 5;
 Session activeSessions[MAX_SESSIONS];
-const unsigned long SESSION_DURATION = 3600000;
+const unsigned long SESSION_DURATION = 900000;
 
 // Forward Declarations
 void updateTimeDisplay();
@@ -220,8 +220,7 @@ bool autoDetectAndUpdatePrayerTimes();
 // ================================
 // FLUSH CALLBACK
 // ================================
-void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
-{
+void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
     if (spiMutex != NULL && xSemaphoreTake(spiMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         uint32_t w = area->x2 - area->x1 + 1;
         uint32_t h = area->y2 - area->y1 + 1;
@@ -240,8 +239,7 @@ void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 // ================================
 // TOUCH CALLBACK
 // ================================
-void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data)
-{
+void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data) {
     static unsigned long lastTouchRead = 0;
     unsigned long now = millis();
     
@@ -1869,8 +1867,7 @@ void setupServerRoutes() {
 // ================================
 // SETUP - ESP32 CORE 3.x COMPATIBLE
 // ================================
-void setup()
-{
+void setup() {
     Serial.begin(115200);
     delay(1000);
 
@@ -2188,7 +2185,6 @@ void setup()
 // ================================
 // LOOP
 // ================================
-void loop()
-{
+void loop() {
     vTaskDelay(pdMS_TO_TICKS(1000));
 }
