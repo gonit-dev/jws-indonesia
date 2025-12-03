@@ -69,6 +69,13 @@
 #define WEB_TASK_PRIORITY       1
 #define PRAYER_TASK_PRIORITY    1
 
+int resetYear;
+int resetMonth;
+int resetDay;
+int resetHour;
+int resetMinute;
+int resetSecond;
+
 // Task Handles
 TaskHandle_t rtcTaskHandle = NULL;
 TaskHandle_t uiTaskHandle = NULL;
@@ -597,7 +604,7 @@ bool initRTC() {
         Serial.println("   - GND → GND");
         Serial.println("   - BATTERY → CR2032 (optional)");
         Serial.println("\n⚠ Running without RTC");
-        Serial.println("   Time will reset to 00:00:00 01/01/2000 on power loss");
+        Serial.println("   Time will reset to 00:00:00 01/01/1970 on power loss");
         Serial.println("========================================\n");
         return false;
     }
@@ -1887,12 +1894,24 @@ void setupServerRoutes() {
         Serial.println("\nResetting time to default...");
         
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            setTime(0, 0, 0, 1, 1, 2000);
+            setTime(0, 0, 0, 1, 1, 1970);
             timeConfig.currentTime = now();
             timeConfig.ntpSynced = false;
             timeConfig.ntpServer = "";
-            
-            Serial.println("✓ System time reset to: 00:00:00 01/01/2000");
+
+            resetYear = 1970;
+            resetMonth = 1;
+            resetDay = 1;
+            resetHour = 0;
+            resetMinute = 0;
+            resetSecond = 0;
+                        
+            Serial.println(
+                "✓ System time reset to: " 
+                + String(resetHour) + ":" + String(resetMinute) + ":" + String(resetSecond)
+                + " " 
+                + String(resetDay) + "/" + String(resetMonth) + "/" + String(resetYear)
+            );
             
             // ================================
             // 3. SAVE TO RTC IF AVAILABLE
@@ -1900,8 +1919,21 @@ void setupServerRoutes() {
             if (rtcAvailable) {
                 DateTime resetTime(2000, 1, 1, 0, 0, 0);
                 rtc.adjust(resetTime);
+
+                resetYear = 2000;
+                resetMonth = 1;
+                resetDay = 1;
+                resetHour = 0;
+                resetMinute = 0;
+                resetSecond = 0;
                 
-                Serial.println("✓ RTC time reset to: 00:00:00 01/01/2000");
+                Serial.println(
+                    "✓ System time reset to: " 
+                    + String(resetHour) + ":" + String(resetMinute) + ":" + String(resetSecond)
+                    + " " 
+                    + String(resetDay) + "/" + String(resetMonth) + "/" + String(resetYear)
+                );
+
                 Serial.println("  (RTC will keep this time until NTP sync)");
             } else {
                 Serial.println("✓ System time reset (no RTC detected)");
@@ -1954,7 +1986,12 @@ void setupServerRoutes() {
         
         Serial.println("\n========================================");
         Serial.println("FACTORY RESET COMPLETE");
-        Serial.println("Time reset to: 00:00:00 01/01/2000");
+        Serial.println(
+            "✓ System time reset to: " 
+            + String(resetHour) + ":" + String(resetMinute) + ":" + String(resetSecond)
+            + " " 
+            + String(resetDay) + "/" + String(resetMonth) + "/" + String(resetYear)
+        );
         if (rtcAvailable) {
             Serial.println("RTC will maintain this time until NTP sync");
         }
