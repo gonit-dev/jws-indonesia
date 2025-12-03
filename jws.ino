@@ -2013,7 +2013,7 @@ void setupServerRoutes() {
 }
 
 // ================================
-// SETUP - ESP32 CORE 3.x COMPATIBLE
+// SETUP - ESP32 CORE 3.x
 // ================================
 void setup() {
     Serial.begin(115200);
