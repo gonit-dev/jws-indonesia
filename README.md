@@ -285,28 +285,36 @@ http://192.168.1.100/api/data      # Via WiFi Router (ganti IP sesuai device)
 
 ```json
 {
-  "time": "14:30:45",
-  "date": "26/11/2025",
-  "day": "Wednesday",
-  "timestamp": 1732612245,
+  "time": "12:34:56",
+  "date": "01/01/2000",
+  "day": "Saturday",
+  "timestamp": 946684800,
+
   "prayerTimes": {
-    "subuh": "04:30",
-    "dzuhur": "12:05",
-    "ashar": "15:20",
-    "maghrib": "18:10",
-    "isya": "19:25"
+    "subuh": "04:32",
+    "dzuhur": "11:58",
+    "ashar": "15:21",
+    "maghrib": "17:52",
+    "isya": "19:03"
   },
+
   "location": {
-    "city": "Jakarta",
-    "cityId": "Jakarta"
+    "city": "KotaTangerang",
+    "cityId": "KotaTangerang",
+    "displayName": "Kota Tangerang",
+    "latitude": "-6.178",
+    "longitude": "106.63"
   },
+
   "device": {
     "wifiConnected": true,
     "wifiSSID": "MyWiFi",
-    "ip": "192.168.1.100",
+    "ip": "192.168.1.20",
     "apIP": "192.168.4.1",
-    "ntpSynced": true,
-    "freeHeap": 180000
+    "ntpSynced": false,
+    "ntpServer": "pool.ntp.org",
+    "freeHeap": 257000,
+    "uptime": 123456
   }
 }
 ```
