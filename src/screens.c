@@ -136,7 +136,7 @@ void create_screen_main() {
                             lv_obj_t *obj = lv_obj_create(parent_obj);
                             objects.subuh = obj;
                             lv_obj_set_pos(obj, 0, 32);
-                            lv_obj_set_size(obj, LV_PCT(100), 30);
+                            lv_obj_set_size(obj, LV_PCT(100), 35);
                             lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -150,8 +150,8 @@ void create_screen_main() {
                                 {
                                     lv_obj_t *obj = lv_obj_create(parent_obj);
                                     objects.obj3 = obj;
-                                    lv_obj_set_pos(obj, 5, 3);
-                                    lv_obj_set_size(obj, 150, LV_PCT(80));
+                                    lv_obj_set_pos(obj, 5, 6);
+                                    lv_obj_set_size(obj, 150, LV_PCT(70));
                                     lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -193,8 +193,8 @@ void create_screen_main() {
                             // zuhur
                             lv_obj_t *obj = lv_obj_create(parent_obj);
                             objects.zuhur = obj;
-                            lv_obj_set_pos(obj, 0, 62);
-                            lv_obj_set_size(obj, LV_PCT(100), 30);
+                            lv_obj_set_pos(obj, 0, 67);
+                            lv_obj_set_size(obj, LV_PCT(100), 35);
                             lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -208,8 +208,8 @@ void create_screen_main() {
                                 {
                                     lv_obj_t *obj = lv_obj_create(parent_obj);
                                     objects.obj5 = obj;
-                                    lv_obj_set_pos(obj, 5, 3);
-                                    lv_obj_set_size(obj, 150, LV_PCT(80));
+                                    lv_obj_set_pos(obj, 5, 6);
+                                    lv_obj_set_size(obj, 150, LV_PCT(70));
                                     lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -251,8 +251,8 @@ void create_screen_main() {
                             // ashar
                             lv_obj_t *obj = lv_obj_create(parent_obj);
                             objects.ashar = obj;
-                            lv_obj_set_pos(obj, 0, 92);
-                            lv_obj_set_size(obj, LV_PCT(100), 30);
+                            lv_obj_set_pos(obj, 0, 102);
+                            lv_obj_set_size(obj, LV_PCT(100), 35);
                             lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -266,8 +266,8 @@ void create_screen_main() {
                                 {
                                     lv_obj_t *obj = lv_obj_create(parent_obj);
                                     objects.obj7 = obj;
-                                    lv_obj_set_pos(obj, 5, 3);
-                                    lv_obj_set_size(obj, 150, LV_PCT(80));
+                                    lv_obj_set_pos(obj, 5, 6);
+                                    lv_obj_set_size(obj, 150, LV_PCT(70));
                                     lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -309,8 +309,8 @@ void create_screen_main() {
                             // maghrib
                             lv_obj_t *obj = lv_obj_create(parent_obj);
                             objects.maghrib = obj;
-                            lv_obj_set_pos(obj, 0, 122);
-                            lv_obj_set_size(obj, LV_PCT(100), 30);
+                            lv_obj_set_pos(obj, 0, 137);
+                            lv_obj_set_size(obj, LV_PCT(100), 35);
                             lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -324,8 +324,8 @@ void create_screen_main() {
                                 {
                                     lv_obj_t *obj = lv_obj_create(parent_obj);
                                     objects.obj9 = obj;
-                                    lv_obj_set_pos(obj, 5, 3);
-                                    lv_obj_set_size(obj, 150, LV_PCT(80));
+                                    lv_obj_set_pos(obj, 5, 6);
+                                    lv_obj_set_size(obj, 150, LV_PCT(70));
                                     lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -367,8 +367,8 @@ void create_screen_main() {
                             // isya
                             lv_obj_t *obj = lv_obj_create(parent_obj);
                             objects.isya = obj;
-                            lv_obj_set_pos(obj, 0, 152);
-                            lv_obj_set_size(obj, LV_PCT(100), 30);
+                            lv_obj_set_pos(obj, 0, 172);
+                            lv_obj_set_size(obj, LV_PCT(100), 35);
                             lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -382,8 +382,8 @@ void create_screen_main() {
                                 {
                                     lv_obj_t *obj = lv_obj_create(parent_obj);
                                     objects.obj11 = obj;
-                                    lv_obj_set_pos(obj, 5, 3);
-                                    lv_obj_set_size(obj, 150, LV_PCT(80));
+                                    lv_obj_set_pos(obj, 5, 6);
+                                    lv_obj_set_size(obj, 150, LV_PCT(70));
                                     lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
