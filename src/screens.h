@@ -35,9 +35,7 @@ typedef struct _objects_t {
     lv_obj_t *obj12;
     lv_obj_t *isya_time;
     lv_obj_t *time;
-    lv_obj_t *time_hour;
-    lv_obj_t *time_minute;
-    lv_obj_t *time_colon;
+    lv_obj_t *time_now;
     lv_obj_t *date_now;
 } objects_t;
 

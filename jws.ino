@@ -189,7 +189,6 @@ unsigned long lastTouchTime = 0;
 // ================================
 // STATE VARIABLES
 // ================================
-bool colonOn = true;
 bool displayNeedsUpdate = false;
 
 enum WiFiState {
@@ -1152,9 +1151,7 @@ void clockTickTask(void *parameter) {
 // HELPER FUNCTIONS
 // ================================
 void hideAllUIElements() {
-    if (objects.time_hour) lv_obj_add_flag(objects.time_hour, LV_OBJ_FLAG_HIDDEN);
-    if (objects.time_colon) lv_obj_add_flag(objects.time_colon, LV_OBJ_FLAG_HIDDEN);
-    if (objects.time_minute) lv_obj_add_flag(objects.time_minute, LV_OBJ_FLAG_HIDDEN);
+    if (objects.time_now) lv_obj_add_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
     if (objects.date_now) lv_obj_add_flag(objects.date_now, LV_OBJ_FLAG_HIDDEN);
     if (objects.city_time) lv_obj_add_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.subuh_time) lv_obj_add_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
@@ -1165,9 +1162,7 @@ void hideAllUIElements() {
 }
 
 void showAllUIElements() {
-    if (objects.time_hour) lv_obj_clear_flag(objects.time_hour, LV_OBJ_FLAG_HIDDEN);
-    if (objects.time_colon) lv_obj_clear_flag(objects.time_colon, LV_OBJ_FLAG_HIDDEN);
-    if (objects.time_minute) lv_obj_clear_flag(objects.time_minute, LV_OBJ_FLAG_HIDDEN);
+    if (objects.time_now) lv_obj_clear_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
     if (objects.date_now) lv_obj_clear_flag(objects.date_now, LV_OBJ_FLAG_HIDDEN);
     if (objects.city_time) lv_obj_clear_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.subuh_time) lv_obj_clear_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
@@ -1195,41 +1190,26 @@ void updateCityDisplay() {
 
 void updateTimeDisplay() {
     if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-        char hourStr[3];
-        char minuteStr[3];
+        char timeStr[10];
         char dateStr[15];
         
-        sprintf(hourStr, "%02d", hour(timeConfig.currentTime));
-        sprintf(minuteStr, "%02d", minute(timeConfig.currentTime));
+        sprintf(timeStr, "%02d:%02d",  // <-- COLON TETAP (:)
+                hour(timeConfig.currentTime), 
+                minute(timeConfig.currentTime));
+        
         sprintf(dateStr, "%02d/%02d/%04d", 
                 day(timeConfig.currentTime), 
                 month(timeConfig.currentTime), 
                 year(timeConfig.currentTime));
         
-        // Update JAM
-        if (objects.time_hour) {
-            lv_label_set_text(objects.time_hour, hourStr);
-        }
-        
-        // Update COLON (berkedip: muncul/hilang)
-        if (objects.time_colon) {
-            if (colonOn) {
-                lv_label_set_text(objects.time_colon, ":");
-            } else {
-                lv_label_set_text(objects.time_colon, " ");
-            }
-        }
-        
-        // Update MENIT
-        if (objects.time_minute) {
-            lv_label_set_text(objects.time_minute, minuteStr);
+        if (objects.time_now) {
+            lv_label_set_text(objects.time_now, timeStr);
         }
         
         if (objects.date_now) {
             lv_label_set_text(objects.date_now, dateStr);
         }
         
-        colonOn = !colonOn;
         xSemaphoreGive(timeMutex);
     }
 }
