@@ -1193,7 +1193,7 @@ void updateTimeDisplay() {
         char timeStr[10];
         char dateStr[15];
         
-        sprintf(timeStr, "%02d:%02d",  // <-- COLON TETAP (:)
+        sprintf(timeStr, "%02d:%02d",
                 hour(timeConfig.currentTime), 
                 minute(timeConfig.currentTime));
         
