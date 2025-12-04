@@ -70,13 +70,6 @@
 #define WEB_TASK_PRIORITY       1
 #define PRAYER_TASK_PRIORITY    1
 
-int resetYear;
-int resetMonth;
-int resetDay;
-int resetHour;
-int resetMinute;
-int resetSecond;
-
 // Task Handles
 TaskHandle_t rtcTaskHandle = NULL;
 TaskHandle_t uiTaskHandle = NULL;
@@ -588,6 +581,9 @@ void loadCitySelection() {
     }
 }
 
+// ================================
+// INIT RTC
+// ================================
 bool initRTC() {
     Serial.println("\n========================================");
     Serial.println("INITIALIZING DS3231 RTC");
@@ -604,8 +600,35 @@ bool initRTC() {
         Serial.println("   - GND → GND");
         Serial.println("   - BATTERY → CR2032 (optional)");
         Serial.println("\n⚠ Running without RTC");
-        Serial.println("   Time will reset to 00:00:00 01/01/1970 on power loss");
+        Serial.println("   Time will reset to 00:00:00 01/01/2000 on power loss");
         Serial.println("========================================\n");
+        
+        // SET DEFAULT TIME 01/01/2000 00:00:00
+        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+            // Set system time menggunakan TimeLib
+            setTime(0, 0, 0, 1, 1, 2000);
+            
+            // Get timestamp dari TimeLib
+            time_t tempTime = now();
+            
+            // ================================
+            // CRITICAL FIX: Verify timestamp validity
+            // ================================
+            if (tempTime < 946684800) {
+                // If TimeLib returns invalid time (before 2000)
+                Serial.println("⚠ TimeLib returned invalid time");
+                Serial.printf("  Got timestamp: %ld (should be >= 946684800)\n", tempTime);
+                Serial.println("  Forcing timestamp to 946684800 (01/01/2000)");
+                timeConfig.currentTime = 946684800;
+            } else {
+                timeConfig.currentTime = tempTime;
+                Serial.println("✓ TimeLib set successfully");
+                Serial.printf("  Timestamp: %ld\n", timeConfig.currentTime);
+            }
+            
+            xSemaphoreGive(timeMutex);
+        }
+        
         return false;
     }
     
@@ -618,40 +641,43 @@ bool initRTC() {
         Serial.println("✓ RTC has battery backup - time will persist");
     }
     
-    DateTime now = rtc.now();
+    DateTime rtcNow = rtc.now();
     
     Serial.printf("\nRTC Current Time: %02d:%02d:%02d %02d/%02d/%04d\n",
-                 now.hour(), now.minute(), now.second(),
-                 now.day(), now.month(), now.year());
+                 rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
+                 rtcNow.day(), rtcNow.month(), rtcNow.year());
     
-    if (now.year() < 2000) {
-        Serial.println("\n⚠ RTC time is invalid (year < 2000)");
-        Serial.println("   This happens when:");
-        Serial.println("   1. First time use (no battery installed)");
-        Serial.println("   2. Battery is dead");
-        Serial.println("   3. Just after factory reset");
-        Serial.println("\n→ Waiting for NTP sync to set correct time");
-        
-        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            setTime(0, 0, 0, 1, 1, 2000);
-            timeConfig.currentTime = now.unixtime();
-            xSemaphoreGive(timeMutex);
-        }
-        
-        Serial.println("========================================\n");
-        return true;
-    }
+    // ALWAYS RESET TO 01/01/2000 00:00:00 ON BOOT
+    Serial.println("\n⚠ Resetting to default time: 00:00:00 01/01/2000");
+    Serial.println("   (Time will be updated by NTP when WiFi connects)");
+    
+    DateTime defaultTime(2000, 1, 1, 0, 0, 0);
+    rtc.adjust(defaultTime);
     
     if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-        setTime(now.hour(), now.minute(), now.second(), 
-                now.day(), now.month(), now.year());
-        timeConfig.currentTime = now.unixtime();
+        // Set system time menggunakan TimeLib
+        setTime(0, 0, 0, 1, 1, 2000);
+        
+        // Get timestamp dari TimeLib
+        time_t tempTime = now();
+        
+        // ================================
+        // CRITICAL FIX: Verify timestamp validity
+        // ================================
+        if (tempTime < 946684800) {
+            Serial.println("⚠ TimeLib returned invalid time");
+            Serial.printf("  Got timestamp: %ld (should be >= 946684800)\n", tempTime);
+            Serial.println("  Forcing timestamp to 946684800 (01/01/2000)");
+            timeConfig.currentTime = 946684800;
+        } else {
+            timeConfig.currentTime = tempTime;
+            Serial.println("✓ System time set to 00:00:00 01/01/2000");
+            Serial.printf("  Timestamp: %ld (correct!)\n", timeConfig.currentTime);
+        }
+        
+        Serial.println("   RTC will maintain this until NTP sync");
         
         xSemaphoreGive(timeMutex);
-        
-        Serial.println("✓ System time loaded from RTC");
-        Serial.println("   RTC is running continuously (1 tick/second)");
-        Serial.println("   Even during ESP restart or power loss");
         
         if (displayQueue != NULL) {
             DisplayUpdate update;
@@ -1108,6 +1134,8 @@ void rtcSyncTask(void *parameter) {
                     xQueueSend(displayQueue, &update, 0);
                 } else if (rtcTime.year() < 2000) {
                     Serial.println("RTC time invalid (year < 2000), keeping system time");
+                        DateTime resetTime(2000, 1, 1, 0, 0, 0);
+                        rtc.adjust(resetTime);
                 }
                 
                 xSemaphoreGive(timeMutex);
@@ -1123,22 +1151,58 @@ void clockTickTask(void *parameter) {
     const TickType_t xFrequency = pdMS_TO_TICKS(1000);
     
     static int autoSyncCounter = 0; 
+    static bool firstRun = true;
     
     while (true) {
         if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-            timeConfig.currentTime++;
+            // ================================
+            // CRITICAL FIX: Prevent 1970 epoch bug
+            // ================================
+            if (timeConfig.currentTime < 946684800) { 
+                // 946684800 = Unix timestamp for 01/01/2000 00:00:00 UTC
+                // Any time before year 2000 is invalid
+                
+                if (firstRun) {
+                    Serial.println("\n⚠ CLOCK TASK WARNING:");
+                    Serial.printf("  Invalid timestamp detected: %ld\n", timeConfig.currentTime);
+                    Serial.println("  This indicates time was not properly initialized");
+                    Serial.println("  Forcing reset to: 01/01/2000 00:00:00");
+                    firstRun = false;
+                }
+                
+                // Force reset to 2000
+                setTime(0, 0, 0, 1, 1, 2000);
+                timeConfig.currentTime = now();
+                
+                // Double-check: if TimeLib still returns invalid time
+                if (timeConfig.currentTime < 946684800) {
+                    Serial.println("  TimeLib.h malfunction - using hardcoded timestamp");
+                    timeConfig.currentTime = 946684800;
+                }
+                
+                Serial.printf("  ✓ Time corrected to: %ld\n\n", timeConfig.currentTime);
+            } else {
+                // Normal operation: increment by 1 second
+                timeConfig.currentTime++;
+            }
+            
             xSemaphoreGive(timeMutex);
+            
+            // Send update to display
             DisplayUpdate update;
             update.type = DisplayUpdate::TIME_UPDATE;
             xQueueSend(displayQueue, &update, 0);
         }
 
+        // ================================
+        // AUTO NTP SYNC EVERY HOUR
+        // ================================
         if (wifiConfig.isConnected) {
             autoSyncCounter++;
-            if (autoSyncCounter >= 3600) {
+            if (autoSyncCounter >= 3600) {  // 3600 seconds = 1 hour
                 autoSyncCounter = 0;
                 if (ntpTaskHandle != NULL) {
-                    Serial.println("Auto NTP sync (hourly)");
+                    Serial.println("\n⏰ Auto NTP sync (hourly)");
                     xTaskNotifyGive(ntpTaskHandle);
                 }
             }
@@ -1147,6 +1211,7 @@ void clockTickTask(void *parameter) {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
+
 // ================================
 // HELPER FUNCTIONS
 // ================================
@@ -1887,29 +1952,17 @@ void setupServerRoutes() {
         }
         
         // ================================
-        // 2. RESET TIME TO 00:00 01/01/2000
+        // 2. RESET TIME TO 00:00:00 01/01/2000
         // ================================
         Serial.println("\nResetting time to default...");
         
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            setTime(0, 0, 0, 1, 1, 1970);
+            setTime(0, 0, 0, 1, 1, 2000);
             timeConfig.currentTime = now();
             timeConfig.ntpSynced = false;
             timeConfig.ntpServer = "";
-
-            resetYear = 1970;
-            resetMonth = 1;
-            resetDay = 1;
-            resetHour = 0;
-            resetMinute = 0;
-            resetSecond = 0;
-                        
-            Serial.println(
-                "✓ System time reset to: " 
-                + String(resetHour) + ":" + String(resetMinute) + ":" + String(resetSecond)
-                + " " 
-                + String(resetDay) + "/" + String(resetMonth) + "/" + String(resetYear)
-            );
+            
+            Serial.println("✓ System time reset to: 00:00:00 01/01/2000");
             
             // ================================
             // 3. SAVE TO RTC IF AVAILABLE
@@ -1917,21 +1970,8 @@ void setupServerRoutes() {
             if (rtcAvailable) {
                 DateTime resetTime(2000, 1, 1, 0, 0, 0);
                 rtc.adjust(resetTime);
-
-                resetYear = 2000;
-                resetMonth = 1;
-                resetDay = 1;
-                resetHour = 0;
-                resetMinute = 0;
-                resetSecond = 0;
                 
-                Serial.println(
-                    "✓ System time reset to: " 
-                    + String(resetHour) + ":" + String(resetMinute) + ":" + String(resetSecond)
-                    + " " 
-                    + String(resetDay) + "/" + String(resetMonth) + "/" + String(resetYear)
-                );
-
+                Serial.println("✓ RTC time reset to: 00:00:00 01/01/2000");
                 Serial.println("  (RTC will keep this time until NTP sync)");
             } else {
                 Serial.println("✓ System time reset (no RTC detected)");
@@ -1984,12 +2024,7 @@ void setupServerRoutes() {
         
         Serial.println("\n========================================");
         Serial.println("FACTORY RESET COMPLETE");
-        Serial.println(
-            "✓ System time reset to: " 
-            + String(resetHour) + ":" + String(resetMinute) + ":" + String(resetSecond)
-            + " " 
-            + String(resetDay) + "/" + String(resetMonth) + "/" + String(resetYear)
-        );
+        Serial.println("✓ System time reset to: 00:00:00 01/01/2000");
         if (rtcAvailable) {
             Serial.println("RTC will maintain this time until NTP sync");
         }
@@ -2155,7 +2190,6 @@ void setup() {
     // TIME CONFIG INIT
     // ================================
     timeConfig.ntpServer = "pool.ntp.org";
-    timeConfig.currentTime = 0;
     timeConfig.ntpSynced = false;
 
     // ================================

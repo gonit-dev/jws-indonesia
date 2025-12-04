@@ -451,11 +451,11 @@ void create_screen_main() {
                                     // timeNow
                                     lv_obj_t *obj = lv_label_create(parent_obj);
                                     objects.time_now = obj;
-                                    lv_obj_set_pos(obj, 0, 65);
+                                    lv_obj_set_pos(obj, 0, 71);
                                     lv_obj_set_size(obj, LV_PCT(100), LV_SIZE_CONTENT);
                                     lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xff000000), LV_PART_MAIN | LV_STATE_DEFAULT);
-                                    lv_obj_set_style_text_font(obj, &ui_font_prototype_48, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_text_font(obj, &ui_font_prototype_38, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_text_letter_space(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_label_set_text(obj, "00:00");
                                 }
@@ -463,13 +463,13 @@ void create_screen_main() {
                                     // dateNow
                                     lv_obj_t *obj = lv_label_create(parent_obj);
                                     objects.date_now = obj;
-                                    lv_obj_set_pos(obj, 0, 122);
+                                    lv_obj_set_pos(obj, 0, 117);
                                     lv_obj_set_size(obj, LV_PCT(100), LV_SIZE_CONTENT);
                                     lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xff000000), LV_PART_MAIN | LV_STATE_DEFAULT);
-                                    lv_obj_set_style_text_font(obj, &ui_font_prototype_22, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_text_font(obj, &ui_font_prototype_20, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_text_letter_space(obj, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
-                                    lv_label_set_text(obj, "00/00/0000");
+                                    lv_label_set_text(obj, "01/01/2000");
                                 }
                             }
                         }
