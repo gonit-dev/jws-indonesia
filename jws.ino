@@ -26,6 +26,7 @@
 #include "src/ui.h"
 #include "src/screens.h"
 #include "src/images.h"
+#include "src/fonts.h"
 
 // ================================
 // PIN DEFINITIONS
