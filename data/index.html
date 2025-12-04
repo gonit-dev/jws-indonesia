@@ -38,6 +38,12 @@
             background-color: #ffae00;
             color: white;
         }
+        .realtime-value {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #1779ba;
+            font-size: 15px;
+        }
         .prayer-time-box {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -187,7 +193,9 @@
                                             <div class="large-6 medium-6 small-12 cell" style="text-align: left;">
                                                 <p><strong>NTP Status:</strong> <span id="ntpStatus">-</span></p>
                                                 <p><strong>NTP Server:</strong> <span id="ntpServerUsed">-</span></p>
-                                                <p><strong>Current Time:</strong> <span id="currentTime">-</span></p>
+                                                <p><strong>Current Time:</strong> <span id="currentTime" class="realtime-value">-</span></p>
+                                                <p><strong>Current Date:</strong> <span id="currentDate" class="realtime-value">-</span></p>
+                                                <p><strong>Uptime:</strong> <span id="uptime" class="realtime-value">--:--:--</span></p>
                                             </div>
                                         </div>
                                     </div>
@@ -347,11 +355,101 @@
     </div>
 
     <script>
-        async function secureFetch(url, options = {}) {
-            if (url.includes('/api/data')) {
-                return fetch(url, options);
+        // ================================
+        // GLOBAL VARIABLES
+        // ================================
+        let isOnline = false;
+        let cityList = [];
+        let loadAttempts = 0;
+        const MAX_LOAD_ATTEMPTS = 3;
+        
+        // Real-time clock sync
+        let serverTimestamp = 0;
+        let localStartTime = 0;
+        let serverUptimeStart = 0;
+        let lastSyncTime = 0;
+
+        // ================================
+        // REAL-TIME CLOCK FUNCTIONS
+        // ================================
+        function getCurrentTime() {
+            if (serverTimestamp === 0 || localStartTime === 0) {
+                return null;
             }
             
+            const elapsedMs = Date.now() - localStartTime;
+            const currentTimestamp = serverTimestamp + Math.floor(elapsedMs / 1000);
+            
+            return new Date(currentTimestamp * 1000);
+        }
+
+        function getCurrentUptime() {
+            if (serverUptimeStart === 0 || localStartTime === 0) {
+                return 0;
+            }
+            
+            const elapsedMs = Date.now() - localStartTime;
+            return serverUptimeStart + Math.floor(elapsedMs / 1000);
+        }
+
+        function formatTime(date) {
+            if (!date) return '--:--:--';
+            
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            
+            return `${hours}:${minutes}:${seconds}`;
+        }
+
+        function formatUptime(seconds) {
+            if (seconds === 0) return '--:--:--';
+            
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            if (days > 0) {
+                // Jika ada hari, tampilkan format: "Xd HH:MM:SS"
+                return `${days}d ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            } else {
+                // Jika belum 1 hari, format: "HH:MM:SS"
+                return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            }
+        }
+
+        function updateRealtimeDisplay() {
+            const currentTime = getCurrentTime();
+            const uptime = getCurrentUptime();
+            
+            const timeElement = document.getElementById('currentTime');
+            const dateElement = document.getElementById('currentDate');
+            const uptimeElement = document.getElementById('uptime');
+            
+            if (timeElement && currentTime) {
+                const hours = String(currentTime.getHours()).padStart(2, '0');
+                const minutes = String(currentTime.getMinutes()).padStart(2, '0');
+                const seconds = String(currentTime.getSeconds()).padStart(2, '0');
+                timeElement.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+            
+            if (dateElement && currentTime) {
+                const day = String(currentTime.getDate()).padStart(2, '0');
+                const month = String(currentTime.getMonth() + 1).padStart(2, '0');
+                const year = currentTime.getFullYear();
+                dateElement.textContent = `${day}/${month}/${year}`;
+            }
+            
+            if (uptimeElement) {
+                uptimeElement.textContent = formatUptime(uptime);
+            }
+        }
+
+        // ================================
+        // SECURE FETCH WRAPPER
+        // ================================
+        async function secureFetch(url, options = {}) {
             if (!options.credentials) {
                 options.credentials = 'same-origin';
             }
@@ -374,11 +472,9 @@
             }
         }
 
-        let isOnline = false;
-        let cityList = [];
-        let loadAttempts = 0;
-        const MAX_LOAD_ATTEMPTS = 3;
-
+        // ================================
+        // TOAST NOTIFICATION
+        // ================================
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             toast.textContent = message;
@@ -395,6 +491,83 @@
             }, 4000);
         }
 
+        // ================================
+        // DEVICE STATUS UPDATE
+        // ================================
+        async function updateDeviceStatus() {
+            try {
+                const response = await secureFetch('/devicestatus');
+                const data = await response.json();
+                
+                isOnline = data.connected === true;
+                
+                // Update WiFi info
+                document.getElementById('wifiName').textContent = data.ssid || 'Tidak Terhubung';
+                document.getElementById('ipAddress').textContent = data.ip || '-';
+                document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Synced' : '❌ Not Synced';
+                
+                if (document.getElementById('ntpServerUsed')) {
+                    document.getElementById('ntpServerUsed').textContent = data.ntpServer || '-';
+                }
+                
+                // Update internet status badge
+                const statusBadge = document.getElementById('internetStatus');
+                if (isOnline) {
+                    statusBadge.textContent = '✅ Online';
+                    statusBadge.className = 'status-badge status-online';
+                } else {
+                    statusBadge.textContent = '❌ Offline';
+                    statusBadge.className = 'status-badge status-offline';
+                }
+                
+                // ================================
+                // SYNC TIME & DATE FROM SERVER
+                // ================================
+                if (data.currentTime && data.currentDate) {
+                    const timeParts = data.currentTime.split(':');
+                    const dateParts = data.currentDate.split('/');
+                    
+                    if (timeParts.length === 3 && dateParts.length === 3) {
+                        const now = new Date(
+                            parseInt(dateParts[2]), // year
+                            parseInt(dateParts[1]) - 1, // month (0-indexed)
+                            parseInt(dateParts[0]), // day
+                            parseInt(timeParts[0]), // hour
+                            parseInt(timeParts[1]), // minute
+                            parseInt(timeParts[2])  // second
+                        );
+                        
+                        serverTimestamp = Math.floor(now.getTime() / 1000);
+                        localStartTime = Date.now();
+                        lastSyncTime = Date.now();
+                        
+                        console.log('⏰ Time synced:', data.currentTime, data.currentDate);
+                    }
+                }
+                
+                // Sync uptime
+                if (data.uptime !== undefined) {
+                    serverUptimeStart = data.uptime;
+                    console.log('⏱️ Uptime synced:', serverUptimeStart, 'seconds');
+                }
+                
+                // Free heap display
+                if (document.getElementById('freeHeap')) {
+                    const heapKB = Math.floor(parseInt(data.freeHeap) / 1024);
+                    document.getElementById('freeHeap').textContent = heapKB + ' KB';
+                }
+                
+            } catch (error) {
+                console.error('Error fetching device status:', error);
+                isOnline = false;
+                document.getElementById('internetStatus').textContent = '❌ Error';
+                document.getElementById('internetStatus').className = 'status-badge status-offline';
+            }
+        }
+        
+        // ================================
+        // CITY LOADING FUNCTIONS
+        // ================================
         async function loadCities() {
             console.log(`📥 Loading cities (Attempt ${loadAttempts + 1}/${MAX_LOAD_ATTEMPTS})...`);
             
@@ -434,7 +607,7 @@
                     if (city.province !== currentProvince) {
                         currentProvince = city.province;
                         const optgroup = document.createElement('optgroup');
-                        optgroup.label = '┏━ ' + currentProvince + ' ━┓';
+                        optgroup.label = '┌─ ' + currentProvince + ' ─┐';
                         dropdown.appendChild(optgroup);
                     }
                     
@@ -603,7 +776,6 @@
                 clearTimeout(timeoutId);
                 
                 console.log('Response status:', response.status);
-                console.log('Response headers:', [...response.headers.entries()]);
                 
                 const contentType = response.headers.get('content-type');
                 let responseData;
@@ -648,10 +820,6 @@
                 
             } catch (error) {
                 console.error('❌ Error saving city:', error);
-                console.error('Error details:', {
-                    message: error.message,
-                    stack: error.stack
-                });
                 
                 let errorMessage = 'Gagal menyimpan kota/kabupaten';
                 
@@ -660,10 +828,6 @@
                 } else if (error.message.includes('Session expired')) {
                     errorMessage = 'Session habis - refresh halaman';
                     setTimeout(() => window.location.reload(), 2000);
-                } else if (error.message.includes('not found')) {
-                    errorMessage = 'Kota tidak ditemukan dalam database';
-                } else if (error.message.includes('Network')) {
-                    errorMessage = 'Koneksi bermasalah - cek WiFi';
                 } else if (error.message) {
                     errorMessage = error.message;
                 }
@@ -677,6 +841,9 @@
             }
         }
 
+        // ================================
+        // PRAYER TIMES
+        // ================================
         async function loadSavedPrayerTimes() {
             try {
                 const response = await secureFetch('/getprayertimes');
@@ -692,39 +859,9 @@
             }
         }
 
-        async function updateDeviceStatus() {
-            try {
-                const response = await secureFetch('/devicestatus');
-                const data = await response.json();
-                
-                isOnline = data.connected === true;
-                
-                document.getElementById('wifiName').textContent = data.ssid || 'Tidak Terhubung';
-                document.getElementById('ipAddress').textContent = data.ip || '-';
-                 document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Synced' : '❌ Not Synced';
-                document.getElementById('currentTime').textContent = data.currentTime || '-';
-                
-                if (document.getElementById('ntpServerUsed')) {
-                    document.getElementById('ntpServerUsed').textContent = data.ntpServer || '-';
-                }
-                
-                const statusBadge = document.getElementById('internetStatus');
-                
-                if (isOnline) {
-                    statusBadge.textContent = '✅ Online';
-                    statusBadge.className = 'status-badge status-online';
-                } else {
-                    statusBadge.textContent = '❌ Offline';
-                    statusBadge.className = 'status-badge status-offline';
-                }
-            } catch (error) {
-                console.error('Error fetching device status:', error);
-                isOnline = false;
-                document.getElementById('internetStatus').textContent = '❌ Error';
-                document.getElementById('internetStatus').className = 'status-badge status-offline';
-            }
-        }
-        
+        // ================================
+        // WIFI & AP SETTINGS
+        // ================================
         function setWiFi() {
             const ssid = document.getElementById('wifiSSID').value.trim();
             const password = document.getElementById('wifiPassword').value;
@@ -830,6 +967,9 @@
             });
         }
 
+        // ================================
+        // TIME SYNC
+        // ================================
         function syncTime() {
             const d = new Date();
             
@@ -866,6 +1006,9 @@
             });
         }
 
+        // ================================
+        // FACTORY RESET
+        // ================================
         function resetSettings() {
             if (!confirm('⚠️ Yakin ingin reset semua pengaturan? Device akan restart dan kembali ke default.')) {
                 return;
@@ -905,30 +1048,49 @@
             });
         }
 
+        // ================================
+        // INITIALIZATION
+        // ================================
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Page loaded - Islamic Prayer Clock (City Selection Mode)');
+            console.log('🚀 Page loaded - Islamic Prayer Clock (Real-time Mode)');
             console.log('📊 Initialization sequence:');
             console.log('  1. Loading cities...');
             console.log('  2. Loading device status...');
             console.log('  3. Loading prayer times...');
+            console.log('  4. Starting real-time clock...');
             
+            // Load initial data
             loadCities();
             updateDeviceStatus();
             loadSavedPrayerTimes();
             
-            setInterval(updateDeviceStatus, 5000);
-            setInterval(loadSavedPrayerTimes, 10000);
+            // ================================
+            // REAL-TIME CLOCK - UPDATE EVERY 1 SECOND
+            // ================================
+            setInterval(updateRealtimeDisplay, 1000);
+            console.log('✅ Real-time clock started (1s interval)');
             
-            console.log('✅ Auto-refresh configured');
+            // ================================
+            // SERVER SYNC - EVERY 5 SECONDS
+            // ================================
+            setInterval(updateDeviceStatus, 5000);
+            console.log('✅ Device status sync (5s interval)');
+            
+            // ================================
+            // PRAYER TIMES REFRESH - EVERY 30 SECONDS
+            // ================================
+            setInterval(loadSavedPrayerTimes, 30000);
+            console.log('✅ Prayer times refresh (30s interval)');
+            
+            console.log('✅ All timers configured');
         });
         
         console.log('%c🕌 Islamic Prayer Clock Web Interface', 'color: #667eea; font-size: 16px; font-weight: bold;');
+        console.log('%c✓ Real-time Clock (1s update)', 'color: #3adb76;');
+        console.log('%c✓ Auto Server Sync (5s)', 'color: #3adb76;');
         console.log('%c✓ Optimized City Loading', 'color: #3adb76;');
-        console.log('%c✓ Retry Mechanism (3 attempts)', 'color: #3adb76;');
-        console.log('%c✓ 15s timeout per request', 'color: #3adb76;');
         console.log('%c✓ Auto NTP Sync', 'color: #3adb76;');
-        console.log('%c✓ Auto Prayer Times Update (midnight)', 'color: #3adb76;');
-        console.log('%c✓ Security: Token-based authentication', 'color: #ffae00;');
+        console.log('%c✓ Security: Token-based auth', 'color: #ffae00;');
     </script>
 </body>
 </html>

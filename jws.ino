@@ -1354,10 +1354,17 @@ void setupServerRoutes() {
         }
 
         char timeStr[20];
+        char dateStr[20];
+        
         sprintf(timeStr, "%02d:%02d:%02d",
                 hour(timeConfig.currentTime),
                 minute(timeConfig.currentTime),
                 second(timeConfig.currentTime));
+        
+        sprintf(dateStr, "%02d/%02d/%04d",
+                day(timeConfig.currentTime),
+                month(timeConfig.currentTime),
+                year(timeConfig.currentTime));
         
         bool isWiFiConnected = (WiFi.status() == WL_CONNECTED && 
                                 wifiConfig.isConnected && 
@@ -1378,6 +1385,8 @@ void setupServerRoutes() {
         response += "\"ntpSynced\":" + String(timeConfig.ntpSynced ? "true" : "false") + ",";
         response += "\"ntpServer\":\"" + timeConfig.ntpServer + "\",";
         response += "\"currentTime\":\"" + String(timeStr) + "\",";
+        response += "\"currentDate\":\"" + String(dateStr) + "\",";
+        response += "\"uptime\":" + String(millis() / 1000) + ",";
         response += "\"freeHeap\":\"" + String(ESP.getFreeHeap()) + "\"";
         response += "}";
         
