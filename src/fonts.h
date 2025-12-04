@@ -12,6 +12,7 @@ extern const lv_font_t ui_font_prototype_38;
 extern const lv_font_t ui_font_prototype_16;
 extern const lv_font_t ui_font_prototype_14;
 extern const lv_font_t ui_font_prototype_12;
+extern const lv_font_t ui_font_prototype_40;
 
 
 #ifdef __cplusplus

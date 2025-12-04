@@ -448,22 +448,46 @@ void create_screen_main() {
                             {
                                 lv_obj_t *parent_obj = obj;
                                 {
-                                    // time_now
+                                    // time_hour
                                     lv_obj_t *obj = lv_label_create(parent_obj);
-                                    objects.time_now = obj;
-                                    lv_obj_set_pos(obj, 0, 76);
-                                    lv_obj_set_size(obj, LV_PCT(100), LV_SIZE_CONTENT);
+                                    objects.time_hour = obj;
+                                    lv_obj_set_pos(obj, 0, 70);
+                                    lv_obj_set_size(obj, LV_PCT(45), LV_SIZE_CONTENT);
+                                    lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_RIGHT, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_text_color(obj, lv_color_hex(0xff000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_text_font(obj, &ui_font_prototype_40, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_text_letter_space(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_label_set_text(obj, "00");
+                                }
+                                {
+                                    // time_minute
+                                    lv_obj_t *obj = lv_label_create(parent_obj);
+                                    objects.time_minute = obj;
+                                    lv_obj_set_pos(obj, 88, 70);
+                                    lv_obj_set_size(obj, LV_PCT(45), LV_SIZE_CONTENT);
+                                    lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_text_color(obj, lv_color_hex(0xff000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_text_font(obj, &ui_font_prototype_40, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_text_letter_space(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_label_set_text(obj, "00");
+                                }
+                                {
+                                    // time_colon
+                                    lv_obj_t *obj = lv_label_create(parent_obj);
+                                    objects.time_colon = obj;
+                                    lv_obj_set_pos(obj, 72, 67);
+                                    lv_obj_set_size(obj, LV_PCT(10), LV_SIZE_CONTENT);
                                     lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xff000000), LV_PART_MAIN | LV_STATE_DEFAULT);
-                                    lv_obj_set_style_text_font(obj, &ui_font_prototype_38, LV_PART_MAIN | LV_STATE_DEFAULT);
-                                    lv_obj_set_style_text_letter_space(obj, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
-                                    lv_label_set_text(obj, "00:00");
+                                    lv_obj_set_style_text_font(obj, &ui_font_prototype_40, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_text_letter_space(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_label_set_text(obj, ":");
                                 }
                                 {
                                     // date_now
                                     lv_obj_t *obj = lv_label_create(parent_obj);
                                     objects.date_now = obj;
-                                    lv_obj_set_pos(obj, 0, 111);
+                                    lv_obj_set_pos(obj, 0, 116);
                                     lv_obj_set_size(obj, LV_PCT(100), LV_SIZE_CONTENT);
                                     lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xff000000), LV_PART_MAIN | LV_STATE_DEFAULT);
