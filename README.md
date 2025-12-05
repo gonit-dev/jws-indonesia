@@ -199,6 +199,42 @@ settingsMutex   // Configuration
 spiMutex        // SPI bus (display + touch)
 ```
 
+## ⚙️ Perilaku Sistem Penting
+
+### 🕐 Perilaku Waktu Default
+- Sistem **SELALU reset ke 01/01/2000 00:00:00** saat boot (bukan ambil dari RTC)
+- Waktu akan auto-update saat NTP sync berhasil
+- RTC hanya digunakan untuk maintain waktu **setelah** NTP sync
+- Ini mencegah timestamp invalid (bug epoch 1970)
+
+### 🔐 Fitur Keamanan
+- Web interface menggunakan **token-based session** (expired 15 menit)
+- Maksimal 5 session bersamaan
+- Auto-redirect jika session expired
+- CORS enabled untuk endpoint `/api/data`
+
+### 📡 Manajemen Daya WiFi
+- Sleep mode **aktif** untuk anti-overheat (~10°C lebih dingin)
+- TX Power: 19.5 dBm
+- Auto-disconnect setelah 30x gagal koneksi (mencegah overheating)
+- Power saving: `WIFI_PS_MIN_MODEM`
+
+### 💡 Konfigurasi Backlight
+- Brightness default: **180/255 (~70%)**
+- Bisa diubah di: `#define TFT_BL_BRIGHTNESS 180`
+- Frekuensi PWM: 5000 Hz
+
+### ⏱️ Watchdog Timer
+- Timeout: **60 detik** (bukan default 5 detik)
+- Hanya WiFi & Web task yang dimonitor
+- Auto-restart jika task hang
+
+### 🔄 Auto-Refresh Web Interface
+- Real-time clock: update setiap **1 detik** (client-side)
+- Device status sync: setiap **5 detik**
+- Prayer times refresh: setiap **30 detik**
+- Timestamp di-sync dari server + increment lokal
+
 ## 🔍 Troubleshooting
 
 ### ❌ Error Compile
@@ -235,6 +271,12 @@ Solusi: Library Manager → Uninstall → Install 9.2.0
 - Install RTC DS3231 module (lihat pinout di atas)
 - RTC akan auto-detected saat boot
 
+**Jam masih 01/01/2000 setelah lama**
+- Normal behavior saat belum NTP sync
+- Cek WiFi connected
+- Tunggu auto NTP sync (max 1 menit)
+- Atau gunakan "Sync Time Now" di web interface
+
 ## 🔐 Security Notes
 
 ⚠️ **Default Credentials**
@@ -258,6 +300,7 @@ esp32-prayer-clock/
 │   ├── ui.h                # EEZ Studio UI
 │   ├── ui.cpp
 │   └── screens.h
+│   └── fonts.h
 ├── data/                   # LittleFS (upload ke ESP32)
 │   ├── index.html          # Web interface
 │   ├── assets/css/
