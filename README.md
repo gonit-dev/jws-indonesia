@@ -240,7 +240,7 @@ spiMutex        // SPI bus (display + touch)
 ### 🗺️ GPS Kordinat
 - Bisa anda modif menggunakan tambahan GPS Module (sebelumnya di ambil dari data kordinat json tersimpan)
 
-### 🗺️ Upload File JSON Untuk Ambil Data Kota/Kabupaten Ketika Ada Yang Baru
+### 🌐 Upload File JSON Untuk Ambil Data Kota/Kabupaten Ketika Ada Yang Baru
 - Ada tombol unggah file JSON untuk memperbarui data Kota/Kabupaten secara manual
 - Ada validasi jika salah file, nama, format, ukuran dan penulisan JSON. Contoh bisa dilihat di folder /data/cities.json
 - Setelah terunggah pilih Kota/Kabupaten akan refresh
