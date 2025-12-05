@@ -10,8 +10,7 @@
 ## 📸 Preview
 
 <img width="1366" height="2001" alt="FireShot Capture 090 - Islamic Prayer Clock Settings - 192 168 4 1" src="https://github.com/user-attachments/assets/e16864c4-1194-4506-a684-6ae478ba6c0a" />
-![20251205_135705](https://github.com/user-attachments/assets/4a1ee20d-c013-42f2-b564-745606634ea7)
-<img alt="DISPLAY" src="[https://github.com/user-attachments/assets/d589d957-b477-4f4c-9588-8c1d22f48456](https://github.com/user-attachments/assets/4a1ee20d-c013-42f2-b564-745606634ea7)" />
+<img alt="DISPLAY" src="https://github.com/user-attachments/assets/4a1ee20d-c013-42f2-b564-745606634ea7" />
 
 ## ✨ Fitur Utama
 
