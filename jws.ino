@@ -2109,7 +2109,7 @@ void setupServerRoutes() {
         },
         [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
             // Handle file upload
-            static File uploadFile;
+            static fs::File  uploadFile;
             static size_t totalSize = 0;
             static unsigned long uploadStartTime = 0;
             
