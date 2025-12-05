@@ -8,6 +8,7 @@
 ![License](https://img.shields.io/badge/license-MIT-yellow)
 
 ## 📸 Preview
+<img width="1366" height="1686" alt="FireShot Capture 094 - Islamic Prayer Clock Settings - 192 168 4 1" src="https://github.com/user-attachments/assets/3ae0b778-6e82-49fc-9834-0ee9a1704c75" />
 
 <img width="1366" height="2001" alt="FireShot Capture 090 - Islamic Prayer Clock Settings - 192 168 4 1" src="https://github.com/user-attachments/assets/e16864c4-1194-4506-a684-6ae478ba6c0a" />
 <img alt="DISPLAY" src="https://github.com/user-attachments/assets/4a1ee20d-c013-42f2-b564-745606634ea7" />
