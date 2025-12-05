@@ -236,6 +236,10 @@ spiMutex        // SPI bus (display + touch)
 - Prayer times refresh: setiap **30 detik**
 - Timestamp di-sync dari server + increment lokal
 
+
+### GPS Kordinat
+- Bisa anda modif menggunakan tambahan GPS Module (sebelumnya di ambil dari data kordinat json tersimpan)
+
 ## 🔍 Troubleshooting
 
 ### ❌ Error Compile
