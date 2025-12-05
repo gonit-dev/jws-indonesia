@@ -716,7 +716,7 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
     String url = "http://api.aladhan.com/v1/timings/" + String(dateStr) + 
                  "?latitude=" + lat + 
                  "&longitude=" + lon + 
-                 "&method=20";
+                 "&method=5";
     
     Serial.println("\nFetching prayer times by coordinates...");
     Serial.println("   Date: " + String(dateStr));
