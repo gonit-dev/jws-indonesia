@@ -2181,7 +2181,7 @@ void setupServerRoutes() {
                     vTaskDelay(pdMS_TO_TICKS(100));
                     
                     if (LittleFS.exists("/cities.json")) {
-                        File verifyFile = LittleFS.open("/cities.json", "r");
+                        fs::File verifyFile = LittleFS.open("/cities.json", "r");
                         if (verifyFile) {
                             size_t fileSize = verifyFile.size();
                             
