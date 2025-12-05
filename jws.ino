@@ -1429,7 +1429,7 @@ void setupServerRoutes() {
             return;
         }
 
-        Serial.println("GET /getcities - Loading with DynamicJsonDocument");
+        Serial.println("GET /getcities");
         
         if (!LittleFS.exists("/cities.json")) {
             Serial.println("cities.json not found");
@@ -1437,134 +1437,21 @@ void setupServerRoutes() {
             return;
         }
         
-        // ================================
-        // CEK APAKAH METADATA SUDAH ADA
-        // ================================
-        int jsonSize = 0;
-        int citiesCount = 0;
-        bool metadataExists = false;
+        AsyncWebServerResponse *response = request->beginResponse(
+            LittleFS, 
+            "/cities.json", 
+            "application/json"
+        );
         
-        if (LittleFS.exists("/cities_meta.txt")) {
-            fs::File meta = LittleFS.open("/cities_meta.txt", "r");
-            if (meta) {
-                jsonSize = meta.readStringUntil('\n').toInt();
-                citiesCount = meta.readStringUntil('\n').toInt();
-                meta.close();
-                
-                if (jsonSize > 0) {
-                    metadataExists = true;
-                    Serial.printf("✅ Metadata loaded: %d bytes, %d cities\n", jsonSize, citiesCount);
-                }
-            }
-        }
+        response->addHeader("Connection", "close");
+        response->addHeader("Access-Control-Allow-Origin", "*");
+        response->addHeader("Cache-Control", "public, max-age=3600");
         
-        // ================================
-        // JIKA METADATA TIDAK ADA, AUTO-GENERATE
-        // ================================
-        if (!metadataExists) {
-            Serial.println("⚙️ Metadata not found, generating...");
-            
-            fs::File file = LittleFS.open("/cities.json", "r");
-            if (!file) {
-                Serial.println("ERROR: Cannot open cities.json");
-                request->send(500, "application/json", "{\"error\":\"Cannot read file\"}");
-                return;
-            }
-            
-            jsonSize = file.size() + 2048;
-            file.close();
-            
-            Serial.printf("📊 Detected file size: %d bytes\n", jsonSize);
-            
-            // Parse untuk hitung jumlah cities
-            DynamicJsonDocument tempDoc(jsonSize);
-            
-            file = LittleFS.open("/cities.json", "r");
-            DeserializationError error = deserializeJson(tempDoc, file);
-            file.close();
-            
-            if (error) {
-                Serial.print("JSON parse error during metadata generation: ");
-                Serial.println(error.c_str());
-                request->send(500, "application/json", "{\"error\":\"Invalid JSON format\"}");
-                return;
-            }
-            
-            if (tempDoc.is<JsonArray>()) {
-                citiesCount = tempDoc.as<JsonArray>().size();
-                Serial.printf("📊 Detected cities count: %d\n", citiesCount);
-            }
-            
-            // ================================
-            // SIMPAN METADATA KE LITTLEFS
-            // ================================
-            fs::File metaFile = LittleFS.open("/cities_meta.txt", "w");
-            if (metaFile) {
-                metaFile.println(jsonSize);
-                metaFile.println(citiesCount);
-                metaFile.flush();
-                metaFile.close();
-                
-                Serial.println("✅ Metadata auto-generated and saved!");
-                Serial.printf("   Size: %d bytes\n", jsonSize);
-                Serial.printf("   Cities: %d\n", citiesCount);
-            } else {
-                Serial.println("⚠️ Warning: Cannot save metadata (but continuing...)");
-            }
-        }
+        response->setContentLength(LittleFS.open("/cities.json", "r").size());
         
-        // ================================
-        // ALOKASI MEMORI DINAMIS
-        // ================================
-        DynamicJsonDocument doc(jsonSize);
+        request->send(response);
         
-        // ================================
-        // PARSE JSON FILE
-        // ================================
-        fs::File file = LittleFS.open("/cities.json", "r");
-        if (!file) {
-            Serial.println("Failed to open cities.json");
-            request->send(500, "application/json", "{\"error\":\"Cannot open file\"}");
-            return;
-        }
-        
-        DeserializationError error = deserializeJson(doc, file);
-        file.close();
-        
-        if (error) {
-            Serial.print("JSON parse error: ");
-            Serial.println(error.c_str());
-            request->send(500, "application/json", "{\"error\":\"Invalid JSON format\"}");
-            return;
-        }
-        
-        // ================================
-        // VALIDASI STRUKTUR JSON
-        // ================================
-        if (!doc.is<JsonArray>()) {
-            Serial.println("JSON is not an array");
-            request->send(500, "application/json", "{\"error\":\"Invalid data structure\"}");
-            return;
-        }
-        
-        JsonArray cities = doc.as<JsonArray>();
-        int actualCount = cities.size();
-        
-        Serial.printf("✅ Loaded %d cities successfully\n", actualCount);
-        
-        if (citiesCount > 0 && actualCount != citiesCount) {
-            Serial.printf("⚠️ Warning: Expected %d cities, got %d\n", citiesCount, actualCount);
-        }
-        
-        // ================================
-        // SERIALIZE & KIRIM KE CLIENT
-        // ================================
-        String output;
-        serializeJson(doc, output);
-        
-        request->send(200, "application/json", output);
-        
-        Serial.println("cities.json sent successfully");
+        Serial.println("cities.json sent");
     });
 
     server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request){
