@@ -603,27 +603,14 @@ bool initRTC() {
         Serial.println("   Time will reset to 00:00:00 01/01/2000 on power loss");
         Serial.println("========================================\n");
         
-        // SET DEFAULT TIME 01/01/2000 00:00:00
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            // Set system time menggunakan TimeLib
             setTime(0, 0, 0, 1, 1, 2000);
-            
-            // Get timestamp dari TimeLib
             time_t tempTime = now();
             
-            // ================================
-            // CRITICAL FIX: Verify timestamp validity
-            // ================================
             if (tempTime < 946684800) {
-                // If TimeLib returns invalid time (before 2000)
-                Serial.println("⚠ TimeLib returned invalid time");
-                Serial.printf("  Got timestamp: %ld (should be >= 946684800)\n", tempTime);
-                Serial.println("  Forcing timestamp to 946684800 (01/01/2000)");
                 timeConfig.currentTime = 946684800;
             } else {
                 timeConfig.currentTime = tempTime;
-                Serial.println("✓ TimeLib set successfully");
-                Serial.printf("  Timestamp: %ld\n", timeConfig.currentTime);
             }
             
             xSemaphoreGive(timeMutex);
@@ -647,42 +634,61 @@ bool initRTC() {
                  rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
                  rtcNow.day(), rtcNow.month(), rtcNow.year());
     
-    // ALWAYS RESET TO 01/01/2000 00:00:00 ON BOOT
-    Serial.println("\n⚠ Resetting to default time: 00:00:00 01/01/2000");
-    Serial.println("   (Time will be updated by NTP when WiFi connects)");
-    
-    DateTime defaultTime(2000, 1, 1, 0, 0, 0);
-    rtc.adjust(defaultTime);
-    
-    if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-        // Set system time menggunakan TimeLib
-        setTime(0, 0, 0, 1, 1, 2000);
+    // ================================
+    // CHECK IF RTC TIME IS VALID
+    // ================================
+    if (rtcNow.year() >= 2000 && rtcNow.year() <= 2100) {
+        Serial.println("\n✓ RTC time is valid - using RTC time");
         
-        // Get timestamp dari TimeLib
-        time_t tempTime = now();
-        
-        // ================================
-        // CRITICAL FIX: Verify timestamp validity
-        // ================================
-        if (tempTime < 946684800) {
-            Serial.println("⚠ TimeLib returned invalid time");
-            Serial.printf("  Got timestamp: %ld (should be >= 946684800)\n", tempTime);
-            Serial.println("  Forcing timestamp to 946684800 (01/01/2000)");
-            timeConfig.currentTime = 946684800;
-        } else {
-            timeConfig.currentTime = tempTime;
-            Serial.println("✓ System time set to 00:00:00 01/01/2000");
-            Serial.printf("  Timestamp: %ld (correct!)\n", timeConfig.currentTime);
+        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+            time_t rtcUnix = rtcNow.unixtime();
+            
+            setTime(rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
+                   rtcNow.day(), rtcNow.month(), rtcNow.year());
+            
+            timeConfig.currentTime = rtcUnix;
+            
+            Serial.printf("   System time set from RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+                         rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
+                         rtcNow.day(), rtcNow.month(), rtcNow.year());
+            Serial.printf("   Timestamp: %ld\n", timeConfig.currentTime);
+            
+            xSemaphoreGive(timeMutex);
+            
+            if (displayQueue != NULL) {
+                DisplayUpdate update;
+                update.type = DisplayUpdate::TIME_UPDATE;
+                xQueueSend(displayQueue, &update, 0);
+            }
         }
+    } else {
+        Serial.println("\n⚠ RTC time invalid (year out of range)");
+        Serial.println("   Resetting to default time: 00:00:00 01/01/2000");
         
-        Serial.println("   RTC will maintain this until NTP sync");
+        DateTime defaultTime(2000, 1, 1, 0, 0, 0);
+        rtc.adjust(defaultTime);
         
-        xSemaphoreGive(timeMutex);
-        
-        if (displayQueue != NULL) {
-            DisplayUpdate update;
-            update.type = DisplayUpdate::TIME_UPDATE;
-            xQueueSend(displayQueue, &update, 0);
+        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+            setTime(0, 0, 0, 1, 1, 2000);
+            time_t tempTime = now();
+            
+            if (tempTime < 946684800) {
+                timeConfig.currentTime = 946684800;
+            } else {
+                timeConfig.currentTime = tempTime;
+            }
+            
+            Serial.println("   System time set to 00:00:00 01/01/2000");
+            Serial.printf("   Timestamp: %ld\n", timeConfig.currentTime);
+            Serial.println("   RTC will maintain this until NTP sync");
+            
+            xSemaphoreGive(timeMutex);
+            
+            if (displayQueue != NULL) {
+                DisplayUpdate update;
+                update.type = DisplayUpdate::TIME_UPDATE;
+                xQueueSend(displayQueue, &update, 0);
+            }
         }
     }
     
