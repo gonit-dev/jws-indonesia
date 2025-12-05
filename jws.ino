@@ -1165,8 +1165,6 @@ void clockTickTask(void *parameter) {
             // CRITICAL FIX: Prevent 1970 epoch bug
             // ================================
             if (timeConfig.currentTime < 946684800) { 
-                // 946684800 = Unix timestamp for 01/01/2000 00:00:00 UTC
-                // Any time before year 2000 is invalid
                 
                 if (firstRun) {
                     Serial.println("\n⚠ CLOCK TASK WARNING:");
@@ -1176,11 +1174,9 @@ void clockTickTask(void *parameter) {
                     firstRun = false;
                 }
                 
-                // Force reset to 2000
                 setTime(0, 0, 0, 1, 1, 2000);
                 timeConfig.currentTime = now();
                 
-                // Double-check: if TimeLib still returns invalid time
                 if (timeConfig.currentTime < 946684800) {
                     Serial.println("  TimeLib.h malfunction - using hardcoded timestamp");
                     timeConfig.currentTime = 946684800;
@@ -1188,13 +1184,11 @@ void clockTickTask(void *parameter) {
                 
                 Serial.printf("  ✓ Time corrected to: %ld\n\n", timeConfig.currentTime);
             } else {
-                // Normal operation: increment by 1 second
                 timeConfig.currentTime++;
             }
             
             xSemaphoreGive(timeMutex);
             
-            // Send update to display
             DisplayUpdate update;
             update.type = DisplayUpdate::TIME_UPDATE;
             xQueueSend(displayQueue, &update, 0);
@@ -1327,9 +1321,6 @@ void scheduleRestart(int delaySeconds) {
 // ================================
 // WEB SERVER ROUTES - COMPLETE
 // ================================
-// ================================
-// WEB SERVER ROUTES - COMPLETE WITH SECURITY
-// ================================
 void setupServerRoutes() {
     // ================================
     // 1. SERVE HTML & CSS FILES
@@ -1438,7 +1429,7 @@ void setupServerRoutes() {
             return;
         }
 
-        Serial.println("GET /getcities");
+        Serial.println("GET /getcities - Loading with DynamicJsonDocument");
         
         if (!LittleFS.exists("/cities.json")) {
             Serial.println("cities.json not found");
@@ -1446,21 +1437,134 @@ void setupServerRoutes() {
             return;
         }
         
-        AsyncWebServerResponse *response = request->beginResponse(
-            LittleFS, 
-            "/cities.json", 
-            "application/json"
-        );
+        // ================================
+        // CEK APAKAH METADATA SUDAH ADA
+        // ================================
+        int jsonSize = 0;
+        int citiesCount = 0;
+        bool metadataExists = false;
         
-        response->addHeader("Connection", "close");
-        response->addHeader("Access-Control-Allow-Origin", "*");
-        response->addHeader("Cache-Control", "public, max-age=3600");
+        if (LittleFS.exists("/cities_meta.txt")) {
+            fs::File meta = LittleFS.open("/cities_meta.txt", "r");
+            if (meta) {
+                jsonSize = meta.readStringUntil('\n').toInt();
+                citiesCount = meta.readStringUntil('\n').toInt();
+                meta.close();
+                
+                if (jsonSize > 0) {
+                    metadataExists = true;
+                    Serial.printf("✅ Metadata loaded: %d bytes, %d cities\n", jsonSize, citiesCount);
+                }
+            }
+        }
         
-        response->setContentLength(LittleFS.open("/cities.json", "r").size());
+        // ================================
+        // JIKA METADATA TIDAK ADA, AUTO-GENERATE
+        // ================================
+        if (!metadataExists) {
+            Serial.println("⚙️ Metadata not found, generating...");
+            
+            fs::File file = LittleFS.open("/cities.json", "r");
+            if (!file) {
+                Serial.println("ERROR: Cannot open cities.json");
+                request->send(500, "application/json", "{\"error\":\"Cannot read file\"}");
+                return;
+            }
+            
+            jsonSize = file.size() + 2048;
+            file.close();
+            
+            Serial.printf("📊 Detected file size: %d bytes\n", jsonSize);
+            
+            // Parse untuk hitung jumlah cities
+            DynamicJsonDocument tempDoc(jsonSize);
+            
+            file = LittleFS.open("/cities.json", "r");
+            DeserializationError error = deserializeJson(tempDoc, file);
+            file.close();
+            
+            if (error) {
+                Serial.print("JSON parse error during metadata generation: ");
+                Serial.println(error.c_str());
+                request->send(500, "application/json", "{\"error\":\"Invalid JSON format\"}");
+                return;
+            }
+            
+            if (tempDoc.is<JsonArray>()) {
+                citiesCount = tempDoc.as<JsonArray>().size();
+                Serial.printf("📊 Detected cities count: %d\n", citiesCount);
+            }
+            
+            // ================================
+            // SIMPAN METADATA KE LITTLEFS
+            // ================================
+            fs::File metaFile = LittleFS.open("/cities_meta.txt", "w");
+            if (metaFile) {
+                metaFile.println(jsonSize);
+                metaFile.println(citiesCount);
+                metaFile.flush();
+                metaFile.close();
+                
+                Serial.println("✅ Metadata auto-generated and saved!");
+                Serial.printf("   Size: %d bytes\n", jsonSize);
+                Serial.printf("   Cities: %d\n", citiesCount);
+            } else {
+                Serial.println("⚠️ Warning: Cannot save metadata (but continuing...)");
+            }
+        }
         
-        request->send(response);
+        // ================================
+        // ALOKASI MEMORI DINAMIS
+        // ================================
+        DynamicJsonDocument doc(jsonSize);
         
-        Serial.println("cities.json sent");
+        // ================================
+        // PARSE JSON FILE
+        // ================================
+        fs::File file = LittleFS.open("/cities.json", "r");
+        if (!file) {
+            Serial.println("Failed to open cities.json");
+            request->send(500, "application/json", "{\"error\":\"Cannot open file\"}");
+            return;
+        }
+        
+        DeserializationError error = deserializeJson(doc, file);
+        file.close();
+        
+        if (error) {
+            Serial.print("JSON parse error: ");
+            Serial.println(error.c_str());
+            request->send(500, "application/json", "{\"error\":\"Invalid JSON format\"}");
+            return;
+        }
+        
+        // ================================
+        // VALIDASI STRUKTUR JSON
+        // ================================
+        if (!doc.is<JsonArray>()) {
+            Serial.println("JSON is not an array");
+            request->send(500, "application/json", "{\"error\":\"Invalid data structure\"}");
+            return;
+        }
+        
+        JsonArray cities = doc.as<JsonArray>();
+        int actualCount = cities.size();
+        
+        Serial.printf("✅ Loaded %d cities successfully\n", actualCount);
+        
+        if (citiesCount > 0 && actualCount != citiesCount) {
+            Serial.printf("⚠️ Warning: Expected %d cities, got %d\n", citiesCount, actualCount);
+        }
+        
+        // ================================
+        // SERIALIZE & KIRIM KE CLIENT
+        // ================================
+        String output;
+        serializeJson(doc, output);
+        
+        request->send(200, "application/json", output);
+        
+        Serial.println("cities.json sent successfully");
     });
 
     server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request){
@@ -2099,12 +2203,36 @@ void setupServerRoutes() {
     // ================================
     server.on("/uploadcities", HTTP_POST, 
         [](AsyncWebServerRequest *request) {
-            // Handle POST completion
             if (!validateSession(request)) {
-                Serial.println("Unauthorized access to /uploadcities");
+                Serial.println("Unauthorized file upload attempt");
                 request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
                 return;
             }
+            
+            String jsonSizeStr = "";
+            String citiesCountStr = "";
+            
+            if (request->hasParam("jsonSize", true)) {
+                jsonSizeStr = request->getParam("jsonSize", true)->value();
+            }
+            
+            if (request->hasParam("citiesCount", true)) {
+                citiesCountStr = request->getParam("citiesCount", true)->value();
+            }
+            
+            if (jsonSizeStr.length() > 0 && citiesCountStr.length() > 0) {
+                fs::File metaFile = LittleFS.open("/cities_meta.txt", "w");
+                if (metaFile) {
+                    metaFile.println(jsonSizeStr);
+                    metaFile.println(citiesCountStr);
+                    metaFile.close();
+                    
+                    Serial.println("Cities metadata saved:");
+                    Serial.println("  JSON Size: " + jsonSizeStr + " bytes");
+                    Serial.println("  Cities Count: " + citiesCountStr);
+                }
+            }
+            
             request->send(200, "application/json", "{\"success\":true}");
         },
         [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
@@ -2144,7 +2272,6 @@ void setupServerRoutes() {
                 Serial.println("📝 Writing to LittleFS...");
             }
             
-            // Write chunk
             if (uploadFile) {
                 size_t written = uploadFile.write(data, len);
                 if (written != len) {
@@ -2158,7 +2285,6 @@ void setupServerRoutes() {
                 }
             }
             
-            // Finalize upload
             if (final) {
                 if (uploadFile) {
                     uploadFile.flush();
@@ -2171,7 +2297,6 @@ void setupServerRoutes() {
                                 totalSize, totalSize / 1024.0);
                     Serial.printf("   Duration: %lu ms\n", uploadDuration);
                     
-                    // Verify file
                     vTaskDelay(pdMS_TO_TICKS(100));
                     
                     if (LittleFS.exists("/cities.json")) {
@@ -2179,7 +2304,6 @@ void setupServerRoutes() {
                         if (verifyFile) {
                             size_t fileSize = verifyFile.size();
                             
-                            // Read first 100 bytes to check JSON format
                             char buffer[101];
                             size_t bytesRead = verifyFile.readBytes(buffer, 100);
                             buffer[bytesRead] = '\0';
@@ -2190,7 +2314,6 @@ void setupServerRoutes() {
                             Serial.println("First 100 chars:");
                             Serial.println(buffer);
                             
-                            // Basic JSON validation
                             String preview(buffer);
                             if (preview.indexOf('[') >= 0 && preview.indexOf('{') >= 0) {
                                 Serial.println("✅ JSON format looks valid");

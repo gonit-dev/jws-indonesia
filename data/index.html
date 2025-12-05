@@ -1108,6 +1108,47 @@
         // ================================
         let selectedCitiesFile = null;
 
+        function calculateArduinoJsonSize(json) {
+            
+            let totalSize = 0;
+            
+            totalSize += 24; 
+            
+            if (Array.isArray(json)) {
+                totalSize += 16;
+                totalSize += json.length * 8;
+                
+                json.forEach(item => {
+                    if (typeof item === 'object' && item !== null) {
+                        totalSize += 16;
+                        
+                        const keys = Object.keys(item);
+                        totalSize += keys.length * 24;
+                        
+                        keys.forEach(key => {
+                            totalSize += key.length + 1;
+                            totalSize += Math.ceil((key.length + 1) / 4) * 4;
+                            
+                            // Value
+                            const value = item[key];
+                            if (typeof value === 'string') {
+                                totalSize += value.length + 1;
+                                totalSize += Math.ceil((value.length + 1) / 4) * 4;
+                            } else if (typeof value === 'number') {
+                                totalSize += 8; // double
+                            } else if (typeof value === 'boolean') {
+                                totalSize += 1;
+                            }
+                        });
+                    }
+                });
+            }
+            
+            totalSize = Math.ceil(totalSize * 1.2);
+            
+            return totalSize;
+        }
+
         function handleCitiesFileSelect(event) {
             const file = event.target.files[0];
             const fileNameDisplay = document.getElementById('selectedFileName');
@@ -1145,35 +1186,104 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
+                    // Validasi 3: Parse JSON
                     const json = JSON.parse(e.target.result);
                     
+                    // Validasi 4: Harus array
                     if (!Array.isArray(json)) {
                         throw new Error('JSON harus berupa array');
                     }
                     
+                    // Validasi 5: Tidak boleh kosong
                     if (json.length === 0) {
                         throw new Error('JSON array tidak boleh kosong');
                     }
                     
-                    const firstItem = json[0];
-                    if (!firstItem.api || !firstItem.display || !firstItem.province) {
-                        throw new Error('Format JSON tidak valid (harus ada field: api, display, province)');
+                    // Validasi 6: Struktur field wajib
+                    const requiredFields = ['api', 'display', 'province'];
+                    const optionalFields = ['lat', 'lon'];
+                    
+                    for (let i = 0; i < json.length; i++) {
+                        const item = json[i];
+                        
+                        // Cek field wajib
+                        for (const field of requiredFields) {
+                            if (!item.hasOwnProperty(field) || !item[field]) {
+                                throw new Error(`Item ${i}: field '${field}' tidak ada atau kosong`);
+                            }
+                            
+                            if (typeof item[field] !== 'string') {
+                                throw new Error(`Item ${i}: field '${field}' harus string`);
+                            }
+                        }
+                        
+                        if (item.lat) {
+                            const lat = parseFloat(item.lat);
+                            if (isNaN(lat) || lat < -90 || lat > 90) {
+                                throw new Error(`Item ${i}: latitude tidak valid (${item.lat})`);
+                            }
+                        }
+                        
+                        if (item.lon) {
+                            const lon = parseFloat(item.lon);
+                            if (isNaN(lon) || lon < -180 || lon > 180) {
+                                throw new Error(`Item ${i}: longitude tidak valid (${item.lon})`);
+                            }
+                        }
                     }
                     
+                    const jsonSize = calculateArduinoJsonSize(json);
+                    
+                    console.log('JSON Validation Results:');
+                    console.log('  ✅ File name:', file.name);
+                    console.log('  ✅ File size:', (file.size / 1024).toFixed(2), 'KB');
+                    console.log('  ✅ Cities count:', json.length);
+                    console.log('  ✅ JSON structure: Valid');
+                    console.log('  📊 DynamicJsonDocument size needed:', jsonSize, 'bytes');
+                    
+                    const ESP32_MAX_HEAP = 320000;
+                    
+                    if (jsonSize > ESP32_MAX_HEAP) {
+                        const sizeKB = (jsonSize / 1024).toFixed(2);
+                        const maxKB = (ESP32_MAX_HEAP / 1024).toFixed(2);
+                        
+                        showToast(
+                            `❌ File terlalu berat untuk ESP32!\n` +
+                            `Ukuran JSON: ${sizeKB} KB\n` +
+                            `Max safe: ${maxKB} KB\n` +
+                            `Kurangi jumlah kota atau persingkat field`,
+                            'error'
+                        );
+                        
+                        selectedCitiesFile = null;
+                        fileNameDisplay.textContent = `❌ Terlalu berat (${sizeKB} KB > ${maxKB} KB)`;
+                        fileNameDisplay.style.color = '#cc4b37';
+                        uploadBtn.disabled = true;
+                        event.target.value = '';
+                        return;
+                    }
+                    
+                    // File valid - simpan metadata
                     selectedCitiesFile = file;
+                    selectedCitiesFile.jsonMetadata = {
+                        citiesCount: json.length,
+                        jsonSize: jsonSize,
+                        fileSize: file.size
+                    };
+                    
                     const sizeKB = (file.size / 1024).toFixed(2);
-                    fileNameDisplay.textContent = `✅ ${file.name} (${sizeKB} KB) - ${json.length} kota`;
+                    const jsonSizeKB = (jsonSize / 1024).toFixed(2);
+                    
+                    fileNameDisplay.innerHTML = 
+                        `✅ ${file.name} (${sizeKB} KB)<br>` +
+                        `📊 ${json.length} kota | DynamicJsonDocument: ${jsonSizeKB} KB`;
                     fileNameDisplay.style.color = '#3adb76';
                     uploadBtn.disabled = false;
                     
-                    console.log('✅ File validated:', file.name);
-                    console.log('   Size:', sizeKB, 'KB');
-                    console.log('   Cities count:', json.length);
-                    
                 } catch (error) {
-                    showToast('❌ File bukan JSON valid: ' + error.message, 'error');
+                    showToast('❌ Validasi gagal: ' + error.message, 'error');
                     selectedCitiesFile = null;
-                    fileNameDisplay.textContent = '❌ Format JSON tidak valid';
+                    fileNameDisplay.textContent = '❌ ' + error.message;
                     fileNameDisplay.style.color = '#cc4b37';
                     uploadBtn.disabled = true;
                     event.target.value = '';
@@ -1202,6 +1312,12 @@
             console.log('Starting cities.json upload...');
             console.log('File:', selectedCitiesFile.name);
             console.log('Size:', selectedCitiesFile.size, 'bytes');
+            
+            if (selectedCitiesFile.jsonMetadata) {
+                console.log('Cities:', selectedCitiesFile.jsonMetadata.citiesCount);
+                console.log('JSON Size:', selectedCitiesFile.jsonMetadata.jsonSize, 'bytes');
+            }
+            
             console.log('========================================');
             
             const uploadBtn = document.getElementById('uploadBtn');
@@ -1209,7 +1325,6 @@
             const progressBar = document.getElementById('uploadProgressBar');
             const statusText = document.getElementById('uploadStatus');
             
-            // Disable button and show progress
             uploadBtn.disabled = true;
             uploadBtn.textContent = '⏳ Uploading...';
             progressDiv.style.display = 'block';
@@ -1221,9 +1336,14 @@
                 const formData = new FormData();
                 formData.append('file', selectedCitiesFile);
                 
+                // Tambahkan metadata
+                if (selectedCitiesFile.jsonMetadata) {
+                    formData.append('jsonSize', selectedCitiesFile.jsonMetadata.jsonSize);
+                    formData.append('citiesCount', selectedCitiesFile.jsonMetadata.citiesCount);
+                }
+                
                 const xhr = new XMLHttpRequest();
                 
-                // Progress tracking
                 xhr.upload.addEventListener('progress', (e) => {
                     if (e.lengthComputable) {
                         const percentComplete = Math.round((e.loaded / e.total) * 100);
@@ -1234,18 +1354,36 @@
                     }
                 });
                 
-                // Upload complete
                 xhr.addEventListener('load', async () => {
                     console.log('Upload response status:', xhr.status);
+                    console.log('Response:', xhr.responseText);
                     
                     if (xhr.status === 200) {
+                        let response;
+                        try {
+                            response = JSON.parse(xhr.responseText);
+                        } catch (e) {
+                            response = { success: true };
+                        }
+                        
                         progressBar.style.width = '100%';
                         progressBar.textContent = '100%';
                         statusText.textContent = '✅ Upload berhasil!';
                         statusText.style.color = '#3adb76';
                         
                         console.log('✅ Upload successful');
-                        showToast('✅ cities.json berhasil diupload!', 'success');
+                        
+                        if (selectedCitiesFile.jsonMetadata) {
+                            const jsonSizeKB = (selectedCitiesFile.jsonMetadata.jsonSize / 1024).toFixed(2);
+                            showToast(
+                                `✅ cities.json berhasil diupload!\n` +
+                                `📊 ${selectedCitiesFile.jsonMetadata.citiesCount} kota\n` +
+                                `💾 DynamicJsonDocument: ${jsonSizeKB} KB`,
+                                'success'
+                            );
+                        } else {
+                            showToast('✅ cities.json berhasil diupload!', 'success');
+                        }
                         
                         // Reset form
                         document.getElementById('citiesFileInput').value = '';
@@ -1260,7 +1398,6 @@
                             loadCities();
                         }, 2000);
                         
-                        // Hide progress after 5 seconds
                         setTimeout(() => {
                             progressDiv.style.display = 'none';
                             uploadBtn.disabled = false;
@@ -1268,33 +1405,38 @@
                         }, 5000);
                         
                     } else {
-                        throw new Error('HTTP ' + xhr.status);
+                        let errorMsg = 'Upload failed';
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            errorMsg = response.error || errorMsg;
+                        } catch (e) {
+                            errorMsg = xhr.responseText || errorMsg;
+                        }
+                        throw new Error(errorMsg);
                     }
                 });
                 
-                // Upload error
                 xhr.addEventListener('error', () => {
-                    throw new Error('Network error');
+                    throw new Error('Network error - koneksi terputus');
                 });
                 
-                // Upload timeout
                 xhr.addEventListener('timeout', () => {
-                    throw new Error('Upload timeout');
+                    throw new Error('Upload timeout - file terlalu lama');
                 });
                 
-                // Send request
                 xhr.open('POST', '/uploadcities', true);
-                xhr.timeout = 30000; // 30 second timeout
+                xhr.timeout = 30000;
                 xhr.send(formData);
                 
             } catch (error) {
                 console.error('❌ Upload error:', error);
                 
                 progressBar.style.background = '#cc4b37';
-                statusText.textContent = '❌ Upload gagal';
+                progressBar.style.width = '100%';
+                statusText.textContent = '❌ ' + error.message;
                 statusText.style.color = '#cc4b37';
                 
-                showToast('❌ Gagal upload: ' + error.message, 'error');
+                showToast('❌ Upload gagal: ' + error.message, 'error');
                 
                 setTimeout(() => {
                     progressDiv.style.display = 'none';
