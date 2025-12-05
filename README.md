@@ -237,16 +237,17 @@ spiMutex        // SPI bus (display + touch)
 - Prayer times refresh: setiap **30 detik**
 - Timestamp di-sync dari server + increment lokal
 
-### 🗺️ GPS Kordinat
-- Bisa anda modif menggunakan tambahan GPS Module (sebelumnya di ambil dari data kordinat json tersimpan)
+### 🗺️ GPS Koordinat
+- Bisa dimodifikasi menggunakan **modul GPS** (sebelumnya diambil dari **data koordinat JSON** yang tersimpan)  
 
-### 🌐 Upload File JSON Untuk Ambil Data Kota/Kabupaten Ketika Ada Yang Baru
-- Ada tombol unggah file JSON untuk memperbarui data Kota/Kabupaten secara manual
-- Ada validasi jika salah file, nama, format, ukuran dan penulisan JSON. Contoh bisa dilihat di folder /data/cities.json
-- Setelah terunggah pilih Kota/Kabupaten akan refresh
-- Batas file json hanya sampai 1MB, kalau bisa di perkecil lagi mungkin akan membuat lebih berat jika besar mengingat file JSON Kota/Kabupaten tidak sampai 1MB
-- Kordinat di sini setiap jarak KM bisa berbeda waktu shalat
-- Sistem merubah data metodenye ke Mesir sesuai format perhitungan Indonesia lama. Mentri Agama RI sejak 2024 mengganti metode perhitungannya dan belum digunakan secara Nasional di Indonesia 
+### 🌐 Unggah File JSON untuk Memperbarui Data Kota/Kabupaten
+- **Tombol unggah file JSON** untuk memperbarui data Kota/Kabupaten secara manual  
+- **Validasi file** meliputi: nama, format, ukuran, dan struktur JSON (contoh di folder `/data/cities.json`)  
+- Setelah terunggah, pemilihan **Kota/Kabupaten** akan **refresh otomatis**  
+- **Batas ukuran file JSON:** maksimal **1 MB**. File lebih besar dapat memperlambat proses karena data Kota/Kabupaten biasanya tidak sampai 1 MB  
+- **Koordinat tiap lokasi** dapat memengaruhi **waktu shalat**, berbeda per kilometer  
+- Sistem otomatis mengubah **metode perhitungan** menjadi **Mesir** sesuai **format perhitungan lama Indonesia**.  
+  - Catatan: **Kementerian Agama RI** sejak 2024 mengganti metode perhitungan, namun metode baru belum digunakan secara nasional
 
 ## 🔍 Troubleshooting
 
