@@ -237,7 +237,7 @@ spiMutex        // SPI bus (display + touch)
 - Timestamp di-sync dari server + increment lokal
 
 
-### GPS Kordinat
+### 🗺️ GPS Kordinat
 - Bisa anda modif menggunakan tambahan GPS Module (sebelumnya di ambil dari data kordinat json tersimpan)
 
 ## 🔍 Troubleshooting
