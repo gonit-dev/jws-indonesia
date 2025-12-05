@@ -2095,6 +2095,127 @@ void setupServerRoutes() {
     });
 
     // ================================
+    // 11. UPLOAD CITIES.JSON
+    // ================================
+    server.on("/uploadcities", HTTP_POST, 
+        [](AsyncWebServerRequest *request) {
+            // Handle POST completion
+            if (!validateSession(request)) {
+                Serial.println("Unauthorized access to /uploadcities");
+                request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+                return;
+            }
+            request->send(200, "application/json", "{\"success\":true}");
+        },
+        [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+            // Handle file upload
+            static File uploadFile;
+            static size_t totalSize = 0;
+            static unsigned long uploadStartTime = 0;
+            
+            // Validate session on first chunk
+            if (index == 0) {
+                if (!validateSession(request)) {
+                    Serial.println("Unauthorized file upload attempt");
+                    return;
+                }
+                
+                Serial.println("\n========================================");
+                Serial.println("CITIES.JSON UPLOAD STARTED");
+                Serial.println("========================================");
+                Serial.printf("Filename: %s\n", filename.c_str());
+                
+                // Validate filename
+                if (filename != "cities.json") {
+                    Serial.printf("❌ Invalid filename: %s (must be cities.json)\n", filename.c_str());
+                    return;
+                }
+                
+                // Delete old file if exists
+                if (LittleFS.exists("/cities.json")) {
+                    LittleFS.remove("/cities.json");
+                    Serial.println("🗑️ Old cities.json deleted");
+                }
+                
+                // Open file for writing
+                uploadFile = LittleFS.open("/cities.json", "w");
+                if (!uploadFile) {
+                    Serial.println("❌ Failed to open file for writing");
+                    return;
+                }
+                
+                totalSize = 0;
+                uploadStartTime = millis();
+                Serial.println("📝 Writing to LittleFS...");
+            }
+            
+            // Write chunk
+            if (uploadFile) {
+                size_t written = uploadFile.write(data, len);
+                if (written != len) {
+                    Serial.printf("⚠️ Write mismatch: %d/%d bytes\n", written, len);
+                }
+                totalSize += written;
+                
+                // Progress indicator every 5KB
+                if (totalSize % 5120 == 0 || final) {
+                    Serial.printf("   Progress: %d bytes (%.1f KB)\n", 
+                                totalSize, totalSize / 1024.0);
+                }
+            }
+            
+            // Finalize upload
+            if (final) {
+                if (uploadFile) {
+                    uploadFile.flush();
+                    uploadFile.close();
+                    
+                    unsigned long uploadDuration = millis() - uploadStartTime;
+                    
+                    Serial.println("\n✅ Upload complete!");
+                    Serial.printf("   Total size: %d bytes (%.2f KB)\n", 
+                                totalSize, totalSize / 1024.0);
+                    Serial.printf("   Duration: %lu ms\n", uploadDuration);
+                    
+                    // Verify file
+                    vTaskDelay(pdMS_TO_TICKS(100));
+                    
+                    if (LittleFS.exists("/cities.json")) {
+                        File verifyFile = LittleFS.open("/cities.json", "r");
+                        if (verifyFile) {
+                            size_t fileSize = verifyFile.size();
+                            
+                            // Read first 100 bytes to check JSON format
+                            char buffer[101];
+                            size_t bytesRead = verifyFile.readBytes(buffer, 100);
+                            buffer[bytesRead] = '\0';
+                            
+                            verifyFile.close();
+                            
+                            Serial.printf("✅ File verified: %d bytes\n", fileSize);
+                            Serial.println("First 100 chars:");
+                            Serial.println(buffer);
+                            
+                            // Basic JSON validation
+                            String preview(buffer);
+                            if (preview.indexOf('[') >= 0 && preview.indexOf('{') >= 0) {
+                                Serial.println("✅ JSON format looks valid");
+                            } else {
+                                Serial.println("⚠️ Warning: File may not be valid JSON");
+                            }
+                            
+                            Serial.println("========================================\n");
+                        }
+                    } else {
+                        Serial.println("❌ File verification failed - file not found");
+                        Serial.println("========================================\n");
+                    }
+                }
+            }
+        }
+    );
+
+    // ================================
     // 11. 404 NOT FOUND HANDLER WITH SMART REDIRECT
     // ================================
     server.onNotFound([](AsyncWebServerRequest *request){

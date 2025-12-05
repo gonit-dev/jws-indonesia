@@ -280,6 +280,61 @@
                     </div>
                 </div>
 
+                <!-- Cities.json Upload Section -->
+                <div class="grid-x grid-padding-x">
+                    <div class="large-10 center cell">
+                        <div class="callout warning">
+                            <h5>📤 Upload Cities.json</h5>
+                            
+                            <div class="info-box" style="border-left-color: #ffae00; background: #fff8e1;">
+                                <p style="margin: 0; font-size: 13px; color: #856404;">
+                                    <strong>ℹ️ Kapan perlu upload cities.json?</strong><br>
+                                    🆕 Ada kota/kabupaten baru yang ditambahkan<br>
+                                    📍 Data koordinat kota ada yang diperbarui<br>
+                                    🔧 File cities.json rusak atau terhapus
+                                </p>
+                            </div>
+
+                            <div class="grid-x grid-margin-x">
+                                <div class="large-8 medium-8 small-12 cell">
+                                    <label for="citiesFileInput" class="button hollow expanded" style="margin: 0; cursor: pointer; text-align: center;">
+                                        📁 Pilih File cities.json
+                                        <input type="file" id="citiesFileInput" accept=".json" style="display: none;" onchange="handleCitiesFileSelect(event)">
+                                    </label>
+                                    <p id="selectedFileName" style="margin: 10px 0; font-size: 13px; color: #666; text-align: center;">
+                                        Belum ada file dipilih
+                                    </p>
+                                </div>
+                                <div class="large-4 medium-4 small-12 cell">
+                                    <button id="uploadBtn" class="button warning expanded" onclick="uploadCitiesFile()" disabled>
+                                        📤 Upload File
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="uploadProgress" style="display: none; margin-top: 15px;">
+                                <div style="background: #e0e0e0; border-radius: 10px; overflow: hidden; height: 30px;">
+                                    <div id="uploadProgressBar" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 13px;">
+                                        0%
+                                    </div>
+                                </div>
+                                <p id="uploadStatus" style="margin: 10px 0; text-align: center; font-size: 13px; color: #666;">
+                                    Memulai upload...
+                                </p>
+                            </div>
+
+                            <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+                                <p style="margin: 0; font-size: 12px; color: #666;">
+                                    ⚠️ <strong>Penting:</strong><br>
+                                    📝 File harus bernama <code>cities.json</code><br>
+                                    🔍 Format harus valid JSON array<br>
+                                    💾 Ukuran maksimal: 1 MB<br>
+                                    🔄 Dropdown kota akan otomatis refresh setelah upload berhasil
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Prayer Times Section -->
                 <div class="grid-x grid-padding-x">
@@ -1046,6 +1101,207 @@
                 btn.disabled = false;
                 btn.textContent = originalText;
             });
+        }
+
+        // ================================
+        // CITIES.JSON UPLOAD FUNCTIONS
+        // ================================
+        let selectedCitiesFile = null;
+
+        function handleCitiesFileSelect(event) {
+            const file = event.target.files[0];
+            const fileNameDisplay = document.getElementById('selectedFileName');
+            const uploadBtn = document.getElementById('uploadBtn');
+            
+            if (!file) {
+                selectedCitiesFile = null;
+                fileNameDisplay.textContent = 'Belum ada file dipilih';
+                fileNameDisplay.style.color = '#666';
+                uploadBtn.disabled = true;
+                return;
+            }
+            
+            if (file.name !== 'cities.json') {
+                showToast('❌ Nama file harus cities.json', 'error');
+                selectedCitiesFile = null;
+                fileNameDisplay.textContent = '❌ Nama file tidak valid';
+                fileNameDisplay.style.color = '#cc4b37';
+                uploadBtn.disabled = true;
+                event.target.value = '';
+                return;
+            }
+            
+            const maxSize = 1 * 1024 * 1024;
+            if (file.size > maxSize) {
+                showToast('❌ File terlalu besar (max 1MB)', 'error');
+                selectedCitiesFile = null;
+                fileNameDisplay.textContent = '❌ File terlalu besar';
+                fileNameDisplay.style.color = '#cc4b37';
+                uploadBtn.disabled = true;
+                event.target.value = '';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    
+                    if (!Array.isArray(json)) {
+                        throw new Error('JSON harus berupa array');
+                    }
+                    
+                    if (json.length === 0) {
+                        throw new Error('JSON array tidak boleh kosong');
+                    }
+                    
+                    const firstItem = json[0];
+                    if (!firstItem.api || !firstItem.display || !firstItem.province) {
+                        throw new Error('Format JSON tidak valid (harus ada field: api, display, province)');
+                    }
+                    
+                    selectedCitiesFile = file;
+                    const sizeKB = (file.size / 1024).toFixed(2);
+                    fileNameDisplay.textContent = `✅ ${file.name} (${sizeKB} KB) - ${json.length} kota`;
+                    fileNameDisplay.style.color = '#3adb76';
+                    uploadBtn.disabled = false;
+                    
+                    console.log('✅ File validated:', file.name);
+                    console.log('   Size:', sizeKB, 'KB');
+                    console.log('   Cities count:', json.length);
+                    
+                } catch (error) {
+                    showToast('❌ File bukan JSON valid: ' + error.message, 'error');
+                    selectedCitiesFile = null;
+                    fileNameDisplay.textContent = '❌ Format JSON tidak valid';
+                    fileNameDisplay.style.color = '#cc4b37';
+                    uploadBtn.disabled = true;
+                    event.target.value = '';
+                    console.error('JSON validation error:', error);
+                }
+            };
+            
+            reader.onerror = function() {
+                showToast('❌ Gagal membaca file', 'error');
+                selectedCitiesFile = null;
+                fileNameDisplay.textContent = '❌ Gagal membaca file';
+                fileNameDisplay.style.color = '#cc4b37';
+                uploadBtn.disabled = true;
+            };
+            
+            reader.readAsText(file);
+        }
+
+        async function uploadCitiesFile() {
+            if (!selectedCitiesFile) {
+                showToast('❌ Pilih file terlebih dahulu', 'error');
+                return;
+            }
+            
+            console.log('========================================');
+            console.log('Starting cities.json upload...');
+            console.log('File:', selectedCitiesFile.name);
+            console.log('Size:', selectedCitiesFile.size, 'bytes');
+            console.log('========================================');
+            
+            const uploadBtn = document.getElementById('uploadBtn');
+            const progressDiv = document.getElementById('uploadProgress');
+            const progressBar = document.getElementById('uploadProgressBar');
+            const statusText = document.getElementById('uploadStatus');
+            
+            // Disable button and show progress
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = '⏳ Uploading...';
+            progressDiv.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            statusText.textContent = 'Memulai upload...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedCitiesFile);
+                
+                const xhr = new XMLHttpRequest();
+                
+                // Progress tracking
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.width = percentComplete + '%';
+                        progressBar.textContent = percentComplete + '%';
+                        statusText.textContent = `Uploading: ${(e.loaded / 1024).toFixed(1)} KB / ${(e.total / 1024).toFixed(1)} KB`;
+                        console.log(`Upload progress: ${percentComplete}%`);
+                    }
+                });
+                
+                // Upload complete
+                xhr.addEventListener('load', async () => {
+                    console.log('Upload response status:', xhr.status);
+                    
+                    if (xhr.status === 200) {
+                        progressBar.style.width = '100%';
+                        progressBar.textContent = '100%';
+                        statusText.textContent = '✅ Upload berhasil!';
+                        statusText.style.color = '#3adb76';
+                        
+                        console.log('✅ Upload successful');
+                        showToast('✅ cities.json berhasil diupload!', 'success');
+                        
+                        // Reset form
+                        document.getElementById('citiesFileInput').value = '';
+                        document.getElementById('selectedFileName').textContent = 'Belum ada file dipilih';
+                        document.getElementById('selectedFileName').style.color = '#666';
+                        selectedCitiesFile = null;
+                        
+                        // Reload cities list
+                        setTimeout(() => {
+                            showToast('🔄 Memuat ulang daftar kota...', 'warning');
+                            loadAttempts = 0;
+                            loadCities();
+                        }, 2000);
+                        
+                        // Hide progress after 5 seconds
+                        setTimeout(() => {
+                            progressDiv.style.display = 'none';
+                            uploadBtn.disabled = false;
+                            uploadBtn.textContent = '📤 Upload File';
+                        }, 5000);
+                        
+                    } else {
+                        throw new Error('HTTP ' + xhr.status);
+                    }
+                });
+                
+                // Upload error
+                xhr.addEventListener('error', () => {
+                    throw new Error('Network error');
+                });
+                
+                // Upload timeout
+                xhr.addEventListener('timeout', () => {
+                    throw new Error('Upload timeout');
+                });
+                
+                // Send request
+                xhr.open('POST', '/uploadcities', true);
+                xhr.timeout = 30000; // 30 second timeout
+                xhr.send(formData);
+                
+            } catch (error) {
+                console.error('❌ Upload error:', error);
+                
+                progressBar.style.background = '#cc4b37';
+                statusText.textContent = '❌ Upload gagal';
+                statusText.style.color = '#cc4b37';
+                
+                showToast('❌ Gagal upload: ' + error.message, 'error');
+                
+                setTimeout(() => {
+                    progressDiv.style.display = 'none';
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = '📤 Upload File';
+                }, 3000);
+            }
         }
 
         // ================================
