@@ -2108,12 +2108,10 @@ void setupServerRoutes() {
             request->send(200, "application/json", "{\"success\":true}");
         },
         [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-            // Handle file upload
             static fs::File  uploadFile;
             static size_t totalSize = 0;
             static unsigned long uploadStartTime = 0;
             
-            // Validate session on first chunk
             if (index == 0) {
                 if (!validateSession(request)) {
                     Serial.println("Unauthorized file upload attempt");
@@ -2125,19 +2123,16 @@ void setupServerRoutes() {
                 Serial.println("========================================");
                 Serial.printf("Filename: %s\n", filename.c_str());
                 
-                // Validate filename
                 if (filename != "cities.json") {
                     Serial.printf("❌ Invalid filename: %s (must be cities.json)\n", filename.c_str());
                     return;
                 }
                 
-                // Delete old file if exists
                 if (LittleFS.exists("/cities.json")) {
                     LittleFS.remove("/cities.json");
                     Serial.println("🗑️ Old cities.json deleted");
                 }
                 
-                // Open file for writing
                 uploadFile = LittleFS.open("/cities.json", "w");
                 if (!uploadFile) {
                     Serial.println("❌ Failed to open file for writing");
@@ -2157,7 +2152,6 @@ void setupServerRoutes() {
                 }
                 totalSize += written;
                 
-                // Progress indicator every 5KB
                 if (totalSize % 5120 == 0 || final) {
                     Serial.printf("   Progress: %d bytes (%.1f KB)\n", 
                                 totalSize, totalSize / 1024.0);
