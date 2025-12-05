@@ -202,9 +202,10 @@ spiMutex        // SPI bus (display + touch)
 ## ⚙️ Perilaku Sistem Penting
 
 ### 🕐 Perilaku Waktu Default
-- Sistem **SELALU reset ke 01/01/2000 00:00:00** saat boot (bukan ambil dari RTC)
+- Jika **RTC tersedia & valid** (tahun 2000-2100) → sistem gunakan waktu dari RTC
+- Jika **RTC tidak ada/rusak/invalid** → reset ke 01/01/2000 00:00:00
 - Waktu akan auto-update saat NTP sync berhasil
-- RTC hanya digunakan untuk maintain waktu **setelah** NTP sync
+- NTP sync otomatis menyimpan waktu ke RTC untuk persistensi
 - Ini mencegah timestamp invalid (bug epoch 1970)
 
 ### 🔐 Fitur Keamanan
