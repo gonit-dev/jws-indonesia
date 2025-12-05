@@ -1321,6 +1321,9 @@ void scheduleRestart(int delaySeconds) {
 // ================================
 // WEB SERVER ROUTES - COMPLETE
 // ================================
+// ================================
+// WEB SERVER ROUTES - COMPLETE WITH SECURITY
+// ================================
 void setupServerRoutes() {
     // ================================
     // 1. SERVE HTML & CSS FILES
@@ -1340,6 +1343,12 @@ void setupServerRoutes() {
     });
     
     server.on("/assets/css/foundation.css", HTTP_GET, [](AsyncWebServerRequest *request){
+        if (!validateSession(request)) {
+            Serial.println("Unauthorized access to CSS");
+            request->send(403, "text/css", "/* Forbidden */");
+            return;
+        }
+        
         request->send(LittleFS, "/assets/css/foundation.css", "text/css");
     });
 
@@ -1399,7 +1408,7 @@ void setupServerRoutes() {
     server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest *request){
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /getprayertimes");
-            request->send(403, "text/plain", "Forbidden");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
             return;
         }
 
@@ -1710,7 +1719,7 @@ void setupServerRoutes() {
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request){
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /getcityinfo");
-            request->send(403, "text/plain", "Forbidden");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
             return;
         }
 
@@ -1746,7 +1755,7 @@ void setupServerRoutes() {
     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /setwifi");
-            request->send(403, "text/plain", "Forbidden");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
             return;
         }
 
@@ -1772,7 +1781,7 @@ void setupServerRoutes() {
     server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /setap");
-            request->send(403, "text/plain", "Forbidden");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
             return;
         }
 
@@ -1805,7 +1814,7 @@ void setupServerRoutes() {
     server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /synctime");
-            request->send(403, "text/plain", "Forbidden");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
             return;
         }
 
@@ -1849,6 +1858,12 @@ void setupServerRoutes() {
     // 8. API ENDPOINT - FULL DATA JSON
     // ================================
     server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request) {
+        // Optional: Uncomment untuk proteksi API publik
+        // if (!validateSession(request)) {
+        //     request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+        //     return;
+        // }
+
         String json = "{";
         
         // ================================
@@ -1924,12 +1939,41 @@ void setupServerRoutes() {
     });
 
     // ================================
-    // 9. FACTORY RESET
+    // 9. NOT FOUND PAGE
+    // ================================
+    server.on("/notfound", HTTP_GET, [](AsyncWebServerRequest *request){
+        String html = "<!DOCTYPE html><html><head>";
+        html += "<meta charset='UTF-8'>";
+        html += "<meta name='viewport' content='width=device-width,initial-scale=1.0'>";
+        html += "<title>404 - Not Found</title>";
+        html += "<style>";
+        html += "body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}";
+        html += ".container{max-width:500px;margin:20px;background:white;padding:50px 40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}";
+        html += ".error-code{font-size:120px;font-weight:800;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0;line-height:1}";
+        html += "h2{color:#333;font-size:28px;margin:20px 0 10px;font-weight:600}";
+        html += "p{color:#666;font-size:16px;line-height:1.6;margin:20px 0 30px}";
+        html += ".btn{display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;text-decoration:none;border-radius:50px;font-weight:600;font-size:16px;transition:all 0.3s;box-shadow:0 4px 15px rgba(102,126,234,0.4)}";
+        html += ".btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(102,126,234,0.6)}";
+        html += ".icon{font-size:80px;margin-bottom:20px}";
+        html += "</style></head><body>";
+        html += "<div class='container'>";
+        html += "<div class='icon'>🔒</div>";
+        html += "<div class='error-code'>404</div>";
+        html += "<h2>Page Not Found</h2>";
+        html += "<p>The page you're looking for doesn't exist or you don't have permission to access it. Please return to the home page.</p>";
+        html += "<a href='/' class='btn'>← Back to Home</a>";
+        html += "</div></body></html>";
+        
+        request->send(404, "text/html", html);
+    });
+
+    // ================================
+    // 10. FACTORY RESET
     // ================================
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /reset");
-            request->send(403, "text/plain", "Forbidden");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
             return;
         }
 
@@ -1965,14 +2009,13 @@ void setupServerRoutes() {
         // ================================
         Serial.println("\nResetting time to default...");
         
-        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+        if (xSemaphoreTake(timeMutex, portMAX_DELAY)== pdTRUE) {
             setTime(0, 0, 0, 1, 1, 2000);
             timeConfig.currentTime = now();
             timeConfig.ntpSynced = false;
             timeConfig.ntpServer = "";
-            
             Serial.println("✓ System time reset to: 00:00:00 01/01/2000");
-            
+                    
             // ================================
             // 3. SAVE TO RTC IF AVAILABLE
             // ================================
@@ -2046,11 +2089,72 @@ void setupServerRoutes() {
     });
 
     // ================================
-    // 10. 404 NOT FOUND HANDLER
+    // 11. 404 NOT FOUND HANDLER WITH SMART REDIRECT
     // ================================
     server.onNotFound([](AsyncWebServerRequest *request){
-        Serial.printf("404: %s\n", request->url().c_str());
-        request->send(404, "text/plain", "Not found");
+        String url = request->url();
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        Serial.printf("\n[404] Client: %s | URL: %s\n", 
+            clientIP.toString().c_str(), url.c_str());
+        
+        // ================================
+        // RULE 1: Static Assets - Return 404 Plain Text
+        // ================================
+        if (url.startsWith("/assets/") || 
+            url.endsWith(".css") || 
+            url.endsWith(".js") || 
+            url.endsWith(".png") || 
+            url.endsWith(".jpg") || 
+            url.endsWith(".jpeg") ||
+            url.endsWith(".gif") ||
+            url.endsWith(".ico") ||
+            url.endsWith(".svg") ||
+            url.endsWith(".woff") ||
+            url.endsWith(".woff2") ||
+            url.endsWith(".ttf")) {
+            
+            Serial.println("   → Static asset not found (returning 404)");
+            request->send(404, "text/plain", "File not found");
+            return;
+        }
+        
+        // ================================
+        // RULE 2: Protected API Endpoints - Check Session
+        // ================================
+        bool isProtectedEndpoint = (
+            url.startsWith("/api/") ||
+            url == "/devicestatus" ||
+            url == "/getprayertimes" ||
+            url == "/getcities" ||
+            url == "/setcity" ||
+            url == "/setwifi" ||
+            url == "/setap" ||
+            url == "/synctime" ||
+            url == "/reset" ||
+            url == "/getcityinfo"
+        );
+        
+        if (isProtectedEndpoint) {
+            // Validate session untuk endpoint yang dilindungi
+            if (!validateSession(request)) {
+                Serial.println("   → Protected endpoint, invalid session");
+                Serial.println("   → Redirecting to /notfound");
+                request->redirect("/notfound");
+                return;
+            }
+            
+            // Session valid tapi endpoint tidak ada
+            Serial.println("   → Protected endpoint not found (session valid)");
+            request->redirect("/notfound");
+            return;
+        }
+        
+        // ================================
+        // RULE 3: Random URLs - Direct Redirect
+        // ================================
+        Serial.println("   → Invalid URL, redirecting to /notfound");
+        request->redirect("/notfound");
     });
 }
 
