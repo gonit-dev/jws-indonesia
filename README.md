@@ -148,6 +148,7 @@ STA Mode: http://<IP-ESP32>  (cek serial monitor)
 - ✅ Manual Time Sync (browser time → ESP32)
 - ✅ AP Credentials Change
 - ✅ Factory Reset
+- ✅ Upload Data location Indonesia
 
 ## ⏰ Auto-Update System
 
@@ -236,7 +237,6 @@ spiMutex        // SPI bus (display + touch)
 - Prayer times refresh: setiap **30 detik**
 - Timestamp di-sync dari server + increment lokal
 
-
 ### 🗺️ GPS Kordinat
 - Bisa anda modif menggunakan tambahan GPS Module (sebelumnya di ambil dari data kordinat json tersimpan)
 
@@ -245,6 +245,8 @@ spiMutex        // SPI bus (display + touch)
 - Ada validasi jika salah file, nama, format, ukuran dan penulisan JSON. Contoh bisa dilihat di folder /data/cities.json
 - Setelah terunggah pilih Kota/Kabupaten akan refresh
 - Batas file json hanya sampai 1MB, kalau bisa di perkecil lagi mungkin akan membuat lebih berat jika besar mengingat file JSON Kota/Kabupaten tidak sampai 1MB
+- Kordinat di sini setiap jarak KM bisa berbeda waktu shalat
+- Sistem merubah data metodenye ke Mesir sesuai format perhitungan Indonesia lama. Mentri Agama RI sejak 2024 mengganti metode perhitungannya dan belum digunakan secara Nasional di Indonesia 
 
 ## 🔍 Troubleshooting
 
