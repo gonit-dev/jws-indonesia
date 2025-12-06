@@ -786,13 +786,12 @@
             const lat = selectedOption.getAttribute('data-lat');
             const lon = selectedOption.getAttribute('data-lon');
             
-            // ✅ FIX: Ambil dari JSON langsung, bukan dari textContent
             const cityData = cityList.find(c => c.api === selectedCity);
-            const displayName = cityData ? cityData.display : selectedCity; // ✅ "Tangerang (Kabupaten)"
+            const displayName = cityData ? cityData.display : selectedCity;
             
             console.log('City data:');
-            console.log('  API:', selectedCity);          // "Kabupaten Tangerang"
-            console.log('  Display:', displayName);       // "Tangerang (Kabupaten)" ✅
+            console.log('  API:', selectedCity);
+            console.log('  Display:', displayName); 
             console.log('  Lat:', lat);
             console.log('  Lon:', lon);
             

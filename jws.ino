@@ -943,7 +943,7 @@ void wifiTask(void *parameter) {
                     esp_task_wdt_reset();
                     
                     if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-                        Serial.println("Auto-updating prayer times for: " + prayerConfig.selectedCityName);
+                        Serial.println("Auto-updating prayer times for: " + prayerConfig.selectedCity);
                         getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
                     } else {
                         Serial.println("No city coordinates - please select via web interface");
@@ -1106,7 +1106,7 @@ void prayerTask(void *parameter) {
             xSemaphoreGive(timeMutex);
             
             if (shouldUpdate) {
-                Serial.println("Midnight prayer times update for: " + prayerConfig.selectedCityName);
+                Serial.println("Midnight prayer times update for: " + prayerConfig.selectedCity);
                 getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
                 hasUpdatedToday = true;
             }
@@ -1670,7 +1670,7 @@ void setupServerRoutes() {
         if (WiFi.status() == WL_CONNECTED) {
             if (lat.length() > 0 && lon.length() > 0) {
                 Serial.println("Fetching prayer times with coordinates...");
-                Serial.println("  City: " + prayerConfig.selectedCityName);
+                Serial.println("  City: " + prayerConfig.selectedCity);
                 Serial.println("  Lat: " + lat);
                 Serial.println("  Lon: " + lon);
                 
