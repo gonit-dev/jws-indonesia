@@ -283,8 +283,8 @@
     "api": "Bengkulu",
     "display": "Bengkulu (Kota)",
     "province": "Bengkulu",
-    "lat": -3.7922858,
-    "lon": 102.2623797
+    "lat": -4.0035184,
+    "lon": 101.8393474
   },
   {
     "api": "Kabupaten Bengkulu Selatan",
@@ -353,8 +353,8 @@
     "api": "Yogyakarta",
     "display": "Yogyakarta (Kota)",
     "province": "DI Yogyakarta",
-    "lat": -7.8012646,
-    "lon": 110.3646857
+    "lat": -7.9778384,
+    "lon": 110.3672257
   },
   {
     "api": "Kabupaten Bantul",
@@ -430,8 +430,8 @@
     "api": "Gorontalo",
     "display": "Gorontalo (Kota)",
     "province": "Gorontalo",
-    "lat": 0.5384433,
-    "lon": 123.0594971
+    "lat": 0.7186174,
+    "lon": 122.4555927
   },
   {
     "api": "Kabupaten Boalemo",
@@ -451,8 +451,8 @@
     "api": "Kabupaten Gorontalo",
     "display": "Gorontalo (Kabupaten)",
     "province": "Gorontalo",
-    "lat": 0.5384433,
-    "lon": 123.0594971
+    "lat": 0.7186174,
+    "lon": 122.4555927
   },
   {
     "api": "Kabupaten Gorontalo Utara",
@@ -472,8 +472,8 @@
     "api": "Jambi",
     "display": "Jambi (Kota)",
     "province": "Jambi",
-    "lat": -1.6296917,
-    "lon": 103.6077806
+    "lat": -1.7069965,
+    "lon": 102.7140041
   },
   {
     "api": "Sungai Penuh",
@@ -486,8 +486,8 @@
     "api": "Kabupaten Batanghari",
     "display": "Batanghari (Kabupaten)",
     "province": "Jambi",
-    "lat": -1.8590978,
-    "lon": 103.0052795
+    "lat": -1.3837137,
+    "lon": 102.4331438
   },
   {
     "api": "Kabupaten Bungo",
@@ -556,8 +556,8 @@
     "api": "Banjar",
     "display": "Banjar (Kota)",
     "province": "Jawa Barat",
-    "lat": -7.3695648,
-    "lon": 108.5415225
+    "lat": -3.3187496,
+    "lon": 114.5925828
   },
   {
     "api": "Bekasi",
@@ -1018,7 +1018,7 @@
     "api": "Mojokerto",
     "display": "Mojokerto (Kota)",
     "province": "Jawa Timur",
-    "lat": -7.5413378,
+    "lat": -7.5413377,
     "lon": 112.5094975
   },
   {
@@ -1144,7 +1144,7 @@
     "api": "Kabupaten Mojokerto",
     "display": "Mojokerto (Kabupaten)",
     "province": "Jawa Timur",
-    "lat": -7.5413378,
+    "lat": -7.5413377,
     "lon": 112.5094975
   },
   {
@@ -1900,8 +1900,8 @@
     "api": "Kabupaten Maluku Tenggara Barat",
     "display": "Maluku Tenggara Barat (Kabupaten)",
     "province": "Maluku",
-    "lat": -8.3132248,
-    "lon": 116.235021
+    "lat": -7.2304216,
+    "lon": 131.9208824
   },
   {
     "api": "Kabupaten Seram Bagian Barat",
@@ -2117,8 +2117,8 @@
     "api": "Kabupaten Manggarai",
     "display": "Manggarai (Kabupaten)",
     "province": "Nusa Tenggara Timur",
-    "lat": -8.5480146,
-    "lon": 120.4389862
+    "lat": -6.2101704,
+    "lon": 106.849935
   },
   {
     "api": "Kabupaten Manggarai Barat",
@@ -2250,8 +2250,8 @@
     "api": "Kabupaten Mamberamo Raya",
     "display": "Mamberamo Raya (Kabupaten)",
     "province": "Papua",
-    "lat": -2.2827389,
-    "lon": 138.02109
+    "lat": -2.3957005,
+    "lon": 137.8168835
   },
   {
     "api": "Kabupaten Sarmi",
@@ -2341,8 +2341,8 @@
     "api": "Kabupaten Kaimana",
     "display": "Kaimana (Kabupaten)",
     "province": "Papua Barat Daya",
-    "lat": -0.5559436,
-    "lon": 130.6846815
+    "lat": -3.5158359,
+    "lon": 134.3165746
   },
   {
     "api": "Kabupaten Maybrat",
@@ -3391,22 +3391,22 @@
     "api": "Kabupaten Batubara",
     "display": "Batubara (Kabupaten)",
     "province": "Sumatera Utara",
-    "lat": 3.3311896,
-    "lon": 99.1682961
+    "lat": -2.911016,
+    "lon": 116.2008286
   },
   {
     "api": "Kabupaten Dairi",
     "display": "Dairi (Kabupaten)",
     "province": "Sumatera Utara",
-    "lat": 2.8357104,
-    "lon": 98.2844075
+    "lat": -3.0189196,
+    "lon": 136.9337975
   },
   {
     "api": "Kabupaten Deli Serdang",
     "display": "Deli Serdang (Kabupaten)",
     "province": "Sumatera Utara",
-    "lat": 3.6767806,
-    "lon": 98.683589
+    "lat": 3.6952434,
+    "lon": 98.8310745
   },
   {
     "api": "Kabupaten Humbang Hasundutan",
@@ -3440,15 +3440,15 @@
     "api": "Kabupaten Labuhanbatu Utara",
     "display": "Labuhanbatu Utara (Kabupaten)",
     "province": "Sumatera Utara",
-    "lat": 2.4634731,
-    "lon": 99.7228758
+    "lat": 2.5808179,
+    "lon": 100.2036832
   },
   {
     "api": "Kabupaten Langkat",
     "display": "Langkat (Kabupaten)",
     "province": "Sumatera Utara",
-    "lat": 3.8293858,
-    "lon": 98.2483495
+    "lat": 1.1427537,
+    "lon": 102.0829907
   },
   {
     "api": "Kabupaten Mandailing Natal",
@@ -3461,7 +3461,7 @@
     "api": "Kabupaten Nias",
     "display": "Nias (Kabupaten)",
     "province": "Sumatera Utara",
-    "lat": 1.042737,
+    "lat": 1.0427371,
     "lon": 97.645176
   },
   {
@@ -3496,8 +3496,8 @@
     "api": "Kabupaten Padang Lawas Utara",
     "display": "Padang Lawas Utara (Kabupaten)",
     "province": "Sumatera Utara",
-    "lat": 1.6290988,
-    "lon": 99.6926374
+    "lat": 1.1528001,
+    "lon": 99.817203
   },
   {
     "api": "Kabupaten Pakpak Bharat",
@@ -3524,8 +3524,8 @@
     "api": "Kabupaten Simalungun",
     "display": "Simalungun (Kabupaten)",
     "province": "Sumatera Utara",
-    "lat": 2.9505161,
-    "lon": 98.7835306
+    "lat": 2.9504522,
+    "lon": 98.7835111
   },
   {
     "api": "Kabupaten Tapanuli Selatan",
@@ -3552,8 +3552,8 @@
     "api": "Kabupaten Toba",
     "display": "Toba (Kabupaten)",
     "province": "Sumatera Utara",
-    "lat": 2.9484707,
-    "lon": 99.0658546
+    "lat": -0.2724311,
+    "lon": 110.0727916
   },
   {
     "api": "Kabupaten Majene",
@@ -3584,11 +3584,11 @@
     "lon": 119.5405447
   },
   {
-    "api": "Kabupaten Pasangkayu",
+    "api": "Kabupaten Kabupaten Pasangkayu",
     "display": "Pasangkayu (Kabupaten)",
     "province": "Sulawesi Barat",
     "lat": -1.3447436,
-    "lon": 119.3795111
+    "lon": 119.3795112
   },
   {
     "api": "Kabupaten Polewali Mandar",
