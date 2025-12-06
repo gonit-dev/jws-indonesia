@@ -520,7 +520,7 @@ void loadPrayerTimes() {
                 
                 file.close();
                 Serial.println("Prayer times loaded");
-                Serial.println("  City: " + prayerConfig.selectedCityName);
+                Serial.println("  City: " + prayerConfig.selectedCity);
             }
         }
         xSemaphoreGive(settingsMutex);
@@ -565,7 +565,7 @@ void loadCitySelection() {
                 prayerConfig.longitude.trim();
                 
                 file.close();
-                Serial.println("City selection loaded: " + prayerConfig.selectedCityName);
+                Serial.println("City selection loaded: " + prayerConfig.selectedCity);
                 Serial.println("   Lat: " + prayerConfig.latitude + ", Lon: " + prayerConfig.longitude);
             }
         } else {
@@ -2440,9 +2440,9 @@ void setup() {
     // DISPLAY LOADED CITY & PRAYER TIMES
     // ================================
     if (prayerConfig.selectedCity.length() > 0) {
-        Serial.println("\nSelected City: " + prayerConfig.selectedCityName);
+        Serial.println("\nSelected City: " + prayerConfig.selectedCity);
         Serial.println("\nLoaded Prayer Times:");
-        Serial.println("   City: " + prayerConfig.selectedCityName);
+        Serial.println("   City: " + prayerConfig.selectedCity);
         Serial.println("   Subuh: " + prayerConfig.subuhTime);
         Serial.println("   Dzuhur: " + prayerConfig.zuhurTime);
         Serial.println("   Ashar: " + prayerConfig.asarTime);
