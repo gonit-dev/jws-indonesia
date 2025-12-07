@@ -40,8 +40,8 @@
 #define SCREEN_WIDTH   320
 #define SCREEN_HEIGHT  240
 
-#define RTC_SDA    21
-#define RTC_SCL    22
+//#define RTC_SDA    21
+//#define RTC_SCL    22
 
 // PWM Backlight Configuration
 #define TFT_BL_CHANNEL    0
@@ -589,9 +589,9 @@ bool initRTC() {
     Serial.println("INITIALIZING DS3231 RTC");
     Serial.println("========================================");
     
-    Wire.begin(RTC_SDA, RTC_SCL);
+    Wire.begin(/*RTC_SDA, RTC_SCL*/);
     
-    if (!rtc.begin(&Wire)) {
+    if (!rtc.begin(/*&Wire*/)) {
         Serial.println("✗ DS3231 not found!");
         Serial.println("   Check wiring:");
         Serial.println("   - SDA → GPIO21");
