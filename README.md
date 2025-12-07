@@ -215,12 +215,6 @@ spiMutex        // SPI bus (display + touch)
 - Auto-redirect jika session expired
 - CORS enabled untuk endpoint `/api/data`
 
-### 📡 Manajemen Daya WiFi
-- Sleep mode **aktif** untuk anti-overheat (~10°C lebih dingin)
-- TX Power: 19.5 dBm
-- Auto-disconnect setelah 30x gagal koneksi (mencegah overheating)
-- Power saving: `WIFI_PS_MIN_MODEM`
-
 ### 💡 Konfigurasi Backlight
 - Brightness default: **180/255 (~70%)**
 - Bisa diubah di: `#define TFT_BL_BRIGHTNESS 180`
