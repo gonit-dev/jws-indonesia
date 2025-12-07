@@ -202,7 +202,7 @@ struct Session {
     String token;
     unsigned long expiry;
     IPAddress clientIP;
-    unsigned long createdAt;  // NEW: Track creation time
+    unsigned long createdAt;
 };
 
 const int MAX_SESSIONS = 5;
@@ -596,14 +596,14 @@ bool initRTC() {
     Wire.begin(/*RTC_SDA, RTC_SCL*/);
     
     if (!rtc.begin(/*&Wire*/)) {
-        Serial.println("✗ DS3231 not found!");
+        Serial.println("âœ— DS3231 not found!");
         Serial.println("   Check wiring:");
-        Serial.println("   - SDA → GPIO21");
-        Serial.println("   - SCL → GPIO22");
-        Serial.println("   - VCC → 3.3V");
-        Serial.println("   - GND → GND");
-        Serial.println("   - BATTERY → CR2032 (optional)");
-        Serial.println("\n⚠ Running without RTC");
+        Serial.println("   - SDA â†’ GPIO21");
+        Serial.println("   - SCL â†’ GPIO22");
+        Serial.println("   - VCC â†’ 3.3V");
+        Serial.println("   - GND â†’ GND");
+        Serial.println("   - BATTERY â†’ CR2032 (optional)");
+        Serial.println("\nâš  Running without RTC");
         Serial.println("   Time will reset to 00:00:00 01/01/2000 on power loss");
         Serial.println("========================================\n");
         
@@ -623,13 +623,13 @@ bool initRTC() {
         return false;
     }
     
-    Serial.println("✓ DS3231 detected!");
+    Serial.println("âœ“ DS3231 detected!");
     
     if (rtc.lostPower()) {
-        Serial.println("⚠ RTC lost power - battery may be dead or missing");
+        Serial.println("âš  RTC lost power - battery may be dead or missing");
         Serial.println("   Install CR2032 battery for time persistence");
     } else {
-        Serial.println("✓ RTC has battery backup - time will persist");
+        Serial.println("âœ“ RTC has battery backup - time will persist");
     }
     
     DateTime rtcNow = rtc.now();
@@ -642,7 +642,7 @@ bool initRTC() {
     // CHECK IF RTC TIME IS VALID
     // ================================
     if (rtcNow.year() >= 2000 && rtcNow.year() <= 2100) {
-        Serial.println("\n✓ RTC time is valid - using RTC time");
+        Serial.println("\nâœ“ RTC time is valid - using RTC time");
         
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
             time_t rtcUnix = rtcNow.unixtime();
@@ -666,7 +666,7 @@ bool initRTC() {
             }
         }
     } else {
-        Serial.println("\n⚠ RTC time invalid (year out of range)");
+        Serial.println("\nâš  RTC time invalid (year out of range)");
         Serial.println("   Resetting to default time: 00:00:00 01/01/2000");
         
         DateTime defaultTime(2000, 1, 1, 0, 0, 0);
@@ -884,56 +884,21 @@ void uiTask(void *parameter) {
 void wifiTask(void *parameter) {
     int connectAttempt = 0;
     const int MAX_CONNECT_ATTEMPTS = 30;
-    unsigned long lastStabilityCheck = 0;
-    unsigned long lastAPStatusReport = 0;
     
     while (true) {
         esp_task_wdt_reset();
-        
-        // ================================
-        // STABILITY CHECK EVERY 10 SECONDS
-        // ================================
-        if (millis() - lastStabilityCheck > 10000) {
-            lastStabilityCheck = millis();
-            
-            esp_wifi_set_ps(WIFI_PS_NONE);
-            WiFi.setTxPower(WIFI_POWER_19_5dBm);
-            
-            if (millis() - lastAPStatusReport > 30000) {
-                lastAPStatusReport = millis();
-                int clients = WiFi.softAPgetStationNum();
-                
-                if (clients > 0) {
-                    Serial.printf("\n📱 AP Status Check:\n");
-                    Serial.printf("   Connected Clients: %d\n", clients);
-                    Serial.printf("   AP IP: %s\n", WiFi.softAPIP().toString().c_str());
-                    Serial.printf("   WiFi Mode: %s\n", 
-                        WiFi.getMode() == WIFI_AP_STA ? "AP+STA" : 
-                        WiFi.getMode() == WIFI_AP ? "AP Only" : "STA Only");
-                    Serial.printf("   Free Heap: %d bytes\n\n", ESP.getFreeHeap());
-                }
-            }
-        }
         
         switch (wifiState) {
             case WIFI_IDLE:
                 if (wifiConfig.routerSSID.length() > 0 && !wifiConfig.isConnected) {
                     if (xSemaphoreTake(wifiMutex, portMAX_DELAY) == pdTRUE) {
-                        Serial.println("\n========================================");
-                        Serial.println("CONNECTING TO WIFI ROUTER");
-                        Serial.println("========================================");
-                        Serial.println("SSID: " + wifiConfig.routerSSID);
+                        Serial.println("Connecting to WiFi: " + wifiConfig.routerSSID);
                         
-                        esp_wifi_set_ps(WIFI_PS_NONE);
                         WiFi.setTxPower(WIFI_POWER_19_5dBm);
                         
                         WiFi.begin(wifiConfig.routerSSID.c_str(), wifiConfig.routerPassword.c_str());
                         wifiState = WIFI_CONNECTING;
                         connectAttempt = 0;
-                        
-                        Serial.println("Status: Connecting...");
-                        Serial.println("========================================\n");
-                        
                         xSemaphoreGive(wifiMutex);
                     }
                 }
@@ -948,50 +913,26 @@ void wifiTask(void *parameter) {
                         wifiConfig.isConnected = true;
                         wifiConfig.localIP = WiFi.localIP();
                         wifiState = WIFI_CONNECTED;
-                        
-                        esp_wifi_set_ps(WIFI_PS_NONE);
-                        WiFi.setTxPower(WIFI_POWER_19_5dBm);
-                        
-                        Serial.println("\n========================================");
-                        Serial.println("✅ WIFI CONNECTED!");
-                        Serial.println("========================================");
-                        Serial.printf("   SSID: %s\n", WiFi.SSID().c_str());
-                        Serial.printf("   IP Address: %s\n", wifiConfig.localIP.toString().c_str());
-                        Serial.printf("   Gateway: %s\n", WiFi.gatewayIP().toString().c_str());
-                        Serial.printf("   Subnet: %s\n", WiFi.subnetMask().toString().c_str());
-                        Serial.printf("   DNS: %s\n", WiFi.dnsIP().toString().c_str());
-                        Serial.printf("   RSSI: %d dBm\n", WiFi.RSSI());
-                        Serial.printf("   Channel: %d\n", WiFi.channel());
-                        Serial.println("========================================\n");
-                        
+                        Serial.println("WiFi Connected!");
+                        Serial.print("   IP: ");
+                        Serial.println(wifiConfig.localIP);
                         xSemaphoreGive(wifiMutex);
                         
                         if (ntpTaskHandle != NULL) {
-                            Serial.println("🕐 Auto-triggering NTP sync...\n");
+                            Serial.println("Auto-triggering NTP sync...");
                             xTaskNotifyGive(ntpTaskHandle);
                         }
                     }
                 } else {
                     connectAttempt++;
-                    
-                    if (connectAttempt % 5 == 0) {
-                        Serial.printf("⏳ Connecting... (%d/%d)\n", connectAttempt, MAX_CONNECT_ATTEMPTS);
-                    }
-                    
                     if (connectAttempt >= MAX_CONNECT_ATTEMPTS) {
                         wifiState = WIFI_FAILED;
                         
-                        Serial.println("\n========================================");
-                        Serial.println("❌ WIFI CONNECTION TIMEOUT");
-                        Serial.println("========================================");
-                        Serial.println("Reason: Max connection attempts reached");
-                        Serial.println("Action: Disconnecting to prevent overheating");
-                        Serial.println("Retry: Will retry after 60 seconds");
-                        Serial.println("========================================\n");
-                        
                         WiFi.disconnect(true);
                         WiFi.mode(WIFI_AP);
-                        vTaskDelay(pdMS_TO_TICKS(1000));
+                        
+                        Serial.println("WiFi connection timeout");
+                        Serial.println("WiFi disconnected to prevent overheating");
                     }
                 }
                 
@@ -1006,10 +947,10 @@ void wifiTask(void *parameter) {
                     esp_task_wdt_reset();
                     
                     if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-                        Serial.println("🕌 Auto-updating prayer times for: " + prayerConfig.selectedCity);
+                        Serial.println("Auto-updating prayer times for: " + prayerConfig.selectedCity);
                         getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
                     } else {
-                        Serial.println("⚠️ No city coordinates - please select via web interface");
+                        Serial.println("No city coordinates - please select via web interface");
                     }
                     
                     autoUpdateDone = true;
@@ -1021,44 +962,34 @@ void wifiTask(void *parameter) {
                         wifiState = WIFI_IDLE;
                         autoUpdateDone = false;
                         
-                        Serial.println("\n========================================");
-                        Serial.println("⚠️ WIFI DISCONNECTED");
-                        Serial.println("========================================");
-                        Serial.println("Action: Switching back to AP mode");
-                        Serial.println("Auto-reconnect: Will retry in 5 seconds");
-                        Serial.println("========================================\n");
-                        
                         WiFi.mode(WIFI_AP_STA);
                         
-                        vTaskDelay(pdMS_TO_TICKS(500));
-                        esp_wifi_set_ps(WIFI_PS_NONE);
-                        WiFi.setTxPower(WIFI_POWER_19_5dBm);
-                        
+                        Serial.println("WiFi disconnected!");
                         xSemaphoreGive(wifiMutex);
                     }
                 }
-                
                 vTaskDelay(pdMS_TO_TICKS(10000));
                 break;
                 
-            case WIFI_FAILED:
-                Serial.println("⏳ Waiting 60s before retry...");
-                
-                WiFi.disconnect(true);
-                WiFi.mode(WIFI_AP);
-                
-                vTaskDelay(pdMS_TO_TICKS(60000));
-                
-                WiFi.mode(WIFI_AP_STA);
-                vTaskDelay(pdMS_TO_TICKS(500));
-                
-                esp_wifi_set_ps(WIFI_PS_NONE);
-                WiFi.setTxPower(WIFI_POWER_19_5dBm);
-                
-                wifiState = WIFI_IDLE;
-                
-                Serial.println("🔄 Retry: Switching back to AP+STA mode\n");
-                break;
+                case WIFI_FAILED:
+                    esp_task_wdt_reset();
+                    
+                    Serial.println("⚠️ WiFi STA failed - AP TETAP AKTIF");
+                    Serial.println("   Retry in 30 seconds...");
+                    
+                    WiFi.disconnect(false, false);
+                    
+                    for (int i = 30; i > 0; i--) {
+                        if (i % 10 == 0) {
+                            Serial.printf("   Retry in %d seconds... (AP: 192.168.4.1)\n", i);
+                        }
+                        vTaskDelay(pdMS_TO_TICKS(1000));
+                        esp_task_wdt_reset();
+                    }
+                    
+                    wifiState = WIFI_IDLE;
+                    Serial.println("🔄 Retrying WiFi STA connection...");
+                    break;
         }
     }
 }
@@ -1104,7 +1035,7 @@ void ntpTask(void *parameter) {
                     syncSuccess = true;
                     timeConfig.ntpServer = String(ntpServers[serverIndex]);
                     
-                    Serial.println("✓ NTP Sync successful!");
+                    Serial.println("âœ“ NTP Sync successful!");
                     Serial.printf("   Server: %s\n", ntpServers[serverIndex]);
                     Serial.printf("   Time: %02d:%02d:%02d %02d/%02d/%04d\n",
                                  hour(ntpTime), minute(ntpTime), second(ntpTime),
@@ -1123,7 +1054,7 @@ void ntpTask(void *parameter) {
                         
                         rtc.adjust(dt);
                         
-                        Serial.println("✓ NTP time saved to RTC");
+                        Serial.println("âœ“ NTP time saved to RTC");
                         Serial.println("   (RTC time updated from NTP)");
                     }
                     
@@ -1140,7 +1071,7 @@ void ntpTask(void *parameter) {
             }
             
             if (!syncSuccess) {
-                Serial.println("✗ All NTP servers failed!");
+                Serial.println("âœ— All NTP servers failed!");
                 Serial.println("   Keeping current time");
                 Serial.println("========================================\n");
             }
@@ -1158,7 +1089,7 @@ void webTask(void *parameter) {
     setupServerRoutes();
     server.begin();
     
-    Serial.println("✅ Web server started");
+    Serial.println("âœ… Web server started");
     Serial.println("   Port: 80");
     Serial.println("   Max Clients: " + String(MAX_SESSIONS));
     Serial.println("========================================\n");
@@ -1169,6 +1100,29 @@ void webTask(void *parameter) {
         vTaskDelay(pdMS_TO_TICKS(5000));
         esp_task_wdt_reset();
         
+        if (millis() - lastAPCheck > 5000) {
+            lastAPCheck = millis();
+            
+            wifi_mode_t mode;
+            esp_wifi_get_mode(&mode);
+            
+            if (mode != WIFI_MODE_APSTA) {
+                Serial.println("\n🚨 CRITICAL: WiFi mode changed!");
+                Serial.printf("   Current mode: %d (should be %d)\n", mode, WIFI_MODE_APSTA);
+                Serial.println("   Forcing back to AP_STA...");
+                
+                WiFi.mode(WIFI_AP_STA);
+                delay(100);
+                
+                // Re-start AP
+                WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+                delay(100);
+                
+                Serial.println("✅ AP restored: " + String(wifiConfig.apSSID));
+            }
+        }
+        
+        // Monitor setiap 30 detik
         if (millis() - lastReport > 30000) {
             Serial.println("\n=== WEB SERVER STATUS ===");
             Serial.printf("Free Heap: %d bytes (%.1f KB)\n", 
@@ -1290,7 +1244,7 @@ void clockTickTask(void *parameter) {
             if (timeConfig.currentTime < 946684800) { 
                 
                 if (firstRun) {
-                    Serial.println("\n⚠ CLOCK TASK WARNING:");
+                    Serial.println("\nâš  CLOCK TASK WARNING:");
                     Serial.printf("  Invalid timestamp detected: %ld\n", timeConfig.currentTime);
                     Serial.println("  This indicates time was not properly initialized");
                     Serial.println("  Forcing reset to: 01/01/2000 00:00:00");
@@ -1305,7 +1259,7 @@ void clockTickTask(void *parameter) {
                     timeConfig.currentTime = 946684800;
                 }
                 
-                Serial.printf("  ✓ Time corrected to: %ld\n\n", timeConfig.currentTime);
+                Serial.printf("  âœ“ Time corrected to: %ld\n\n", timeConfig.currentTime);
             } else {
                 timeConfig.currentTime++;
             }
@@ -1325,7 +1279,7 @@ void clockTickTask(void *parameter) {
             if (autoSyncCounter >= 3600) {  // 3600 seconds = 1 hour
                 autoSyncCounter = 0;
                 if (ntpTaskHandle != NULL) {
-                    Serial.println("\n⏰ Auto NTP sync (hourly)");
+                    Serial.println("\nâ° Auto NTP sync (hourly)");
                     xTaskNotifyGive(ntpTaskHandle);
                 }
             }
@@ -1445,6 +1399,7 @@ void scheduleRestart(int delaySeconds) {
 // WEB SERVER ROUTES
 // ================================
 void setupServerRoutes() {
+    
     // ================================
     // 1. SERVE HTML - ROOT PAGE
     // ================================
@@ -1940,7 +1895,7 @@ void setupServerRoutes() {
             url.endsWith(".woff2") ||
             url.endsWith(".ttf")) {
             
-            Serial.println("   → Static asset not found (returning 404)");
+            Serial.println("   â†’ Static asset not found (returning 404)");
             request->send(404, "text/plain", "File not found");
             return;
         }
@@ -1961,19 +1916,19 @@ void setupServerRoutes() {
         
         if (isProtectedEndpoint) {
             if (!validateSession(request)) {
-                Serial.println("   → Protected endpoint, invalid session");
-                Serial.println("   → Redirecting to /notfound");
+                Serial.println("   â†’ Protected endpoint, invalid session");
+                Serial.println("   â†’ Redirecting to /notfound");
                 request->redirect("/notfound");
                 return;
             }
             
-            Serial.println("   → Protected endpoint not found (session valid)");
+            Serial.println("   â†’ Protected endpoint not found (session valid)");
             request->redirect("/notfound");
             return;
         }
         
         // RULE 3: Random URLs - Direct Redirect
-        Serial.println("   → Invalid URL, redirecting to /notfound");
+        Serial.println("   â†’ Invalid URL, redirecting to /notfound");
         request->redirect("/notfound");
     });
 }
@@ -1989,8 +1944,8 @@ void setup() {
     Serial.println("========================================");
     Serial.println("   ESP32 Islamic Prayer Clock");
     Serial.println("   LVGL 9.2.0 + FreeRTOS");
-    Serial.println("   ULTRA STABLE WIFI - MULTI-CLIENT");
-    Serial.println("   VERSION 2.2 - STABILITY OPTIMIZED");
+    Serial.println("   CONCURRENT ACCESS OPTIMIZED");
+    Serial.println("   VERSION 2.1 - MULTI-CLIENT");
     Serial.println("========================================\n");
 
     // ================================
@@ -2102,88 +2057,49 @@ void setup() {
     Serial.printf("Backlight ON: %d/255\n", TFT_BL_BRIGHTNESS);
     
     // ================================
-    // WIFI EVENT HANDLER - MONITOR CONNECTIONS
-    // ================================
-    WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info){
-        switch(event) {
-            case WIFI_EVENT_AP_STACONNECTED:
-                Serial.println("✅ Client connected to AP");
-                Serial.printf("   MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
-                    info.wifi_ap_staconnected.mac[0],
-                    info.wifi_ap_staconnected.mac[1],
-                    info.wifi_ap_staconnected.mac[2],
-                    info.wifi_ap_staconnected.mac[3],
-                    info.wifi_ap_staconnected.mac[4],
-                    info.wifi_ap_staconnected.mac[5]);
-                break;
-                
-            case WIFI_EVENT_AP_STADISCONNECTED:
-                Serial.println("⚠️ Client disconnected from AP");
-                Serial.printf("   MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
-                    info.wifi_ap_stadisconnected.mac[0],
-                    info.wifi_ap_stadisconnected.mac[1],
-                    info.wifi_ap_stadisconnected.mac[2],
-                    info.wifi_ap_stadisconnected.mac[3],
-                    info.wifi_ap_stadisconnected.mac[4],
-                    info.wifi_ap_stadisconnected.mac[5]);
-                break;
-                
-            case WIFI_EVENT_STA_DISCONNECTED:
-                Serial.println("⚠️ Disconnected from WiFi router");
-                break;
-                
-            case WIFI_EVENT_STA_CONNECTED:
-                Serial.println("✅ Connected to WiFi router");
-                break;
-                
-            default:
-                break;
-        }
-    });
-    
-    // ================================
-    // WIFI CONFIGURATION - ULTRA STABLE MODE
+    // WIFI CONFIGURATION
     // ================================
     Serial.println("\n========================================");
-    Serial.println("WIFI CONFIGURATION - STABILITY MODE");
+    Serial.println("WIFI CONFIGURATION");
     Serial.println("========================================");
-    
-    WiFi.persistent(false);
-    WiFi.setAutoReconnect(true);
-    WiFi.setSleep(WIFI_PS_NONE);
-    
+
     WiFi.mode(WIFI_AP_STA);
     delay(100);
-    
-    WiFi.setTxPower(WIFI_POWER_19_5dBm);
-    
+
+    WiFi.setSleep(WIFI_PS_NONE);
+
     esp_wifi_set_ps(WIFI_PS_NONE);
-    
-    // STEP 5: Configure AP IP settings
-    WiFi.softAPConfig(
-        IPAddress(192, 168, 4, 1),
-        IPAddress(192, 168, 4, 1),
-        IPAddress(255, 255, 255, 0) 
-    );
-    
-    WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword, 6, 0, 8);
-    
-    delay(500);
-    
-    Serial.println("✅ WiFi Configuration Applied:");
-    Serial.println("   Mode: AP + STA (Dual)");
-    Serial.println("   Sleep: DISABLED (Force at driver level)");
-    Serial.println("   Power: Maximum (19.5dBm)");
-    Serial.println("   Auto Reconnect: Enabled");
-    Serial.println("   Flash Persistence: Disabled");
-    Serial.println("   AP Channel: 6 (stable, low interference)");
-    Serial.println("   AP Max Clients: 8 (ESP32 hardware limit)");
-    Serial.println("   AP Beacon Interval: 100ms (default)");
-    Serial.printf("   AP SSID: %s\n", wifiConfig.apSSID);
-    Serial.printf("   AP Password: %s\n", wifiConfig.apPassword);
-    Serial.printf("   AP IP: %s\n", WiFi.softAPIP().toString().c_str());
-    Serial.printf("   AP MAC: %s\n", WiFi.softAPmacAddress().c_str());
+
+    WiFi.setTxPower(WIFI_POWER_19_5dBm);
+    esp_wifi_set_max_tx_power(78);
+
+    WiFi.setAutoReconnect(true);
+
+    WiFi.persistent(false);
+
+    Serial.println("✅ WiFi Mode: AP + STA");
+    Serial.println("✅ WiFi Sleep: DOUBLE DISABLED");
+    Serial.println("   - Arduino: WIFI_PS_NONE");
+    Serial.println("   - ESP-IDF: WIFI_PS_NONE");
+    Serial.println("✅ WiFi Power: Maximum (19.5dBm)");
+    Serial.println("✅ Auto Reconnect: Enabled");
+    Serial.println("✅ Persistent: Disabled");
     Serial.println("========================================\n");
+
+    WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+    delay(100);
+
+    Serial.printf("✅ AP Started: %s\n", wifiConfig.apSSID);
+    Serial.printf("   Password: %s\n", wifiConfig.apPassword);
+    Serial.print("   AP IP: ");
+    Serial.println(WiFi.softAPIP());
+    Serial.printf("   AP MAC: %s\n", WiFi.softAPmacAddress().c_str());
+    
+    WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+    Serial.printf("AP Started: %s\n", wifiConfig.apSSID);
+    Serial.printf("   Password: %s\n", wifiConfig.apPassword);
+    Serial.print("   AP IP: ");
+    Serial.println(WiFi.softAPIP());
     
     // ================================
     // TIME CONFIG INIT
@@ -2195,43 +2111,41 @@ void setup() {
     // DISPLAY LOADED CITY & PRAYER TIMES
     // ================================
     if (prayerConfig.selectedCity.length() > 0) {
-        Serial.println("\n========================================");
-        Serial.println("LOADED PRAYER TIMES");
-        Serial.println("========================================");
-        Serial.println("City: " + prayerConfig.selectedCity);
+        Serial.println("\nSelected City: " + prayerConfig.selectedCity);
+        Serial.println("\nLoaded Prayer Times:");
+        Serial.println("   City: " + prayerConfig.selectedCity);
         Serial.println("   Subuh: " + prayerConfig.subuhTime);
         Serial.println("   Dzuhur: " + prayerConfig.zuhurTime);
         Serial.println("   Ashar: " + prayerConfig.asarTime);
         Serial.println("   Maghrib: " + prayerConfig.maghribTime);
         Serial.println("   Isya: " + prayerConfig.isyaTime);
-        Serial.println("========================================\n");
 
         DisplayUpdate update;
         update.type = DisplayUpdate::PRAYER_UPDATE;
         xQueueSend(displayQueue, &update, 0);
     } else {
-        Serial.println("\n⚠️ No city selected");
-        Serial.println("   Please select city via web interface\n");
+        Serial.println("\nNo city selected");
+        Serial.println("   Please select city via web interface");
     }
 
     // ================================
     // WATCHDOG CONFIGURATION
     // ================================
-    Serial.println("Configuring Watchdog...");
+    Serial.println("\nConfiguring Watchdog...");
     
     esp_task_wdt_deinit();
     
     esp_task_wdt_config_t wdt_config = {
-        .timeout_ms = 120000,
+        .timeout_ms = 60000,
         .idle_core_mask = 0,
         .trigger_panic = true
     };
     
     esp_err_t wdt_err = esp_task_wdt_init(&wdt_config);
     if (wdt_err == ESP_OK) {
-        Serial.println("✅ Watchdog configured (120s timeout)");
+        Serial.println("Watchdog configured (60s timeout)");
     } else {
-        Serial.printf("❌ Watchdog init error: %s\n", esp_err_to_name(wdt_err));
+        Serial.printf("Watchdog init error: %s\n", esp_err_to_name(wdt_err));
     }
     
     // ================================
@@ -2242,7 +2156,7 @@ void setup() {
     Serial.println("\n========================================");
     Serial.println("SESSION SYSTEM INITIALIZATION");
     Serial.println("========================================");
-    Serial.println("🗑️ Clearing all sessions...");
+    Serial.println("ðŸ—‘ï¸  Clearing all sessions...");
     
     for (int i = 0; i < MAX_SESSIONS; i++) {
         activeSessions[i].token = "";
@@ -2250,7 +2164,7 @@ void setup() {
         activeSessions[i].clientIP = IPAddress(0, 0, 0, 0);
     }
     
-    Serial.println("✅ All sessions cleared");
+    Serial.println("âœ… All sessions cleared");
     Serial.printf("   Max sessions: %d\n", MAX_SESSIONS);
     Serial.printf("   Session duration: %lu minutes\n", SESSION_DURATION / 60000);
     Serial.println("========================================\n");
@@ -2269,7 +2183,7 @@ void setup() {
         &uiTaskHandle,
         1  // Core 1
     );
-    Serial.println("   ✓ UI Task (Core 1)");
+    Serial.println("   âœ“ UI Task (Core 1)");
     
     xTaskCreatePinnedToCore(
         wifiTask,
@@ -2280,7 +2194,7 @@ void setup() {
         &wifiTaskHandle,
         0  // Core 0
     );
-    Serial.println("   ✓ WiFi Task (Core 0)");
+    Serial.println("   âœ“ WiFi Task (Core 0)");
     
     xTaskCreatePinnedToCore(
         ntpTask,
@@ -2291,7 +2205,7 @@ void setup() {
         &ntpTaskHandle,
         0  // Core 0
     );
-    Serial.println("   ✓ NTP Task (Core 0)");
+    Serial.println("   âœ“ NTP Task (Core 0)");
     
     xTaskCreatePinnedToCore(
         webTask,
@@ -2302,7 +2216,7 @@ void setup() {
         &webTaskHandle,
         0  // Core 0
     );
-    Serial.println("   ✓ Web Task (Core 0)");
+    Serial.println("   âœ“ Web Task (Core 0)");
     
     xTaskCreatePinnedToCore(
         prayerTask,
@@ -2313,7 +2227,7 @@ void setup() {
         &prayerTaskHandle,
         0  // Core 0
     );
-    Serial.println("   ✓ Prayer Task (Core 0)");
+    Serial.println("   âœ“ Prayer Task (Core 0)");
     
     xTaskCreatePinnedToCore(
         clockTickTask,
@@ -2324,7 +2238,7 @@ void setup() {
         NULL,
         0  // Core 0
     );
-    Serial.println("   ✓ Clock Task (Core 0)");
+    Serial.println("   âœ“ Clock Task (Core 0)");
     
     // ================================
     // RTC SYNC TASK
@@ -2339,7 +2253,7 @@ void setup() {
             &rtcTaskHandle,
             0  // Core 0
         );
-        Serial.println("   ✓ RTC Sync Task (Core 0)");
+        Serial.println("   âœ“ RTC Sync Task (Core 0)");
     }
     
     vTaskDelay(pdMS_TO_TICKS(500));
@@ -2349,11 +2263,11 @@ void setup() {
     // ================================
     if (wifiTaskHandle) {
         esp_task_wdt_add(wifiTaskHandle);
-        Serial.println("   ✓ WiFi Task → WDT");
+        Serial.println("   âœ“ WiFi Task â†’ WDT");
     }
     if (webTaskHandle) {
         esp_task_wdt_add(webTaskHandle);
-        Serial.println("   ✓ Web Task → WDT");
+        Serial.println("   âœ“ Web Task â†’ WDT");
     }
     
     Serial.println("All tasks started\n");
@@ -2362,37 +2276,29 @@ void setup() {
     // STARTUP COMPLETE
     // ================================
     Serial.println("========================================");
-    Serial.println("🎉 SYSTEM READY - ULTRA STABLE MODE");
+    Serial.println("SYSTEM READY!");
     Serial.println("========================================");
-    Serial.println("✅ WiFi stability optimizations applied:");
-    Serial.println("   • Power save DISABLED at driver level");
-    Serial.println("   • TX power locked to maximum");
-    Serial.println("   • Stability checks every 10 seconds");
-    Serial.println("   • AP monitoring active");
-    Serial.println("   • Max 8 simultaneous connections");
-    Serial.println("   • Channel 6 (low interference)");
-    Serial.println("   • Watchdog timeout: 120 seconds");
+    Serial.println("âœ… Multi-client concurrent access enabled");
+    Serial.println("âœ… WiFi sleep disabled for better response");
+    Serial.println("âœ… Max " + String(MAX_SESSIONS) + " simultaneous connections");
     Serial.println("========================================\n");
     
     if (wifiConfig.routerSSID.length() > 0) {
-        Serial.println("📡 WiFi router configured:");
+        Serial.println("ðŸ“¡ WiFi configured, will auto-connect...");
         Serial.println("   SSID: " + wifiConfig.routerSSID);
-        Serial.println("   Status: Will auto-connect...\n");
     } else {
-        Serial.println("📱 SETUP INSTRUCTIONS:");
-        Serial.println("   1. Connect to WiFi AP:");
-        Serial.printf("      • SSID: %s\n", wifiConfig.apSSID);
-        Serial.printf("      • Password: %s\n", wifiConfig.apPassword);
-        Serial.println("   2. Open browser: http://192.168.4.1");
-        Serial.println("   3. Configure WiFi & select city");
-        Serial.println("   4. Device will auto-restart\n");
+        Serial.println("ðŸ“± Connect to AP to configure:");
+        Serial.println("   1. WiFi: " + String(wifiConfig.apSSID));
+        Serial.println("   2. Password: " + String(wifiConfig.apPassword));
+        Serial.println("   3. Browser: http://192.168.4.1");
+        Serial.println("   4. Set WiFi & select city");
     }
     
     if (prayerConfig.selectedCity.length() == 0) {
-        Serial.println("⚠️ REMINDER: Select city via web interface\n");
+        Serial.println("\nâš ï¸  REMINDER: Select city via web interface");
     }
     
-    Serial.println("🎊 Boot complete - Ready for connections!");
+    Serial.println("\nðŸŽ‰ Boot complete - Ready for connections!");
     Serial.println("========================================\n");
 }
 
