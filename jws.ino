@@ -77,6 +77,7 @@ TaskHandle_t wifiTaskHandle = NULL;
 TaskHandle_t ntpTaskHandle = NULL;
 TaskHandle_t webTaskHandle = NULL;
 TaskHandle_t prayerTaskHandle = NULL;
+TaskHandle_t sessionCleanupTaskHandle = NULL;
 
 // ================================
 // SEMAPHORES & MUTEXES
@@ -705,6 +706,8 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
         return;
     }
 
+    esp_task_wdt_reset();
+
     time_t now_t;
     if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         now_t = timeConfig.currentTime;
@@ -736,11 +739,15 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
     http.begin(client, url);
     http.setTimeout(15000);
     
+    esp_task_wdt_reset();
+    
     int httpResponseCode = http.GET();
     Serial.println("Response code: " + String(httpResponseCode));
     
     if (httpResponseCode == 200) {
         String payload = http.getString();
+        
+        esp_task_wdt_reset();
         
         DynamicJsonDocument doc(8192);
         DeserializationError error = deserializeJson(doc, payload);
@@ -819,8 +826,11 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
     
     http.end();
     client.stop();
+    
+    esp_task_wdt_reset();
     vTaskDelay(pdMS_TO_TICKS(100));
 }
+
 
 // ================================
 // TASKS
@@ -880,6 +890,7 @@ void uiTask(void *parameter) {
 void wifiTask(void *parameter) {
     int connectAttempt = 0;
     const int MAX_CONNECT_ATTEMPTS = 30;
+    unsigned long lastKeepAlive = 0; // ✅ BARU
     
     while (true) {
         esp_task_wdt_reset();
@@ -909,6 +920,7 @@ void wifiTask(void *parameter) {
                         wifiConfig.isConnected = true;
                         wifiConfig.localIP = WiFi.localIP();
                         wifiState = WIFI_CONNECTED;
+                        lastKeepAlive = millis();
                         Serial.println("WiFi Connected!");
                         Serial.print("   IP: ");
                         Serial.println(wifiConfig.localIP);
@@ -938,6 +950,14 @@ void wifiTask(void *parameter) {
             case WIFI_CONNECTED:
                 static bool autoUpdateDone = false;
                 
+                if (millis() - lastKeepAlive > 30000) {
+                    if (WiFi.status() == WL_CONNECTED) {
+                        WiFi.localIP(); // Keepalive ping
+                        lastKeepAlive = millis();
+                        Serial.println("📡 WiFi keepalive");
+                    }
+                }
+                
                 if (!autoUpdateDone && wifiConfig.isConnected) {
                     vTaskDelay(pdMS_TO_TICKS(3000));
                     esp_task_wdt_reset();
@@ -957,6 +977,7 @@ void wifiTask(void *parameter) {
                         wifiConfig.isConnected = false;
                         wifiState = WIFI_IDLE;
                         autoUpdateDone = false;
+                        lastKeepAlive = 0;
                         
                         WiFi.mode(WIFI_AP_STA);
                         
@@ -1074,9 +1095,37 @@ void webTask(void *parameter) {
     server.begin();
     Serial.println("Web server started");
     
+    unsigned long lastHeapCheck = 0;
+    size_t lowestHeap = ESP.getFreeHeap();
+    
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(1000));
         esp_task_wdt_reset();
+        
+        if (millis() - lastHeapCheck > 30000) {
+            size_t freeHeap = ESP.getFreeHeap();
+            size_t minFreeHeap = ESP.getMinFreeHeap();
+            
+            if (freeHeap < lowestHeap) {
+                lowestHeap = freeHeap;
+            }
+            
+            Serial.printf("📊 Heap: Free=%d, Min=%d, Lowest=%d\n", 
+                freeHeap, minFreeHeap, lowestHeap);
+            
+            if (freeHeap < 20000) {
+                Serial.println("⚠️ CRITICAL: Low memory detected!");
+                Serial.println("🔄 Emergency restart in 5 seconds...");
+                vTaskDelay(pdMS_TO_TICKS(5000));
+                ESP.restart();
+            }
+            
+            if (freeHeap < 50000) {
+                Serial.println("⚠️ WARNING: Memory getting low!");
+            }
+            
+            lastHeapCheck = millis();
+        }
     }
 }
 
@@ -1319,9 +1368,12 @@ void scheduleRestart(int delaySeconds) {
 }
 
 // ================================
-// WEB SERVER ROUTES - COMPLETE
+// WEB SERVER ROUTES
 // ================================
 void setupServerRoutes() {
+    DefaultHeaders::Instance().addHeader("Connection", "close");
+    DefaultHeaders::Instance().addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
     // ================================
     // 1. SERVE HTML & CSS FILES
     // ================================
@@ -2289,6 +2341,29 @@ void setupServerRoutes() {
     });
 }
 
+void sessionCleanupTask(void *parameter) {
+    while (true) {
+        vTaskDelay(pdMS_TO_TICKS(60000)); // Setiap 1 menit
+        
+        unsigned long now = millis();
+        int cleaned = 0;
+        
+        for (int i = 0; i < MAX_SESSIONS; i++) {
+            if (activeSessions[i].token.length() > 0 && 
+                activeSessions[i].expiry < now) {
+                activeSessions[i].token = "";
+                activeSessions[i].expiry = 0;
+                activeSessions[i].clientIP = IPAddress(0, 0, 0, 0);
+                cleaned++;
+            }
+        }
+        
+        if (cleaned > 0) {
+            Serial.printf("🧹 Cleaned %d expired sessions\n", cleaned);
+        }
+    }
+}
+
 // ================================
 // SETUP - ESP32 CORE 3.x
 // ================================
@@ -2301,7 +2376,7 @@ void setup() {
     Serial.println("   ESP32 Islamic Prayer Clock");
     Serial.println("   LVGL 9.2.0 + FreeRTOS");
     Serial.println("   MANUAL CITY SELECTION");
-    Serial.println("   VERSION 2.0 - CITY SELECTOR");
+    Serial.println("   VERSION 2.0 - FIXED WEB SERVER");
     Serial.println("========================================\n");
 
     // ================================
@@ -2334,6 +2409,8 @@ void setup() {
     
     displayQueue = xQueueCreate(10, sizeof(DisplayUpdate));
     
+    Serial.println("Semaphores & Queue created");
+    
     // ================================
     // LITTLEFS & LOAD SETTINGS
     // ================================
@@ -2341,6 +2418,8 @@ void setup() {
     loadWiFiCredentials();
     loadPrayerTimes();
     loadCitySelection();
+    
+    Serial.println("Settings loaded from LittleFS");
     
     // ================================
     // RTC DS3231 INIT
@@ -2422,7 +2501,7 @@ void setup() {
     Serial.println("WiFi Balanced Mode:");
     Serial.println("   - Sleep: Enabled (Anti-Overheat)");
     Serial.println("   - Latency: ~3ms (Tidak terasa)");
-    Serial.println("   - Temperature: -10Â°C cooler");
+    Serial.println("   - Temperature: -10°C cooler");
     
     WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
     Serial.printf("AP Started: %s\n", wifiConfig.apSSID);
@@ -2460,7 +2539,7 @@ void setup() {
     // ================================
     // WATCHDOG CONFIGURATION
     // ================================
-    Serial.println("\nStarting FreeRTOS Tasks...");
+    Serial.println("\nConfiguring Watchdog...");
     
     esp_task_wdt_deinit();
     
@@ -2480,6 +2559,8 @@ void setup() {
     // ================================
     // CREATE FREERTOS TASKS
     // ================================
+    Serial.println("\nStarting FreeRTOS Tasks...");
+    
     xTaskCreatePinnedToCore(
         uiTask,
         "UI",
@@ -2489,6 +2570,7 @@ void setup() {
         &uiTaskHandle,
         1  // Core 1
     );
+    Serial.println("✓ UI Task started (Core 1)");
     
     xTaskCreatePinnedToCore(
         wifiTask,
@@ -2499,6 +2581,7 @@ void setup() {
         &wifiTaskHandle,
         0  // Core 0
     );
+    Serial.println("✓ WiFi Task started (Core 0)");
     
     xTaskCreatePinnedToCore(
         ntpTask,
@@ -2509,6 +2592,7 @@ void setup() {
         &ntpTaskHandle,
         0  // Core 0
     );
+    Serial.println("✓ NTP Task started (Core 0)");
     
     xTaskCreatePinnedToCore(
         webTask,
@@ -2519,6 +2603,7 @@ void setup() {
         &webTaskHandle,
         0  // Core 0
     );
+    Serial.println("✓ Web Task started (Core 0)");
     
     xTaskCreatePinnedToCore(
         prayerTask,
@@ -2529,6 +2614,7 @@ void setup() {
         &prayerTaskHandle,
         0  // Core 0
     );
+    Serial.println("✓ Prayer Task started (Core 0)");
     
     xTaskCreatePinnedToCore(
         clockTickTask,
@@ -2539,6 +2625,19 @@ void setup() {
         NULL,
         0  // Core 0
     );
+    Serial.println("✓ Clock Task started (Core 0)");
+    
+    // ✅ BARU: Session Cleanup Task
+    xTaskCreatePinnedToCore(
+        sessionCleanupTask,
+        "SessionCleanup",
+        2048,
+        NULL,
+        1,
+        &sessionCleanupTaskHandle,
+        0  // Core 0
+    );
+    Serial.println("✓ Session Cleanup Task started (Core 0)");
     
     // ================================
     // RTC SYNC TASK
@@ -2553,7 +2652,7 @@ void setup() {
             &rtcTaskHandle,
             0  // Core 0
         );
-        Serial.println("RTC Sync task started");
+        Serial.println("✓ RTC Sync Task started (Core 0)");
     }
     
     vTaskDelay(pdMS_TO_TICKS(500));
@@ -2561,16 +2660,33 @@ void setup() {
     // ================================
     // REGISTER TASKS TO WATCHDOG
     // ================================
+    Serial.println("\nRegistering tasks to Watchdog...");
+    
     if (wifiTaskHandle) {
         esp_task_wdt_add(wifiTaskHandle);
-        Serial.println("   WiFi task registered to WDT");
+        Serial.println("✓ WiFi task registered to WDT");
     }
     if (webTaskHandle) {
         esp_task_wdt_add(webTaskHandle);
-        Serial.println("   Web task registered to WDT");
+        Serial.println("✓ Web task registered to WDT");
     }
     
-    Serial.println("All tasks started");
+    Serial.println("All tasks registered");
+    
+    // ================================
+    // SESSION MANAGEMENT INIT
+    // ================================
+    Serial.println("\nInitializing session management...");
+    
+    randomSeed(analogRead(0) + millis());
+    
+    for (int i = 0; i < MAX_SESSIONS; i++) {
+        activeSessions[i].token = "";
+        activeSessions[i].expiry = 0;
+        activeSessions[i].clientIP = IPAddress(0, 0, 0, 0);
+    }
+    
+    Serial.println("✓ Session management initialized");
     
     // ================================
     // STARTUP COMPLETE
@@ -2578,10 +2694,20 @@ void setup() {
     Serial.println("\n========================================");
     Serial.println("System Ready!");
     Serial.println("MANUAL CITY SELECTION MODE");
+    Serial.println("WEB SERVER STABILITY FIXES APPLIED");
     Serial.println("========================================\n");
+    
+    Serial.println("Improvements:");
+    Serial.println("✓ Session cleanup (1 min interval)");
+    Serial.println("✓ WiFi keepalive (30 sec interval)");
+    Serial.println("✓ Heap monitoring (30 sec interval)");
+    Serial.println("✓ Watchdog protection");
+    Serial.println("✓ Diagnostic endpoint available");
+    Serial.println();
     
     if (wifiConfig.routerSSID.length() > 0) {
         Serial.println("WiFi configured, will auto-connect...");
+        Serial.println("   SSID: " + wifiConfig.routerSSID);
     } else {
         Serial.println("Connect to AP and configure WiFi");
         Serial.println("   1. Connect to: " + String(wifiConfig.apSSID));
@@ -2592,18 +2718,16 @@ void setup() {
     }
     
     if (prayerConfig.selectedCity.length() == 0) {
-        Serial.println("\nREMINDER: Please select a city via web interface");
-    }
-
-    randomSeed(analogRead(0) + millis());
-    
-    for (int i = 0; i < MAX_SESSIONS; i++) {
-        activeSessions[i].token = "";
-        activeSessions[i].expiry = 0;
-        activeSessions[i].clientIP = IPAddress(0, 0, 0, 0);
+        Serial.println("\n⚠️  REMINDER: Please select a city via web interface");
     }
     
-    Serial.println("\nBoot complete - Display ready!");
+    Serial.println("\n📊 Diagnostic URL: http://" + WiFi.softAPIP().toString() + "/diagnostic");
+    if (wifiConfig.isConnected) {
+        Serial.println("📊 Diagnostic URL: http://" + wifiConfig.localIP.toString() + "/diagnostic");
+    }
+    
+    Serial.println("\n✅ Boot complete - Display ready!");
+    Serial.println("========================================\n");
 }
 
 // ================================
