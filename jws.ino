@@ -1095,6 +1095,7 @@ void webTask(void *parameter) {
     Serial.println("========================================\n");
     
     unsigned long lastReport = 0;
+    unsigned long lastAPCheck;
     
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(5000));
