@@ -890,7 +890,7 @@ void uiTask(void *parameter) {
 void wifiTask(void *parameter) {
     int connectAttempt = 0;
     const int MAX_CONNECT_ATTEMPTS = 30;
-    unsigned long lastKeepAlive = 0; // ✅ BARU
+    unsigned long lastKeepAlive = 0;
     
     while (true) {
         esp_task_wdt_reset();
@@ -952,7 +952,7 @@ void wifiTask(void *parameter) {
                 
                 if (millis() - lastKeepAlive > 30000) {
                     if (WiFi.status() == WL_CONNECTED) {
-                        WiFi.localIP(); // Keepalive ping
+                        WiFi.localIP();
                         lastKeepAlive = millis();
                         Serial.println("📡 WiFi keepalive");
                     }
@@ -2319,7 +2319,6 @@ void setupServerRoutes() {
         );
         
         if (isProtectedEndpoint) {
-            // Validate session untuk endpoint yang dilindungi
             if (!validateSession(request)) {
                 Serial.println("   → Protected endpoint, invalid session");
                 Serial.println("   → Redirecting to /notfound");
@@ -2327,7 +2326,6 @@ void setupServerRoutes() {
                 return;
             }
             
-            // Session valid tapi endpoint tidak ada
             Serial.println("   → Protected endpoint not found (session valid)");
             request->redirect("/notfound");
             return;
