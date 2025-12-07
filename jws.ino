@@ -199,6 +199,7 @@ struct Session {
     String token;
     unsigned long expiry;
     IPAddress clientIP;
+    unsigned long createdAt;  // NEW: Track creation time
 };
 
 const int MAX_SESSIONS = 5;
@@ -2422,7 +2423,7 @@ void setup() {
     Serial.println("WiFi Balanced Mode:");
     Serial.println("   - Sleep: Enabled (Anti-Overheat)");
     Serial.println("   - Latency: ~3ms (Tidak terasa)");
-    Serial.println("   - Temperature: -10Â°C cooler");
+    Serial.println("   - Temperature: -10°C cooler");
     
     WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
     Serial.printf("AP Started: %s\n", wifiConfig.apSSID);
@@ -2476,6 +2477,28 @@ void setup() {
     } else {
         Serial.printf("Watchdog init error: %s\n", esp_err_to_name(wdt_err));
     }
+    
+    // ================================
+    // SESSION SYSTEM INIT - CLEAR ON RESTART
+    // ================================
+    randomSeed(analogRead(0) + millis());
+    
+    Serial.println("\n========================================");
+    Serial.println("SESSION SYSTEM INITIALIZATION");
+    Serial.println("========================================");
+    Serial.println("🗑️  Clearing all sessions...");
+    
+    for (int i = 0; i < MAX_SESSIONS; i++) {
+        activeSessions[i].token = "";
+        activeSessions[i].expiry = 0;
+        activeSessions[i].clientIP = IPAddress(0, 0, 0, 0);
+    }
+    
+    Serial.println("✅ All sessions cleared (ESP restart)");
+    Serial.printf("   Max sessions: %d\n", MAX_SESSIONS);
+    Serial.printf("   Session duration: %lu minutes\n", SESSION_DURATION / 60000);
+    Serial.println("   Sessions will persist while ESP is running");
+    Serial.println("========================================\n");
     
     // ================================
     // CREATE FREERTOS TASKS
@@ -2593,14 +2616,6 @@ void setup() {
     
     if (prayerConfig.selectedCity.length() == 0) {
         Serial.println("\nREMINDER: Please select a city via web interface");
-    }
-
-    randomSeed(analogRead(0) + millis());
-    
-    for (int i = 0; i < MAX_SESSIONS; i++) {
-        activeSessions[i].token = "";
-        activeSessions[i].expiry = 0;
-        activeSessions[i].clientIP = IPAddress(0, 0, 0, 0);
     }
     
     Serial.println("\nBoot complete - Display ready!");
