@@ -2497,14 +2497,6 @@ void setup() {
     WiFi.mode(WIFI_AP_STA);
     delay(100);
 
-    // ================================
-    // SET HOSTNAME - MENGIKUTI NAMA AP
-    // ================================
-    String hostname = String(wifiConfig.apSSID);
-    WiFi.setHostname(hostname.c_str());
-    Serial.printf(" Hostname Set: %s\n", hostname.c_str());
-    Serial.println("========================================");
-
     WiFi.setSleep(WIFI_PS_NONE);
 
     esp_wifi_set_ps(WIFI_PS_NONE);
@@ -2525,6 +2517,16 @@ void setup() {
     Serial.println(" Persistent: Disabled");
     Serial.println("========================================\n");
 
+    // ================================
+    // SET HOSTNAME (AP + STA)
+    // ================================
+    String hostname = wifiConfig.apSSID;
+
+    WiFi.softAPsetHostname(hostname.c_str()); // untuk AP
+    WiFi.setHostname(hostname.c_str());       // untuk STA
+
+    Serial.printf("Hostname Set: %s\n", hostname.c_str());
+    
     WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
     delay(100);
 
