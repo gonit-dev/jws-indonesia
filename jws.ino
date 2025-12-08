@@ -404,7 +404,7 @@ void loadWiFiCredentials() {
                 file.close();
             }
         } else {
-            strcpy(wifiConfig.apSSID, "JWS ESP32");
+            strcpy(wifiConfig.apSSID, "JWS Indonesia");
             strcpy(wifiConfig.apPassword, "12345678");
         }
         xSemaphoreGive(settingsMutex);
@@ -1455,7 +1455,7 @@ void setupServerRoutes() {
         
         if (!validateSession(request)) {
             Serial.println("[STATUS] Invalid session");
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            request->redirect("/notfound");
             return;
         }
 
@@ -1504,7 +1504,7 @@ void setupServerRoutes() {
     server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest *request){
         if (!validateSession(request)) {
             Serial.println("[PRAYER] Invalid session");
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            request->redirect("/notfound");
             return;
         }
 
@@ -1533,7 +1533,7 @@ void setupServerRoutes() {
         
         if (!validateSession(request)) {
             Serial.println("[CITIES] Invalid session");
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            request->redirect("/notfound");
             return;
         }
 
@@ -1567,8 +1567,7 @@ void setupServerRoutes() {
         
         if (!validateSession(request)) {
             Serial.println("[SETCITY] Invalid session");
-            request->send(403, "application/json", 
-                "{\"error\":\"Session expired. Please refresh page.\"}");
+            request->redirect("/notfound");
             return;
         }
 
@@ -1658,7 +1657,8 @@ void setupServerRoutes() {
     // ================================
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request){
         if (!validateSession(request)) {
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            Serial.println("[CITYINFO] Invalid session");
+            request->redirect("/notfound");
             return;
         }
 
@@ -1685,11 +1685,12 @@ void setupServerRoutes() {
     });
 
     // ================================
-    // 8-11. WiFi, AP, Time Sync
+    // 8. SET WIFI
     // ================================
     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            Serial.println("[SETWIFI] Invalid session");
+            request->redirect("/notfound");
             return;
         }
 
@@ -1707,9 +1708,13 @@ void setupServerRoutes() {
         }
     });
 
+    // ================================
+    // 9. SET AP
+    // ================================
     server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            Serial.println("[SETAP] Invalid session");
+            request->redirect("/notfound");
             return;
         }
 
@@ -1735,9 +1740,13 @@ void setupServerRoutes() {
         }
     });
 
+    // ================================
+    // 10. SYNC TIME
+    // ================================
     server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            Serial.println("[SYNCTIME] Invalid session");
+            request->redirect("/notfound");
             return;
         }
 
@@ -1777,9 +1786,15 @@ void setupServerRoutes() {
     });
 
     // ================================
-    // 12. API DATA
+    // 11. API DATA
     // ================================
     server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (!validateSession(request)) {
+            Serial.println("[API] Invalid session");
+            request->redirect("/notfound");
+            return;
+        }
+        
         String json;
         json.reserve(512);
         json = "{\"time\":\"00:00:00\",\"date\":\"01/01/2000\"}";
@@ -1790,19 +1805,39 @@ void setupServerRoutes() {
     });
 
     // ================================
-    // 13. NOT FOUND PAGE
+    // 12. NOT FOUND PAGE
     // ================================
     server.on("/notfound", HTTP_GET, [](AsyncWebServerRequest *request){
-        String html = "<!DOCTYPE html><html><body><h1>404</h1><a href='/'>Back</a></body></html>";
+        String html = "<!DOCTYPE html><html><head><meta charset='UTF-8'>";
+        html += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
+        html += "<style>";
+        html += "body{font-family:Arial,sans-serif;text-align:center;padding:50px;background:#f5f5f5}";
+        html += "h1{color:#d9534f;font-size:72px;margin:0}";
+        html += "h2{color:#333;margin:20px 0}";
+        html += "p{color:#666;font-size:16px;margin:10px 0}";
+        html += "a{display:inline-block;margin-top:20px;padding:12px 24px;";
+        html += "background:#5cb85c;color:white;text-decoration:none;border-radius:5px}";
+        html += "a:hover{background:#4cae4c}";
+        html += ".container{max-width:600px;margin:0 auto;background:white;padding:40px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}";
+        html += "</style></head><body>";
+        html += "<div class='container'>";
+        html += "<h1>404</h1>";
+        html += "<h2>Page Not Found</h2>";
+        html += "<p>The page you are looking for doesn't exist or your session has expired.</p>";
+        html += "<p>Please return to the home page to continue.</p>";
+        html += "<a href='/'>Back to Home</a>";
+        html += "</div></body></html>";
+        
         request->send(404, "text/html", html);
     });
 
     // ================================
-    // 14. FACTORY RESET
+    // 13. FACTORY RESET
     // ================================
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            Serial.println("[RESET] Invalid session");
+            request->redirect("/notfound");
             return;
         }
 
@@ -1818,12 +1853,13 @@ void setupServerRoutes() {
     });
 
     // ================================
-    // 15. UPLOAD CITIES.JSON - LENGKAP TANPA ERROR
+    // 14. UPLOAD CITIES.JSON
     // ================================
     server.on("/uploadcities", HTTP_POST, 
         [](AsyncWebServerRequest *request) {
             if (!validateSession(request)) {
-                request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+                Serial.println("[UPLOAD] Invalid session");
+                request->redirect("/notfound");
                 return;
             }
             
@@ -1874,7 +1910,7 @@ void setupServerRoutes() {
     );
 
     // ================================
-    // 16. 404 NOT FOUND HANDLER - SMART REDIRECT (ORIGINAL)
+    // 15. 404 NOT FOUND HANDLER - UNIFIED REDIRECT
     // ================================
     server.onNotFound([](AsyncWebServerRequest *request){
         String url = request->url();
@@ -1896,40 +1932,13 @@ void setupServerRoutes() {
             url.endsWith(".woff2") ||
             url.endsWith(".ttf")) {
             
-            Serial.println("   â†’ Static asset not found (returning 404)");
+            Serial.println("   → Static asset not found (returning 404)");
             request->send(404, "text/plain", "File not found");
             return;
         }
         
-        // RULE 2: Protected API Endpoints - Check Session
-        bool isProtectedEndpoint = (
-            url.startsWith("/api/") ||
-            url == "/devicestatus" ||
-            url == "/getprayertimes" ||
-            url == "/getcities" ||
-            url == "/setcity" ||
-            url == "/setwifi" ||
-            url == "/setap" ||
-            url == "/synctime" ||
-            url == "/reset" ||
-            url == "/getcityinfo"
-        );
-        
-        if (isProtectedEndpoint) {
-            if (!validateSession(request)) {
-                Serial.println("   â†’ Protected endpoint, invalid session");
-                Serial.println("   â†’ Redirecting to /notfound");
-                request->redirect("/notfound");
-                return;
-            }
-            
-            Serial.println("   â†’ Protected endpoint not found (session valid)");
-            request->redirect("/notfound");
-            return;
-        }
-        
-        // RULE 3: Random URLs - Direct Redirect
-        Serial.println("   â†’ Invalid URL, redirecting to /notfound");
+        // RULE 2: Semua URL lainnya → Redirect ke /notfound
+        Serial.println("   → Redirecting to /notfound");
         request->redirect("/notfound");
     });
 }
