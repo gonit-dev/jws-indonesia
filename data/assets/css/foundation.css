@@ -3200,11 +3200,11 @@ table.hover:not(.unstriped) tr:nth-of-type(even):hover {
   position: relative;
   margin: 0 0 1rem 0;
   padding: 1rem;
-    border-radius: 10px;
-    box-shadow: 0px 0px 4px 0px #969696;
-    -webkit-box-shadow: 0px 0px 4px 0px #969696;
-    -moz-box-shadow: 0px 0px 4px 0px #969696;
-    background-color: white;
+  border-radius: 10px;
+  box-shadow: 0px 0px 4px 0px #969696;
+  -webkit-box-shadow: 0px 0px 4px 0px #969696;
+  -moz-box-shadow: 0px 0px 4px 0px #969696;
+  background-color: white;
   color: #0a0a0a; }
   .callout > :first-child {
     margin-top: 0; }

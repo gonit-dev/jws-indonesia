@@ -5,8 +5,16 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Islamic Prayer Clock Settings</title>
+    
+    <!-- Foundation CSS dari CDN -->
     <link rel="stylesheet" href="assets/css/foundation.css">
+    
     <style>
+        /* Hanya untuk animasi spinner dan toast - tidak ada di Foundation */
+        @keyframes spinner {
+            to {transform: rotate(360deg);}
+        }
+        
         .loading-spinner {
             display: inline-block;
             width: 20px;
@@ -16,109 +24,26 @@
             border-top-color: #1779ba;
             animation: spinner 1s ease-in-out infinite;
         }
-        @keyframes spinner {
-            to {transform: rotate(360deg);}
-        }
-        .status-badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 3px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .status-online {
-            background-color: #3adb76;
-            color: white;
-        }
-        .status-offline {
-            background-color: #cc4b37;
-            color: white;
-        }
-        .status-loading {
-            background-color: #ffae00;
-            color: white;
-        }
-        .realtime-value {
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            color: #1779ba;
-            font-size: 15px;
-        }
-        .prayer-time-box {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 10px 0;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .prayer-time-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-        }
-        .prayer-time-item:last-child {
-            border-bottom: none;
-        }
-        .prayer-name {
-            font-weight: bold;
-            font-size: 16px;
-        }
-        .prayer-time {
-            font-size: 18px;
-            font-weight: bold;
-        }
-        .info-box {
-            background: #f8f9fa;
-            border-left: 4px solid #1779ba;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 4px;
-        }
-        .auto-badge {
-            display: inline-block;
-            background: #3adb76;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: bold;
-            margin-left: 10px;
-        }
         
-        /* Toast Notification */
         .toast {
             position: fixed;
             top: -100px;
             left: 50%;
             transform: translateX(-50%);
-            background: #3adb76;
-            color: white;
-            padding: 20px 30px;
-            border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
             z-index: 9999;
-            font-size: 16px;
-            font-weight: bold;
-            transition: top 0.5s ease-in-out;
             min-width: 300px;
             text-align: center;
+            transition: top 0.5s ease-in-out;
         }
+        
         .toast.show {
             top: 30px;
-        }
-        .toast.error {
-            background: #cc4b37;
-        }
-        .toast.warning {
-            background: #ffae00;
         }
     </style>
 </head>
 <body>
-    <!-- Toast Notification -->
-    <div id="toast" class="toast"></div>
+    <!-- Toast Notification menggunakan Foundation Callout -->
+    <div id="toast" class="toast callout success"></div>
 
     <div class="grid-container">
         <div class="grid-x grid-padding-x">
@@ -128,13 +53,13 @@
                 <div class="grid-x grid-padding-y">
                     <div class="large-12 cell">
                         <h3>🕌 Islamic Prayer Clock Settings</h3>
-                        <p style="color: #666; font-size: 14px;">Semua pengaturan otomatis - tinggal sambungkan WiFi!</p>
+                        <p class="subheader">Semua pengaturan otomatis - tinggal sambungkan WiFi!</p>
                     </div>
                 </div>
 
                 <!-- WiFi & Device Status Section -->
                 <div class="grid-x grid-padding-x">
-                    <div class="large-10 center cell">
+                    <div class="large-12 cell">
                         <div class="callout">
                             
                             <!-- WiFi Settings -->
@@ -151,7 +76,7 @@
                                                     <input type="password" id="wifiPassword" placeholder="WiFi Password">
                                                 </div>
                                                 <div class="large-12 medium-12 small-12 cell">
-                                                    <button class="submit success button expanded" onclick="setWiFi()">
+                                                    <button class="button success expanded" onclick="setWiFi()">
                                                         💾 Set WiFi & Restart
                                                     </button>
                                                 </div>
@@ -171,7 +96,7 @@
                                             <input type="password" id="apPassword" placeholder="AP Password">
                                         </div>
                                         <div class="large-12 medium-12 small-12 cell">
-                                            <button class="submit success button expanded" onclick="setAP()">
+                                            <button class="button success expanded" onclick="setAP()">
                                                 💾 Set AP Config
                                             </button>
                                         </div>
@@ -180,22 +105,22 @@
                             </div>
                             
                             <!-- Device Status -->
-                            <div class="grid-x grid-padding-y" style="margin-top: 20px;">
+                            <div class="grid-x grid-padding-y">
                                 <div class="large-12 medium-12 small-12 cell">
                                     <div class="callout secondary">
                                         <h5>📊 Device Status</h5>
                                         <div class="grid-x grid-margin-x">
-                                            <div class="large-6 medium-6 small-12 cell" style="text-align: left;">
+                                            <div class="large-6 medium-6 small-12 cell text-left">
                                                 <p><strong>WiFi Network:</strong> <span id="wifiName">-</span></p>
                                                 <p><strong>IP Address:</strong> <span id="ipAddress">-</span></p>
-                                                <p><strong>Internet:</strong> <span id="internetStatus" class="status-badge status-loading">Checking...</span></p>
+                                                <p><strong>Internet:</strong> <span id="internetStatus" class="label warning">Checking...</span></p>
                                             </div>
-                                            <div class="large-6 medium-6 small-12 cell" style="text-align: left;">
+                                            <div class="large-6 medium-6 small-12 cell text-left">
                                                 <p><strong>NTP Status:</strong> <span id="ntpStatus">-</span></p>
                                                 <p><strong>NTP Server:</strong> <span id="ntpServerUsed">-</span></p>
-                                                <p><strong>Current Time:</strong> <span id="currentTime" class="realtime-value">-</span></p>
-                                                <p><strong>Current Date:</strong> <span id="currentDate" class="realtime-value">-</span></p>
-                                                <p><strong>Uptime:</strong> <span id="uptime" class="realtime-value">--:--:--</span></p>
+                                                <p><strong>Current Time:</strong> <span id="currentTime">-</span></p>
+                                                <p><strong>Current Date:</strong> <span id="currentDate">-</span></p>
+                                                <p><strong>Uptime:</strong> <span id="uptime">--:--:--</span></p>
                                             </div>
                                         </div>
                                     </div>
@@ -207,36 +132,40 @@
 
                 <!-- Time Sync Section -->
                 <div class="grid-x grid-padding-x">
-                    <div class="large-10 center cell">
+                    <div class="large-12 cell">
                         <div class="callout">
                              <h5>⏰ Time Synchronization</h5>
-                            <div class="grid-x grid-margin-x">
+                            <div class="grid-x grid-margin-x align-middle">
                                 
                                 <!-- Manual Sync -->
                                 <div class="large-6 medium-6 cell">
-                                    <div class="info-box">
-                                         <h6>📱 Manual Sync from Browser</h6>
-                                        <p style="font-size: 13px; margin: 10px 0; color: #666;">
-                                            Sinkronkan waktu dari perangkat Anda
-                                        </p>
-                                        <button class="button expanded" style="color: #999;" onclick="syncTime()">
-                                            🔄 Sync Time Now
-                                        </button>
+                                    <div class="callout primary">
+                                        <div class="large-12 medium-12 cell">
+                                            <h6>📱 Manual Sync from Browser</h6>
+                                            <p class="help-text">Sinkronkan waktu dari perangkat Anda</p>
+                                        </div>
+                                        <div class="large-12 medium-12 cell">
+                                            <button class="button success expanded" onclick="syncTime()">
+                                                🔄 Sync Time Now
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                                 
                                 <!-- Auto NTP Info -->
                                 <div class="large-6 medium-6 cell">
-                                    <div class="info-box" style="border-left-color: #3adb76;">
-                                        <h6>🌐 Auto NTP Sync <span class="auto-badge">AUTO</span></h6>
-                                        <p style="font-size: 13px; margin: 10px 0; color: #666;">
-                                            Waktu otomatis sync saat WiFi terhubung
-                                        </p>
-                                        <p style="font-size: 12px; margin: 0; color: #999;">
-                                            ✓ Auto-sync setiap 1 jam<br>
-                                            ✓ Multi-server fallback<br>
-                                            ✓ Timezone: WIB (UTC+7)
-                                        </p>
+                                    <div class="callout primary">
+                                        <div class="large-12 medium-12 cell">
+                                            <h6>🌐 Auto NTP Sync <span class="label success">AUTO</span></h6>
+                                            <p class="help-text">Waktu otomatis sync saat WiFi terhubung</p>
+                                        </div>
+                                        <div class="large-12 medium-12 cell">
+                                            <p class="help-text">
+                                                ✓ Auto-sync setiap 1 jam<br>
+                                                ✓ Multi-server fallback<br>
+                                                ✓ Timezone: WIB (UTC+7)
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -246,20 +175,18 @@
 
                 <!-- City Selection -->
                 <div class="grid-x grid-padding-x">
-                    <div class="large-10 center cell">
+                    <div class="large-12 cell">
                         <div class="callout">
                             <h5>📍 Pilih Kota/Kabupaten</h5>
                             
-                            <div class="info-box" style="text-align: center;">
-                                <p style="margin: 0; font-size: 14px;">
-                                    <strong>Kota/Kabupaten Terpilih:</strong><br>
-                                    <span id="currentCity" style="font-size: 18px; font-weight: bold; color: #1779ba;">Belum dipilih</span>
-                                </p>
+                            <div class="callout secondary text-center">
+                                <p><strong>Kota/Kabupaten Terpilih:</strong></p>
+                                <h4 id="currentCity" class="text-primary">Belum dipilih</h4>
                             </div>
 
                             <div class="grid-x grid-margin-x">
                                 <div class="large-8 medium-8 small-12 cell">
-                                    <select id="cityDropdown" style="width: 100%; padding: 10px; font-size: 14px; border-radius: 5px; border: 2px solid #e0e0e0;">
+                                    <select id="cityDropdown">
                                         <option value="">-- Pilih Kota/Kabupaten --</option>
                                     </select>
                                 </div>
@@ -270,8 +197,8 @@
                                 </div>
                             </div>
 
-                            <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
-                                <p style="margin: 0; font-size: 12px; color: #666;">
+                            <div class="callout secondary">
+                                <p class="help-text text-center">
                                     ℹ️ Pilih kota/Kabupaten untuk mendapatkan jadwal shalat yang akurat<br>
                                     🔄 Jadwal akan otomatis update setelah kota/Kabupaten dipilih
                                 </p>
@@ -282,26 +209,26 @@
 
                 <!-- Cities.json Upload Section -->
                 <div class="grid-x grid-padding-x">
-                    <div class="large-10 center cell">
+                    <div class="large-12 cell">
                         <div class="callout warning">
                             <h5>📤 Upload Cities.json</h5>
                             
-                            <div class="info-box" style="border-left-color: #ffae00; background: #fff8e1;">
-                                <p style="margin: 0; font-size: 13px; color: #856404;">
+                            <div class="callout alert">
+                                <p class="help-text">
                                     <strong>ℹ️ Kapan perlu upload cities.json?</strong><br>
                                     🆕 Ada kota/kabupaten baru yang ditambahkan<br>
-                                    📍 Data koordinat kota ada yang diperbarui<br>
+                                    📝 Data koordinat kota ada yang diperbarui<br>
                                     🔧 File cities.json rusak atau terhapus
                                 </p>
                             </div>
 
                             <div class="grid-x grid-margin-x">
                                 <div class="large-8 medium-8 small-12 cell">
-                                    <label for="citiesFileInput" class="button hollow expanded" style="margin: 0; cursor: pointer; text-align: center;">
+                                    <label for="citiesFileInput" class="button hollow expanded">
                                         📁 Pilih File cities.json
-                                        <input type="file" id="citiesFileInput" accept=".json" style="display: none;" onchange="handleCitiesFileSelect(event)">
+                                        <input type="file" id="citiesFileInput" accept=".json" class="show-for-sr" onchange="handleCitiesFileSelect(event)">
                                     </label>
-                                    <p id="selectedFileName" style="margin: 10px 0; font-size: 13px; color: #666; text-align: center;">
+                                    <p id="selectedFileName" class="help-text text-center">
                                         Belum ada file dipilih
                                     </p>
                                 </div>
@@ -312,22 +239,22 @@
                                 </div>
                             </div>
 
-                            <div id="uploadProgress" style="display: none; margin-top: 15px;">
-                                <div style="background: #e0e0e0; border-radius: 10px; overflow: hidden; height: 30px;">
-                                    <div id="uploadProgressBar" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 13px;">
-                                        0%
+                            <div id="uploadProgress" class="hide">
+                                <div class="progress" role="progressbar">
+                                    <div id="uploadProgressBar" class="progress-meter" style="width: 0%">
+                                        <p class="progress-meter-text">0%</p>
                                     </div>
                                 </div>
-                                <p id="uploadStatus" style="margin: 10px 0; text-align: center; font-size: 13px; color: #666;">
+                                <p id="uploadStatus" class="help-text text-center">
                                     Memulai upload...
                                 </p>
                             </div>
 
-                            <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
-                                <p style="margin: 0; font-size: 12px; color: #666;">
+                            <div class="callout secondary">
+                                <p class="help-text">
                                     ⚠️ <strong>Penting:</strong><br>
-                                    📝 File harus bernama <code>cities.json</code><br>
-                                    🔍 Format harus valid JSON array<br>
+                                    📄 File harus bernama <code>cities.json</code><br>
+                                    📋 Format harus valid JSON array<br>
                                     💾 Ukuran maksimal: 1 MB<br>
                                     🔄 Dropdown kota akan otomatis refresh setelah upload berhasil
                                 </p>
@@ -338,36 +265,40 @@
 
                 <!-- Prayer Times Section -->
                 <div class="grid-x grid-padding-x">
-                    <div class="large-10 center cell">
+                    <div class="large-12 cell">
                         <div class="callout">
                             <h5>🕌 Jadwal Shalat</h5>
 
                             <!-- Prayer Times Display -->
-                            <div class="prayer-time-box" id="prayerTimesBox">
-                                <div class="prayer-time-item">
-                                    <span class="prayer-name">🌅 Subuh (Fajr)</span>
-                                    <span class="prayer-time" id="subuhTime">--:--</span>
-                                </div>
-                                <div class="prayer-time-item">
-                                    <span class="prayer-name">☀️ Dzuhur (Dhuhr)</span>
-                                    <span class="prayer-time" id="dzuhurTime">--:--</span>
-                                </div>
-                                <div class="prayer-time-item">
-                                    <span class="prayer-name">🌤️ Ashar (Asr)</span>
-                                    <span class="prayer-time" id="asharTime">--:--</span>
-                                </div>
-                                <div class="prayer-time-item">
-                                    <span class="prayer-name">🌆 Maghrib</span>
-                                    <span class="prayer-time" id="maghribTime">--:--</span>
-                                </div>
-                                <div class="prayer-time-item">
-                                    <span class="prayer-name">🌙 Isya (Isha)</span>
-                                    <span class="prayer-time" id="isyaTime">--:--</span>
-                                </div>
+                            <div class="callout primary" id="prayerTimesBox">
+                                <table class="unstriped hover">
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-left"><strong>🌅 Subuh (Fajr)</strong></td>
+                                            <td class="text-right"><h5 id="subuhTime">--:--</h5></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-left"><strong>☀️ Dzuhur (Dhuhr)</strong></td>
+                                            <td class="text-right"><h5 id="dzuhurTime">--:--</h5></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-left"><strong>🌤️ Ashar (Asr)</strong></td>
+                                            <td class="text-right"><h5 id="asharTime">--:--</h5></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-left"><strong>🌆 Maghrib</strong></td>
+                                            <td class="text-right"><h5 id="maghribTime">--:--</h5></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-left"><strong>🌙 Isya (Isha)</strong></td>
+                                            <td class="text-right"><h5 id="isyaTime">--:--</h5></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
 
-                            <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
-                                <p style="margin: 0; font-size: 12px; color: #666;">
+                            <div class="callout secondary">
+                                <p class="help-text text-center">
                                     ℹ️ Jadwal shalat berdasarkan kota/Kabupaten yang dipilih<br>
                                     📅 Auto-refresh setiap tengah malam (00:00 WIB)<br>
                                     🕋 Metode kalkulasi: Egyptian General Authority of Survey<br>
@@ -380,25 +311,25 @@
 
                 <!-- Factory Reset Section -->
                 <div class="grid-x grid-padding-x">
-                    <div class="large-10 center cell">
+                    <div class="large-12 cell">
                         <div class="callout alert">
                             <h5>⚠️ Factory Reset</h5>
-                            <p style="font-size: 14px; margin-bottom: 15px;">
-                                Reset semua pengaturan (WiFi, waktu, jadwal shalat) ke default. Device akan restart.
-                            </p>
-                            <div style="background: #fff3cd; padding: 12px; border-radius: 5px; margin-bottom: 15px;">
-                                <p style="margin: 0; font-size: 13px; color: #856404;">
+                            <p>Reset semua pengaturan (WiFi, waktu, jadwal shalat) ke default. Device akan restart.</p>
+                            
+                            <div class="callout warning">
+                                <p>
                                     <strong>⚠️ Peringatan:</strong> Ini akan menghapus semua data tersimpan:
                                 </p>
-                                <p style="margin: 8px 0 0 20px; font-size: 12px; color: #856404;">
-                                    📡 WiFi credentials<br>
-                                    🕋 Jadwal shalat tersimpan<br>
-                                    📶 AP settings<br>
-                                    📍 Pilihan kota/Kabupaten<br>
-                                    📅 Waktu dan tanggal
-                                </p>
+                                <ul>
+                                    📡 WiFi credentials</br>
+                                    🕋 Jadwal shalat tersimpan</br>
+                                    📶 AP settings</br>
+                                    📍 Pilihan kota/Kabupaten</br>
+                                    📅 Waktu dan tanggal</br>
+                                </ul>
                             </div>
-                            <button class="alert button expanded" onclick="resetSettings()">
+                            
+                            <button class="button alert expanded" onclick="resetSettings()">
                                 🔄 Reset All Settings & Restart
                             </button>
                         </div>
@@ -408,6 +339,13 @@
             </div>
         </div>
     </div>
+
+    <!-- Foundation JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/foundation-sites@6.8.1/dist/js/foundation.min.js"></script>
+    <script>
+        $(document).foundation();
+    </script>
 
     <script>
         // ================================
@@ -466,10 +404,8 @@
             const secs = seconds % 60;
             
             if (days > 0) {
-                // Jika ada hari, tampilkan format: "Xd HH:MM:SS"
                 return `${days}d ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
             } else {
-                // Jika belum 1 hari, format: "HH:MM:SS"
                 return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
             }
         }
@@ -509,6 +445,24 @@
                 options.credentials = 'same-origin';
             }
             
+            if (!options.headers) {
+                options.headers = {};
+            }
+            
+            const cookies = document.cookie.split(';');
+            let sessionToken = '';
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'session') {
+                    sessionToken = value;
+                    break;
+                }
+            }
+            
+            if (sessionToken) {
+                options.headers['X-Session-Token'] = sessionToken;
+            }
+            
             try {
                 const response = await fetch(url, options);
                 
@@ -528,18 +482,25 @@
         }
 
         // ================================
-        // TOAST NOTIFICATION
+        // TOAST NOTIFICATION (menggunakan Foundation Callout)
         // ================================
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             toast.textContent = message;
-            toast.className = 'toast show';
             
+            // Reset classes
+            toast.className = 'toast callout';
+            
+            // Add type class
             if (type === 'error') {
-                toast.classList.add('error');
+                toast.classList.add('alert');
             } else if (type === 'warning') {
                 toast.classList.add('warning');
+            } else {
+                toast.classList.add('success');
             }
+            
+            toast.classList.add('show');
             
             setTimeout(() => {
                 toast.classList.remove('show');
@@ -565,14 +526,14 @@
                     document.getElementById('ntpServerUsed').textContent = data.ntpServer || '-';
                 }
                 
-                // Update internet status badge
+                // Update internet status badge (Foundation Label)
                 const statusBadge = document.getElementById('internetStatus');
                 if (isOnline) {
                     statusBadge.textContent = '✅ Online';
-                    statusBadge.className = 'status-badge status-online';
+                    statusBadge.className = 'label success';
                 } else {
                     statusBadge.textContent = '❌ Offline';
-                    statusBadge.className = 'status-badge status-offline';
+                    statusBadge.className = 'label alert';
                 }
                 
                 // ================================
@@ -584,12 +545,12 @@
                     
                     if (timeParts.length === 3 && dateParts.length === 3) {
                         const now = new Date(
-                            parseInt(dateParts[2]), // year
-                            parseInt(dateParts[1]) - 1, // month (0-indexed)
-                            parseInt(dateParts[0]), // day
-                            parseInt(timeParts[0]), // hour
-                            parseInt(timeParts[1]), // minute
-                            parseInt(timeParts[2])  // second
+                            parseInt(dateParts[2]),
+                            parseInt(dateParts[1]) - 1,
+                            parseInt(dateParts[0]),
+                            parseInt(timeParts[0]),
+                            parseInt(timeParts[1]),
+                            parseInt(timeParts[2])
                         );
                         
                         serverTimestamp = Math.floor(now.getTime() / 1000);
@@ -606,17 +567,11 @@
                     console.log('⏱️ Uptime synced:', serverUptimeStart, 'seconds');
                 }
                 
-                // Free heap display
-                if (document.getElementById('freeHeap')) {
-                    const heapKB = Math.floor(parseInt(data.freeHeap) / 1024);
-                    document.getElementById('freeHeap').textContent = heapKB + ' KB';
-                }
-                
             } catch (error) {
                 console.error('Error fetching device status:', error);
                 isOnline = false;
                 document.getElementById('internetStatus').textContent = '❌ Error';
-                document.getElementById('internetStatus').className = 'status-badge status-offline';
+                document.getElementById('internetStatus').className = 'label alert';
             }
         }
         
@@ -701,7 +656,7 @@
                 loadAttempts++;
                 
                 if (loadAttempts < MAX_LOAD_ATTEMPTS) {
-                    const retryDelay = 2000 * loadAttempts;
+                    const retryDelay = Math.min(2000 * Math.pow(2, loadAttempts), 10000);
                     console.log(`🔄 Retrying in ${retryDelay/1000}s...`);
                     
                     dropdown.innerHTML = `<option value="">⏳ Retrying (${loadAttempts}/${MAX_LOAD_ATTEMPTS})...</option>`;
@@ -748,15 +703,14 @@
                     }
                     
                     currentCitySpan.textContent = displayText;
-                    currentCitySpan.style.color = '#1779ba';
+                    currentCitySpan.className = 'text-primary';
                     
                     dropdown.value = data.selectedCityApi;
                     
                     console.log('✅ City loaded:', displayText);
-                    console.log('   Dropdown value:', data.selectedCityApi);
                 } else {
                     currentCitySpan.textContent = 'Belum dipilih';
-                    currentCitySpan.style.color = '#999';
+                    currentCitySpan.className = 'subheader';
                     dropdown.selectedIndex = 0;
                 }
                 
@@ -767,17 +721,10 @@
         }
 
         async function saveCity() {
-            console.log('========================================');
-            console.log('saveCity() called');
-            console.log('========================================');
-            
             const dropdown = document.getElementById('cityDropdown');
             const selectedCity = dropdown.value;
             
-            console.log('Selected value:', selectedCity);
-            
             if (!selectedCity) {
-                console.error('❌ No city selected');
                 showToast('❌ Pilih kota/kabupaten terlebih dahulu', 'error');
                 return;
             }
@@ -789,14 +736,7 @@
             const cityData = cityList.find(c => c.api === selectedCity);
             const displayName = cityData ? cityData.display : selectedCity;
             
-            console.log('City data:');
-            console.log('  API:', selectedCity);
-            console.log('  Display:', displayName); 
-            console.log('  Lat:', lat);
-            console.log('  Lon:', lon);
-            
             if (!lat || !lon) {
-                console.error('❌ Missing coordinates');
                 showToast('❌ Data koordinat tidak lengkap', 'error');
                 return;
             }
@@ -807,18 +747,14 @@
             btn.textContent = '⏳ Menyimpan...';
             
             try {
-                console.log('Sending POST request to /setcity...');
-                
                 const formData = new URLSearchParams();
                 formData.append('city', selectedCity);
                 formData.append('cityName', displayName);
                 formData.append('lat', lat);
                 formData.append('lon', lon);
                 
-                console.log('POST data:', formData.toString());
-                
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); 
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
                 
                 const response = await secureFetch('/setcity', {
                     method: 'POST',
@@ -832,69 +768,28 @@
                 
                 clearTimeout(timeoutId);
                 
-                console.log('Response status:', response.status);
-                
-                const contentType = response.headers.get('content-type');
-                let responseData;
-                
-                if (contentType && contentType.includes('application/json')) {
-                    responseData = await response.json();
-                    console.log('Response JSON:', responseData);
-                } else {
-                    responseData = await response.text();
-                    console.log('Response text:', responseData);
-                }
-                
                 if (response.ok) {
-                    console.log('✅ City saved successfully');
                     showToast('✅ Kota/Kabupaten berhasil disimpan!', 'success');
                     
                     setTimeout(() => {
-                        showToast(`📍 ${selectedCity} - Koordinat: ${parseFloat(lat).toFixed(4)}°, ${parseFloat(lon).toFixed(4)}°`, 'success');
-                    }, 2000);
-                    
-                    setTimeout(() => {
-                        console.log('Reloading city info...');
                         loadCurrentCity();
                     }, 1000);
                     
                     setTimeout(() => {
-                        console.log('Reloading prayer times...');
                         loadSavedPrayerTimes();
                     }, 3000);
                     
                 } else {
-                    let errorMsg = 'Unknown error';
-                    
-                    if (typeof responseData === 'object' && responseData.error) {
-                        errorMsg = responseData.error;
-                    } else if (typeof responseData === 'string') {
-                        errorMsg = responseData;
-                    }
-                    
-                    throw new Error(errorMsg);
+                    throw new Error('Failed to save city');
                 }
                 
             } catch (error) {
                 console.error('❌ Error saving city:', error);
-                
-                let errorMessage = 'Gagal menyimpan kota/kabupaten';
-                
-                if (error.name === 'AbortError') {
-                    errorMessage = 'Request timeout - coba lagi';
-                } else if (error.message.includes('Session expired')) {
-                    errorMessage = 'Session habis - refresh halaman';
-                    setTimeout(() => window.location.reload(), 2000);
-                } else if (error.message) {
-                    errorMessage = error.message;
-                }
-                
-                showToast('❌ ' + errorMessage, 'error');
+                showToast('❌ Gagal menyimpan kota/kabupaten', 'error');
                 
             } finally {
                 btn.disabled = false;
                 btn.textContent = originalText;
-                console.log('========================================\n');
             }
         }
 
@@ -1111,10 +1006,8 @@
         let selectedCitiesFile = null;
 
         function calculateArduinoJsonSize(json) {
-            
             let totalSize = 0;
-            
-            totalSize += 24; 
+            totalSize += 24;
             
             if (Array.isArray(json)) {
                 totalSize += 16;
@@ -1131,13 +1024,12 @@
                             totalSize += key.length + 1;
                             totalSize += Math.ceil((key.length + 1) / 4) * 4;
                             
-                            // Value
                             const value = item[key];
                             if (typeof value === 'string') {
                                 totalSize += value.length + 1;
                                 totalSize += Math.ceil((value.length + 1) / 4) * 4;
                             } else if (typeof value === 'number') {
-                                totalSize += 8; // double
+                                totalSize += 8;
                             } else if (typeof value === 'boolean') {
                                 totalSize += 1;
                             }
@@ -1147,7 +1039,6 @@
             }
             
             totalSize = Math.ceil(totalSize * 1.2);
-            
             return totalSize;
         }
 
@@ -1159,7 +1050,7 @@
             if (!file) {
                 selectedCitiesFile = null;
                 fileNameDisplay.textContent = 'Belum ada file dipilih';
-                fileNameDisplay.style.color = '#666';
+                fileNameDisplay.className = 'help-text text-center';
                 uploadBtn.disabled = true;
                 return;
             }
@@ -1167,8 +1058,7 @@
             if (file.name !== 'cities.json') {
                 showToast('❌ Nama file harus cities.json', 'error');
                 selectedCitiesFile = null;
-                fileNameDisplay.textContent = '❌ Nama file tidak valid';
-                fileNameDisplay.style.color = '#cc4b37';
+                fileNameDisplay.innerHTML = '<span class="label alert">❌ Nama file tidak valid</span>';
                 uploadBtn.disabled = true;
                 event.target.value = '';
                 return;
@@ -1178,8 +1068,7 @@
             if (file.size > maxSize) {
                 showToast('❌ File terlalu besar (max 1MB)', 'error');
                 selectedCitiesFile = null;
-                fileNameDisplay.textContent = '❌ File terlalu besar';
-                fileNameDisplay.style.color = '#cc4b37';
+                fileNameDisplay.innerHTML = '<span class="label alert">❌ File terlalu besar</span>';
                 uploadBtn.disabled = true;
                 event.target.value = '';
                 return;
@@ -1188,27 +1077,21 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    // Validasi 3: Parse JSON
                     const json = JSON.parse(e.target.result);
                     
-                    // Validasi 4: Harus array
                     if (!Array.isArray(json)) {
                         throw new Error('JSON harus berupa array');
                     }
                     
-                    // Validasi 5: Tidak boleh kosong
                     if (json.length === 0) {
                         throw new Error('JSON array tidak boleh kosong');
                     }
                     
-                    // Validasi 6: Struktur field wajib
                     const requiredFields = ['api', 'display', 'province'];
-                    const optionalFields = ['lat', 'lon'];
                     
                     for (let i = 0; i < json.length; i++) {
                         const item = json[i];
                         
-                        // Cek field wajib
                         for (const field of requiredFields) {
                             if (!item.hasOwnProperty(field) || !item[field]) {
                                 throw new Error(`Item ${i}: field '${field}' tidak ada atau kosong`);
@@ -1235,37 +1118,21 @@
                     }
                     
                     const jsonSize = calculateArduinoJsonSize(json);
-                    
-                    console.log('JSON Validation Results:');
-                    console.log('  ✅ File name:', file.name);
-                    console.log('  ✅ File size:', (file.size / 1024).toFixed(2), 'KB');
-                    console.log('  ✅ Cities count:', json.length);
-                    console.log('  ✅ JSON structure: Valid');
-                    console.log('  📊 DynamicJsonDocument size needed:', jsonSize, 'bytes');
-                    
                     const ESP32_MAX_HEAP = 320000;
                     
                     if (jsonSize > ESP32_MAX_HEAP) {
                         const sizeKB = (jsonSize / 1024).toFixed(2);
                         const maxKB = (ESP32_MAX_HEAP / 1024).toFixed(2);
                         
-                        showToast(
-                            `❌ File terlalu berat untuk ESP32!\n` +
-                            `Ukuran JSON: ${sizeKB} KB\n` +
-                            `Max safe: ${maxKB} KB\n` +
-                            `Kurangi jumlah kota atau persingkat field`,
-                            'error'
-                        );
+                        showToast(`❌ File terlalu berat untuk ESP32! ${sizeKB} KB > ${maxKB} KB`, 'error');
                         
                         selectedCitiesFile = null;
-                        fileNameDisplay.textContent = `❌ Terlalu berat (${sizeKB} KB > ${maxKB} KB)`;
-                        fileNameDisplay.style.color = '#cc4b37';
+                        fileNameDisplay.innerHTML = `<span class="label alert">❌ Terlalu berat (${sizeKB} KB)</span>`;
                         uploadBtn.disabled = true;
                         event.target.value = '';
                         return;
                     }
                     
-                    // File valid - simpan metadata
                     selectedCitiesFile = file;
                     selectedCitiesFile.jsonMetadata = {
                         citiesCount: json.length,
@@ -1277,16 +1144,14 @@
                     const jsonSizeKB = (jsonSize / 1024).toFixed(2);
                     
                     fileNameDisplay.innerHTML = 
-                        `✅ ${file.name} (${sizeKB} KB)<br>` +
-                        `📊 ${json.length} kota | DynamicJsonDocument: ${jsonSizeKB} KB`;
-                    fileNameDisplay.style.color = '#3adb76';
+                        `<span class="label success">✅ ${file.name} (${sizeKB} KB)</span><br>` +
+                        `<small>📊 ${json.length} kota | DynamicJsonDocument: ${jsonSizeKB} KB</small>`;
                     uploadBtn.disabled = false;
                     
                 } catch (error) {
                     showToast('❌ Validasi gagal: ' + error.message, 'error');
                     selectedCitiesFile = null;
-                    fileNameDisplay.textContent = '❌ ' + error.message;
-                    fileNameDisplay.style.color = '#cc4b37';
+                    fileNameDisplay.innerHTML = `<span class="label alert">❌ ${error.message}</span>`;
                     uploadBtn.disabled = true;
                     event.target.value = '';
                     console.error('JSON validation error:', error);
@@ -1296,8 +1161,7 @@
             reader.onerror = function() {
                 showToast('❌ Gagal membaca file', 'error');
                 selectedCitiesFile = null;
-                fileNameDisplay.textContent = '❌ Gagal membaca file';
-                fileNameDisplay.style.color = '#cc4b37';
+                fileNameDisplay.innerHTML = '<span class="label alert">❌ Gagal membaca file</span>';
                 uploadBtn.disabled = true;
             };
             
@@ -1310,18 +1174,6 @@
                 return;
             }
             
-            console.log('========================================');
-            console.log('Starting cities.json upload...');
-            console.log('File:', selectedCitiesFile.name);
-            console.log('Size:', selectedCitiesFile.size, 'bytes');
-            
-            if (selectedCitiesFile.jsonMetadata) {
-                console.log('Cities:', selectedCitiesFile.jsonMetadata.citiesCount);
-                console.log('JSON Size:', selectedCitiesFile.jsonMetadata.jsonSize, 'bytes');
-            }
-            
-            console.log('========================================');
-            
             const uploadBtn = document.getElementById('uploadBtn');
             const progressDiv = document.getElementById('uploadProgress');
             const progressBar = document.getElementById('uploadProgressBar');
@@ -1329,16 +1181,15 @@
             
             uploadBtn.disabled = true;
             uploadBtn.textContent = '⏳ Uploading...';
-            progressDiv.style.display = 'block';
+            progressDiv.classList.remove('hide');
             progressBar.style.width = '0%';
-            progressBar.textContent = '0%';
+            progressBar.querySelector('.progress-meter-text').textContent = '0%';
             statusText.textContent = 'Memulai upload...';
             
             try {
                 const formData = new FormData();
                 formData.append('file', selectedCitiesFile);
                 
-                // Tambahkan metadata
                 if (selectedCitiesFile.jsonMetadata) {
                     formData.append('jsonSize', selectedCitiesFile.jsonMetadata.jsonSize);
                     formData.append('citiesCount', selectedCitiesFile.jsonMetadata.citiesCount);
@@ -1350,50 +1201,28 @@
                     if (e.lengthComputable) {
                         const percentComplete = Math.round((e.loaded / e.total) * 100);
                         progressBar.style.width = percentComplete + '%';
-                        progressBar.textContent = percentComplete + '%';
+                        progressBar.querySelector('.progress-meter-text').textContent = percentComplete + '%';
                         statusText.textContent = `Uploading: ${(e.loaded / 1024).toFixed(1)} KB / ${(e.total / 1024).toFixed(1)} KB`;
-                        console.log(`Upload progress: ${percentComplete}%`);
                     }
                 });
                 
                 xhr.addEventListener('load', async () => {
-                    console.log('Upload response status:', xhr.status);
-                    console.log('Response:', xhr.responseText);
-                    
                     if (xhr.status === 200) {
-                        let response;
-                        try {
-                            response = JSON.parse(xhr.responseText);
-                        } catch (e) {
-                            response = { success: true };
-                        }
-                        
                         progressBar.style.width = '100%';
-                        progressBar.textContent = '100%';
-                        statusText.textContent = '✅ Upload berhasil!';
-                        statusText.style.color = '#3adb76';
-                        
-                        console.log('✅ Upload successful');
+                        progressBar.querySelector('.progress-meter-text').textContent = '100%';
+                        statusText.innerHTML = '<span class="label success">✅ Upload berhasil!</span>';
                         
                         if (selectedCitiesFile.jsonMetadata) {
                             const jsonSizeKB = (selectedCitiesFile.jsonMetadata.jsonSize / 1024).toFixed(2);
-                            showToast(
-                                `✅ cities.json berhasil diupload!\n` +
-                                `📊 ${selectedCitiesFile.jsonMetadata.citiesCount} kota\n` +
-                                `💾 DynamicJsonDocument: ${jsonSizeKB} KB`,
-                                'success'
-                            );
+                            showToast(`✅ cities.json berhasil diupload! ${selectedCitiesFile.jsonMetadata.citiesCount} kota`, 'success');
                         } else {
                             showToast('✅ cities.json berhasil diupload!', 'success');
                         }
                         
-                        // Reset form
                         document.getElementById('citiesFileInput').value = '';
                         document.getElementById('selectedFileName').textContent = 'Belum ada file dipilih';
-                        document.getElementById('selectedFileName').style.color = '#666';
                         selectedCitiesFile = null;
                         
-                        // Reload cities list
                         setTimeout(() => {
                             showToast('🔄 Memuat ulang daftar kota...', 'warning');
                             loadAttempts = 0;
@@ -1401,20 +1230,13 @@
                         }, 2000);
                         
                         setTimeout(() => {
-                            progressDiv.style.display = 'none';
+                            progressDiv.classList.add('hide');
                             uploadBtn.disabled = false;
                             uploadBtn.textContent = '📤 Upload File';
                         }, 5000);
                         
                     } else {
-                        let errorMsg = 'Upload failed';
-                        try {
-                            const response = JSON.parse(xhr.responseText);
-                            errorMsg = response.error || errorMsg;
-                        } catch (e) {
-                            errorMsg = xhr.responseText || errorMsg;
-                        }
-                        throw new Error(errorMsg);
+                        throw new Error('Upload failed');
                     }
                 });
                 
@@ -1433,15 +1255,14 @@
             } catch (error) {
                 console.error('❌ Upload error:', error);
                 
-                progressBar.style.background = '#cc4b37';
+                progressBar.classList.add('alert');
                 progressBar.style.width = '100%';
-                statusText.textContent = '❌ ' + error.message;
-                statusText.style.color = '#cc4b37';
+                statusText.innerHTML = `<span class="label alert">❌ ${error.message}</span>`;
                 
                 showToast('❌ Upload gagal: ' + error.message, 'error');
                 
                 setTimeout(() => {
-                    progressDiv.style.display = 'none';
+                    progressDiv.classList.add('hide');
                     uploadBtn.disabled = false;
                     uploadBtn.textContent = '📤 Upload File';
                 }, 3000);
@@ -1452,45 +1273,18 @@
         // INITIALIZATION
         // ================================
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Page loaded - Islamic Prayer Clock (Real-time Mode)');
-            console.log('📊 Initialization sequence:');
-            console.log('  1. Loading cities...');
-            console.log('  2. Loading device status...');
-            console.log('  3. Loading prayer times...');
-            console.log('  4. Starting real-time clock...');
+            console.log('🚀 Page loaded - Islamic Prayer Clock (Foundation CSS)');
             
-            // Load initial data
             loadCities();
             updateDeviceStatus();
             loadSavedPrayerTimes();
             
-            // ================================
-            // REAL-TIME CLOCK - UPDATE EVERY 1 SECOND
-            // ================================
             setInterval(updateRealtimeDisplay, 1000);
-            console.log('✅ Real-time clock started (1s interval)');
-            
-            // ================================
-            // SERVER SYNC - EVERY 5 SECONDS
-            // ================================
             setInterval(updateDeviceStatus, 5000);
-            console.log('✅ Device status sync (5s interval)');
-            
-            // ================================
-            // PRAYER TIMES REFRESH - EVERY 30 SECONDS
-            // ================================
             setInterval(loadSavedPrayerTimes, 30000);
-            console.log('✅ Prayer times refresh (30s interval)');
             
             console.log('✅ All timers configured');
         });
-        
-        console.log('%c🕌 Islamic Prayer Clock Web Interface', 'color: #667eea; font-size: 16px; font-weight: bold;');
-        console.log('%c✅ Real-time Clock (1s update)', 'color: #3adb76;');
-        console.log('%c✅ Auto Server Sync (5s)', 'color: #3adb76;');
-        console.log('%c✅ Optimized City Loading', 'color: #3adb76;');
-        console.log('%c✅ Auto NTP Sync', 'color: #3adb76;');
-        console.log('%c✅ Security: Token-based auth', 'color: #ffae00;');
     </script>
 </body>
 </html>
