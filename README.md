@@ -196,10 +196,10 @@ Touch initialized
 LVGL initialized
 LittleFS Mounted
 WiFi credentials loaded
-✅ AP Started: JWS ESP32
+✅ AP Started: JWS Indonesia
    Password: 12345678
    AP IP: 192.168.4.1
-✅ Hostname Set: JWS ESP32
+✅ Hostname Set: JWS Indonesia
 ========================================
 SYSTEM READY!
 ========================================
@@ -212,14 +212,14 @@ SYSTEM READY!
 ### 1️⃣ First Boot
 ```
 Device membuat Access Point:
-   SSID: "JWS ESP32"
+   SSID: "JWS Indonesia"
    Password: "12345678"
    IP: 192.168.4.1
 ```
 
 ### 2️⃣ Hubungkan ke AP
 ```
-1. Cari WiFi "JWS ESP32" di HP/Laptop
+1. Cari WiFi "JWS Indonesia" di HP/Laptop
 2. Password: 12345678
 3. Buka browser: http://192.168.4.1
 ```
