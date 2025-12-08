@@ -502,8 +502,6 @@ http://192.168.1.100/api/data      # Via WiFi (ganti IP sesuai device)
 | `location.city` | string | Selected city name |
 | `location.latitude` | string | City latitude |
 | `location.longitude` | string | City longitude |
-| `device.wifiConnected` | boolean | WiFi status |
-| `device.ip` | string | Device IP (STA mode) |
 | `device.ntpSynced` | boolean | NTP sync status |
 | `device.freeHeap` | number | Free RAM (bytes) |
 
