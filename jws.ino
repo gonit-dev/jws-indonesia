@@ -1789,19 +1789,130 @@ void setupServerRoutes() {
     // 11. API DATA
     // ================================
     server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request) {
+        // KEPUTUSAN: Buat publik atau tidak?
+        // Jika ingin secure, uncomment baris berikut:
+        /*
         if (!validateSession(request)) {
             Serial.println("[API] Invalid session");
-            request->redirect("/notfound");
+            request->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
             return;
         }
+        */
         
         String json;
-        json.reserve(512);
-        json = "{\"time\":\"00:00:00\",\"date\":\"01/01/2000\"}";
+        json.reserve(1024); // Increased size for full data
+        
+        // Get time data
+        char timeStr[20], dateStr[20];
+        int dayOfWeek = 0;
+        time_t timestamp = 0;
+        
+        if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            timestamp = timeConfig.currentTime;
+            
+            sprintf(timeStr, "%02d:%02d:%02d",
+                    hour(timestamp),
+                    minute(timestamp),
+                    second(timestamp));
+            
+            sprintf(dateStr, "%02d/%02d/%04d",
+                    day(timestamp),
+                    month(timestamp),
+                    year(timestamp));
+            
+            dayOfWeek = weekday(timestamp); // 1=Sunday, 2=Monday, etc.
+            
+            xSemaphoreGive(timeMutex);
+        }
+        
+        // Day names
+        const char* dayNames[] = {"", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+        String dayName = (dayOfWeek >= 1 && dayOfWeek <= 7) ? dayNames[dayOfWeek] : "Unknown";
+        
+        // Get location data
+        String city = "";
+        String cityId = "";
+        String displayName = "";
+        String latitude = "";
+        String longitude = "";
+        
+        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            city = prayerConfig.selectedCityName.length() > 0 ? 
+                prayerConfig.selectedCityName : 
+                prayerConfig.selectedCity;
+            cityId = prayerConfig.selectedCity;
+            displayName = city;
+            latitude = prayerConfig.latitude;
+            longitude = prayerConfig.longitude;
+            xSemaphoreGive(settingsMutex);
+        }
+        
+        // Get prayer times
+        String subuh = prayerConfig.subuhTime;
+        String dzuhur = prayerConfig.zuhurTime;
+        String ashar = prayerConfig.asarTime;
+        String maghrib = prayerConfig.maghribTime;
+        String isya = prayerConfig.isyaTime;
+        
+        // Get device status
+        bool isWiFiConnected = (WiFi.status() == WL_CONNECTED && 
+                                wifiConfig.isConnected && 
+                                wifiConfig.localIP.toString() != "0.0.0.0");
+        
+        String ssid = isWiFiConnected ? WiFi.SSID() : "";
+        String ip = isWiFiConnected ? wifiConfig.localIP.toString() : "";
+        String apIP = WiFi.softAPIP().toString();
+        
+        // Build JSON response
+        json = "{";
+        
+        // Time section
+        json += "\"time\":\"" + String(timeStr) + "\",";
+        json += "\"date\":\"" + String(dateStr) + "\",";
+        json += "\"day\":\"" + dayName + "\",";
+        json += "\"timestamp\":" + String(timestamp) + ",";
+        
+        // Prayer times section
+        json += "\"prayerTimes\":{";
+        json += "\"subuh\":\"" + subuh + "\",";
+        json += "\"dzuhur\":\"" + dzuhur + "\",";
+        json += "\"ashar\":\"" + ashar + "\",";
+        json += "\"maghrib\":\"" + maghrib + "\",";
+        json += "\"isya\":\"" + isya + "\"";
+        json += "},";
+        
+        // Location section
+        json += "\"location\":{";
+        json += "\"city\":\"" + city + "\",";
+        json += "\"cityId\":\"" + cityId + "\",";
+        json += "\"displayName\":\"" + displayName + "\",";
+        json += "\"latitude\":\"" + latitude + "\",";
+        json += "\"longitude\":\"" + longitude + "\"";
+        json += "},";
+        
+        // Device section
+        json += "\"device\":{";
+        json += "\"wifiConnected\":" + String(isWiFiConnected ? "true" : "false") + ",";
+        json += "\"wifiSSID\":\"" + ssid + "\",";
+        json += "\"ip\":\"" + ip + "\",";
+        json += "\"apIP\":\"" + apIP + "\",";
+        json += "\"ntpSynced\":" + String(timeConfig.ntpSynced ? "true" : "false") + ",";
+        json += "\"ntpServer\":\"" + timeConfig.ntpServer + "\",";
+        json += "\"freeHeap\":" + String(ESP.getFreeHeap()) + ",";
+        json += "\"uptime\":" + String(millis() / 1000);
+        json += "}";
+        
+        json += "}";
         
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
         resp->addHeader("Connection", "keep-alive");
+        resp->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        resp->addHeader("Access-Control-Allow-Origin", "*"); // Enable CORS if needed
         request->send(resp);
+        
+        // Optional: Log API access
+        Serial.printf("[API/DATA] Request from: %s\n", 
+            request->client()->remoteIP().toString().c_str());
     });
 
     // ================================
