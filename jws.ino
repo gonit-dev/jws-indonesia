@@ -1795,101 +1795,65 @@ void setupServerRoutes() {
         }
         */
         
-        String json;
-        json.reserve(1024); // Increased size for full data
+        String json = "{";
         
-        // Get time data
-        char timeStr[20], dateStr[20];
-        int dayOfWeek = 0;
-        time_t timestamp = 0;
-        
+        // ================================
+        // 1. TIME & DATE
+        // ================================
         if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            timestamp = timeConfig.currentTime;
+            char timeStr[10], dateStr[12], dayStr[15];
             
             sprintf(timeStr, "%02d:%02d:%02d",
-                    hour(timestamp),
-                    minute(timestamp),
-                    second(timestamp));
+                    hour(timeConfig.currentTime),
+                    minute(timeConfig.currentTime),
+                    second(timeConfig.currentTime));
             
             sprintf(dateStr, "%02d/%02d/%04d",
-                    day(timestamp),
-                    month(timestamp),
-                    year(timestamp));
+                    day(timeConfig.currentTime),
+                    month(timeConfig.currentTime),
+                    year(timeConfig.currentTime));
             
-            dayOfWeek = weekday(timestamp); // 1=Sunday, 2=Monday, etc.
+            const char* dayNames[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+            int dayOfWeek = weekday(timeConfig.currentTime) - 1;
+            strcpy(dayStr, dayNames[dayOfWeek]);
+            
+            json += "\"time\":\"" + String(timeStr) + "\",";
+            json += "\"date\":\"" + String(dateStr) + "\",";
+            json += "\"day\":\"" + String(dayStr) + "\",";
+            json += "\"timestamp\":" + String(timeConfig.currentTime) + ",";
             
             xSemaphoreGive(timeMutex);
         }
         
-        // Day names
-        const char* dayNames[] = {"", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-        String dayName = (dayOfWeek >= 1 && dayOfWeek <= 7) ? dayNames[dayOfWeek] : "Unknown";
-        
-        // Get location data
-        String city = "";
-        String cityId = "";
-        String displayName = "";
-        String latitude = "";
-        String longitude = "";
-        
+        // ================================
+        // 2. PRAYER TIMES & LOCATION
+        // ================================
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            city = prayerConfig.selectedCityName.length() > 0 ? 
-                prayerConfig.selectedCityName : 
-                prayerConfig.selectedCity;
-            cityId = prayerConfig.selectedCity;
-            displayName = city;
-            latitude = prayerConfig.latitude;
-            longitude = prayerConfig.longitude;
+            json += "\"prayerTimes\":{";
+            json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
+            json += "\"dzuhur\":\"" + prayerConfig.zuhurTime + "\",";
+            json += "\"ashar\":\"" + prayerConfig.asarTime + "\",";
+            json += "\"maghrib\":\"" + prayerConfig.maghribTime + "\",";
+            json += "\"isya\":\"" + prayerConfig.isyaTime + "\"";
+            json += "},";
+            
+            json += "\"location\":{";
+            json += "\"city\":\"" + prayerConfig.selectedCity + "\",";
+            json += "\"cityId\":\"" + prayerConfig.selectedCity + "\",";
+            json += "\"displayName\":\"" + prayerConfig.selectedCityName + "\",";
+            json += "\"latitude\":\"" + prayerConfig.latitude + "\",";
+            json += "\"longitude\":\"" + prayerConfig.longitude + "\"";
+            json += "},";
+            
             xSemaphoreGive(settingsMutex);
         }
         
-        // Get prayer times
-        String subuh = prayerConfig.subuhTime;
-        String dzuhur = prayerConfig.zuhurTime;
-        String ashar = prayerConfig.asarTime;
-        String maghrib = prayerConfig.maghribTime;
-        String isya = prayerConfig.isyaTime;
-        
-        // Get device status
-        bool isWiFiConnected = (WiFi.status() == WL_CONNECTED && 
-                                wifiConfig.isConnected && 
-                                wifiConfig.localIP.toString() != "0.0.0.0");
-        
-        String ssid = isWiFiConnected ? WiFi.SSID() : "";
-        String ip = isWiFiConnected ? wifiConfig.localIP.toString() : "";
-        String apIP = WiFi.softAPIP().toString();
-        
-        // Build JSON response
-        json = "{";
-        
-        // Time section
-        json += "\"time\":\"" + String(timeStr) + "\",";
-        json += "\"date\":\"" + String(dateStr) + "\",";
-        json += "\"day\":\"" + dayName + "\",";
-        json += "\"timestamp\":" + String(timestamp) + ",";
-        
-        // Prayer times section
-        json += "\"prayerTimes\":{";
-        json += "\"subuh\":\"" + subuh + "\",";
-        json += "\"dzuhur\":\"" + dzuhur + "\",";
-        json += "\"ashar\":\"" + ashar + "\",";
-        json += "\"maghrib\":\"" + maghrib + "\",";
-        json += "\"isya\":\"" + isya + "\"";
-        json += "},";
-        
-        // Location section
-        json += "\"location\":{";
-        json += "\"city\":\"" + city + "\",";
-        json += "\"cityId\":\"" + cityId + "\",";
-        json += "\"displayName\":\"" + displayName + "\",";
-        json += "\"latitude\":\"" + latitude + "\",";
-        json += "\"longitude\":\"" + longitude + "\"";
-        json += "},";
-        
-        // Device section
+        // ================================
+        // 3. DEVICE STATUS
+        // ================================
         json += "\"device\":{";
-        json += "\"wifiConnected\":" + String(isWiFiConnected ? "true" : "false") + ",";
-        json += "\"apIP\":\"" + apIP + "\",";
+        json += "\"wifiConnected\":" + String((WiFi.status() == WL_CONNECTED && wifiConfig.isConnected) ? "true" : "false") + ",";
+        json += "\"apIP\":\"" + WiFi.softAPIP().toString() + "\",";
         json += "\"ntpSynced\":" + String(timeConfig.ntpSynced ? "true" : "false") + ",";
         json += "\"ntpServer\":\"" + timeConfig.ntpServer + "\",";
         json += "\"freeHeap\":" + String(ESP.getFreeHeap()) + ",";
