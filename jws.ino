@@ -1046,6 +1046,10 @@ void wifiTask(void *parameter) {
                         vTaskDelay(pdMS_TO_TICKS(1000));
                         esp_task_wdt_reset();
                     }
+
+                    String hostname = wifiConfig.apSSID;
+                    WiFi.setHostname(hostname.c_str());
+                    Serial.printf("   Setting hostname: %s\n", hostname.c_str());
                     
                     wifiState = WIFI_IDLE;
                     Serial.println(" Retrying WiFi STA connection...");
