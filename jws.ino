@@ -2008,8 +2008,6 @@ void setupServerRoutes() {
         // DEVICE STATUS
         json += "\"device\":{";
         json += "\"wifiConnected\":" + String((WiFi.status() == WL_CONNECTED && wifiConfig.isConnected) ? "true" : "false") + ",";
-        json += "\"wifiSSID\":\"" + String(WiFi.SSID()) + "\",";
-        json += "\"ip\":\"" + wifiConfig.localIP.toString() + "\",";
         json += "\"apIP\":\"" + WiFi.softAPIP().toString() + "\",";
         json += "\"ntpSynced\":" + String(timeConfig.ntpSynced ? "true" : "false") + ",";
         json += "\"ntpServer\":\"" + timeConfig.ntpServer + "\",";
