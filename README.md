@@ -477,8 +477,6 @@ http://192.168.1.100/api/data      # Via WiFi (ganti IP sesuai device)
 
   "device": {
     "wifiConnected": true,
-    "wifiSSID": "MyWiFi",
-    "ip": "192.168.1.20",
     "apIP": "192.168.4.1",
     "ntpSynced": true,
     "ntpServer": "pool.ntp.org",
