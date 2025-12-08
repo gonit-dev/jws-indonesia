@@ -2312,7 +2312,6 @@ void setupServerRoutes() {
         Serial.printf("\n[404] Client: %s | URL: %s\n", 
             clientIP.toString().c_str(), url.c_str());
         
-        // RULE 1: Static Assets - Return 404 Plain Text
         if (url.startsWith("/assets/") || 
             url.endsWith(".css") || 
             url.endsWith(".js") || 
