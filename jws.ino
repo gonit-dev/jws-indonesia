@@ -150,10 +150,16 @@ struct PrayerConfig {
     String longitude;
 };
 
+struct MethodConfig {
+    int methodId;
+    String methodName;
+};
+
 // Global configurations
 WiFiConfig wifiConfig;
 TimeConfig timeConfig;
 PrayerConfig prayerConfig;
+MethodConfig methodConfig = {5, "Egyptian General Authority of Survey"};
 
 // ================================
 // DISPLAY UPDATE STRUCTURE
@@ -696,6 +702,56 @@ bool initRTC() {
 }
 
 // ================================
+// FUNGSI SAVE/LOAD METHOD
+// ================================
+void saveMethodSelection() {
+    if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+        fs::File file = LittleFS.open("/method_selection.txt", "w");
+        if (file) {
+            file.println(methodConfig.methodId);
+            file.println(methodConfig.methodName);
+            file.flush();
+            file.close();
+            Serial.println("Method selection saved:");
+            Serial.println("  ID: " + String(methodConfig.methodId));
+            Serial.println("  Name: " + methodConfig.methodName);
+        } else {
+            Serial.println("Failed to save method selection");
+        }
+        xSemaphoreGive(settingsMutex);
+    }
+}
+
+void loadMethodSelection() {
+    if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+        if (LittleFS.exists("/method_selection.txt")) {
+            fs::File file = LittleFS.open("/method_selection.txt", "r");
+            if (file) {
+                String idStr = file.readStringUntil('\n');
+                idStr.trim();
+                methodConfig.methodId = idStr.toInt();
+                
+                if (file.available()) {
+                    methodConfig.methodName = file.readStringUntil('\n');
+                    methodConfig.methodName.trim();
+                }
+                
+                file.close();
+                Serial.println("Method selection loaded:");
+                Serial.println("  ID: " + String(methodConfig.methodId));
+                Serial.println("  Name: " + methodConfig.methodName);
+            }
+        } else {
+            // Default: Egyptian General Authority of Survey
+            methodConfig.methodId = 5;
+            methodConfig.methodName = "Egyptian General Authority of Survey";
+            Serial.println("No method selection found - using default (Egyptian)");
+        }
+        xSemaphoreGive(settingsMutex);
+    }
+}
+
+// ================================
 // PRAYER TIMES API
 // ================================
 void getPrayerTimesByCoordinates(String lat, String lon) {
@@ -718,14 +774,18 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
             month(now_t), 
             year(now_t));
     
+    // Ambil method ID dari config
+    int currentMethod = methodConfig.methodId;
+    
     String url = "http://api.aladhan.com/v1/timings/" + String(dateStr) + 
                  "?latitude=" + lat + 
                  "&longitude=" + lon + 
-                 "&method=5";
+                 "&method=" + String(currentMethod);
     
     Serial.println("\nFetching prayer times by coordinates...");
     Serial.println("   Date: " + String(dateStr));
     Serial.println("   Lat: " + lat + ", Lon: " + lon);
+    Serial.println("   Method: " + String(currentMethod) + " (" + methodConfig.methodName + ")");
     Serial.println("   URL: " + url);
     
     HTTPClient http;
@@ -784,6 +844,7 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
                 prayerConfig.isyaTime = tempIsya;
                 
                 Serial.println("\nPrayer times updated successfully:");
+                Serial.println("   Method: " + methodConfig.methodName);
                 Serial.println("   Subuh: " + prayerConfig.subuhTime);
                 Serial.println("   Dzuhur: " + prayerConfig.zuhurTime);
                 Serial.println("   Ashar: " + prayerConfig.asarTime);
@@ -820,6 +881,7 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
     client.stop();
     vTaskDelay(pdMS_TO_TICKS(100));
 }
+
 
 // ================================
 // TASKS
@@ -1400,9 +1462,6 @@ void scheduleRestart(int delaySeconds) {
 // WEB SERVER ROUTES
 // ================================
 void setupServerRoutes() {
-    // ================================
-    // 1. SERVE HTML & CSS FILES
-    // ================================
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
         IPAddress clientIP = request->client()->remoteIP();
         String sessionToken = getOrCreateSession(clientIP);
@@ -1436,9 +1495,6 @@ void setupServerRoutes() {
         request->send(response);
     });
 
-    // ================================
-    // 2. DEVICE STATUS
-    // ================================
     server.on("/devicestatus", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /devicestatus");
@@ -1489,9 +1545,6 @@ void setupServerRoutes() {
         request->send(resp);
     });
 
-    // ================================
-    // 3. PRAYER TIMES
-    // ================================
     server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest *request){
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /getprayertimes");
@@ -1512,9 +1565,6 @@ void setupServerRoutes() {
         request->send(resp);
     });
 
-    // ================================
-    // 4. CITY SELECTION ENDPOINTS
-    // ================================
     server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request){
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /getcities");
@@ -1844,9 +1894,141 @@ void setupServerRoutes() {
         request->send(resp);
     });
 
-    // ================================
-    // 5. WIFI SETTINGS
-    // ================================
+    server.on("/getmethod", HTTP_GET, [](AsyncWebServerRequest *request){
+        if (!validateSession(request)) {
+            Serial.println("Unauthorized access to /getmethod");
+            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
+            return;
+        }
+
+        String json = "{";
+        
+        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            json += "\"methodId\":" + String(methodConfig.methodId) + ",";
+            json += "\"methodName\":\"" + methodConfig.methodName + "\"";
+            xSemaphoreGive(settingsMutex);
+        } else {
+            json += "\"methodId\":5,";
+            json += "\"methodName\":\"Egyptian General Authority of Survey\"";
+        }
+        
+        json += "}";
+        
+        Serial.println("GET /getmethod: " + json);
+        
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        resp->addHeader("Connection", "close");
+        request->send(resp);
+    });
+
+    server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest *request){
+        Serial.println("\n========================================");
+        Serial.println("POST /setmethod received");
+        Serial.println("========================================");
+        
+        if (!validateSession(request)) {
+            Serial.println("ERROR: Session validation failed");
+            request->send(403, "application/json", 
+                "{\"error\":\"Session expired or invalid. Please refresh page.\"}");
+            return;
+        }
+        Serial.println("✓ Session validated");
+
+        if (!request->hasParam("methodId", true) || !request->hasParam("methodName", true)) {
+            Serial.println("ERROR: Missing parameters");
+            request->send(400, "application/json", 
+                "{\"error\":\"Missing methodId or methodName parameter\"}");
+            return;
+        }
+
+        String methodIdStr = request->getParam("methodId", true)->value();
+        String methodName = request->getParam("methodName", true)->value();
+        
+        methodIdStr.trim();
+        methodName.trim();
+        
+        int methodId = methodIdStr.toInt();
+        
+        Serial.println("Received data:");
+        Serial.println("  Method ID: " + String(methodId));
+        Serial.println("  Method Name: " + methodName);
+        
+        if (methodId < 0 || methodId > 20) {
+            Serial.println("ERROR: Invalid method ID");
+            request->send(400, "application/json", 
+                "{\"error\":\"Invalid method ID\"}");
+            return;
+        }
+
+        Serial.println("Saving to memory...");
+        
+        bool memorySuccess = false;
+        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(5000)) == pdTRUE) {
+            methodConfig.methodId = methodId;
+            methodConfig.methodName = methodName;
+            
+            xSemaphoreGive(settingsMutex);
+            Serial.println("✓ Memory updated");
+            Serial.println("  Method ID: " + String(methodConfig.methodId));
+            Serial.println("  Method Name: " + methodConfig.methodName);
+            memorySuccess = true;
+        } else {
+            Serial.println("ERROR: Cannot acquire settings mutex");
+            request->send(500, "application/json", 
+                "{\"error\":\"System busy, please retry\"}");
+            return;
+        }
+        
+        if (!memorySuccess) {
+            Serial.println("ERROR: Memory update failed");
+            request->send(500, "application/json", 
+                "{\"error\":\"Failed to update memory\"}");
+            return;
+        }
+        
+        Serial.println("Writing to LittleFS...");
+        saveMethodSelection();
+        
+        Serial.println("Updating prayer times with new method...");
+        bool willFetchPrayerTimes = false;
+        
+        if (WiFi.status() == WL_CONNECTED) {
+            if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
+                Serial.println("Fetching prayer times with new method...");
+                Serial.println("  City: " + prayerConfig.selectedCity);
+                Serial.println("  Method: " + methodName);
+                
+                getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
+                
+                Serial.println("✓ Prayer times update initiated");
+                willFetchPrayerTimes = true;
+            } else {
+                Serial.println("⚠ No coordinates available");
+            }
+        } else {
+            Serial.println("⚠ WiFi not connected");
+        }
+        
+        Serial.println("========================================");
+        Serial.println("SUCCESS: Method saved successfully");
+        Serial.println("  Method: " + methodName);
+        if (willFetchPrayerTimes) {
+            Serial.println("  Prayer times will update shortly...");
+        }
+        Serial.println("========================================\n");
+        
+        String response = "{";
+        response += "\"success\":true,";
+        response += "\"methodId\":" + String(methodId) + ",";
+        response += "\"methodName\":\"" + methodName + "\",";
+        response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
+        response += "}";
+        
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
+        resp->addHeader("Connection", "close");
+        request->send(resp);
+    });
+
     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /setwifi");
@@ -1872,9 +2054,6 @@ void setupServerRoutes() {
         }
     });
 
-    // ================================
-    // 6. ACCESS POINT SETTINGS
-    // ================================
     server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /setap");
@@ -1907,9 +2086,6 @@ void setupServerRoutes() {
         }
     });
 
-    // ================================
-    // 7. TIME SYNCHRONIZATION
-    // ================================
     server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /synctime");
@@ -1955,9 +2131,6 @@ void setupServerRoutes() {
         }
     });
 
-    // ================================
-    // 8. API ENDPOINT - FULL DATA JSON
-    // ================================
     server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request) {
         String json = "{";
         
@@ -2028,9 +2201,6 @@ void setupServerRoutes() {
         request->send(resp);
     });
 
-    // ================================
-    // 9. NOT FOUND PAGE
-    // ================================
     server.on("/notfound", HTTP_GET, [](AsyncWebServerRequest *request){
         String html = "<!DOCTYPE html><html><head>";
         html += "<meta charset='UTF-8'>";
@@ -2059,9 +2229,6 @@ void setupServerRoutes() {
         request->send(resp);
     });
 
-    // ================================
-    // 10. FACTORY RESET
-    // ================================
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /reset");
@@ -2091,6 +2258,18 @@ void setupServerRoutes() {
         if (LittleFS.exists("/city_selection.txt")) {
             LittleFS.remove("/city_selection.txt");
             Serial.println("City selection deleted");
+        }
+
+        if (LittleFS.exists("/method_selection.txt")) {
+            LittleFS.remove("/method_selection.txt");
+            Serial.println("✓ Method selection deleted");
+        }
+
+        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+            methodConfig.methodId = 5;
+            methodConfig.methodName = "Egyptian General Authority of Survey";
+            Serial.println("✓ Method reset to default (Egyptian)");
+            xSemaphoreGive(settingsMutex);
         }
     
         // RESET TIME TO 00:00:00 01/01/2000
@@ -2169,9 +2348,6 @@ void setupServerRoutes() {
         scheduleRestart(5);
     });
 
-    // ================================
-    // 11. UPLOAD CITIES.JSON
-    // ================================
     server.on("/uploadcities", HTTP_POST, 
         [](AsyncWebServerRequest *request) {
             if (!validateSession(request)) {
@@ -2305,9 +2481,6 @@ void setupServerRoutes() {
         }
     );
 
-    // ================================
-    // 12. 404 NOT FOUND HANDLER WITH SMART REDIRECT
-    // ================================
     server.onNotFound([](AsyncWebServerRequest *request){
         String url = request->url();
         IPAddress clientIP = request->client()->remoteIP();
@@ -2417,6 +2590,7 @@ void setup() {
     loadWiFiCredentials();
     loadPrayerTimes();
     loadCitySelection();
+    loadMethodSelection();
     
     // ================================
     // RTC DS3231 INIT
@@ -2497,6 +2671,14 @@ void setup() {
     WiFi.mode(WIFI_AP_STA);
     delay(100);
 
+    // ================================
+    // SET HOSTNAME - MENGIKUTI NAMA AP
+    // ================================
+    String hostname = String(wifiConfig.apSSID);
+    WiFi.setHostname(hostname.c_str());
+    Serial.printf(" Hostname Set: %s\n", hostname.c_str());
+    Serial.println("========================================");
+
     WiFi.setSleep(WIFI_PS_NONE);
 
     esp_wifi_set_ps(WIFI_PS_NONE);
@@ -2517,16 +2699,6 @@ void setup() {
     Serial.println(" Persistent: Disabled");
     Serial.println("========================================\n");
 
-    // ================================
-    // SET HOSTNAME (AP + STA)
-    // ================================
-    String hostname = wifiConfig.apSSID;
-
-    WiFi.softAPsetHostname(hostname.c_str()); // untuk AP
-    WiFi.setHostname(hostname.c_str());       // untuk STA
-
-    Serial.printf("Hostname Set: %s\n", hostname.c_str());
-    
     WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
     delay(100);
 

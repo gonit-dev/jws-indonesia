@@ -67,7 +67,7 @@
                                 <div class="large-6 medium-6 cell">
                                     <div class="grid-x grid-padding-x">
                                         <div class="large-12 medium-12 small-12 cell">
-                                            <h5><b>📡 WiFi Settings</b></h5>
+                                            <h5><strong>📡 WiFi Settings</strong></h5>
                                             <div class="grid-x grid-margin-x">
                                                 <div class="large-12 medium-12 small-12 cell">
                                                     <input type="text" id="wifiSSID" placeholder="WiFi SSID">
@@ -87,7 +87,7 @@
                                 
                                 <!-- Access Point Settings -->
                                 <div class="large-6 medium-6 cell">
-                                    <h5><b>📶 Access Point Settings</b></h5>
+                                    <h5><strong>📶 Access Point Settings</strong></h5>
                                     <div class="grid-x grid-margin-x">
                                         <div class="large-12 medium-12 small-12 cell">
                                             <input type="text" id="apSSID" placeholder="AP SSID">
@@ -110,7 +110,7 @@
                                     <div class="callout secondary">
                                         <div class="grid-x grid-padding-y">
                                             <div class="large-12 cell">
-                                                <h5><b>📊 Device Status</b></h5></h4>
+                                                <h5><strong>📊 Device Status</strong></h5></h4>
                                             </div>
                                         </div>
                                         <div class="grid-x grid-margin-x">
@@ -140,7 +140,7 @@
                         <div class="callout">                     
                             <div class="grid-x grid-padding-y">
                                 <div class="large-12 cell">
-                                    <h5><b>⏰ Time Synchronization</b></h5></h4>
+                                    <h5><strong>⏰ Time Synchronization</strong></h5></h4>
                                 </div>
                             </div>
 
@@ -150,7 +150,7 @@
                                 <div class="large-6 medium-6 cell">
                                     <div class="callout primary">
                                         <div class="large-12 medium-12 cell">
-                                            <h6><b>📱 Manual Sync from Browser</b></h6>
+                                            <h6><strong>📱 Manual Sync from Browser</strong></h6>
                                             <p class="help-text">Sinkronkan waktu dari perangkat Anda</p>
                                         </div>
                                         <div class="large-12 medium-12 cell">
@@ -165,7 +165,7 @@
                                 <div class="large-6 medium-6 cell">
                                     <div class="callout primary">
                                         <div class="large-12 medium-12 cell">
-                                            <h6><b>🌐 Auto NTP Sync <span class="label success">AUTO</span></b></h6>
+                                            <h6><strong>🌐 Auto NTP Sync <span class="label success">AUTO</span></strong></h6>
                                             <p class="help-text">Waktu otomatis sync saat WiFi terhubung</p>
                                         </div>
                                         <div class="large-12 medium-12 cell">
@@ -188,24 +188,55 @@
                         <div class="callout">
                             <div class="grid-x grid-padding-y">
                                 <div class="large-12 cell">
-                                    <h5><b>📍 Pilih Kota/Kabupaten</b></h5></h4>
+                                    <h5><strong>🕌 Pilih Kota/Kabupaten & Metode Kalkulasi</strong></h5>
                                 </div>
                             </div>
                             
                             <div class="callout secondary text-center">
                                 <p><strong>Kota/Kabupaten Terpilih:</strong></p>
-                                <h4 id="currentCity" class="text-primary">Belum dipilih</h5></h4>
+                                <h4 id="currentCity" class="text-primary">Belum dipilih</h4>
+                                <p>
+                                    <strong>Metode </strong> <span id="currentMethod">Egyptian General Authority of Survey</span>
+                                </p>
                             </div>
 
                             <div class="grid-x grid-margin-x">
-                                <div class="large-8 medium-8 small-12 cell">
+                                <!-- Dropdown Kota -->
+                                <div class="large-9 medium-8 small-12 cell">
+                                    <label>Pilih Kota/Kabupaten</label>
                                     <select id="cityDropdown">
                                         <option value="">-- Pilih Kota/Kabupaten --</option>
                                     </select>
                                 </div>
-                                <div class="large-4 medium-4 small-12 cell">
+                                
+                                <!-- Tombol Simpan Kota -->
+                                <div class="large-3 medium-4 small-12 cell">
+                                    <label class="show-for-medium">&nbsp;</label>
                                     <button class="button success expanded" onclick="saveCity()">
-                                        💾 Simpan Kota/Kabupaten
+                                        💾 Simpan Kota
+                                    </button>
+                                </div>
+                                
+                                <!-- Dropdown Metode -->
+                                <div class="large-9 medium-8 small-12 cell">
+                                    <label>Metode Kalkulasi Jadwal Shalat</label>
+                                    <select id="methodDropdown">
+                                        <option value="20">Kementerian Agama Indonesia (Kemenag)</option>
+                                        <option value="3">Muslim World League (MWL)</option>
+                                        <option value="5" selected>Egyptian General Authority of Survey</option>
+                                        <option value="2">Islamic Society of North America (ISNA)</option>
+                                        <option value="0">Shia Ithna-Ashari</option>
+                                        <option value="1">University of Islamic Sciences, Karachi</option>
+                                        <option value="4">Umm Al-Qura University, Makkah</option>
+                                        <option value="7">Institute of Geophysics, University of Tehran</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Tombol Simpan Metode -->
+                                <div class="large-3 medium-4 small-12 cell">
+                                    <label class="show-for-medium">&nbsp;</label>
+                                    <button class="button primary expanded" onclick="saveMethod()">
+                                        🕋 Simpan Metode
                                     </button>
                                 </div>
                             </div>
@@ -213,6 +244,7 @@
                             <div class="callout secondary">
                                 <p class="help-text text-center">
                                     ℹ️ Pilih kota/Kabupaten untuk mendapatkan jadwal shalat yang akurat<br>
+                                    ℹ️ Pilih Metode untuk mengganti perhitungan<br>
                                     🔄 Jadwal akan otomatis update setelah kota/Kabupaten dipilih
                                 </p>
                             </div>
@@ -226,7 +258,7 @@
                         <div class="callout warning">
                             <div class="grid-x grid-padding-y">
                                 <div class="large-12 cell">
-                                    <h5><b>📤 Upload Cities.json</b></h5></h4>
+                                    <h5><strong>📤 Upload Cities.json</strong></h5></h4>
                                 </div>
                             </div>
                             
@@ -288,7 +320,7 @@
                         <div class="callout">
                             <div class="grid-x grid-padding-y">
                                 <div class="large-12 cell">
-                                    <h5><b>🕌 Jadwal Shalat</b></h5></h4>
+                                    <h5><strong>🕌 Jadwal Shalat</strong></h5></h4>
                                 </div>
                             </div>
 
@@ -324,7 +356,7 @@
                                 <p class="help-text text-center">
                                     ℹ️ Jadwal shalat berdasarkan kota/Kabupaten yang dipilih<br>
                                     📅 Auto-refresh setiap tengah malam (00:00 WIB)<br>
-                                    🕋 Metode kalkulasi: Egyptian General Authority of Survey<br>
+                                    🕋 <span id="currentMethod">Egyptian General Authority of Survey</span><br>
                                     🔄 Update otomatis saat device online tanpa restart
                                 </p>
                             </div>
@@ -338,7 +370,7 @@
                         <div class="callout alert">
                             <div class="grid-x grid-padding-y">
                                 <div class="large-12 cell">
-                                    <h5><b>⚠️ Factory Reset</b></h5></h4>
+                                    <h5><strong>⚠️ Factory Reset</strong></h5></h4>
                                     <p>Reset semua pengaturan (WiFi, waktu, jadwal shalat) ke default. Device akan restart.</p>
                                 </div>
                             </div>
@@ -367,13 +399,6 @@
         </div>
     </div>
 
-    <!-- Foundation JavaScript -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/foundation-sites@6.8.1/dist/js/foundation.min.js"></script>
-    <script>
-        $(document).foundation();
-    </script>
-
     <script>
         // ================================
         // GLOBAL VARIABLES
@@ -383,7 +408,6 @@
         let loadAttempts = 0;
         const MAX_LOAD_ATTEMPTS = 3;
         
-        // Real-time clock sync
         let serverTimestamp = 0;
         let localStartTime = 0;
         let serverUptimeStart = 0;
@@ -515,10 +539,8 @@
             const toast = document.getElementById('toast');
             toast.textContent = message;
             
-            // Reset classes
             toast.className = 'toast callout';
             
-            // Add type class
             if (type === 'error') {
                 toast.classList.add('alert');
             } else if (type === 'warning') {
@@ -544,7 +566,6 @@
                 
                 isOnline = data.connected === true;
                 
-                // Update WiFi info
                 document.getElementById('wifiName').textContent = data.ssid || 'Tidak Terhubung';
                 document.getElementById('ipAddress').textContent = data.ip || '-';
                 document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Synced' : '❌ Not Synced';
@@ -553,7 +574,6 @@
                     document.getElementById('ntpServerUsed').textContent = data.ntpServer || '-';
                 }
                 
-                // Update internet status badge (Foundation Label)
                 const statusBadge = document.getElementById('internetStatus');
                 if (isOnline) {
                     statusBadge.textContent = '✅ Online';
@@ -588,7 +608,6 @@
                     }
                 }
                 
-                // Sync uptime
                 if (data.uptime !== undefined) {
                     serverUptimeStart = data.uptime;
                     console.log('⏱️ Uptime synced:', serverUptimeStart, 'seconds');
@@ -1297,12 +1316,138 @@
         }
 
         // ================================
+        // METHOD SELECTION FUNCTIONS
+        // ================================
+        async function loadCurrentMethod() {
+            console.log('📖 Loading current method...');
+            
+            try {
+                const response = await secureFetch('/getmethod', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                
+                const data = await response.json();
+                
+                const currentMethodSpan = document.getElementById('currentMethod');
+                const methodDropdown = document.getElementById('methodDropdown');
+                const prayerMethodInfo = document.getElementById('prayerMethodInfo');
+                
+                if (data.methodId !== undefined) {
+                    currentMethodSpan.textContent = data.methodName;
+                    currentMethodSpan.className = 'label success';
+                    
+                    methodDropdown.value = data.methodId;
+                    
+                    if (prayerMethodInfo) {
+                        prayerMethodInfo.textContent = data.methodName;
+                    }
+                    
+                    console.log('✅ Method loaded:', data.methodName);
+                } else {
+                    currentMethodSpan.textContent = 'Egyptian General Authority of Survey';
+                    currentMethodSpan.className = 'label success';
+                    methodDropdown.value = '5';
+                    
+                    if (prayerMethodInfo) {
+                        prayerMethodInfo.textContent = 'Egyptian General Authority of Survey';
+                    }
+                }
+                
+            } catch (error) {
+                console.error('❌ Error loading current method:', error);
+                document.getElementById('currentMethod').textContent = 'Error loading';
+            }
+        }
+
+        async function saveMethod() {
+            const dropdown = document.getElementById('methodDropdown');
+            const methodId = dropdown.value;
+            const methodName = dropdown.options[dropdown.selectedIndex].text;
+            
+            if (!methodId) {
+                showToast('❌ Pilih metode terlebih dahulu', 'error');
+                return;
+            }
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Menyimpan...';
+            
+            try {
+                const formData = new URLSearchParams();
+                formData.append('methodId', methodId);
+                formData.append('methodName', methodName);
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await secureFetch('/setmethod', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json'
+                    },
+                    body: formData.toString(),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    showToast('✅ Metode kalkulasi berhasil disimpan!', 'success');
+                    
+                    document.getElementById('currentMethod').textContent = methodName;
+                    document.getElementById('currentMethod').className = 'label success';
+                    
+                    const prayerMethodInfo = document.getElementById('prayerMethodInfo');
+                    if (prayerMethodInfo) {
+                        prayerMethodInfo.textContent = methodName;
+                    }
+                    
+                    if (result.prayerTimesUpdating) {
+                        setTimeout(() => {
+                            showToast('🔄 Jadwal shalat sedang diperbarui...', 'warning');
+                        }, 1500);
+                        
+                        setTimeout(() => {
+                            loadSavedPrayerTimes();
+                        }, 4000);
+                    } else {
+                        showToast('ℹ️ Pilih kota terlebih dahulu untuk update jadwal', 'warning');
+                    }
+                    
+                } else {
+                    throw new Error('Failed to save method');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error saving method:', error);
+                showToast('❌ Gagal menyimpan metode', 'error');
+                
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        // ================================
         // INITIALIZATION
         // ================================
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 Page loaded - Islamic Prayer Clock (Foundation CSS)');
             
             loadCities();
+            loadCurrentMethod();
             updateDeviceStatus();
             loadSavedPrayerTimes();
             
