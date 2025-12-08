@@ -357,13 +357,13 @@ displayQueue    // UI update requests (10 items)
 - Token-based session (32 karakter random)
 - Session expired: 15 menit (900 detik)
 - Maksimal 5 session bersamaan
-- Auto-redirect ke `/notfound` jika session invalid
+- Auto-redirect ke `notfound` jika session invalid
 - Session auto-refresh saat digunakan
 
 **URL Protection:**
-- Protected endpoints: Redirect ke `/notfound` jika no session
+- Protected endpoints: Redirect ke `notfound` jika no session
 - Static assets: Return 404 plain text
-- Random URLs: Redirect ke `/notfound`
+- Random URLs: Redirect ke `notfound`
 
 ### 💡 Display Configuration
 
