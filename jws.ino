@@ -1396,6 +1396,7 @@ void scheduleRestart(int delaySeconds) {
 // WEB SERVER ROUTES
 // ================================
 void setupServerRoutes() {
+    
     // ================================
     // 1. SERVE HTML & CSS FILES
     // ================================
@@ -1409,6 +1410,8 @@ void setupServerRoutes() {
         
         response->addHeader("Set-Cookie", 
             "session=" + sessionToken + "; Max-Age=3600; Path=/; SameSite=Strict");
+        response->addHeader("Connection", "close");  // FORCE CLOSE
+        response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         
         request->send(response);
     });
@@ -1420,7 +1423,14 @@ void setupServerRoutes() {
             return;
         }
         
-        request->send(LittleFS, "/assets/css/foundation.css", "text/css");
+        AsyncWebServerResponse *response = request->beginResponse(
+            LittleFS, "/assets/css/foundation.css", "text/css"
+        );
+        
+        response->addHeader("Connection", "close");  // FORCE CLOSE
+        response->addHeader("Cache-Control", "public, max-age=3600");  // CACHE 1 JAM
+        
+        request->send(response);
     });
 
     // ================================
@@ -1470,7 +1480,10 @@ void setupServerRoutes() {
         response += "\"freeHeap\":\"" + String(ESP.getFreeHeap()) + "\"";
         response += "}";
         
-        request->send(200, "application/json", response);
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
+        resp->addHeader("Connection", "close");  // FORCE CLOSE
+        resp->addHeader("Cache-Control", "no-cache");
+        request->send(resp);
     });
 
     // ================================
@@ -1490,7 +1503,10 @@ void setupServerRoutes() {
         json += "\"maghrib\":\"" + prayerConfig.maghribTime + "\",";
         json += "\"isya\":\"" + prayerConfig.isyaTime + "\"";
         json += "}";
-        request->send(200, "application/json", json);
+        
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        resp->addHeader("Connection", "close");
+        request->send(resp);
     });
 
     // ================================
@@ -1517,7 +1533,7 @@ void setupServerRoutes() {
             "application/json"
         );
         
-        response->addHeader("Connection", "close");
+        response->addHeader("Connection", "close");  // FORCE CLOSE
         response->addHeader("Access-Control-Allow-Origin", "*");
         response->addHeader("Cache-Control", "public, max-age=3600");
         
@@ -1784,7 +1800,9 @@ void setupServerRoutes() {
         response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
         response += "}";
         
-        request->send(200, "application/json", response);
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
+        resp->addHeader("Connection", "close");  // FORCE CLOSE
+        request->send(resp);
     });
 
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -1817,7 +1835,10 @@ void setupServerRoutes() {
         json += "}";
         
         Serial.println("GET /getcityinfo: " + json);
-        request->send(200, "application/json", json);
+        
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        resp->addHeader("Connection", "close");
+        request->send(resp);
     });
 
     // ================================
@@ -1838,7 +1859,9 @@ void setupServerRoutes() {
             
             Serial.println("WiFi credentials saved successfully");
             
-            request->send(200, "text/plain", "OK");
+            AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
+            resp->addHeader("Connection", "close");
+            request->send(resp);
             
             scheduleRestart(5);
         } else {
@@ -1871,7 +1894,9 @@ void setupServerRoutes() {
             
             Serial.println("AP Settings berhasil disimpan");
             
-            request->send(200, "text/plain", "OK");
+            AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
+            resp->addHeader("Connection", "close");
+            request->send(resp);
             
             scheduleRestart(5);
         } else {
@@ -1919,7 +1944,9 @@ void setupServerRoutes() {
                 Serial.printf("Time synced from browser: %02d:%02d:%02d %02d/%02d/%04d\n", h, i, s, d, m, y);
             }
 
-            request->send(200, "text/plain", "Waktu berhasil di-sync!");
+            AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "Waktu berhasil di-sync!");
+            resp->addHeader("Connection", "close");
+            request->send(resp);
         } else {
             request->send(400, "text/plain", "Data waktu tidak lengkap");
         }
@@ -1929,17 +1956,9 @@ void setupServerRoutes() {
     // 8. API ENDPOINT - FULL DATA JSON
     // ================================
     server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request) {
-        // Optional: Uncomment untuk proteksi API publik
-        // if (!validateSession(request)) {
-        //     request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
-        //     return;
-        // }
-
         String json = "{";
         
-        // ================================
-        // 1. TIME & DATE
-        // ================================
+        // TIME & DATE
         if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
             char timeStr[10], dateStr[12], dayStr[15];
             
@@ -1965,9 +1984,7 @@ void setupServerRoutes() {
             xSemaphoreGive(timeMutex);
         }
         
-        // ================================
-        // 2. PRAYER TIMES & LOCATION
-        // ================================
+        // PRAYER TIMES & LOCATION
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
             json += "\"prayerTimes\":{";
             json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
@@ -1988,11 +2005,11 @@ void setupServerRoutes() {
             xSemaphoreGive(settingsMutex);
         }
         
-        // ================================
-        // 3. DEVICE STATUS
-        // ================================
+        // DEVICE STATUS
         json += "\"device\":{";
         json += "\"wifiConnected\":" + String((WiFi.status() == WL_CONNECTED && wifiConfig.isConnected) ? "true" : "false") + ",";
+        json += "\"wifiSSID\":\"" + String(WiFi.SSID()) + "\",";
+        json += "\"ip\":\"" + wifiConfig.localIP.toString() + "\",";
         json += "\"apIP\":\"" + WiFi.softAPIP().toString() + "\",";
         json += "\"ntpSynced\":" + String(timeConfig.ntpSynced ? "true" : "false") + ",";
         json += "\"ntpServer\":\"" + timeConfig.ntpServer + "\",";
@@ -2004,7 +2021,10 @@ void setupServerRoutes() {
         
         Serial.println("API /api/data requested");
         
-        request->send(200, "application/json", json);
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        resp->addHeader("Connection", "close");
+        resp->addHeader("Cache-Control", "no-cache");
+        request->send(resp);
     });
 
     // ================================
@@ -2033,7 +2053,9 @@ void setupServerRoutes() {
         html += "<a href='/' class='btn'>← Back to Home</a>";
         html += "</div></body></html>";
         
-        request->send(404, "text/html", html);
+        AsyncWebServerResponse *resp = request->beginResponse(404, "text/html", html);
+        resp->addHeader("Connection", "close");
+        request->send(resp);
     });
 
     // ================================
@@ -2050,19 +2072,16 @@ void setupServerRoutes() {
         Serial.println("FACTORY RESET STARTED");
         Serial.println("========================================");
         
-        // ================================
-        // 1. DELETE ALL FILES
-        // ================================
+        // DELETE ALL FILES
         if (LittleFS.exists("/wifi_creds.txt")) {
             LittleFS.remove("/wifi_creds.txt");
             Serial.println("✓ WiFi creds deleted");
         }
-        
         if (LittleFS.exists("/prayer_times.txt")) {
             LittleFS.remove("/prayer_times.txt");
             Serial.println("✓ Prayer times deleted");
         }
-        
+    
         if (LittleFS.exists("/ap_creds.txt")) {
             LittleFS.remove("/ap_creds.txt");
             Serial.println("✓ AP creds deleted");
@@ -2072,22 +2091,18 @@ void setupServerRoutes() {
             LittleFS.remove("/city_selection.txt");
             Serial.println("✓ City selection deleted");
         }
-        
-        // ================================
-        // 2. RESET TIME TO 00:00:00 01/01/2000
-        // ================================
+    
+        // RESET TIME TO 00:00:00 01/01/2000
         Serial.println("\nResetting time to default...");
         
-        if (xSemaphoreTake(timeMutex, portMAX_DELAY)== pdTRUE) {
+        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
             setTime(0, 0, 0, 1, 1, 2000);
             timeConfig.currentTime = now();
             timeConfig.ntpSynced = false;
             timeConfig.ntpServer = "";
             Serial.println("✓ System time reset to: 00:00:00 01/01/2000");
                     
-            // ================================
-            // 3. SAVE TO RTC IF AVAILABLE
-            // ================================
+            // SAVE TO RTC IF AVAILABLE
             if (rtcAvailable) {
                 DateTime resetTime(2000, 1, 1, 0, 0, 0);
                 rtc.adjust(resetTime);
@@ -2105,10 +2120,8 @@ void setupServerRoutes() {
             
             xSemaphoreGive(timeMutex);
         }
-        
-        // ================================
-        // 4. CLEAR MEMORY SETTINGS
-        // ================================
+    
+        // CLEAR MEMORY SETTINGS
         if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
             wifiConfig.routerSSID = "";
             wifiConfig.routerPassword = "";
@@ -2132,14 +2145,10 @@ void setupServerRoutes() {
             xSemaphoreGive(settingsMutex);
         }
         
-        // ================================
-        // 5. UPDATE DISPLAY
-        // ================================
+        // UPDATE DISPLAY
         updateCityDisplay();
         
-        // ================================
-        // 6. DISCONNECT WIFI
-        // ================================
+        // DISCONNECT WIFI
         WiFi.disconnect(true);
         Serial.println("✓ WiFi disconnected");
         
@@ -2152,7 +2161,9 @@ void setupServerRoutes() {
         Serial.println("Device will restart in 5 seconds...");
         Serial.println("========================================\n");
         
-        request->send(200, "text/plain", "OK");
+        AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
+        resp->addHeader("Connection", "close");
+        request->send(resp);
         
         scheduleRestart(5);
     });
@@ -2192,10 +2203,12 @@ void setupServerRoutes() {
                 }
             }
             
-            request->send(200, "application/json", "{\"success\":true}");
+            AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", "{\"success\":true}");
+            resp->addHeader("Connection", "close");
+            request->send(resp);
         },
         [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-            static fs::File  uploadFile;
+            static fs::File uploadFile;
             static size_t totalSize = 0;
             static unsigned long uploadStartTime = 0;
             
@@ -2292,7 +2305,7 @@ void setupServerRoutes() {
     );
 
     // ================================
-    // 11. 404 NOT FOUND HANDLER WITH SMART REDIRECT
+    // 12. 404 NOT FOUND HANDLER WITH SMART REDIRECT
     // ================================
     server.onNotFound([](AsyncWebServerRequest *request){
         String url = request->url();
@@ -2301,9 +2314,7 @@ void setupServerRoutes() {
         Serial.printf("\n[404] Client: %s | URL: %s\n", 
             clientIP.toString().c_str(), url.c_str());
         
-        // ================================
         // RULE 1: Static Assets - Return 404 Plain Text
-        // ================================
         if (url.startsWith("/assets/") || 
             url.endsWith(".css") || 
             url.endsWith(".js") || 
@@ -2322,9 +2333,6 @@ void setupServerRoutes() {
             return;
         }
         
-        // ================================
-        // RULE 2: Protected API Endpoints - Check Session
-        // ================================
         bool isProtectedEndpoint = (
             url.startsWith("/api/") ||
             url == "/devicestatus" ||
@@ -2339,7 +2347,6 @@ void setupServerRoutes() {
         );
         
         if (isProtectedEndpoint) {
-            // Validate session untuk endpoint yang dilindungi
             if (!validateSession(request)) {
                 Serial.println("   → Protected endpoint, invalid session");
                 Serial.println("   → Redirecting to /notfound");
@@ -2347,15 +2354,11 @@ void setupServerRoutes() {
                 return;
             }
             
-            // Session valid tapi endpoint tidak ada
             Serial.println("   → Protected endpoint not found (session valid)");
             request->redirect("/notfound");
             return;
         }
         
-        // ================================
-        // RULE 3: Random URLs - Direct Redirect
-        // ================================
         Serial.println("   → Invalid URL, redirecting to /notfound");
         request->redirect("/notfound");
     });
