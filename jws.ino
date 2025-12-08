@@ -1396,66 +1396,46 @@ void scheduleRestart(int delaySeconds) {
 // WEB SERVER ROUTES
 // ================================
 void setupServerRoutes() {
-    
     // ================================
-    // 1. SERVE HTML - ROOT PAGE
+    // 1. SERVE HTML & CSS FILES
     // ================================
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
         IPAddress clientIP = request->client()->remoteIP();
-        Serial.printf("[ROOT] Request from: %s\n", clientIP.toString().c_str());
-        
         String sessionToken = getOrCreateSession(clientIP);
         
         AsyncWebServerResponse *response = request->beginResponse(
-            LittleFS, 
-            "/index.html", 
-            "text/html"
+            LittleFS, "/index.html", "text/html"
         );
         
         response->addHeader("Set-Cookie", 
             "session=" + sessionToken + "; Max-Age=3600; Path=/; SameSite=Strict");
-        response->addHeader("Connection", "keep-alive");
-        response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        response->addHeader("Access-Control-Allow-Origin", "*");
         
         request->send(response);
-        Serial.printf("[ROOT] Sent to: %s\n", clientIP.toString().c_str());
     });
     
-    // ================================
-    // 2. SERVE CSS
-    // ================================
     server.on("/assets/css/foundation.css", HTTP_GET, [](AsyncWebServerRequest *request){
-        Serial.printf("[CSS] Request from: %s\n", 
-            request->client()->remoteIP().toString().c_str());
+        if (!validateSession(request)) {
+            Serial.println("Unauthorized access to CSS");
+            request->send(403, "text/css", "/* Forbidden */");
+            return;
+        }
         
-        AsyncWebServerResponse *response = request->beginResponse(
-            LittleFS, 
-            "/assets/css/foundation.css", 
-            "text/css"
-        );
-        
-        response->addHeader("Connection", "keep-alive");
-        response->addHeader("Cache-Control", "public, max-age=86400");
-        response->addHeader("Access-Control-Allow-Origin", "*");
-        
-        request->send(response);
+        request->send(LittleFS, "/assets/css/foundation.css", "text/css");
     });
 
     // ================================
-    // 3. DEVICE STATUS
+    // 2. DEVICE STATUS
     // ================================
     server.on("/devicestatus", HTTP_GET, [](AsyncWebServerRequest *request) {
-        Serial.printf("[STATUS] From: %s\n", 
-            request->client()->remoteIP().toString().c_str());
-        
         if (!validateSession(request)) {
-            Serial.println("[STATUS] Invalid session");
-            request->redirect("/notfound");
+            Serial.println("Unauthorized access to /devicestatus");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
             return;
         }
 
-        char timeStr[20], dateStr[20];
+        char timeStr[20];
+        char dateStr[20];
+        
         sprintf(timeStr, "%02d:%02d:%02d",
                 hour(timeConfig.currentTime),
                 minute(timeConfig.currentTime),
@@ -1470,12 +1450,15 @@ void setupServerRoutes() {
                                 wifiConfig.isConnected && 
                                 wifiConfig.localIP.toString() != "0.0.0.0");
         
-        String ssid = isWiFiConnected ? WiFi.SSID() : "";
-        String ip = isWiFiConnected ? wifiConfig.localIP.toString() : "-";
+        String ssid = "";
+        String ip = "-";
         
-        String response;
-        response.reserve(256);
-        response = "{";
+        if (isWiFiConnected) {
+            ssid = WiFi.SSID();
+            ip = wifiConfig.localIP.toString();
+        }
+        
+        String response = "{";
         response += "\"connected\":" + String(isWiFiConnected ? "true" : "false") + ",";
         response += "\"ssid\":\"" + ssid + "\",";
         response += "\"ip\":\"" + ip + "\",";
@@ -1487,54 +1470,43 @@ void setupServerRoutes() {
         response += "\"freeHeap\":\"" + String(ESP.getFreeHeap()) + "\"";
         response += "}";
         
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
-        resp->addHeader("Connection", "keep-alive");
-        resp->addHeader("Cache-Control", "no-cache");
-        resp->addHeader("Access-Control-Allow-Origin", "*");
-        request->send(resp);
+        request->send(200, "application/json", response);
     });
 
     // ================================
-    // 4. GET PRAYER TIMES
+    // 3. PRAYER TIMES
     // ================================
     server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest *request){
         if (!validateSession(request)) {
-            Serial.println("[PRAYER] Invalid session");
-            request->redirect("/notfound");
+            Serial.println("Unauthorized access to /getprayertimes");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
             return;
         }
 
-        String json;
-        json.reserve(256);
-        json = "{";
+        String json = "{";
         json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
         json += "\"dzuhur\":\"" + prayerConfig.zuhurTime + "\",";
         json += "\"ashar\":\"" + prayerConfig.asarTime + "\",";
         json += "\"maghrib\":\"" + prayerConfig.maghribTime + "\",";
         json += "\"isya\":\"" + prayerConfig.isyaTime + "\"";
         json += "}";
-        
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Connection", "keep-alive");
-        resp->addHeader("Access-Control-Allow-Origin", "*");
-        request->send(resp);
+        request->send(200, "application/json", json);
     });
 
     // ================================
-    // 5. GET CITIES LIST
+    // 4. CITY SELECTION ENDPOINTS
     // ================================
     server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request){
-        Serial.printf("[CITIES] Request from: %s\n", 
-            request->client()->remoteIP().toString().c_str());
-        
         if (!validateSession(request)) {
-            Serial.println("[CITIES] Invalid session");
-            request->redirect("/notfound");
+            Serial.println("Unauthorized access to /getcities");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
             return;
         }
 
+        Serial.println("GET /getcities");
+        
         if (!LittleFS.exists("/cities.json")) {
-            Serial.println("[CITIES] File not found");
+            Serial.println("cities.json not found");
             request->send(404, "application/json", "[]");
             return;
         }
@@ -1542,33 +1514,53 @@ void setupServerRoutes() {
         AsyncWebServerResponse *response = request->beginResponse(
             LittleFS, 
             "/cities.json", 
-            "application/json",
-            false
+            "application/json"
         );
         
-        response->addHeader("Connection", "keep-alive");
+        response->addHeader("Connection", "close");
         response->addHeader("Access-Control-Allow-Origin", "*");
         response->addHeader("Cache-Control", "public, max-age=3600");
         
+        response->setContentLength(LittleFS.open("/cities.json", "r").size());
+        
         request->send(response);
-        Serial.println("[CITIES] Stream started");
+        
+        Serial.println("cities.json sent");
     });
 
-    // ================================
-    // 6. SET CITY
-    // ================================
     server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request){
-        Serial.printf("\n[SETCITY] Request from: %s\n", 
-            request->client()->remoteIP().toString().c_str());
+        Serial.println("\n========================================");
+        Serial.println("POST /setcity received");
+        Serial.print("Client IP: ");
+        Serial.println(request->client()->remoteIP().toString());
+        Serial.println("========================================");
         
         if (!validateSession(request)) {
-            Serial.println("[SETCITY] Invalid session");
-            request->redirect("/notfound");
+            Serial.println("ERROR: Session validation failed");
+            
+            int headers = request->headers();
+            Serial.printf("Request headers (%d):\n", headers);
+            for(int i = 0; i < headers; i++) {
+                const AsyncWebHeader* h = request->getHeader(i);
+                Serial.printf("  %s: %s\n", h->name().c_str(), h->value().c_str());
+            }
+            
+            request->send(403, "application/json", 
+                "{\"error\":\"Session expired or invalid. Please refresh page.\"}");
             return;
         }
+        Serial.println("✓ Session validated");
 
         if (!request->hasParam("city", true)) {
-            Serial.println("[SETCITY] Missing city parameter");
+            Serial.println("ERROR: Missing 'city' parameter");
+            
+            int params = request->params();
+            Serial.printf("Received parameters (%d):\n", params);
+            for(int i = 0; i < params; i++) {
+                const AsyncWebParameter* p = request->getParam(i);
+                Serial.printf("  %s = %s\n", p->name().c_str(), p->value().c_str());
+            }
+            
             request->send(400, "application/json", 
                 "{\"error\":\"Missing city parameter\"}");
             return;
@@ -1577,23 +1569,41 @@ void setupServerRoutes() {
         String cityApi = request->getParam("city", true)->value();
         cityApi.trim();
         
-        String cityName = request->hasParam("cityName", true) ? 
-            request->getParam("cityName", true)->value() : cityApi;
-        cityName.trim();
+        String cityName = "";
+        if (request->hasParam("cityName", true)) {
+            cityName = request->getParam("cityName", true)->value();
+            cityName.trim();
+        }
         
-        String lat = request->hasParam("lat", true) ? 
-            request->getParam("lat", true)->value() : "";
-        lat.trim();
+        String lat = "";
+        if (request->hasParam("lat", true)) {
+            lat = request->getParam("lat", true)->value();
+            lat.trim();
+        }
         
-        String lon = request->hasParam("lon", true) ? 
-            request->getParam("lon", true)->value() : "";
-        lon.trim();
+        String lon = "";
+        if (request->hasParam("lon", true)) {
+            lon = request->getParam("lon", true)->value();
+            lon.trim();
+        }
         
-        Serial.printf("[SETCITY] City: %s, Lat: %s, Lon: %s\n", 
-            cityApi.c_str(), lat.c_str(), lon.c_str());
-
-        if (cityApi.length() == 0 || cityApi.length() > 100) {
-            request->send(400, "application/json", "{\"error\":\"Invalid city name\"}");
+        Serial.println("Received data:");
+        Serial.println("  City API: " + cityApi);
+        Serial.println("  City Name: " + cityName);
+        Serial.println("  Latitude: " + lat);
+        Serial.println("  Longitude: " + lon);
+        
+        if (cityApi.length() == 0) {
+            Serial.println("ERROR: Empty city API name");
+            request->send(400, "application/json", 
+                "{\"error\":\"City name cannot be empty\"}");
+            return;
+        }
+        
+        if (cityApi.length() > 100) {
+            Serial.println("ERROR: City API name too long");
+            request->send(400, "application/json", 
+                "{\"error\":\"City name too long (max 100 chars)\"}");
             return;
         }
 
@@ -1601,103 +1611,235 @@ void setupServerRoutes() {
             float latVal = lat.toFloat();
             float lonVal = lon.toFloat();
             
-            if (latVal < -90.0 || latVal > 90.0 || lonVal < -180.0 || lonVal > 180.0) {
-                request->send(400, "application/json", "{\"error\":\"Invalid coordinates\"}");
+            if (latVal < -90.0 || latVal > 90.0) {
+                Serial.println("ERROR: Invalid latitude range");
+                request->send(400, "application/json", 
+                    "{\"error\":\"Invalid latitude value\"}");
                 return;
             }
+            
+            if (lonVal < -180.0 || lonVal > 180.0) {
+                Serial.println("ERROR: Invalid longitude range");
+                request->send(400, "application/json", 
+                    "{\"error\":\"Invalid longitude value\"}");
+                return;
+            }
+        } else {
+            Serial.println("WARNING: Coordinates not provided");
         }
 
-        String response;
-        response.reserve(256);
-        response = "{\"success\":true,\"city\":\"" + cityName + 
-                   "\",\"cityApi\":\"" + cityApi + "\",\"message\":\"Saving...\"}";
+        Serial.println("Saving to memory...");
         
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
-        resp->addHeader("Connection", "close");
-        resp->addHeader("Access-Control-Allow-Origin", "*");
-        request->send(resp);
-        
-        Serial.println("[SETCITY] Response sent, processing...");
-        
-        static String s_cityApi, s_cityName, s_lat, s_lon;
-        s_cityApi = cityApi;
-        s_cityName = cityName;
-        s_lat = lat;
-        s_lon = lon;
-        
-        xTaskCreate([](void* param) {
-            vTaskDelay(pdMS_TO_TICKS(100));
+        bool memorySuccess = false;
+        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(5000)) == pdTRUE) {
+            prayerConfig.selectedCity = cityApi;
+            prayerConfig.selectedCityName = (cityName.length() > 0) ? cityName : cityApi; 
+            prayerConfig.latitude = lat;
+            prayerConfig.longitude = lon;
             
+            xSemaphoreGive(settingsMutex);
+            Serial.println("✓ Memory updated");
+            Serial.println("  selectedCity (API): " + prayerConfig.selectedCity);
+            Serial.println("  selectedCityName (Display): " + prayerConfig.selectedCityName);
+            memorySuccess = true;
+        } else {
+            Serial.println("ERROR: Cannot acquire settings mutex (timeout)");
+            request->send(500, "application/json", 
+                "{\"error\":\"System busy, please retry in a moment\"}");
+            return;
+        }
+        
+        if (!memorySuccess) {
+            Serial.println("ERROR: Memory update failed");
+            request->send(500, "application/json", 
+                "{\"error\":\"Failed to update memory\"}");
+            return;
+        }
+        
+        Serial.println("Writing to LittleFS...");
+        
+        bool fileSuccess = false;
+        int retryCount = 0;
+        const int maxRetries = 3;
+        
+        while (!fileSuccess && retryCount < maxRetries) {
             if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(5000)) == pdTRUE) {
-                prayerConfig.selectedCity = s_cityApi;
-                prayerConfig.selectedCityName = s_cityName;
-                prayerConfig.latitude = s_lat;
-                prayerConfig.longitude = s_lon;
+                fs::File file = LittleFS.open("/city_selection.txt", "w");
+                if (file) {
+                    file.println(prayerConfig.selectedCity);
+                    file.println(prayerConfig.selectedCityName);
+                    file.println(prayerConfig.latitude);
+                    file.println(prayerConfig.longitude);
+                    file.flush();
+                    
+                    size_t bytesWritten = file.size();
+                    file.close();
+                    
+                    if (bytesWritten > 0) {
+                        fileSuccess = true;
+                        Serial.printf("✓ File saved (%d bytes)\n", bytesWritten);
+                        Serial.println("  Line 1 (API): " + prayerConfig.selectedCity);
+                        Serial.println("  Line 2 (Display): " + prayerConfig.selectedCityName);
+                        Serial.println("  Line 3 (Lat): " + prayerConfig.latitude);
+                        Serial.println("  Line 4 (Lon): " + prayerConfig.longitude);
+                    } else {
+                        Serial.println("WARNING: File is empty after write");
+                    }
+                } else {
+                    Serial.printf("ERROR: Cannot open file (attempt %d/%d)\n", 
+                        retryCount + 1, maxRetries);
+                }
                 xSemaphoreGive(settingsMutex);
+            } else {
+                Serial.println("ERROR: Cannot acquire mutex for file write");
             }
             
-            saveCitySelection();
-            updateCityDisplay();
-            
-            if (WiFi.status() == WL_CONNECTED && s_lat.length() > 0 && s_lon.length() > 0) {
-                getPrayerTimesByCoordinates(s_lat, s_lon);
+            if (!fileSuccess) {
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    Serial.printf("Retrying file write (%d/%d)...\n", retryCount + 1, maxRetries);
+                    vTaskDelay(pdMS_TO_TICKS(100));
+                }
             }
-            
-            Serial.println("[SETCITY-BG] Complete\n");
-            vTaskDelete(NULL);
-        }, "SaveCity", 4096, NULL, 1, NULL);
+        }
+        
+        if (!fileSuccess) {
+            Serial.println("ERROR: Failed to save to file after retries");
+            request->send(500, "application/json", 
+                "{\"error\":\"Failed to save city selection to storage\"}");
+            return;
+        }
+        
+        vTaskDelay(pdMS_TO_TICKS(100));
+        
+        if (LittleFS.exists("/city_selection.txt")) {
+            fs::File verifyFile = LittleFS.open("/city_selection.txt", "r");
+            if (verifyFile) {
+                size_t fileSize = verifyFile.size();
+                
+                Serial.println("File content verification:");
+                String line1 = verifyFile.readStringUntil('\n'); line1.trim();
+                String line2 = verifyFile.readStringUntil('\n'); line2.trim();
+                String line3 = verifyFile.readStringUntil('\n'); line3.trim();
+                String line4 = verifyFile.readStringUntil('\n'); line4.trim();
+                
+                Serial.println("  Line 1: " + line1);
+                Serial.println("  Line 2: " + line2);
+                Serial.println("  Line 3: " + line3);
+                Serial.println("  Line 4: " + line4);
+                
+                verifyFile.close();
+                Serial.printf("✓ File verified (size: %d bytes)\n", fileSize);
+            }
+        } else {
+            Serial.println("WARNING: File verification failed - file not found");
+        }
+        
+        Serial.println("Updating display...");
+        updateCityDisplay();
+        Serial.println("✓ Display updated");
+        
+        bool willFetchPrayerTimes = false;
+        
+        if (WiFi.status() == WL_CONNECTED) {
+            if (lat.length() > 0 && lon.length() > 0) {
+                Serial.println("Fetching prayer times with coordinates...");
+                Serial.println("  City: " + prayerConfig.selectedCity);
+                Serial.println("  Lat: " + lat);
+                Serial.println("  Lon: " + lon);
+                
+                getPrayerTimesByCoordinates(lat, lon);
+                
+                Serial.println("✓ Prayer times update initiated");
+                willFetchPrayerTimes = true;
+            } else {
+                Serial.println("No coordinates provided - cannot fetch prayer times");
+            }
+        } else {
+            Serial.println("WiFi not connected - prayer times will update when online");
+        }
+        
+        Serial.println("========================================");
+        Serial.println("SUCCESS: City saved successfully");
+        Serial.println("  API Name: " + prayerConfig.selectedCity);
+        Serial.println("  Display Name: " + prayerConfig.selectedCityName);
+        if (willFetchPrayerTimes) {
+            Serial.println("Prayer times will update shortly...");
+        }
+        Serial.println("========================================\n");
+        
+        String response = "{";
+        response += "\"success\":true,";
+        response += "\"city\":\"" + prayerConfig.selectedCityName + "\",";
+        response += "\"cityApi\":\"" + prayerConfig.selectedCity + "\",";
+        
+        if (lat.length() > 0) {
+            response += "\"lat\":\"" + lat + "\",";
+        }
+        
+        if (lon.length() > 0) {
+            response += "\"lon\":\"" + lon + "\",";
+        }
+        
+        response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
+        response += "}";
+        
+        request->send(200, "application/json", response);
     });
 
-    // ================================
-    // 7. GET CITY INFO
-    // ================================
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request){
         if (!validateSession(request)) {
-            Serial.println("[CITYINFO] Invalid session");
-            request->redirect("/notfound");
+            Serial.println("Unauthorized access to /getcityinfo");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
             return;
         }
 
-        String json;
-        json.reserve(256);
-        json = "{";
+        String json = "{";
         
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            bool hasSelection = (prayerConfig.selectedCity.length() > 0);
+            
             json += "\"selectedCity\":\"" + prayerConfig.selectedCity + "\",";
             json += "\"selectedCityApi\":\"" + prayerConfig.selectedCity + "\",";
             json += "\"latitude\":\"" + prayerConfig.latitude + "\",";
             json += "\"longitude\":\"" + prayerConfig.longitude + "\",";
-            json += "\"hasSelection\":" + String((prayerConfig.selectedCity.length() > 0) ? "true" : "false");
+            json += "\"hasSelection\":" + String(hasSelection ? "true" : "false");
+            
             xSemaphoreGive(settingsMutex);
         } else {
-            json += "\"selectedCity\":\"\",\"selectedCityApi\":\"\",\"latitude\":\"\",\"longitude\":\"\",\"hasSelection\":false";
+            json += "\"selectedCity\":\"\",";
+            json += "\"selectedCityApi\":\"\",";
+            json += "\"latitude\":\"\",";
+            json += "\"longitude\":\"\",";
+            json += "\"hasSelection\":false";
         }
         
         json += "}";
         
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Connection", "keep-alive");
-        request->send(resp);
+        Serial.println("GET /getcityinfo: " + json);
+        request->send(200, "application/json", json);
     });
 
     // ================================
-    // 8. SET WIFI
+    // 5. WIFI SETTINGS
     // ================================
     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
-            Serial.println("[SETWIFI] Invalid session");
-            request->redirect("/notfound");
+            Serial.println("Unauthorized access to /setwifi");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
             return;
         }
 
         if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
             wifiConfig.routerSSID = request->getParam("ssid", true)->value();
             wifiConfig.routerPassword = request->getParam("password", true)->value();
+            
             saveWiFiCredentials();
             
-            AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
-            resp->addHeader("Connection", "close");
-            request->send(resp);
+            Serial.println("WiFi credentials saved successfully");
+            
+            request->send(200, "text/plain", "OK");
+            
             scheduleRestart(5);
         } else {
             request->send(400, "text/plain", "Missing parameters");
@@ -1705,12 +1847,12 @@ void setupServerRoutes() {
     });
 
     // ================================
-    // 9. SET AP
+    // 6. ACCESS POINT SETTINGS
     // ================================
     server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
-            Serial.println("[SETAP] Invalid session");
-            request->redirect("/notfound");
+            Serial.println("Unauthorized access to /setap");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
             return;
         }
 
@@ -1727,9 +1869,10 @@ void setupServerRoutes() {
             pass.toCharArray(wifiConfig.apPassword, 65);
             saveAPCredentials();
             
-            AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
-            resp->addHeader("Connection", "close");
-            request->send(resp);
+            Serial.println("AP Settings berhasil disimpan");
+            
+            request->send(200, "text/plain", "OK");
+            
             scheduleRestart(5);
         } else {
             request->send(400, "text/plain", "Missing parameters");
@@ -1737,12 +1880,12 @@ void setupServerRoutes() {
     });
 
     // ================================
-    // 10. SYNC TIME
+    // 7. TIME SYNCHRONIZATION
     // ================================
     server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
-            Serial.println("[SYNCTIME] Invalid session");
-            request->redirect("/notfound");
+            Serial.println("Unauthorized access to /synctime");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
             return;
         }
 
@@ -1764,6 +1907,7 @@ void setupServerRoutes() {
                 
                 if (rtcAvailable) {
                     saveTimeToRTC();
+                    Serial.println("Browser time saved to RTC");
                 }
                 
                 DisplayUpdate update;
@@ -1771,30 +1915,26 @@ void setupServerRoutes() {
                 xQueueSend(displayQueue, &update, 0);
                 
                 xSemaphoreGive(timeMutex);
+                
+                Serial.printf("Time synced from browser: %02d:%02d:%02d %02d/%02d/%04d\n", h, i, s, d, m, y);
             }
 
-            AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
-            resp->addHeader("Connection", "close");
-            request->send(resp);
+            request->send(200, "text/plain", "Waktu berhasil di-sync!");
         } else {
-            request->send(400, "text/plain", "Incomplete data");
+            request->send(400, "text/plain", "Data waktu tidak lengkap");
         }
     });
 
     // ================================
-    // 11. API DATA
+    // 8. API ENDPOINT - FULL DATA JSON
     // ================================
     server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request) {
-        // KEPUTUSAN: Buat publik atau tidak?
-        // Jika ingin secure, uncomment baris berikut:
-        /*
-        if (!validateSession(request)) {
-            Serial.println("[API] Invalid session");
-            request->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
-            return;
-        }
-        */
-        
+        // Optional: Uncomment untuk proteksi API publik
+        // if (!validateSession(request)) {
+        //     request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+        //     return;
+        // }
+
         String json = "{";
         
         // ================================
@@ -1862,132 +2002,308 @@ void setupServerRoutes() {
         
         json += "}";
         
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Connection", "keep-alive");
-        resp->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        resp->addHeader("Access-Control-Allow-Origin", "*"); // Enable CORS if needed
-        request->send(resp);
+        Serial.println("API /api/data requested");
         
-        // Optional: Log API access
-        Serial.printf("[API/DATA] Request from: %s\n", 
-            request->client()->remoteIP().toString().c_str());
+        request->send(200, "application/json", json);
     });
 
     // ================================
-    // 12. NOT FOUND PAGE
+    // 9. NOT FOUND PAGE
     // ================================
     server.on("/notfound", HTTP_GET, [](AsyncWebServerRequest *request){
-        String html = "<!DOCTYPE html><html><head><meta charset='UTF-8'>";
-        html += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
+        String html = "<!DOCTYPE html><html><head>";
+        html += "<meta charset='UTF-8'>";
+        html += "<meta name='viewport' content='width=device-width,initial-scale=1.0'>";
+        html += "<title>404 - Not Found</title>";
         html += "<style>";
-        html += "body{font-family:Arial,sans-serif;text-align:center;padding:50px;background:#f5f5f5}";
-        html += "h1{color:#d9534f;font-size:72px;margin:0}";
-        html += "h2{color:#333;margin:20px 0}";
-        html += "p{color:#666;font-size:16px;margin:10px 0}";
-        html += "a{display:inline-block;margin-top:20px;padding:12px 24px;";
-        html += "background:#5cb85c;color:white;text-decoration:none;border-radius:5px}";
-        html += "a:hover{background:#4cae4c}";
-        html += ".container{max-width:600px;margin:0 auto;background:white;padding:40px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}";
+        html += "body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}";
+        html += ".container{max-width:500px;margin:20px;background:white;padding:50px 40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}";
+        html += ".error-code{font-size:120px;font-weight:800;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0;line-height:1}";
+        html += "h2{color:#333;font-size:28px;margin:20px 0 10px;font-weight:600}";
+        html += "p{color:#666;font-size:16px;line-height:1.6;margin:20px 0 30px}";
+        html += ".btn{display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;text-decoration:none;border-radius:50px;font-weight:600;font-size:16px;transition:all 0.3s;box-shadow:0 4px 15px rgba(102,126,234,0.4)}";
+        html += ".btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(102,126,234,0.6)}";
+        html += ".icon{font-size:80px;margin-bottom:20px}";
         html += "</style></head><body>";
         html += "<div class='container'>";
-        html += "<h1>404</h1>";
+        html += "<div class='icon'>🔒</div>";
+        html += "<div class='error-code'>404</div>";
         html += "<h2>Page Not Found</h2>";
-        html += "<p>The page you are looking for doesn't exist or your session has expired.</p>";
-        html += "<p>Please return to the home page to continue.</p>";
-        html += "<a href='/'>Back to Home</a>";
+        html += "<p>The page you're looking for doesn't exist or you don't have permission to access it. Please return to the home page.</p>";
+        html += "<a href='/' class='btn'>← Back to Home</a>";
         html += "</div></body></html>";
         
         request->send(404, "text/html", html);
     });
 
     // ================================
-    // 13. FACTORY RESET
+    // 10. FACTORY RESET
     // ================================
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
-            Serial.println("[RESET] Invalid session");
-            request->redirect("/notfound");
+            Serial.println("Unauthorized access to /reset");
+            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
             return;
         }
 
-        LittleFS.remove("/wifi_creds.txt");
-        LittleFS.remove("/prayer_times.txt");
-        LittleFS.remove("/ap_creds.txt");
-        LittleFS.remove("/city_selection.txt");
+        Serial.println("\n========================================");
+        Serial.println("FACTORY RESET STARTED");
+        Serial.println("========================================");
         
-        AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
-        resp->addHeader("Connection", "close");
-        request->send(resp);
+        // ================================
+        // 1. DELETE ALL FILES
+        // ================================
+        if (LittleFS.exists("/wifi_creds.txt")) {
+            LittleFS.remove("/wifi_creds.txt");
+            Serial.println("✓ WiFi creds deleted");
+        }
+        
+        if (LittleFS.exists("/prayer_times.txt")) {
+            LittleFS.remove("/prayer_times.txt");
+            Serial.println("✓ Prayer times deleted");
+        }
+        
+        if (LittleFS.exists("/ap_creds.txt")) {
+            LittleFS.remove("/ap_creds.txt");
+            Serial.println("✓ AP creds deleted");
+        }
+        
+        if (LittleFS.exists("/city_selection.txt")) {
+            LittleFS.remove("/city_selection.txt");
+            Serial.println("✓ City selection deleted");
+        }
+        
+        // ================================
+        // 2. RESET TIME TO 00:00:00 01/01/2000
+        // ================================
+        Serial.println("\nResetting time to default...");
+        
+        if (xSemaphoreTake(timeMutex, portMAX_DELAY)== pdTRUE) {
+            setTime(0, 0, 0, 1, 1, 2000);
+            timeConfig.currentTime = now();
+            timeConfig.ntpSynced = false;
+            timeConfig.ntpServer = "";
+            Serial.println("✓ System time reset to: 00:00:00 01/01/2000");
+                    
+            // ================================
+            // 3. SAVE TO RTC IF AVAILABLE
+            // ================================
+            if (rtcAvailable) {
+                DateTime resetTime(2000, 1, 1, 0, 0, 0);
+                rtc.adjust(resetTime);
+                
+                Serial.println("✓ RTC time reset to: 00:00:00 01/01/2000");
+                Serial.println("  (RTC will keep this time until NTP sync)");
+            } else {
+                Serial.println("✓ System time reset (no RTC detected)");
+                Serial.println("  (Time will be lost on power cycle)");
+            }
+            
+            DisplayUpdate update;
+            update.type = DisplayUpdate::TIME_UPDATE;
+            xQueueSend(displayQueue, &update, 0);
+            
+            xSemaphoreGive(timeMutex);
+        }
+        
+        // ================================
+        // 4. CLEAR MEMORY SETTINGS
+        // ================================
+        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+            wifiConfig.routerSSID = "";
+            wifiConfig.routerPassword = "";
+            wifiConfig.isConnected = false;
+            
+            prayerConfig.subuhTime = "";
+            prayerConfig.zuhurTime = "";
+            prayerConfig.asarTime = "";
+            prayerConfig.maghribTime = "";
+            prayerConfig.isyaTime = "";
+            prayerConfig.selectedCity = "";
+            prayerConfig.selectedCityName = "";
+            prayerConfig.latitude = "";
+            prayerConfig.longitude = "";
+            
+            strcpy(wifiConfig.apSSID, "JWS ESP32");
+            strcpy(wifiConfig.apPassword, "12345678");
+            
+            Serial.println("✓ Memory settings cleared");
+            
+            xSemaphoreGive(settingsMutex);
+        }
+        
+        // ================================
+        // 5. UPDATE DISPLAY
+        // ================================
+        updateCityDisplay();
+        
+        // ================================
+        // 6. DISCONNECT WIFI
+        // ================================
+        WiFi.disconnect(true);
+        Serial.println("✓ WiFi disconnected");
+        
+        Serial.println("\n========================================");
+        Serial.println("FACTORY RESET COMPLETE");
+        Serial.println("✓ System time reset to: 00:00:00 01/01/2000");
+        if (rtcAvailable) {
+            Serial.println("RTC will maintain this time until NTP sync");
+        }
+        Serial.println("Device will restart in 5 seconds...");
+        Serial.println("========================================\n");
+        
+        request->send(200, "text/plain", "OK");
+        
         scheduleRestart(5);
     });
 
     // ================================
-    // 14. UPLOAD CITIES.JSON
+    // 11. UPLOAD CITIES.JSON
     // ================================
     server.on("/uploadcities", HTTP_POST, 
         [](AsyncWebServerRequest *request) {
             if (!validateSession(request)) {
-                Serial.println("[UPLOAD] Invalid session");
-                request->redirect("/notfound");
+                Serial.println("Unauthorized file upload attempt");
+                request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
                 return;
             }
             
-            AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", "{\"success\":true}");
-            resp->addHeader("Connection", "close");
-            request->send(resp);
+            String jsonSizeStr = "";
+            String citiesCountStr = "";
+            
+            if (request->hasParam("jsonSize", true)) {
+                jsonSizeStr = request->getParam("jsonSize", true)->value();
+            }
+            
+            if (request->hasParam("citiesCount", true)) {
+                citiesCountStr = request->getParam("citiesCount", true)->value();
+            }
+            
+            if (jsonSizeStr.length() > 0 && citiesCountStr.length() > 0) {
+                fs::File metaFile = LittleFS.open("/cities_meta.txt", "w");
+                if (metaFile) {
+                    metaFile.println(jsonSizeStr);
+                    metaFile.println(citiesCountStr);
+                    metaFile.close();
+                    
+                    Serial.println("Cities metadata saved:");
+                    Serial.println("  JSON Size: " + jsonSizeStr + " bytes");
+                    Serial.println("  Cities Count: " + citiesCountStr);
+                }
+            }
+            
+            request->send(200, "application/json", "{\"success\":true}");
         },
         [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-            static fs::File uploadFile;
+            static fs::File  uploadFile;
             static size_t totalSize = 0;
+            static unsigned long uploadStartTime = 0;
             
             if (index == 0) {
                 if (!validateSession(request)) {
+                    Serial.println("Unauthorized file upload attempt");
                     return;
                 }
                 
-                Serial.println("\n[UPLOAD] Starting: " + filename);
+                Serial.println("\n========================================");
+                Serial.println("CITIES.JSON UPLOAD STARTED");
+                Serial.println("========================================");
+                Serial.printf("Filename: %s\n", filename.c_str());
                 
                 if (filename != "cities.json") {
-                    Serial.println("[UPLOAD] Invalid filename");
+                    Serial.printf("❌ Invalid filename: %s (must be cities.json)\n", filename.c_str());
                     return;
                 }
                 
                 if (LittleFS.exists("/cities.json")) {
                     LittleFS.remove("/cities.json");
+                    Serial.println("🗑️ Old cities.json deleted");
                 }
                 
                 uploadFile = LittleFS.open("/cities.json", "w");
                 if (!uploadFile) {
-                    Serial.println("[UPLOAD] Failed to open file");
+                    Serial.println("❌ Failed to open file for writing");
                     return;
                 }
                 
                 totalSize = 0;
-                Serial.println("[UPLOAD] Writing...");
+                uploadStartTime = millis();
+                Serial.println("📝 Writing to LittleFS...");
             }
             
             if (uploadFile) {
-                uploadFile.write(data, len);
-                totalSize += len;
+                size_t written = uploadFile.write(data, len);
+                if (written != len) {
+                    Serial.printf("⚠️ Write mismatch: %d/%d bytes\n", written, len);
+                }
+                totalSize += written;
+                
+                if (totalSize % 5120 == 0 || final) {
+                    Serial.printf("   Progress: %d bytes (%.1f KB)\n", 
+                                totalSize, totalSize / 1024.0);
+                }
             }
             
-            if (final && uploadFile) {
-                uploadFile.close();
-                Serial.printf("[UPLOAD] Complete: %d bytes\n", totalSize);
+            if (final) {
+                if (uploadFile) {
+                    uploadFile.flush();
+                    uploadFile.close();
+                    
+                    unsigned long uploadDuration = millis() - uploadStartTime;
+                    
+                    Serial.println("\n✅ Upload complete!");
+                    Serial.printf("   Total size: %d bytes (%.2f KB)\n", 
+                                totalSize, totalSize / 1024.0);
+                    Serial.printf("   Duration: %lu ms\n", uploadDuration);
+                    
+                    vTaskDelay(pdMS_TO_TICKS(100));
+                    
+                    if (LittleFS.exists("/cities.json")) {
+                        fs::File verifyFile = LittleFS.open("/cities.json", "r");
+                        if (verifyFile) {
+                            size_t fileSize = verifyFile.size();
+                            
+                            char buffer[101];
+                            size_t bytesRead = verifyFile.readBytes(buffer, 100);
+                            buffer[bytesRead] = '\0';
+                            
+                            verifyFile.close();
+                            
+                            Serial.printf("✅ File verified: %d bytes\n", fileSize);
+                            Serial.println("First 100 chars:");
+                            Serial.println(buffer);
+                            
+                            String preview(buffer);
+                            if (preview.indexOf('[') >= 0 && preview.indexOf('{') >= 0) {
+                                Serial.println("✅ JSON format looks valid");
+                            } else {
+                                Serial.println("⚠️ Warning: File may not be valid JSON");
+                            }
+                            
+                            Serial.println("========================================\n");
+                        }
+                    } else {
+                        Serial.println("❌ File verification failed - file not found");
+                        Serial.println("========================================\n");
+                    }
+                }
             }
         }
     );
 
     // ================================
-    // 15. 404 NOT FOUND HANDLER - UNIFIED REDIRECT
+    // 11. 404 NOT FOUND HANDLER WITH SMART REDIRECT
     // ================================
     server.onNotFound([](AsyncWebServerRequest *request){
         String url = request->url();
         IPAddress clientIP = request->client()->remoteIP();
         
-        Serial.printf("[404] %s from %s\n", url.c_str(), clientIP.toString().c_str());
+        Serial.printf("\n[404] Client: %s | URL: %s\n", 
+            clientIP.toString().c_str(), url.c_str());
         
+        // ================================
         // RULE 1: Static Assets - Return 404 Plain Text
+        // ================================
         if (url.startsWith("/assets/") || 
             url.endsWith(".css") || 
             url.endsWith(".js") || 
@@ -2006,8 +2322,41 @@ void setupServerRoutes() {
             return;
         }
         
-        // RULE 2: Semua URL lainnya → Redirect ke /notfound
-        Serial.println("   → Redirecting to /notfound");
+        // ================================
+        // RULE 2: Protected API Endpoints - Check Session
+        // ================================
+        bool isProtectedEndpoint = (
+            url.startsWith("/api/") ||
+            url == "/devicestatus" ||
+            url == "/getprayertimes" ||
+            url == "/getcities" ||
+            url == "/setcity" ||
+            url == "/setwifi" ||
+            url == "/setap" ||
+            url == "/synctime" ||
+            url == "/reset" ||
+            url == "/getcityinfo"
+        );
+        
+        if (isProtectedEndpoint) {
+            // Validate session untuk endpoint yang dilindungi
+            if (!validateSession(request)) {
+                Serial.println("   → Protected endpoint, invalid session");
+                Serial.println("   → Redirecting to /notfound");
+                request->redirect("/notfound");
+                return;
+            }
+            
+            // Session valid tapi endpoint tidak ada
+            Serial.println("   → Protected endpoint not found (session valid)");
+            request->redirect("/notfound");
+            return;
+        }
+        
+        // ================================
+        // RULE 3: Random URLs - Direct Redirect
+        // ================================
+        Serial.println("   → Invalid URL, redirecting to /notfound");
         request->redirect("/notfound");
     });
 }
