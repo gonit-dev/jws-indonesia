@@ -212,14 +212,10 @@ const unsigned long SESSION_DURATION = 900000;
 // Forward Declarations
 void updateTimeDisplay();
 void updatePrayerDisplay();
-void getPrayerTimes(String cityId);
 void getPrayerTimesByCoordinates(String lat, String lon);
 void saveWiFiCredentials();
 void savePrayerTimes();
 void setupServerRoutes();
-bool getLocationFromIP();
-String findClosestCity(String lat, String lon);
-bool autoDetectAndUpdatePrayerTimes();
 
 // ================================
 // FLUSH CALLBACK
