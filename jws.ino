@@ -2688,17 +2688,10 @@ void setup() {
     Serial.println(" Auto Reconnect: Enabled");
     Serial.println(" Persistent: Disabled");
     Serial.println("========================================\n");
-
-    // ================================
-    // SET HOSTNAME (AP + STA)
-    // ================================
+    
     String hostname = wifiConfig.apSSID;
-
-    WiFi.softAPsetHostname(hostname.c_str());  // Hostname AP
-    WiFi.setHostname(hostname.c_str());        // Hostname STA
-
-    Serial.printf("Hostname Set: %s\n", hostname.c_str());
-
+    WiFi.setHostname(hostname.c_str());
+    
     WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
     delay(100);
 
