@@ -196,7 +196,7 @@
                                 <p><strong>Kota/Kabupaten Terpilih:</strong></p>
                                 <h4 id="currentCity" class="text-primary">Belum dipilih</h4>
                                 <p>
-                                    <strong>Metode </strong> <span id="currentMethod">Egyptian General Authority of Survey</span>
+                                    <strong>Metode </strong> <span id="currentMethodTop">Egyptian General Authority of Survey</span>
                                 </p>
                             </div>
 
@@ -356,7 +356,7 @@
                                 <p class="help-text text-center">
                                     ℹ️ Jadwal shalat berdasarkan kota/Kabupaten yang dipilih<br>
                                     📅 Auto-refresh setiap tengah malam (00:00 WIB)<br>
-                                    🕋 <span id="currentMethod">Egyptian General Authority of Survey</span><br>
+                                    🕋 <span id="currentMethodBottom">Egyptian General Authority of Survey</span><br>
                                     🔄 Update otomatis saat device online tanpa restart
                                 </p>
                             </div>
@@ -1335,34 +1335,39 @@
                 
                 const data = await response.json();
                 
-                const currentMethodSpan = document.getElementById('currentMethod');
+                const currentMethodTop = document.getElementById('currentMethodTop');
+                const currentMethodBottom = document.getElementById('currentMethodBottom');
                 const methodDropdown = document.getElementById('methodDropdown');
-                const prayerMethodInfo = document.getElementById('prayerMethodInfo');
                 
                 if (data.methodId !== undefined) {
-                    currentMethodSpan.textContent = data.methodName;
-                    currentMethodSpan.className = 'label success';
+                    // Update KEDUA elemen
+                    if (currentMethodTop) {
+                        currentMethodTop.textContent = data.methodName;
+                    }
+                    if (currentMethodBottom) {
+                        currentMethodBottom.textContent = data.methodName;
+                    }
                     
                     methodDropdown.value = data.methodId;
                     
-                    if (prayerMethodInfo) {
-                        prayerMethodInfo.textContent = data.methodName;
-                    }
-                    
                     console.log('✅ Method loaded:', data.methodName);
                 } else {
-                    currentMethodSpan.textContent = 'Egyptian General Authority of Survey';
-                    currentMethodSpan.className = 'label success';
-                    methodDropdown.value = '5';
-                    
-                    if (prayerMethodInfo) {
-                        prayerMethodInfo.textContent = 'Egyptian General Authority of Survey';
+                    // Default method
+                    if (currentMethodTop) {
+                        currentMethodTop.textContent = 'Egyptian General Authority of Survey';
                     }
+                    if (currentMethodBottom) {
+                        currentMethodBottom.textContent = 'Egyptian General Authority of Survey';
+                    }
+                    methodDropdown.value = '5';
                 }
                 
             } catch (error) {
                 console.error('❌ Error loading current method:', error);
-                document.getElementById('currentMethod').textContent = 'Error loading';
+                const currentMethodTop = document.getElementById('currentMethodTop');
+                const currentMethodBottom = document.getElementById('currentMethodBottom');
+                if (currentMethodTop) currentMethodTop.textContent = 'Error loading';
+                if (currentMethodBottom) currentMethodBottom.textContent = 'Error loading';
             }
         }
 
@@ -1406,24 +1411,32 @@
                     
                     showToast('✅ Metode kalkulasi berhasil disimpan!', 'success');
                     
-                    document.getElementById('currentMethod').textContent = methodName;
-                    document.getElementById('currentMethod').className = 'label success';
+                    // Update KEDUA elemen
+                    const currentMethodTop = document.getElementById('currentMethodTop');
+                    const currentMethodBottom = document.getElementById('currentMethodBottom');
                     
-                    const prayerMethodInfo = document.getElementById('prayerMethodInfo');
-                    if (prayerMethodInfo) {
-                        prayerMethodInfo.textContent = methodName;
+                    if (currentMethodTop) {
+                        currentMethodTop.textContent = methodName;
+                    }
+                    if (currentMethodBottom) {
+                        currentMethodBottom.textContent = methodName;
                     }
                     
+                    // Cek apakah ada kota yang sudah dipilih
                     if (result.prayerTimesUpdating) {
+                        // Jika ada kota, update jadwal shalat
                         setTimeout(() => {
-                            showToast('🔄 Jadwal shalat sedang diperbarui...', 'warning');
+                            showToast('🔄 Jadwal shalat sedang diperbarui dengan metode baru...', 'warning');
                         }, 1500);
                         
                         setTimeout(() => {
                             loadSavedPrayerTimes();
                         }, 4000);
                     } else {
-                        showToast('ℹ️ Pilih kota terlebih dahulu untuk update jadwal', 'warning');
+                        // Jika belum ada kota, beri info
+                        setTimeout(() => {
+                            showToast('ℹ️ Metode tersimpan. Pilih kota untuk menghitung jadwal shalat.', 'warning');
+                        }, 1500);
                     }
                     
                 } else {
