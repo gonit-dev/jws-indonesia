@@ -1889,8 +1889,6 @@ void setupServerRoutes() {
         // Device section
         json += "\"device\":{";
         json += "\"wifiConnected\":" + String(isWiFiConnected ? "true" : "false") + ",";
-        json += "\"wifiSSID\":\"" + ssid + "\",";
-        json += "\"ip\":\"" + ip + "\",";
         json += "\"apIP\":\"" + apIP + "\",";
         json += "\"ntpSynced\":" + String(timeConfig.ntpSynced ? "true" : "false") + ",";
         json += "\"ntpServer\":\"" + timeConfig.ntpServer + "\",";
