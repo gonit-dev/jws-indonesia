@@ -1396,7 +1396,6 @@ void scheduleRestart(int delaySeconds) {
 // WEB SERVER ROUTES
 // ================================
 void setupServerRoutes() {
-    
     // ================================
     // 1. SERVE HTML & CSS FILES
     // ================================
