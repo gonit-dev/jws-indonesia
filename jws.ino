@@ -2067,6 +2067,14 @@ void setup() {
     WiFi.mode(WIFI_AP_STA);
     delay(100);
 
+    // ================================
+    // SET HOSTNAME - MENGIKUTI NAMA AP
+    // ================================
+    String hostname = String(wifiConfig.apSSID);
+    WiFi.setHostname(hostname.c_str());
+    Serial.printf("✅ Hostname Set: %s\n", hostname.c_str());
+    Serial.println("========================================");
+
     WiFi.setSleep(WIFI_PS_NONE);
 
     esp_wifi_set_ps(WIFI_PS_NONE);
@@ -2095,12 +2103,6 @@ void setup() {
     Serial.print("   AP IP: ");
     Serial.println(WiFi.softAPIP());
     Serial.printf("   AP MAC: %s\n", WiFi.softAPmacAddress().c_str());
-    
-    WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
-    Serial.printf("AP Started: %s\n", wifiConfig.apSSID);
-    Serial.printf("   Password: %s\n", wifiConfig.apPassword);
-    Serial.print("   AP IP: ");
-    Serial.println(WiFi.softAPIP());
     
     // ================================
     // TIME CONFIG INIT
@@ -2157,7 +2159,7 @@ void setup() {
     Serial.println("\n========================================");
     Serial.println("SESSION SYSTEM INITIALIZATION");
     Serial.println("========================================");
-    Serial.println("ðŸ—‘ï¸  Clearing all sessions...");
+    Serial.println("🔐️ Clearing all sessions...");
     
     for (int i = 0; i < MAX_SESSIONS; i++) {
         activeSessions[i].token = "";
@@ -2165,7 +2167,7 @@ void setup() {
         activeSessions[i].clientIP = IPAddress(0, 0, 0, 0);
     }
     
-    Serial.println("âœ… All sessions cleared");
+    Serial.println("✅ All sessions cleared");
     Serial.printf("   Max sessions: %d\n", MAX_SESSIONS);
     Serial.printf("   Session duration: %lu minutes\n", SESSION_DURATION / 60000);
     Serial.println("========================================\n");
@@ -2184,7 +2186,7 @@ void setup() {
         &uiTaskHandle,
         1  // Core 1
     );
-    Serial.println("   âœ“ UI Task (Core 1)");
+    Serial.println("   ✓ UI Task (Core 1)");
     
     xTaskCreatePinnedToCore(
         wifiTask,
@@ -2195,7 +2197,7 @@ void setup() {
         &wifiTaskHandle,
         0  // Core 0
     );
-    Serial.println("   âœ“ WiFi Task (Core 0)");
+    Serial.println("   ✓ WiFi Task (Core 0)");
     
     xTaskCreatePinnedToCore(
         ntpTask,
@@ -2206,7 +2208,7 @@ void setup() {
         &ntpTaskHandle,
         0  // Core 0
     );
-    Serial.println("   âœ“ NTP Task (Core 0)");
+    Serial.println("   ✓ NTP Task (Core 0)");
     
     xTaskCreatePinnedToCore(
         webTask,
@@ -2217,7 +2219,7 @@ void setup() {
         &webTaskHandle,
         0  // Core 0
     );
-    Serial.println("   âœ“ Web Task (Core 0)");
+    Serial.println("   ✓ Web Task (Core 0)");
     
     xTaskCreatePinnedToCore(
         prayerTask,
@@ -2228,7 +2230,7 @@ void setup() {
         &prayerTaskHandle,
         0  // Core 0
     );
-    Serial.println("   âœ“ Prayer Task (Core 0)");
+    Serial.println("   ✓ Prayer Task (Core 0)");
     
     xTaskCreatePinnedToCore(
         clockTickTask,
@@ -2239,7 +2241,7 @@ void setup() {
         NULL,
         0  // Core 0
     );
-    Serial.println("   âœ“ Clock Task (Core 0)");
+    Serial.println("   ✓ Clock Task (Core 0)");
     
     // ================================
     // RTC SYNC TASK
@@ -2254,7 +2256,7 @@ void setup() {
             &rtcTaskHandle,
             0  // Core 0
         );
-        Serial.println("   âœ“ RTC Sync Task (Core 0)");
+        Serial.println("   ✓ RTC Sync Task (Core 0)");
     }
     
     vTaskDelay(pdMS_TO_TICKS(500));
@@ -2264,11 +2266,11 @@ void setup() {
     // ================================
     if (wifiTaskHandle) {
         esp_task_wdt_add(wifiTaskHandle);
-        Serial.println("   âœ“ WiFi Task â†’ WDT");
+        Serial.println("   ✓ WiFi Task → WDT");
     }
     if (webTaskHandle) {
         esp_task_wdt_add(webTaskHandle);
-        Serial.println("   âœ“ Web Task â†’ WDT");
+        Serial.println("   ✓ Web Task → WDT");
     }
     
     Serial.println("All tasks started\n");
@@ -2279,16 +2281,16 @@ void setup() {
     Serial.println("========================================");
     Serial.println("SYSTEM READY!");
     Serial.println("========================================");
-    Serial.println("âœ… Multi-client concurrent access enabled");
-    Serial.println("âœ… WiFi sleep disabled for better response");
-    Serial.println("âœ… Max " + String(MAX_SESSIONS) + " simultaneous connections");
+    Serial.println("✅ Multi-client concurrent access enabled");
+    Serial.println("✅ WiFi sleep disabled for better response");
+    Serial.println("✅ Max " + String(MAX_SESSIONS) + " simultaneous connections");
     Serial.println("========================================\n");
     
     if (wifiConfig.routerSSID.length() > 0) {
-        Serial.println("ðŸ“¡ WiFi configured, will auto-connect...");
+        Serial.println("📡 WiFi configured, will auto-connect...");
         Serial.println("   SSID: " + wifiConfig.routerSSID);
     } else {
-        Serial.println("ðŸ“± Connect to AP to configure:");
+        Serial.println("📱 Connect to AP to configure:");
         Serial.println("   1. WiFi: " + String(wifiConfig.apSSID));
         Serial.println("   2. Password: " + String(wifiConfig.apPassword));
         Serial.println("   3. Browser: http://192.168.4.1");
@@ -2296,10 +2298,10 @@ void setup() {
     }
     
     if (prayerConfig.selectedCity.length() == 0) {
-        Serial.println("\nâš ï¸  REMINDER: Select city via web interface");
+        Serial.println("\n⚠️ REMINDER: Select city via web interface");
     }
     
-    Serial.println("\nðŸŽ‰ Boot complete - Ready for connections!");
+    Serial.println("\n🎉 Boot complete - Ready for connections!");
     Serial.println("========================================\n");
 }
 
