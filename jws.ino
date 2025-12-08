@@ -2350,7 +2350,7 @@ void setupServerRoutes() {
                 return;
             }
             
-            Serial.println("   → Protected endpoint not found (session valid)");
+            Serial.println("   → Protected endpoint Not Found (session valid)");
             request->redirect("/notfound");
             return;
         }
