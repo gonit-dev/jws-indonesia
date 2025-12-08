@@ -742,7 +742,6 @@ void loadMethodSelection() {
                 Serial.println("  Name: " + methodConfig.methodName);
             }
         } else {
-            // Default: Egyptian General Authority of Survey
             methodConfig.methodId = 5;
             methodConfig.methodName = "Egyptian General Authority of Survey";
             Serial.println("No method selection found - using default (Egyptian)");
@@ -1175,7 +1174,6 @@ void webTask(void *parameter) {
                 WiFi.mode(WIFI_AP_STA);
                 delay(100);
                 
-                // Re-start AP
                 WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
                 delay(100);
                 
@@ -2671,14 +2669,6 @@ void setup() {
     WiFi.mode(WIFI_AP_STA);
     delay(100);
 
-    // ================================
-    // SET HOSTNAME - MENGIKUTI NAMA AP
-    // ================================
-    String hostname = String(wifiConfig.apSSID);
-    WiFi.setHostname(hostname.c_str());
-    Serial.printf(" Hostname Set: %s\n", hostname.c_str());
-    Serial.println("========================================");
-
     WiFi.setSleep(WIFI_PS_NONE);
 
     esp_wifi_set_ps(WIFI_PS_NONE);
@@ -2698,6 +2688,16 @@ void setup() {
     Serial.println(" Auto Reconnect: Enabled");
     Serial.println(" Persistent: Disabled");
     Serial.println("========================================\n");
+
+    // ================================
+    // SET HOSTNAME (AP + STA)
+    // ================================
+    String hostname = wifiConfig.apSSID;
+
+    WiFi.softAPsetHostname(hostname.c_str());  // Hostname AP
+    WiFi.setHostname(hostname.c_str());        // Hostname STA
+
+    Serial.printf("Hostname Set: %s\n", hostname.c_str());
 
     WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
     delay(100);
