@@ -1439,7 +1439,7 @@ void setupServerRoutes() {
     server.on("/devicestatus", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /devicestatus");
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
             return;
         }
 
@@ -1492,7 +1492,7 @@ void setupServerRoutes() {
     server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest *request){
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /getprayertimes");
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
             return;
         }
 
@@ -1515,7 +1515,7 @@ void setupServerRoutes() {
     server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request){
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /getcities");
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
             return;
         }
 
@@ -1808,7 +1808,7 @@ void setupServerRoutes() {
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request){
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /getcityinfo");
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
             return;
         }
 
@@ -1847,7 +1847,7 @@ void setupServerRoutes() {
     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /setwifi");
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
             return;
         }
 
@@ -1875,7 +1875,7 @@ void setupServerRoutes() {
     server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /setap");
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
             return;
         }
 
@@ -1910,7 +1910,7 @@ void setupServerRoutes() {
     server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /synctime");
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
             return;
         }
 
@@ -2062,7 +2062,7 @@ void setupServerRoutes() {
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!validateSession(request)) {
             Serial.println("Unauthorized access to /reset");
-            request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
             return;
         }
 
@@ -2173,7 +2173,7 @@ void setupServerRoutes() {
         [](AsyncWebServerRequest *request) {
             if (!validateSession(request)) {
                 Serial.println("Unauthorized file upload attempt");
-                request->send(403, "application/json", "{\"error\":\"Invalid session\"}");
+                request->send(403, "application/json", "{\"error\":\"Not Found\"}");
                 return;
             }
             
@@ -2346,7 +2346,7 @@ void setupServerRoutes() {
         
         if (isProtectedEndpoint) {
             if (!validateSession(request)) {
-                Serial.println("   → Protected endpoint, invalid session");
+                Serial.println("   → Protected endpoint, Not Found");
                 Serial.println("   → Redirecting to /notfound");
                 request->redirect("/notfound");
                 return;
