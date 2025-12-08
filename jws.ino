@@ -949,6 +949,10 @@ void wifiTask(void *parameter) {
                 if (wifiConfig.routerSSID.length() > 0 && !wifiConfig.isConnected) {
                     if (xSemaphoreTake(wifiMutex, portMAX_DELAY) == pdTRUE) {
                         Serial.println("Connecting to WiFi: " + wifiConfig.routerSSID);
+
+                        String hostname = wifiConfig.apSSID;
+                        WiFi.setHostname(hostname.c_str());
+                        Serial.printf("   Setting hostname: %s\n", hostname.c_str());
                         
                         WiFi.setTxPower(WIFI_POWER_19_5dBm);
                         
