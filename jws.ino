@@ -940,6 +940,9 @@ void uiTask(void *parameter) {
 void wifiTask(void *parameter) {
     int connectAttempt = 0;
     const int MAX_CONNECT_ATTEMPTS = 30;
+    unsigned long lastConnectAttempt = 0;
+    const unsigned long RECONNECT_INTERVAL = 30000;
+    bool wasConnected = false;
     
     while (true) {
         esp_task_wdt_reset();
@@ -947,20 +950,39 @@ void wifiTask(void *parameter) {
         switch (wifiState) {
             case WIFI_IDLE:
                 if (wifiConfig.routerSSID.length() > 0 && !wifiConfig.isConnected) {
+                    unsigned long now = millis();
+                    
+                    if (wasConnected && (now - lastConnectAttempt < RECONNECT_INTERVAL)) {
+                        vTaskDelay(pdMS_TO_TICKS(1000));
+                        break;
+                    }
+                    
                     if (xSemaphoreTake(wifiMutex, portMAX_DELAY) == pdTRUE) {
-                        Serial.println("Connecting to WiFi: " + wifiConfig.routerSSID);
+                        Serial.println("\n========================================");
+                        Serial.println("WiFi: Attempting to connect...");
+                        Serial.println("========================================");
+                        Serial.println("SSID: " + wifiConfig.routerSSID);
                         
                         WiFi.disconnect(true);
+                        delay(500);
+                        
+                        WiFi.mode(WIFI_AP_STA);
                         delay(100);
                         
                         WiFi.setHostname(wifiConfig.apSSID);
-                        delay(50); // Beri waktu hostname diset
+                        delay(50);
                         
                         WiFi.setTxPower(WIFI_POWER_19_5dBm);
                         
                         WiFi.begin(wifiConfig.routerSSID.c_str(), wifiConfig.routerPassword.c_str());
+                        
                         wifiState = WIFI_CONNECTING;
                         connectAttempt = 0;
+                        lastConnectAttempt = millis();
+                        
+                        Serial.println("Connecting...");
+                        Serial.println("========================================\n");
+                        
                         xSemaphoreGive(wifiMutex);
                     }
                 }
@@ -975,30 +997,49 @@ void wifiTask(void *parameter) {
                         wifiConfig.isConnected = true;
                         wifiConfig.localIP = WiFi.localIP();
                         wifiState = WIFI_CONNECTED;
+                        wasConnected = true;
                         
-                        Serial.println("WiFi Connected!");
-                        Serial.print("   IP: ");
-                        Serial.println(wifiConfig.localIP);
-                        Serial.print("   Hostname: ");
-                        Serial.println(WiFi.getHostname()); // Verifikasi hostname
+                        Serial.println("\n========================================");
+                        Serial.println("✓ WiFi Connected Successfully!");
+                        Serial.println("========================================");
+                        Serial.println("SSID: " + String(WiFi.SSID()));
+                        Serial.println("IP: " + wifiConfig.localIP.toString());
+                        Serial.println("Hostname: " + String(WiFi.getHostname()));
+                        Serial.println("RSSI: " + String(WiFi.RSSI()) + " dBm");
+                        Serial.println("========================================\n");
                         
                         xSemaphoreGive(wifiMutex);
                         
+                        // Trigger NTP sync
                         if (ntpTaskHandle != NULL) {
-                            Serial.println("Auto-triggering NTP sync...");
+                            Serial.println("→ Auto-triggering NTP sync...");
                             xTaskNotifyGive(ntpTaskHandle);
                         }
                     }
                 } else {
                     connectAttempt++;
+                    
+                    if (connectAttempt % 5 == 0) {
+                        Serial.printf("⏳ Connecting... %d/%d (Status: %d)\n", 
+                            connectAttempt, MAX_CONNECT_ATTEMPTS, WiFi.status());
+                    }
+                    
                     if (connectAttempt >= MAX_CONNECT_ATTEMPTS) {
+                        Serial.println("\n========================================");
+                        Serial.println("✗ WiFi Connection Timeout");
+                        Serial.println("========================================");
+                        Serial.println("Failed to connect after " + String(MAX_CONNECT_ATTEMPTS) + " seconds");
+                        Serial.println("Will retry in 30 seconds...");
+                        Serial.println("AP remains active: " + String(wifiConfig.apSSID));
+                        Serial.println("========================================\n");
+                        
                         wifiState = WIFI_FAILED;
                         
                         WiFi.disconnect(true);
-                        WiFi.mode(WIFI_AP);
+                        delay(100);
                         
-                        Serial.println("WiFi connection timeout");
-                        Serial.println("WiFi disconnected to prevent overheating");
+                        WiFi.mode(WIFI_AP_STA);
+                        delay(100);
                     }
                 }
                 
@@ -1008,15 +1049,16 @@ void wifiTask(void *parameter) {
             case WIFI_CONNECTED:
                 static bool autoUpdateDone = false;
                 
+                // Auto-update prayer times saat pertama kali connect
                 if (!autoUpdateDone && wifiConfig.isConnected) {
                     vTaskDelay(pdMS_TO_TICKS(3000));
                     esp_task_wdt_reset();
                     
                     if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-                        Serial.println("Auto-updating prayer times for: " + prayerConfig.selectedCity);
+                        Serial.println("→ Auto-updating prayer times for: " + prayerConfig.selectedCity);
                         getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
                     } else {
-                        Serial.println("No city coordinates - please select via web interface");
+                        Serial.println("⚠ No city coordinates - please select via web interface");
                     }
                     
                     autoUpdateDone = true;
@@ -1027,34 +1069,53 @@ void wifiTask(void *parameter) {
                         wifiConfig.isConnected = false;
                         wifiState = WIFI_IDLE;
                         autoUpdateDone = false;
+                        wasConnected = true;
+                        
+                        Serial.println("\n========================================");
+                        Serial.println("✗ WiFi Disconnected!");
+                        Serial.println("========================================");
+                        Serial.println("Will attempt reconnect in 30 seconds...");
+                        Serial.println("AP remains active: " + String(wifiConfig.apSSID));
+                        Serial.println("========================================\n");
                         
                         WiFi.mode(WIFI_AP_STA);
                         
-                        Serial.println("WiFi disconnected!");
                         xSemaphoreGive(wifiMutex);
                     }
+                } else {
+                    static unsigned long lastStatusPrint = 0;
+                    if (millis() - lastStatusPrint > 60000) {
+                        Serial.printf("ℹ WiFi Status: Connected | RSSI: %d dBm | IP: %s\n", 
+                            WiFi.RSSI(), 
+                            wifiConfig.localIP.toString().c_str());
+                        lastStatusPrint = millis();
+                    }
                 }
-                vTaskDelay(pdMS_TO_TICKS(10000));
+                
+                vTaskDelay(pdMS_TO_TICKS(3000));
                 break;
                 
             case WIFI_FAILED:
                 esp_task_wdt_reset();
                 
-                Serial.println("WiFi STA failed - AP TETAP AKTIF");
-                Serial.println("   Retry in 30 seconds...");
+                Serial.println("\n========================================");
+                Serial.println("⟳ WiFi Retry Countdown");
+                Serial.println("========================================");
+                Serial.println("AP remains active: " + String(wifiConfig.apSSID) + " (192.168.4.1)");
                 
-                WiFi.disconnect(false, false);
-                
+                // Countdown 30 detik
                 for (int i = 30; i > 0; i--) {
-                    if (i % 10 == 0) {
-                        Serial.printf("   Retry in %d seconds... (AP: 192.168.4.1)\n", i);
+                    if (i % 10 == 0 || i <= 5) {
+                        Serial.printf("⏳ Retrying in %d seconds...\n", i);
                     }
                     vTaskDelay(pdMS_TO_TICKS(1000));
                     esp_task_wdt_reset();
                 }
                 
+                Serial.println("========================================\n");
+                Serial.println("⟳ Attempting WiFi reconnection...\n");
+                
                 wifiState = WIFI_IDLE;
-                Serial.println("⟳ Retrying WiFi STA connection...");
                 break;
         }
     }
