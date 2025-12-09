@@ -128,6 +128,16 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <!-- Manual Restart Button -->
+                                    <div class="grid-x grid-padding-y">
+                                        <div class="large-12 cell">
+                                            <div class="callout warning">
+                                                <button class="button alert expanded" onclick="restartDevice()">
+                                                    🔄 Restart Device Now
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1422,9 +1432,7 @@
                         currentMethodBottom.textContent = methodName;
                     }
                     
-                    // Cek apakah ada kota yang sudah dipilih
                     if (result.prayerTimesUpdating) {
-                        // Jika ada kota, update jadwal shalat
                         setTimeout(() => {
                             showToast('🔄 Jadwal shalat sedang diperbarui dengan metode baru...', 'warning');
                         }, 1500);
@@ -1433,7 +1441,6 @@
                             loadSavedPrayerTimes();
                         }, 4000);
                     } else {
-                        // Jika belum ada kota, beri info
                         setTimeout(() => {
                             showToast('ℹ️ Metode tersimpan. Pilih kota untuk menghitung jadwal shalat.', 'warning');
                         }, 1500);
@@ -1448,6 +1455,57 @@
                 showToast('❌ Gagal menyimpan metode', 'error');
                 
             } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        async function restartDevice() {
+            if (!confirm('🔄 Yakin ingin restart device? Device akan offline ~15 detik.')) {
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Restarting...';
+
+            try {
+                const response = await secureFetch('/restart', { 
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                });
+                
+                if (response.ok) {
+                    showToast('✅ Restart command sent!', 'success');
+                    
+                    setTimeout(() => {
+                        showToast('🔄 Device akan restart dalam 5 detik...', 'warning');
+                    }, 1500);
+                    
+                    setTimeout(() => {
+                        showToast('⏳ Tunggu ~15 detik, lalu refresh halaman ini', 'warning');
+                    }, 3500);
+                    
+                    // Disable semua tombol untuk mencegah request lain
+                    document.querySelectorAll('button').forEach(b => b.disabled = true);
+                    
+                    // Auto-refresh setelah 20 detik
+                    setTimeout(() => {
+                        showToast('🔄 Auto-refreshing page...', 'warning');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    }, 18000);
+                    
+                } else {
+                    throw new Error('Restart command failed');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('❌ Gagal restart device', 'error');
                 btn.disabled = false;
                 btn.textContent = originalText;
             }
