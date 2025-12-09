@@ -949,10 +949,12 @@ void wifiTask(void *parameter) {
                 if (wifiConfig.routerSSID.length() > 0 && !wifiConfig.isConnected) {
                     if (xSemaphoreTake(wifiMutex, portMAX_DELAY) == pdTRUE) {
                         Serial.println("Connecting to WiFi: " + wifiConfig.routerSSID);
-
-                        String hostname = wifiConfig.apSSID;
-                        WiFi.setHostname(hostname.c_str());
-                        Serial.printf("   Setting hostname: %s\n", hostname.c_str());
+                        
+                        WiFi.disconnect(true);
+                        delay(100);
+                        
+                        WiFi.setHostname(wifiConfig.apSSID);
+                        delay(50); // Beri waktu hostname diset
                         
                         WiFi.setTxPower(WIFI_POWER_19_5dBm);
                         
@@ -973,9 +975,13 @@ void wifiTask(void *parameter) {
                         wifiConfig.isConnected = true;
                         wifiConfig.localIP = WiFi.localIP();
                         wifiState = WIFI_CONNECTED;
+                        
                         Serial.println("WiFi Connected!");
                         Serial.print("   IP: ");
                         Serial.println(wifiConfig.localIP);
+                        Serial.print("   Hostname: ");
+                        Serial.println(WiFi.getHostname()); // Verifikasi hostname
+                        
                         xSemaphoreGive(wifiMutex);
                         
                         if (ntpTaskHandle != NULL) {
@@ -1031,29 +1037,25 @@ void wifiTask(void *parameter) {
                 vTaskDelay(pdMS_TO_TICKS(10000));
                 break;
                 
-                case WIFI_FAILED:
-                    esp_task_wdt_reset();
-                    
-                    Serial.println("WiFi STA failed - AP TETAP AKTIF");
-                    Serial.println("   Retry in 30 seconds...");
-                    
-                    WiFi.disconnect(false, false);
-                    
-                    for (int i = 30; i > 0; i--) {
-                        if (i % 10 == 0) {
-                            Serial.printf("   Retry in %d seconds... (AP: 192.168.4.1)\n", i);
-                        }
-                        vTaskDelay(pdMS_TO_TICKS(1000));
-                        esp_task_wdt_reset();
+            case WIFI_FAILED:
+                esp_task_wdt_reset();
+                
+                Serial.println("WiFi STA failed - AP TETAP AKTIF");
+                Serial.println("   Retry in 30 seconds...");
+                
+                WiFi.disconnect(false, false);
+                
+                for (int i = 30; i > 0; i--) {
+                    if (i % 10 == 0) {
+                        Serial.printf("   Retry in %d seconds... (AP: 192.168.4.1)\n", i);
                     }
-
-                    String hostname = wifiConfig.apSSID;
-                    WiFi.setHostname(hostname.c_str());
-                    Serial.printf("   Setting hostname: %s\n", hostname.c_str());
-                    
-                    wifiState = WIFI_IDLE;
-                    Serial.println(" Retrying WiFi STA connection...");
-                    break;
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+                    esp_task_wdt_reset();
+                }
+                
+                wifiState = WIFI_IDLE;
+                Serial.println("⟳ Retrying WiFi STA connection...");
+                break;
         }
     }
 }
@@ -2677,10 +2679,6 @@ void setup() {
     WiFi.mode(WIFI_AP_STA);
     delay(100);
 
-    String hostname = wifiConfig.apSSID;
-    WiFi.setHostname(hostname.c_str());  
-    Serial.printf("✓ Hostname Set: %s\n", hostname.c_str());
-
     WiFi.setSleep(WIFI_PS_NONE);
 
     esp_wifi_set_ps(WIFI_PS_NONE);
@@ -2700,7 +2698,7 @@ void setup() {
     Serial.println(" Auto Reconnect: Enabled");
     Serial.println(" Persistent: Disabled");
     Serial.println("========================================\n");
-    
+
     WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
     delay(100);
 
@@ -2709,6 +2707,7 @@ void setup() {
     Serial.print("   AP IP: ");
     Serial.println(WiFi.softAPIP());
     Serial.printf("   AP MAC: %s\n", WiFi.softAPmacAddress().c_str());
+    Serial.println(WiFi.getHostname());
     
     // ================================
     // TIME CONFIG INIT
