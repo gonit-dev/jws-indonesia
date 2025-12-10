@@ -870,7 +870,7 @@
             const ssid = document.getElementById('wifiSSID').value.trim();
             const password = document.getElementById('wifiPassword').value;
 
-            if (!confirm('🔄 Yakin ingin terhubung ke WiFi ' + ssid + '?')) {
+            if (!confirm('📡 Yakin ingin terhubung ke WiFi ' + ssid + '?')) {
                 return;
             }
 
@@ -898,22 +898,10 @@
                     setTimeout(() => {
                         showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
                     }, 1500);
-
-                    setTimeout(() => {
-                        showToast('📡 Setelah dimulai ulang, otomatis terhubung: ' + ssid, 'warning');
-                    }, 3500);
                     
-                    function disableAllButtons() {
-                        document.querySelectorAll('button').forEach(b => b.disabled = true);
-                    }
-
-                    function enableAllButtons() {
-                        document.querySelectorAll('button').forEach(b => b.disabled = false);
-                    }
-
-                    disableAllButtons();
                     setTimeout(() => {
-                        enableAllButtons();
+                        btn.disabled = false;
+                        btn.textContent = originalText;
                     }, 6000);
                     
                     setTimeout(() => {
@@ -939,7 +927,7 @@
             const ssid = document.getElementById('apSSID').value.trim();
             const password = document.getElementById('apPassword').value;
 
-            if (!confirm('🔄 Yakin ingin merubah ke AP ' + ssid + '?')) {
+            if (!confirm('📶 Yakin ingin merubah ke AP ' + ssid + '?')) {
                 return;
             }
 
@@ -952,6 +940,7 @@
                 showToast('❌ Kata sandi minimal 8 karakter', 'error');
                 return;
             }
+
 
             const btn = event.target;
             const originalText = btn.textContent;
@@ -976,18 +965,10 @@
                     setTimeout(() => {
                         showToast('📡 Setelah dimulai ulang, sambungkan ke AP: ' + ssid, 'warning');
                     }, 3500);
-
-                    function disableAllButtons() {
-                        document.querySelectorAll('button').forEach(b => b.disabled = true);
-                    }
-
-                    function enableAllButtons() {
-                        document.querySelectorAll('button').forEach(b => b.disabled = false);
-                    }
-
-                    disableAllButtons();
+                    
                     setTimeout(() => {
-                        enableAllButtons();
+                        btn.disabled = false;
+                        btn.textContent = originalText;
                     }, 6000);
                     
                     setTimeout(() => {
@@ -1075,18 +1056,10 @@
                     setTimeout(() => {
                         showToast('📡 Sambungkan kembali ke AP: JWS Indonesia', 'warning');
                     }, 3500);
-
-                    function disableAllButtons() {
-                        document.querySelectorAll('button').forEach(b => b.disabled = true);
-                    }
-
-                    function enableAllButtons() {
-                        document.querySelectorAll('button').forEach(b => b.disabled = false);
-                    }
-
-                    disableAllButtons();
+                    
                     setTimeout(() => {
-                        enableAllButtons();
+                        btn.disabled = false;
+                        btn.textContent = originalText;
                     }, 6000);
                     
                     setTimeout(() => {
@@ -1517,6 +1490,11 @@
                 return;
             }
 
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Memulai ulang...';
+
             try {
                 const response = await secureFetch('/restart', { 
                     method: 'POST',
@@ -1532,17 +1510,9 @@
                         showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
                     }, 1500);
                     
-                    function disableAllButtons() {
-                        document.querySelectorAll('button').forEach(b => b.disabled = true);
-                    }
-
-                    function enableAllButtons() {
-                        document.querySelectorAll('button').forEach(b => b.disabled = false);
-                    }
-
-                    disableAllButtons();
                     setTimeout(() => {
-                        enableAllButtons();
+                        btn.disabled = false;
+                        btn.textContent = originalText;
                     }, 6000);
                     
                     setTimeout(() => {
