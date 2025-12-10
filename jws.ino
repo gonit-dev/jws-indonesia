@@ -161,6 +161,16 @@ TimeConfig timeConfig;
 PrayerConfig prayerConfig;
 MethodConfig methodConfig = {5, "Egyptian General Authority of Survey"};
 
+unsigned long lastWiFiCheck = 0;
+const unsigned long WIFI_CHECK_INTERVAL = 5000;  // Check every 5 seconds
+int reconnectAttempts = 0;
+const int MAX_RECONNECT_ATTEMPTS = 5;
+unsigned long wifiDisconnectedTime = 0;  // Track when disconnect happened
+
+bool fastReconnectMode = false;
+unsigned long lastFastScan = 0;
+const unsigned long FAST_SCAN_INTERVAL = 3000;  // Scan every 3 seconds
+
 // ================================
 // DISPLAY UPDATE STRUCTURE
 // ================================
@@ -952,41 +962,161 @@ void uiTask(void *parameter) {
     }
 }
 
+// ================================
+// WIFI TASK
+// ================================
 void wifiTask(void *parameter) {
     int connectAttempt = 0;
-    const int MAX_CONNECT_ATTEMPTS = 30;
+    const int MAX_CONNECT_ATTEMPTS = 20;
     unsigned long lastConnectAttempt = 0;
-    const unsigned long RECONNECT_INTERVAL = 30000;
+    const unsigned long RECONNECT_INTERVAL = 10000;
     bool wasConnected = false;
-    
     bool autoUpdateDone = false;
+    
+    lastFastScan = millis();
+    
+    Serial.println("\n========================================");
+    Serial.println("WiFi Task Started - Fast Reconnect Mode");
+    Serial.println("========================================\n");
     
     while (true) {
         esp_task_wdt_reset();
         
+        // ================================================
+        // FIX 2: STOP SCANNING SAAT CONNECTED
+        // ================================================
+        if (wifiConfig.isConnected && WiFi.status() == WL_CONNECTED) {
+            // Hapus scan results saat connected
+            WiFi.scanDelete();
+        }
+        
+        // ================================================
+        // FAST SCAN MODE - Hanya saat disconnected
+        // ================================================
+        if (!wifiConfig.isConnected && wifiConfig.routerSSID.length() > 0) {
+            unsigned long now = millis();
+            
+            if (now - lastFastScan >= FAST_SCAN_INTERVAL) {
+                lastFastScan = now;
+                
+                int n = WiFi.scanComplete();
+                
+                if (n == WIFI_SCAN_FAILED) {
+                    if (wifiState != WIFI_CONNECTING) {
+                        WiFi.scanNetworks(true, false, false, 300);
+                        Serial.println("🔍 Fast scan started...");
+                    }
+                    
+                } else if (n >= 0) {
+                    bool ssidFound = false;
+                    int8_t bestRSSI = -100;
+                    
+                    for (int i = 0; i < n; i++) {
+                        if (WiFi.SSID(i) == wifiConfig.routerSSID) {
+                            ssidFound = true;
+                            bestRSSI = WiFi.RSSI(i);
+                            break;
+                        }
+                    }
+                    
+                    if (ssidFound) {
+                        Serial.println("\n🎯 TARGET SSID DETECTED!");
+                        Serial.println("   SSID: " + wifiConfig.routerSSID);
+                        Serial.println("   RSSI: " + String(bestRSSI) + " dBm");
+                        
+                        if (wifiState != WIFI_CONNECTING) {
+                            Serial.println("   → Triggering immediate connection...\n");
+                            WiFi.scanDelete();
+                            wifiState = WIFI_CONNECTING;
+                            lastConnectAttempt = millis();
+                            connectAttempt = 0;
+                        }
+                        
+                    } else {
+                        static int scanCount = 0;
+                        scanCount++;
+                        
+                        if (scanCount % 5 == 0) {
+                            Serial.printf("🔍 Scan #%d: '%s' not found (scanned %d networks)\n", 
+                                scanCount, wifiConfig.routerSSID.c_str(), n);
+                        }
+                        
+                        WiFi.scanDelete();
+                    }
+                }
+            }
+        }
+        
         switch (wifiState) {
-            case WIFI_IDLE:
+            case WIFI_IDLE: {
                 if (wifiConfig.routerSSID.length() > 0 && !wifiConfig.isConnected) {
                     unsigned long now = millis();
                     
-                    if (wasConnected && (now - lastConnectAttempt < RECONNECT_INTERVAL)) {
-                        vTaskDelay(pdMS_TO_TICKS(1000));
-                        break;
+                    if (wasConnected) {
+                        unsigned long timeSinceLastAttempt = now - lastConnectAttempt;
+                        
+                        if (timeSinceLastAttempt < RECONNECT_INTERVAL) {
+                            unsigned long remainingWait = RECONNECT_INTERVAL - timeSinceLastAttempt;
+                            
+                            bool inCooldown = (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS);
+                            
+                            static unsigned long lastDebug = 0;
+                            if (now - lastDebug > 5000) {
+                                if (inCooldown) {
+                                    Serial.printf("❄️ COOLDOWN: %lu seconds remaining...\n", 
+                                        remainingWait / 1000);
+                                } else {
+                                    Serial.printf("⏳ Waiting %lu seconds before retry...\n", 
+                                        remainingWait / 1000);
+                                }
+                                lastDebug = now;
+                            }
+                            
+                            vTaskDelay(pdMS_TO_TICKS(1000));
+                            break;
+                        }
+                        
+                        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                            Serial.println("\n========================================");
+                            Serial.println("✅ COOLDOWN COMPLETED");
+                            Serial.println("========================================");
+                            Serial.println("Resetting reconnect counter...");
+                            reconnectAttempts = 0;
+                            Serial.println("Ready for fresh reconnect attempts");
+                            Serial.println("========================================\n");
+                        }
+                        
+                        Serial.println("✓ Reconnect interval passed, attempting connection...\n");
                     }
                     
                     if (xSemaphoreTake(wifiMutex, portMAX_DELAY) == pdTRUE) {
-                        Serial.println("\n========================================");
+                        Serial.println("========================================");
                         Serial.println("WiFi: Attempting to connect...");
                         Serial.println("========================================");
                         Serial.println("SSID: " + wifiConfig.routerSSID);
                         
-                        WiFi.disconnect(true);
-                        delay(500);
-                        
-                        WiFi.mode(WIFI_AP_STA);
+                        WiFi.scanDelete();
                         delay(100);
                         
-                        WiFi.setHostname(wifiConfig.apSSID);
+                        WiFi.disconnect(false);
+                        delay(500);
+                        
+                        wifi_mode_t currentMode;
+                        esp_wifi_get_mode(&currentMode);
+                        
+                        if (currentMode != WIFI_MODE_APSTA) {
+                            Serial.println("⚠️ Mode bukan AP_STA, forcing restore...");
+                            WiFi.mode(WIFI_AP_STA);
+                            delay(100);
+                            
+                            if (WiFi.softAPgetStationNum() == 0 && WiFi.softAPIP() == IPAddress(0,0,0,0)) {
+                                WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+                                delay(100);
+                                Serial.println("   ✓ AP restarted: " + String(wifiConfig.apSSID));
+                            }
+                        }
+                        
+                        WiFi.setHostname("jws-prayer-clock");
                         delay(50);
                         
                         WiFi.setTxPower(WIFI_POWER_19_5dBm);
@@ -996,17 +1126,21 @@ void wifiTask(void *parameter) {
                         wifiState = WIFI_CONNECTING;
                         connectAttempt = 0;
                         lastConnectAttempt = millis();
+                        reconnectAttempts++;
                         
-                        Serial.println("Connecting...");
+                        Serial.printf("Connecting... (reconnect attempt %d/%d)\n", 
+                            reconnectAttempts, MAX_RECONNECT_ATTEMPTS);
                         Serial.println("========================================\n");
                         
                         xSemaphoreGive(wifiMutex);
                     }
                 }
-                vTaskDelay(pdMS_TO_TICKS(5000));
-                break;
                 
-            case WIFI_CONNECTING:
+                vTaskDelay(pdMS_TO_TICKS(500));
+                break;
+            }
+                
+            case WIFI_CONNECTING: {
                 esp_task_wdt_reset();
                 
                 if (WiFi.status() == WL_CONNECTED) {
@@ -1016,30 +1150,44 @@ void wifiTask(void *parameter) {
                         wifiState = WIFI_CONNECTED;
                         wasConnected = true;
                         
+                        reconnectAttempts = 0;
+                        connectAttempt = 0;
+                        
+                        WiFi.scanDelete();
+                        
                         autoUpdateDone = false;
                         
+                        unsigned long reconnectTime = (millis() - wifiDisconnectedTime) / 1000;
+                        
                         Serial.println("\n========================================");
-                        Serial.println("✓ WiFi Connected Successfully!");
+                        Serial.println("✅ WiFi Connected Successfully!");
                         Serial.println("========================================");
                         Serial.println("SSID: " + String(WiFi.SSID()));
                         Serial.println("IP: " + wifiConfig.localIP.toString());
-                        Serial.println("Hostname: " + String(WiFi.getHostname()));
+                        Serial.println("Gateway: " + WiFi.gatewayIP().toString());
                         Serial.println("RSSI: " + String(WiFi.RSSI()) + " dBm");
+                        
+                        if (wifiDisconnectedTime > 0) {
+                            Serial.printf("Reconnect time: %lu seconds\n", reconnectTime);
+                        }
+                        
+                        int rssi = WiFi.RSSI();
+                        String quality = "Unknown";
+                        if (rssi >= -50) quality = "Excellent";
+                        else if (rssi >= -60) quality = "Good";
+                        else if (rssi >= -70) quality = "Fair";
+                        else quality = "Weak";
+                        Serial.println("Signal: " + quality);
+                        
                         Serial.println("========================================\n");
                         
                         xSemaphoreGive(wifiMutex);
                         
-                        // ================================================
-                        // TRIGGER NTP SYNC FIRST
-                        // ================================================
                         if (ntpTaskHandle != NULL) {
                             Serial.println("→ Auto-triggering NTP sync...");
-                            
                             ntpSyncInProgress = false;
                             ntpSyncCompleted = false;
-                            
                             xTaskNotifyGive(ntpTaskHandle);
-                            
                             Serial.println("   Waiting for NTP sync to complete...\n");
                         }
                     }
@@ -1047,22 +1195,54 @@ void wifiTask(void *parameter) {
                     connectAttempt++;
                     
                     if (connectAttempt % 5 == 0) {
-                        Serial.printf("⏳ Connecting... %d/%d (Status: %d)\n", 
-                            connectAttempt, MAX_CONNECT_ATTEMPTS, WiFi.status());
+                        wl_status_t status = WiFi.status();
+                        String statusStr = "Unknown";
+                        
+                        switch(status) {
+                            case WL_IDLE_STATUS: statusStr = "Idle"; break;
+                            case WL_NO_SSID_AVAIL: statusStr = "SSID Not Found"; break;
+                            case WL_SCAN_COMPLETED: statusStr = "Scan Complete"; break;
+                            case WL_CONNECTED: statusStr = "Connected"; break;
+                            case WL_CONNECT_FAILED: statusStr = "Failed"; break;
+                            case WL_CONNECTION_LOST: statusStr = "Connection Lost"; break;
+                            case WL_DISCONNECTED: statusStr = "Disconnected"; break;
+                        }
+                        
+                        Serial.printf("⏳ Connecting... %d/%d (%s)\n", 
+                            connectAttempt, MAX_CONNECT_ATTEMPTS, statusStr.c_str());
                     }
                     
                     if (connectAttempt >= MAX_CONNECT_ATTEMPTS) {
                         Serial.println("\n========================================");
                         Serial.println("✗ WiFi Connection Timeout");
                         Serial.println("========================================");
-                        Serial.println("Failed to connect after " + String(MAX_CONNECT_ATTEMPTS) + " seconds");
-                        Serial.println("Will retry in 30 seconds...");
-                        Serial.println("AP remains active: " + String(wifiConfig.apSSID));
+                        Serial.println("Failed after " + String(MAX_CONNECT_ATTEMPTS) + " seconds");
+                        Serial.printf("Status: %d\n", WiFi.status());
+                        Serial.printf("Reconnect attempt: %d/%d\n", reconnectAttempts, MAX_RECONNECT_ATTEMPTS);
+                        
+                        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                            Serial.println("\n⚠️ MAX RECONNECT ATTEMPTS REACHED!");
+                            Serial.println("========================================");
+                            Serial.println("Entered COOLDOWN mode");
+                            Serial.println("   • Failed attempts: " + String(MAX_RECONNECT_ATTEMPTS));
+                            Serial.println("   • Cooldown period: 15 seconds");
+                            Serial.println("   • Fast scan continues in background");
+                            Serial.println("========================================");
+                            
+                            lastConnectAttempt = millis() + 5000;
+                            
+                        } else {
+                            Serial.printf("   Will retry in %d seconds...\n", RECONNECT_INTERVAL/1000);
+                        }
+                        
+                        Serial.println("\nAP remains active: " + String(wifiConfig.apSSID));
+                        Serial.println("   AP IP: " + WiFi.softAPIP().toString());
+                        Serial.println("🔍 Fast scan active - will connect immediately when SSID detected");
                         Serial.println("========================================\n");
                         
                         wifiState = WIFI_FAILED;
                         
-                        WiFi.disconnect(true);
+                        WiFi.disconnect(false);
                         delay(100);
                         
                         WiFi.mode(WIFI_AP_STA);
@@ -1072,11 +1252,10 @@ void wifiTask(void *parameter) {
                 
                 vTaskDelay(pdMS_TO_TICKS(1000));
                 break;
+            }
                 
-            case WIFI_CONNECTED:
-                // ================================================
-                // WAIT FOR NTP SYNC BEFORE UPDATING PRAYER TIMES
-                // ================================================
+            case WIFI_CONNECTED: {
+                // WAIT FOR NTP + UPDATE PRAYER TIMES
                 if (!autoUpdateDone && wifiConfig.isConnected) {
                     
                     if (!ntpSyncInProgress && !ntpSyncCompleted) {
@@ -1094,9 +1273,8 @@ void wifiTask(void *parameter) {
                         
                         vTaskDelay(pdMS_TO_TICKS(500));
                         
-                        // Timeout after 30 seconds
                         if (ntpWaitCounter > 60) {
-                            Serial.println("⚠ NTP sync timeout - proceeding anyway");
+                            Serial.println("⚠️ NTP sync timeout - proceeding anyway");
                             ntpSyncInProgress = false;
                             ntpWaitCounter = 0;
                         }
@@ -1108,14 +1286,12 @@ void wifiTask(void *parameter) {
                         Serial.println("NTP SYNC COMPLETED - UPDATING PRAYER TIMES");
                         Serial.println("========================================");
                         
-                        // Tunggu 1 detik untuk memastikan waktu sudah stabil
                         vTaskDelay(pdMS_TO_TICKS(1000));
                         esp_task_wdt_reset();
                         
                         if (prayerConfig.latitude.length() > 0 && 
                             prayerConfig.longitude.length() > 0) {
                             
-                            // Log current time
                             char timeStr[20], dateStr[20];
                             sprintf(timeStr, "%02d:%02d:%02d",
                                     hour(timeConfig.currentTime),
@@ -1133,18 +1309,17 @@ void wifiTask(void *parameter) {
                                          ", " + prayerConfig.longitude);
                             Serial.println("");
                             
-                            // Update prayer times
                             getPrayerTimesByCoordinates(
                                 prayerConfig.latitude, 
                                 prayerConfig.longitude
                             );
                             
-                            Serial.println("✓ Prayer times update completed");
+                            Serial.println("✅ Prayer times update completed");
                             Serial.println("========================================\n");
                             
                         } else {
                             Serial.println("\n========================================");
-                            Serial.println("⚠ PRAYER TIMES AUTO-UPDATE SKIPPED");
+                            Serial.println("⚠️ PRAYER TIMES AUTO-UPDATE SKIPPED");
                             Serial.println("========================================");
                             Serial.println("Reason: No city coordinates available");
                             Serial.println("Action: Please select city via web interface");
@@ -1154,9 +1329,8 @@ void wifiTask(void *parameter) {
                         autoUpdateDone = true;
                         
                     } else {
-                        // NTP sync failed, tapi tetap lanjut
                         Serial.println("\n========================================");
-                        Serial.println("⚠ NTP SYNC FAILED");
+                        Serial.println("⚠️ NTP SYNC FAILED");
                         Serial.println("========================================");
                         Serial.println("Proceeding with prayer times update anyway");
                         Serial.println("Warning: Time may be inaccurate!");
@@ -1176,65 +1350,92 @@ void wifiTask(void *parameter) {
                     }
                 }
                 
-                // Monitor WiFi status
-                if (WiFi.status() != WL_CONNECTED) {
-                    if (xSemaphoreTake(wifiMutex, portMAX_DELAY) == pdTRUE) {
-                        wifiConfig.isConnected = false;
-                        wifiState = WIFI_IDLE;
-                        
-                        autoUpdateDone = false;
-                        ntpSyncInProgress = false;
-                        ntpSyncCompleted = false;
-                        
-                        wasConnected = true;
-                        
-                        Serial.println("\n========================================");
-                        Serial.println("✗ WiFi Disconnected!");
-                        Serial.println("========================================");
-                        Serial.println("Will attempt reconnect in 30 seconds...");
-                        Serial.println("AP remains active: " + String(wifiConfig.apSSID));
-                        Serial.println("========================================\n");
-                        
-                        WiFi.mode(WIFI_AP_STA);
-                        
-                        xSemaphoreGive(wifiMutex);
-                    }
-                } else {
-                    // Status update setiap 60 detik
+                unsigned long now = millis();
+                
+                if (now - lastWiFiCheck >= WIFI_CHECK_INTERVAL) {
+                    lastWiFiCheck = now;
+                    
+                    wl_status_t status = WiFi.status();
+                    
                     static unsigned long lastStatusPrint = 0;
-                    if (millis() - lastStatusPrint > 60000) {
-                        Serial.printf("ℹ WiFi Status: Connected | RSSI: %d dBm | IP: %s\n", 
+                    if (now - lastStatusPrint > 60000) {
+                        Serial.printf("ℹ️ WiFi: Connected | RSSI: %d dBm | IP: %s | Uptime: %lu min\n", 
                             WiFi.RSSI(), 
-                            wifiConfig.localIP.toString().c_str());
-                        lastStatusPrint = millis();
+                            wifiConfig.localIP.toString().c_str(),
+                            (now - wifiDisconnectedTime) / 60000);
+                        lastStatusPrint = now;
+                    }
+                    
+                    if (status != WL_CONNECTED) {
+                        Serial.println("\n========================================");
+                        Serial.println("⚠️ WiFi DISCONNECTED DETECTED!");
+                        Serial.println("========================================");
+                        Serial.printf("Status code: %d\n", status);
+                        Serial.print("Reason: ");
+                        
+                        switch(status) {
+                            case WL_NO_SSID_AVAIL:
+                                Serial.println("SSID not available (router offline?)");
+                                break;
+                            case WL_CONNECT_FAILED:
+                                Serial.println("Connection failed");
+                                break;
+                            case WL_CONNECTION_LOST:
+                                Serial.println("Connection lost");
+                                break;
+                            case WL_DISCONNECTED:
+                                Serial.println("Disconnected");
+                                break;
+                            default:
+                                Serial.println("Unknown");
+                        }
+                        
+                        if (xSemaphoreTake(wifiMutex, portMAX_DELAY) == pdTRUE) {
+                            wifiConfig.isConnected = false;
+                            wifiState = WIFI_IDLE;
+                            
+                            autoUpdateDone = false;
+                            ntpSyncInProgress = false;
+                            ntpSyncCompleted = false;
+                            
+                            wasConnected = true;
+                            wifiDisconnectedTime = millis();
+                            
+                            Serial.println("→ Initiating fast reconnect mode...");
+                            Serial.println("   🔍 Background scan every 3 seconds");
+                            Serial.println("   ⚡ Will connect immediately when router detected");
+                            Serial.printf("   Next attempt in %d seconds\n", RECONNECT_INTERVAL/1000);
+                            Serial.println("AP remains active: " + String(wifiConfig.apSSID));
+                            Serial.println("   AP IP: " + WiFi.softAPIP().toString());
+                            Serial.println("========================================\n");
+                            
+                            WiFi.scanNetworks(true, false, false, 300);
+                            lastFastScan = millis();
+                            
+                            xSemaphoreGive(wifiMutex);
+                        }
                     }
                 }
                 
                 vTaskDelay(pdMS_TO_TICKS(500));
                 break;
+            }
                 
-            case WIFI_FAILED:
+            case WIFI_FAILED: {
                 esp_task_wdt_reset();
                 
+                lastConnectAttempt = millis();
+                
                 Serial.println("\n========================================");
-                Serial.println("⟳ WiFi Retry Countdown");
-                Serial.println("========================================");
-                Serial.println("AP remains active: " + String(wifiConfig.apSSID) + " (192.168.4.1)");
-                
-                // Countdown 30 detik
-                for (int i = 30; i > 0; i--) {
-                    if (i % 10 == 0 || i <= 5) {
-                        Serial.printf("⏳ Retrying in %d seconds...\n", i);
-                    }
-                    vTaskDelay(pdMS_TO_TICKS(1000));
-                    esp_task_wdt_reset();
-                }
-                
+                Serial.println("Connection failed - entering retry mode");
+                Serial.println("🔍 Fast scan continues - instant connect when available");
                 Serial.println("========================================\n");
-                Serial.println("⟳ Attempting WiFi reconnection...\n");
                 
                 wifiState = WIFI_IDLE;
+                
+                vTaskDelay(pdMS_TO_TICKS(1000));
                 break;
+            }
         }
     }
 }
@@ -1321,10 +1522,8 @@ void ntpTask(void *parameter) {
                         Serial.println("   City configured: " + prayerConfig.selectedCity);
                         Serial.println("   Updating prayer times with correct date...");
                         
-                        // Release mutex sebelum call API
                         xSemaphoreGive(timeMutex);
                         
-                        // Update prayer times (sekarang waktu sudah valid!)
                         getPrayerTimesByCoordinates(
                             prayerConfig.latitude, 
                             prayerConfig.longitude
@@ -2787,6 +2986,88 @@ void setupServerRoutes() {
     });
 }
 
+void setupWiFiEvents() {
+    WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
+        Serial.printf("[WiFi-Event] %d\n", event);
+        
+        switch(event) {
+            case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+                Serial.println("📡 STA Connected to AP");
+                break;
+                
+            case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+                Serial.println("🌐 Got IP: " + WiFi.localIP().toString());
+                break;
+                
+            case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+                Serial.println("❌ STA Disconnected!");
+                Serial.printf("   Reason Code: %d\n", info.wifi_sta_disconnected.reason);
+                
+                // Decode reason
+                switch(info.wifi_sta_disconnected.reason) {
+                    case WIFI_REASON_AUTH_EXPIRE:
+                        Serial.println("   Detail: Authentication expired");
+                        break;
+                    case WIFI_REASON_AUTH_LEAVE:
+                        Serial.println("   Detail: Deauthenticated (router disconnect)");
+                        break;
+                    case WIFI_REASON_ASSOC_LEAVE:
+                        Serial.println("   Detail: Disassociated");
+                        break;
+                    case WIFI_REASON_ASSOC_EXPIRE:
+                        Serial.println("   Detail: Association expired");
+                        break;
+                    case WIFI_REASON_NOT_AUTHED:
+                        Serial.println("   Detail: Not authenticated");
+                        break;
+                    case WIFI_REASON_NOT_ASSOCED:
+                        Serial.println("   Detail: Not associated");
+                        break;
+                    case WIFI_REASON_ASSOC_TOOMANY:
+                        Serial.println("   Detail: Too many stations");
+                        break;
+                    case WIFI_REASON_BEACON_TIMEOUT:
+                        Serial.println("   Detail: Beacon timeout (router unreachable)");
+                        break;
+                    case WIFI_REASON_NO_AP_FOUND:
+                        Serial.println("   Detail: AP not found");
+                        break;
+                    case WIFI_REASON_HANDSHAKE_TIMEOUT:
+                        Serial.println("   Detail: Handshake timeout");
+                        break;
+                    default:
+                        Serial.printf("   Detail: Unknown reason (%d)\n", info.wifi_sta_disconnected.reason);
+                }
+                
+                wifiDisconnectedTime = millis();
+                
+                if (wifiConfig.isConnected) {
+                    Serial.println("   → Triggering auto-reconnect...");
+                    wifiConfig.isConnected = false;
+                    wifiState = WIFI_IDLE;
+                }
+                break;
+                
+            case ARDUINO_EVENT_WIFI_AP_START:
+                Serial.println("📶 AP Started: " + String(WiFi.softAPSSID()));
+                Serial.println("   AP IP: " + WiFi.softAPIP().toString());
+                break;
+                
+            case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
+                Serial.println("👤 Client connected to AP");
+                Serial.printf("   Stations: %d\n", WiFi.softAPgetStationNum());
+                break;
+                
+            case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
+                Serial.println("👤 Client disconnected from AP");
+                Serial.printf("   Stations: %d\n", WiFi.softAPgetStationNum());
+                break;
+        }
+    });
+    
+    Serial.println("✅ WiFi Event Handler registered");
+}
+
 // ================================
 // SETUP - ESP32 CORE 3.x
 // ================================
@@ -2918,6 +3199,7 @@ void setup() {
     Serial.println("WIFI CONFIGURATION");
     Serial.println("========================================");
 
+    setupWiFiEvents();  
     WiFi.mode(WIFI_AP_STA);
     delay(100);
 
