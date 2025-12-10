@@ -408,17 +408,120 @@
 
     <script>
         // ================================
+        // KONFIGURASI POPUP & NOTIFIKASI
+        // ================================
+        const POPUP_CONFIG = {
+            // Konfirmasi
+            confirmations: {
+                setWiFi: 'Yakin ingin menyimpan pengaturan WiFi? Perangkat akan restart otomatis.',
+                setAP: 'Yakin ingin menyimpan pengaturan Access Point? Perangkat akan restart otomatis.',
+                saveCity: 'Yakin ingin menyimpan pilihan kota/kabupaten?',
+                saveMethod: 'Yakin ingin menyimpan metode kalkulasi?',
+                syncTime: 'Yakin ingin sinkronkan waktu dari browser?',
+                uploadCities: 'Yakin ingin upload file cities.json? File lama akan ditimpa.',
+                restart: 'Yakin ingin restart perangkat sekarang?',
+                reset: 'PERINGATAN: Ini akan menghapus SEMUA pengaturan (WiFi, kota, jadwal). Perangkat akan kembali ke pengaturan pabrik. Lanjutkan?'
+            },
+            
+            // Pesan sukses
+            success: {
+                setWiFi: 'WiFi berhasil disimpan!',
+                setAP: 'Pengaturan AP berhasil disimpan!',
+                saveCity: 'Kota/Kabupaten berhasil disimpan!',
+                saveMethod: 'Metode kalkulasi berhasil disimpan!',
+                syncTime: 'Waktu berhasil disinkronkan!',
+                uploadCities: 'File cities.json berhasil diupload!',
+                restart: 'Perintah restart terkirim!',
+                reset: 'Pengaturan berhasil direset!'
+            },
+            
+            // Pesan error
+            error: {
+                setWiFi: 'Gagal menyimpan WiFi',
+                setAP: 'Gagal menyimpan pengaturan AP',
+                saveCity: 'Gagal menyimpan kota/kabupaten',
+                saveMethod: 'Gagal menyimpan metode',
+                syncTime: 'Gagal menyinkronkan waktu',
+                uploadCities: 'Gagal mengupload file',
+                restart: 'Gagal restart perangkat',
+                reset: 'Gagal reset perangkat'
+            },
+            
+            // Pesan restart & reload
+            restartSequence: {
+                countdown: 'Perangkat akan restart dalam 5 detik...',
+                autoReload: 'Halaman akan reload otomatis dalam 15 detik...',
+                manualReload: 'Silakan refresh halaman secara manual jika tidak otomatis reload'
+            }
+        };
+
+        // ================================
         // VARIABEL GLOBAL
         // ================================
         let isOnline = false;
         let cityList = [];
         let loadAttempts = 0;
         const MAX_LOAD_ATTEMPTS = 3;
-        
+
         let serverTimestamp = 0;
         let localStartTime = 0;
         let serverUptimeStart = 0;
         let lastSyncTime = 0;
+
+        let selectedCitiesFile = null;
+
+        // ================================
+        // FUNGSI POPUP & NOTIFIKASI
+        // ================================
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            
+            toast.className = 'toast callout';
+            
+            if (type === 'error') {
+                toast.classList.add('alert');
+            } else if (type === 'warning') {
+                toast.classList.add('warning');
+            } else {
+                toast.classList.add('success');
+            }
+            
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        function showConfirmation(action) {
+            const message = POPUP_CONFIG.confirmations[action];
+            return confirm(message || 'Yakin ingin melanjutkan?');
+        }
+
+        function showSuccessSequence(action, needsRestart = false) {
+            showToast('✅ ' + POPUP_CONFIG.success[action], 'success');
+            
+            if (needsRestart) {
+                setTimeout(() => {
+                    showToast('🔄 ' + POPUP_CONFIG.restartSequence.countdown, 'warning');
+                }, 1500);
+                
+                setTimeout(() => {
+                    showToast('⏳ ' + POPUP_CONFIG.restartSequence.autoReload, 'warning');
+                }, 7000);
+                
+                // Auto reload setelah 20 detik
+                setTimeout(() => {
+                    window.location.reload();
+                }, 20000);
+            }
+        }
+
+        function showError(action, customMessage = null) {
+            const message = customMessage || POPUP_CONFIG.error[action];
+            showToast('❌ ' + message, 'error');
+        }
 
         // ================================
         // FUNGSI JAM REAL-TIME
@@ -539,30 +642,6 @@
         }
 
         // ================================
-        // NOTIFIKASI TOAST (menggunakan Foundation Callout)
-        // ================================
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            
-            toast.className = 'toast callout';
-            
-            if (type === 'error') {
-                toast.classList.add('alert');
-            } else if (type === 'warning') {
-                toast.classList.add('warning');
-            } else {
-                toast.classList.add('success');
-            }
-            
-            toast.classList.add('show');
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 4000);
-        }
-
-        // ================================
         // PEMBARUAN STATUS PERANGKAT
         // ================================
         async function updateDeviceStatus() {
@@ -589,9 +668,7 @@
                     statusBadge.className = 'label alert';
                 }
                 
-                // ================================
-                // SINKRONISASI WAKTU & TANGGAL DARI SERVER
-                // ================================
+                // Sinkronisasi waktu & tanggal dari server
                 if (data.currentTime && data.currentDate) {
                     const timeParts = data.currentTime.split(':');
                     const dateParts = data.currentDate.split('/');
@@ -626,7 +703,7 @@
                 document.getElementById('internetStatus').className = 'label alert';
             }
         }
-        
+
         // ================================
         // FUNGSI MEMUAT KOTA
         // ================================
@@ -777,7 +854,11 @@
             const selectedCity = dropdown.value;
             
             if (!selectedCity) {
-                showToast('❌ Pilih kota/kabupaten terlebih dahulu', 'error');
+                showError('saveCity', 'Pilih kota/kabupaten terlebih dahulu');
+                return;
+            }
+            
+            if (!showConfirmation('saveCity')) {
                 return;
             }
             
@@ -789,7 +870,7 @@
             const displayName = cityData ? cityData.display : selectedCity;
             
             if (!lat || !lon) {
-                showToast('❌ Data koordinat tidak lengkap', 'error');
+                showError('saveCity', 'Data koordinat tidak lengkap');
                 return;
             }
             
@@ -821,7 +902,7 @@
                 clearTimeout(timeoutId);
                 
                 if (response.ok) {
-                    showToast('✅ Kota/Kabupaten berhasil disimpan!', 'success');
+                    showSuccessSequence('saveCity', false);
                     
                     setTimeout(() => {
                         loadCurrentCity();
@@ -837,7 +918,7 @@
                 
             } catch (error) {
                 console.error('❌ Kesalahan menyimpan kota:', error);
-                showToast('❌ Gagal menyimpan kota/kabupaten', 'error');
+                showError('saveCity');
                 
             } finally {
                 btn.disabled = false;
@@ -871,7 +952,11 @@
             const password = document.getElementById('wifiPassword').value;
 
             if (!ssid) {
-                showToast('❌ SSID tidak boleh kosong', 'error');
+                showError('setWiFi', 'SSID tidak boleh kosong');
+                return;
+            }
+
+            if (!showConfirmation('setWiFi')) {
                 return;
             }
 
@@ -889,15 +974,7 @@
             })
             .then(response => {
                 if (response.ok) {
-                    showToast('✅ WiFi berhasil disimpan!', 'success');
-                    
-                    setTimeout(() => {
-                        showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
-                    }, 1500);
-                    
-                    setTimeout(() => {
-                        showToast('⏳ Tunggu 15-20 detik untuk terhubung ke: ' + ssid, 'warning');
-                    }, 3500);
+                    showSuccessSequence('setWiFi', true);
                     
                     setTimeout(() => {
                         btn.disabled = false;
@@ -909,7 +986,7 @@
             })
             .catch(error => {
                 console.error('Kesalahan:', error);
-                showToast('❌ Gagal menyimpan WiFi', 'error');
+                showError('setWiFi');
                 btn.disabled = false;
                 btn.textContent = originalText;
             });
@@ -920,12 +997,16 @@
             const password = document.getElementById('apPassword').value;
 
             if (!ssid) {
-                showToast('❌ SSID AP tidak boleh kosong', 'error');
+                showError('setAP', 'SSID AP tidak boleh kosong');
                 return;
             }
 
             if (password.length > 0 && password.length < 8) {
-                showToast('❌ Kata sandi minimal 8 karakter', 'error');
+                showError('setAP', 'Kata sandi minimal 8 karakter');
+                return;
+            }
+
+            if (!showConfirmation('setAP')) {
                 return;
             }
 
@@ -943,15 +1024,7 @@
             })
             .then(response => {
                 if (response.ok) {
-                    showToast('✅ Pengaturan AP berhasil disimpan!', 'success');
-                    
-                    setTimeout(() => {
-                        showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
-                    }, 1500);
-                    
-                    setTimeout(() => {
-                        showToast('📡 Setelah dimulai ulang, sambungkan ke AP: ' + ssid, 'warning');
-                    }, 3500);
+                    showSuccessSequence('setAP', true);
                     
                     setTimeout(() => {
                         btn.disabled = false;
@@ -965,7 +1038,7 @@
             })
             .catch(error => {
                 console.error('Kesalahan:', error);
-                showToast('❌ ' + error.message, 'error');
+                showError('setAP', error.message);
                 btn.disabled = false;
                 btn.textContent = originalText;
             });
@@ -975,6 +1048,10 @@
         // SINKRONISASI WAKTU
         // ================================
         function syncTime() {
+            if (!showConfirmation('syncTime')) {
+                return;
+            }
+
             const d = new Date();
             
             const year = d.getFullYear();
@@ -997,24 +1074,62 @@
             })
             .then(response => response.text())
             .then(data => {
-                showToast('✅ Waktu berhasil disinkronkan!', 'success');
+                showSuccessSequence('syncTime', false);
                 updateDeviceStatus();
                 btn.disabled = false;
-                btn.textContent = '🔄 Sinkronkan Waktu Sekarang';
+                btn.textContent = '🔄 Sync Time Now';
             })
             .catch(error => {
                 console.error('Kesalahan:', error);
-                showToast('❌ Gagal menyinkronkan waktu', 'error');
+                showError('syncTime');
                 btn.disabled = false;
-                btn.textContent = '🔄 Sinkronkan Waktu Sekarang';
+                btn.textContent = '🔄 Sync Time Now';
             });
+        }
+
+        // ================================
+        // RESTART DEVICE
+        // ================================
+        async function restartDevice() {
+            if (!showConfirmation('restart')) {
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Memulai ulang...';
+
+            try {
+                const response = await secureFetch('/restart', { 
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                });
+                
+                if (response.ok) {
+                    showSuccessSequence('restart', true);
+                    
+                    // Nonaktifkan semua tombol untuk mencegah permintaan lain
+                    document.querySelectorAll('button').forEach(b => b.disabled = true);
+                    
+                } else {
+                    throw new Error('Perintah restart gagal');
+                }
+            } catch (error) {
+                console.error('Kesalahan:', error);
+                showError('restart');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
         }
 
         // ================================
         // RESET PABRIK
         // ================================
         function resetSettings() {
-            if (!confirm('⚠️ Yakin ingin mengatur ulang semua pengaturan? Perangkat akan dimulai ulang dan kembali ke pengaturan awal.')) {
+            if (!showConfirmation('reset')) {
                 return;
             }
 
@@ -1026,37 +1141,26 @@
             fetch('/reset', { method: 'POST' })
             .then(response => {
                 if (response.ok) {
-                    showToast('✅ Pengaturan ulang berhasil!', 'success');
+                    showSuccessSequence('reset', true);
                     
-                    setTimeout(() => {
-                        showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
-                    }, 1500);
+                    // Nonaktifkan semua tombol
+                    document.querySelectorAll('button').forEach(b => b.disabled = true);
                     
-                    setTimeout(() => {
-                        showToast('📡 Sambungkan kembali ke AP: JWS Indonesia', 'warning');
-                    }, 3500);
-                    
-                    setTimeout(() => {
-                        btn.disabled = false;
-                        btn.textContent = originalText;
-                    }, 6000);
                 } else {
                     throw new Error('Pengaturan ulang gagal');
                 }
             })
             .catch(error => {
                 console.error('Kesalahan:', error);
-                showToast('❌ Gagal mengatur ulang perangkat', 'error');
+                showError('reset');
                 btn.disabled = false;
                 btn.textContent = originalText;
             });
         }
 
         // ================================
-        // FUNGSI UNGGAH CITIES.JSON
+        // FUNGSI UPLOAD CITIES.JSON
         // ================================
-        let selectedCitiesFile = null;
-
         function calculateArduinoJsonSize(json) {
             let totalSize = 0;
             totalSize += 24;
@@ -1108,7 +1212,7 @@
             }
             
             if (file.name !== 'cities.json') {
-                showToast('❌ Nama berkas harus cities.json', 'error');
+                showError('uploadCities', 'Nama berkas harus cities.json');
                 selectedCitiesFile = null;
                 fileNameDisplay.innerHTML = '<span class="label alert">❌ Nama berkas tidak valid</span>';
                 uploadBtn.disabled = true;
@@ -1118,7 +1222,7 @@
             
             const maxSize = 1 * 1024 * 1024;
             if (file.size > maxSize) {
-                showToast('❌ Berkas terlalu besar (maks 1MB)', 'error');
+                showError('uploadCities', 'Berkas terlalu besar (maks 1MB)');
                 selectedCitiesFile = null;
                 fileNameDisplay.innerHTML = '<span class="label alert">❌ Berkas terlalu besar</span>';
                 uploadBtn.disabled = true;
@@ -1176,7 +1280,7 @@
                         const sizeKB = (jsonSize / 1024).toFixed(2);
                         const maxKB = (ESP32_MAX_HEAP / 1024).toFixed(2);
                         
-                        showToast(`❌ Berkas terlalu berat untuk ESP32! ${sizeKB} KB > ${maxKB} KB`, 'error');
+                        showError('uploadCities', `Berkas terlalu berat untuk ESP32! ${sizeKB} KB > ${maxKB} KB`);
                         
                         selectedCitiesFile = null;
                         fileNameDisplay.innerHTML = `<span class="label alert">❌ Terlalu berat (${sizeKB} KB)</span>`;
@@ -1201,7 +1305,7 @@
                     uploadBtn.disabled = false;
                     
                 } catch (error) {
-                    showToast('❌ Validasi gagal: ' + error.message, 'error');
+                    showError('uploadCities', 'Validasi gagal: ' + error.message);
                     selectedCitiesFile = null;
                     fileNameDisplay.innerHTML = `<span class="label alert">❌ ${error.message}</span>`;
                     uploadBtn.disabled = true;
@@ -1211,7 +1315,7 @@
             };
             
             reader.onerror = function() {
-                showToast('❌ Gagal membaca berkas', 'error');
+                showError('uploadCities', 'Gagal membaca berkas');
                 selectedCitiesFile = null;
                 fileNameDisplay.innerHTML = '<span class="label alert">❌ Gagal membaca berkas</span>';
                 uploadBtn.disabled = true;
@@ -1222,7 +1326,11 @@
 
         async function uploadCitiesFile() {
             if (!selectedCitiesFile) {
-                showToast('❌ Pilih berkas terlebih dahulu', 'error');
+                showError('uploadCities', 'Pilih berkas terlebih dahulu');
+                return;
+            }
+            
+            if (!showConfirmation('uploadCities')) {
                 return;
             }
             
@@ -1266,9 +1374,9 @@
                         
                         if (selectedCitiesFile.jsonMetadata) {
                             const jsonSizeKB = (selectedCitiesFile.jsonMetadata.jsonSize / 1024).toFixed(2);
-                            showToast(`✅ cities.json berhasil diunggah! ${selectedCitiesFile.jsonMetadata.citiesCount} kota`, 'success');
+                            showSuccessSequence('uploadCities', false);
                         } else {
-                            showToast('✅ cities.json berhasil diunggah!', 'success');
+                            showSuccessSequence('uploadCities', false);
                         }
                         
                         document.getElementById('citiesFileInput').value = '';
@@ -1284,7 +1392,7 @@
                         setTimeout(() => {
                             progressDiv.classList.add('hide');
                             uploadBtn.disabled = false;
-                            uploadBtn.textContent = '📤 Unggah Berkas';
+                            uploadBtn.textContent = '📤 Upload File';
                         }, 5000);
                         
                     } else {
@@ -1311,12 +1419,12 @@
                 progressBar.style.width = '100%';
                 statusText.innerHTML = `<span class="label alert">❌ ${error.message}</span>`;
                 
-                showToast('❌ Pengunggahan gagal: ' + error.message, 'error');
+                showError('uploadCities', error.message);
                 
                 setTimeout(() => {
                     progressDiv.classList.add('hide');
                     uploadBtn.disabled = false;
-                    uploadBtn.textContent = '📤 Unggah Berkas';
+                    uploadBtn.textContent = '📤 Upload File';
                 }, 3000);
             }
         }
@@ -1383,7 +1491,11 @@
             const methodName = dropdown.options[dropdown.selectedIndex].text;
             
             if (!methodId) {
-                showToast('❌ Pilih metode terlebih dahulu', 'error');
+                showError('saveMethod', 'Pilih metode terlebih dahulu');
+                return;
+            }
+            
+            if (!showConfirmation('saveMethod')) {
                 return;
             }
             
@@ -1415,7 +1527,7 @@
                 if (response.ok) {
                     const result = await response.json();
                     
-                    showToast('✅ Metode kalkulasi berhasil disimpan!', 'success');
+                    showSuccessSequence('saveMethod', false);
                     
                     // Perbarui KEDUA elemen
                     const currentMethodTop = document.getElementById('currentMethodTop');
@@ -1448,60 +1560,9 @@
                 
             } catch (error) {
                 console.error('❌ Kesalahan menyimpan metode:', error);
-                showToast('❌ Gagal menyimpan metode', 'error');
+                showError('saveMethod');
                 
             } finally {
-                btn.disabled = false;
-                btn.textContent = originalText;
-            }
-        }
-
-        async function restartDevice() {
-            if (!confirm('🔄 Yakin ingin memulai ulang perangkat? Perangkat akan tidak terhubung ~15 detik.')) {
-                return;
-            }
-
-            const btn = event.target;
-            const originalText = btn.textContent;
-            btn.disabled = true;
-            btn.textContent = '⏳ Memulai ulang...';
-
-            try {
-                const response = await secureFetch('/restart', { 
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    }
-                });
-                
-                if (response.ok) {
-                    showToast('✅ Perintah mulai ulang terkirim!', 'success');
-                    
-                    setTimeout(() => {
-                        showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
-                    }, 1500);
-                    
-                    setTimeout(() => {
-                        showToast('⏳ Tunggu ~15 detik, lalu muat ulang halaman ini', 'warning');
-                    }, 3500);
-                    
-                    // Nonaktifkan semua tombol untuk mencegah permintaan lain
-                    document.querySelectorAll('button').forEach(b => b.disabled = true);
-                    
-                    // Muat ulang otomatis setelah 20 detik
-                    setTimeout(() => {
-                        showToast('🔄 Memuat ulang halaman otomatis...', 'warning');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                    }, 18000);
-                    
-                } else {
-                    throw new Error('Perintah mulai ulang gagal');
-                }
-            } catch (error) {
-                console.error('Kesalahan:', error);
-                showToast('❌ Gagal memulai ulang perangkat', 'error');
                 btn.disabled = false;
                 btn.textContent = originalText;
             }
