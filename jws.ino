@@ -944,6 +944,9 @@ void wifiTask(void *parameter) {
     const unsigned long RECONNECT_INTERVAL = 30000;
     bool wasConnected = false;
     
+    // PENTING: Hilangkan 'static' agar bisa reset setiap kali reconnect
+    bool autoUpdateDone = false;  // ← UBAH INI (hapus 'static')
+    
     while (true) {
         esp_task_wdt_reset();
         
@@ -999,6 +1002,8 @@ void wifiTask(void *parameter) {
                         wifiState = WIFI_CONNECTED;
                         wasConnected = true;
                         
+                        autoUpdateDone = false;
+                        
                         Serial.println("\n========================================");
                         Serial.println("✓ WiFi Connected Successfully!");
                         Serial.println("========================================");
@@ -1047,18 +1052,29 @@ void wifiTask(void *parameter) {
                 break;
                 
             case WIFI_CONNECTED:
-                static bool autoUpdateDone = false;
-                
-                // Auto-update prayer times saat pertama kali connect
                 if (!autoUpdateDone && wifiConfig.isConnected) {
                     vTaskDelay(pdMS_TO_TICKS(3000));
                     esp_task_wdt_reset();
                     
                     if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-                        Serial.println("→ Auto-updating prayer times for: " + prayerConfig.selectedCity);
+                        Serial.println("\n========================================");
+                        Serial.println("AUTO-UPDATING PRAYER TIMES");
+                        Serial.println("========================================");
+                        Serial.println("→ City: " + prayerConfig.selectedCity);
+                        Serial.println("→ Coordinates: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
+                        
+                        // Update prayer times
                         getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
+                        
+                        Serial.println("✓ Prayer times updated successfully");
+                        Serial.println("========================================\n");
                     } else {
-                        Serial.println("⚠ No city coordinates - please select via web interface");
+                        Serial.println("\n========================================");
+                        Serial.println("⚠ PRAYER TIMES AUTO-UPDATE SKIPPED");
+                        Serial.println("========================================");
+                        Serial.println("Reason: No city coordinates available");
+                        Serial.println("Action: Please select city via web interface");
+                        Serial.println("========================================\n");
                     }
                     
                     autoUpdateDone = true;
@@ -1068,7 +1084,9 @@ void wifiTask(void *parameter) {
                     if (xSemaphoreTake(wifiMutex, portMAX_DELAY) == pdTRUE) {
                         wifiConfig.isConnected = false;
                         wifiState = WIFI_IDLE;
+                        
                         autoUpdateDone = false;
+                        
                         wasConnected = true;
                         
                         Serial.println("\n========================================");
@@ -1083,6 +1101,7 @@ void wifiTask(void *parameter) {
                         xSemaphoreGive(wifiMutex);
                     }
                 } else {
+                    // Status update setiap 60 detik
                     static unsigned long lastStatusPrint = 0;
                     if (millis() - lastStatusPrint > 60000) {
                         Serial.printf("ℹ WiFi Status: Connected | RSSI: %d dBm | IP: %s\n", 
