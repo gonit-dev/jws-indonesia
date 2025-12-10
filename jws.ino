@@ -3204,6 +3204,14 @@ void setup() {
     WiFi.mode(WIFI_AP_STA);
     delay(100);
 
+    // ================================
+    // SET HOSTNAME SEBELUM OPERASI WIFI LAINNYA
+    // ================================
+    WiFi.setHostname("JWS-Indonesia");
+    delay(200);
+    Serial.print("   Hostname: ");
+    Serial.println(WiFi.getHostname());
+
     WiFi.setSleep(WIFI_PS_NONE);
 
     esp_wifi_set_ps(WIFI_PS_NONE);
@@ -3215,19 +3223,19 @@ void setup() {
 
     WiFi.persistent(false);
 
-    Serial.println(" WiFi Mode: AP + STA");
-    Serial.println(" WiFi Sleep: DOUBLE DISABLED");
+    Serial.println(" ✓ WiFi Mode: AP + STA");
+    Serial.println(" ✓ WiFi Sleep: DOUBLE DISABLED");
     Serial.println("   - Arduino: WIFI_PS_NONE");
     Serial.println("   - ESP-IDF: WIFI_PS_NONE");
-    Serial.println(" WiFi Power: Maximum (19.5dBm)");
-    Serial.println(" Auto Reconnect: Enabled");
-    Serial.println(" Persistent: Disabled");
+    Serial.println(" ✓ WiFi Power: Maximum (19.5dBm)");
+    Serial.println(" ✓ Auto Reconnect: Enabled");
+    Serial.println(" ✓ Persistent: Disabled");
     Serial.println("========================================\n");
 
     WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
     delay(100);
 
-    Serial.printf(" AP Started: %s\n", wifiConfig.apSSID);
+    Serial.printf(" ✓ AP Started: %s\n", wifiConfig.apSSID);
     Serial.printf("   Password: %s\n", wifiConfig.apPassword);
     Serial.print("   AP IP: ");
     Serial.println(WiFi.softAPIP());
