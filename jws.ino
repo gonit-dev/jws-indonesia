@@ -1116,7 +1116,14 @@ void wifiTask(void *parameter) {
                             }
                         }
                         
-                        WiFi.setHostname("jws-prayer-clock");
+                        WiFi.disconnect(true);
+                        WiFi.mode(WIFI_OFF);
+                        delay(100);
+
+                        WiFi.mode(WIFI_AP_STA);
+                        delay(50);
+
+                        WiFi.setHostname("JWS Indonesia");
                         delay(50);
                         
                         WiFi.setTxPower(WIFI_POWER_19_5dBm);
