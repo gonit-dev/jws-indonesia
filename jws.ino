@@ -1098,12 +1098,7 @@ void wifiTask(void *parameter) {
                         WiFi.scanDelete();
                         delay(100);
 
-                        WiFi.disconnect(true);
-                        WiFi.mode(WIFI_OFF);
-                        delay(500);
-
-                        WiFi.mode(WIFI_AP_STA);
-                        delay(500);
+                        WiFi.disconnect(false);
                         
                         wifi_mode_t currentMode;
                         esp_wifi_get_mode(&currentMode);
@@ -1120,8 +1115,10 @@ void wifiTask(void *parameter) {
                             }
                         }
 
-                        WiFi.setHostname("JWS Indonesia");
-                        delay(50);
+                        WiFi.setHostname("JWS-Indonesia");
+                        delay(100);
+                        Serial.print("   Hostname: ");
+                        Serial.println(WiFi.getHostname());
                         
                         WiFi.setTxPower(WIFI_POWER_19_5dBm);
                         
@@ -2883,7 +2880,7 @@ void setupServerRoutes() {
             prayerConfig.latitude = "";
             prayerConfig.longitude = "";
             
-            strcpy(wifiConfig.apSSID, "JWS ESP32");
+            strcpy(wifiConfig.apSSID, "JWS Indonesia");
             strcpy(wifiConfig.apPassword, "12345678");
             
             Serial.println("Memory settings cleared");
@@ -3235,7 +3232,6 @@ void setup() {
     Serial.print("   AP IP: ");
     Serial.println(WiFi.softAPIP());
     Serial.printf("   AP MAC: %s\n", WiFi.softAPmacAddress().c_str());
-    Serial.println(WiFi.getHostname());
     
     // ================================
     // TIME CONFIG INIT
