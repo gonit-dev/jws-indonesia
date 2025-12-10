@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="assets/css/foundation.css">
     
     <style>
-        /* Hanya untuk animasi spinner dan toast - tidak ada di Foundation */
         @keyframes spinner {
             to {transform: rotate(360deg);}
         }
@@ -409,7 +408,7 @@
 
     <script>
         // ================================
-        // GLOBAL VARIABLES
+        // VARIABEL GLOBAL
         // ================================
         let isOnline = false;
         let cityList = [];
@@ -422,7 +421,7 @@
         let lastSyncTime = 0;
 
         // ================================
-        // REAL-TIME CLOCK FUNCTIONS
+        // FUNGSI JAM REAL-TIME
         // ================================
         function getCurrentTime() {
             if (serverTimestamp === 0 || localStartTime === 0) {
@@ -463,7 +462,7 @@
             const secs = seconds % 60;
             
             if (days > 0) {
-                return `${days}d ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                return `${days}h ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
             } else {
                 return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
             }
@@ -497,7 +496,7 @@
         }
 
         // ================================
-        // SECURE FETCH WRAPPER
+        // PEMBUNGKUS FETCH AMAN
         // ================================
         async function secureFetch(url, options = {}) {
             if (!options.credentials) {
@@ -526,22 +525,21 @@
                 const response = await fetch(url, options);
                 
                 if (response.status === 403) {
-                    showToast('🔄 Session expired - refreshing page...', 'warning');
                     setTimeout(() => {
                         window.location.reload();
                     }, 2000);
-                    throw new Error('Session expired');
+                    throw new Error('Sesi telah berakhir');
                 }
                 
                 return response;
             } catch (error) {
-                console.error('Fetch error:', error);
+                console.error('Kesalahan fetch:', error);
                 throw error;
             }
         }
 
         // ================================
-        // TOAST NOTIFICATION (menggunakan Foundation Callout)
+        // NOTIFIKASI TOAST (menggunakan Foundation Callout)
         // ================================
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
@@ -565,7 +563,7 @@
         }
 
         // ================================
-        // DEVICE STATUS UPDATE
+        // PEMBARUAN STATUS PERANGKAT
         // ================================
         async function updateDeviceStatus() {
             try {
@@ -576,7 +574,7 @@
                 
                 document.getElementById('wifiName').textContent = data.ssid || 'Tidak Terhubung';
                 document.getElementById('ipAddress').textContent = data.ip || '-';
-                document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Synced' : '❌ Not Synced';
+                document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Tersinkron' : '❌ Belum Tersinkron';
                 
                 if (document.getElementById('ntpServerUsed')) {
                     document.getElementById('ntpServerUsed').textContent = data.ntpServer || '-';
@@ -584,15 +582,15 @@
                 
                 const statusBadge = document.getElementById('internetStatus');
                 if (isOnline) {
-                    statusBadge.textContent = '✅ Online';
+                    statusBadge.textContent = '✅ Terhubung';
                     statusBadge.className = 'label success';
                 } else {
-                    statusBadge.textContent = '❌ Offline';
+                    statusBadge.textContent = '❌ Tidak Terhubung';
                     statusBadge.className = 'label alert';
                 }
                 
                 // ================================
-                // SYNC TIME & DATE FROM SERVER
+                // SINKRONISASI WAKTU & TANGGAL DARI SERVER
                 // ================================
                 if (data.currentTime && data.currentDate) {
                     const timeParts = data.currentTime.split(':');
@@ -612,31 +610,31 @@
                         localStartTime = Date.now();
                         lastSyncTime = Date.now();
                         
-                        console.log('⏰ Time synced:', data.currentTime, data.currentDate);
+                        console.log('⏰ Waktu tersinkron:', data.currentTime, data.currentDate);
                     }
                 }
                 
                 if (data.uptime !== undefined) {
                     serverUptimeStart = data.uptime;
-                    console.log('⏱️ Uptime synced:', serverUptimeStart, 'seconds');
+                    console.log('⏱️ Waktu aktif tersinkron:', serverUptimeStart, 'detik');
                 }
                 
             } catch (error) {
-                console.error('Error fetching device status:', error);
+                console.error('Kesalahan mengambil status perangkat:', error);
                 isOnline = false;
-                document.getElementById('internetStatus').textContent = '❌ Error';
+                document.getElementById('internetStatus').textContent = '❌ Kesalahan';
                 document.getElementById('internetStatus').className = 'label alert';
             }
         }
         
         // ================================
-        // CITY LOADING FUNCTIONS
+        // FUNGSI MEMUAT KOTA
         // ================================
         async function loadCities() {
-            console.log(`📥 Loading cities (Attempt ${loadAttempts + 1}/${MAX_LOAD_ATTEMPTS})...`);
+            console.log(`📥 Memuat daftar kota (Percobaan ${loadAttempts + 1}/${MAX_LOAD_ATTEMPTS})...`);
             
             const dropdown = document.getElementById('cityDropdown');
-            dropdown.innerHTML = '<option value="">⏳ Loading cities...</option>';
+            dropdown.innerHTML = '<option value="">⏳ Memuat kota...</option>';
             
             try {
                 const controller = new AbortController();
@@ -660,7 +658,7 @@
                 const data = await response.json();
                 
                 if (!Array.isArray(data) || data.length === 0) {
-                    throw new Error('Invalid or empty city list');
+                    throw new Error('Daftar kota tidak valid atau kosong');
                 }
                 
                 cityList = data;
@@ -695,7 +693,7 @@
                     }
                 });
                 
-                console.log(`✅ Successfully loaded ${data.length} cities with coordinates`);
+                console.log(`✅ Berhasil memuat ${data.length} kota dengan koordinat`);
                 loadAttempts = 0;
                 
                 setTimeout(() => {
@@ -705,23 +703,23 @@
                 return true;
                 
             } catch (error) {
-                console.error('❌ Error loading cities:', error.message);
+                console.error('❌ Kesalahan memuat kota:', error.message);
                 
                 loadAttempts++;
                 
                 if (loadAttempts < MAX_LOAD_ATTEMPTS) {
                     const retryDelay = Math.min(2000 * Math.pow(2, loadAttempts), 10000);
-                    console.log(`🔄 Retrying in ${retryDelay/1000}s...`);
+                    console.log(`🔄 Mencoba lagi dalam ${retryDelay/1000} detik...`);
                     
-                    dropdown.innerHTML = `<option value="">⏳ Retrying (${loadAttempts}/${MAX_LOAD_ATTEMPTS})...</option>`;
+                    dropdown.innerHTML = `<option value="">⏳ Mencoba lagi (${loadAttempts}/${MAX_LOAD_ATTEMPTS})...</option>`;
                     
                     setTimeout(() => {
                         loadCities();
                     }, retryDelay);
                 } else {
-                    console.error('❌ Failed to load cities after', MAX_LOAD_ATTEMPTS, 'attempts');
-                    dropdown.innerHTML = '<option value="">❌ Gagal load kota/kabupaten - Refresh halaman</option>';
-                    showToast('❌ Gagal load daftar kota/kabupaten. Refresh halaman untuk retry.', 'error');
+                    console.error('❌ Gagal memuat kota setelah', MAX_LOAD_ATTEMPTS, 'percobaan');
+                    dropdown.innerHTML = '<option value="">❌ Gagal memuat kota - Muat ulang halaman</option>';
+                    showToast('❌ Gagal memuat daftar kota. Muat ulang halaman untuk mencoba lagi.', 'error');
                     loadAttempts = 0;
                 }
                 
@@ -730,7 +728,7 @@
         }
 
         async function loadCurrentCity() {
-            console.log('🔄 Loading current city selection...');
+            console.log('🔄 Memuat pilihan kota saat ini...');
             
             try {
                 const response = await secureFetch('/getcityinfo', {
@@ -761,7 +759,7 @@
                     
                     dropdown.value = data.selectedCityApi;
                     
-                    console.log('✅ City loaded:', displayText);
+                    console.log('✅ Kota dimuat:', displayText);
                 } else {
                     currentCitySpan.textContent = 'Belum dipilih';
                     currentCitySpan.className = 'subheader';
@@ -769,8 +767,8 @@
                 }
                 
             } catch (error) {
-                console.error('❌ Error loading current city:', error);
-                document.getElementById('currentCity').textContent = 'Error loading';
+                console.error('❌ Kesalahan memuat kota saat ini:', error);
+                document.getElementById('currentCity').textContent = 'Kesalahan memuat';
             }
         }
 
@@ -834,11 +832,11 @@
                     }, 3000);
                     
                 } else {
-                    throw new Error('Failed to save city');
+                    throw new Error('Gagal menyimpan kota');
                 }
                 
             } catch (error) {
-                console.error('❌ Error saving city:', error);
+                console.error('❌ Kesalahan menyimpan kota:', error);
                 showToast('❌ Gagal menyimpan kota/kabupaten', 'error');
                 
             } finally {
@@ -848,7 +846,7 @@
         }
 
         // ================================
-        // PRAYER TIMES
+        // JADWAL SALAT
         // ================================
         async function loadSavedPrayerTimes() {
             try {
@@ -861,12 +859,12 @@
                 document.getElementById('maghribTime').textContent = data.maghrib || '--:--';
                 document.getElementById('isyaTime').textContent = data.isya || '--:--';
             } catch (error) {
-                console.error('Error loading prayer times:', error);
+                console.error('Kesalahan memuat jadwal salat:', error);
             }
         }
 
         // ================================
-        // WIFI & AP SETTINGS
+        // PENGATURAN WIFI & AP
         // ================================
         function setWiFi() {
             const ssid = document.getElementById('wifiSSID').value.trim();
@@ -894,11 +892,11 @@
                     showToast('✅ WiFi berhasil disimpan!', 'success');
                     
                     setTimeout(() => {
-                        showToast('🔄 Device akan restart dalam 5 detik...', 'warning');
+                        showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
                     }, 1500);
                     
                     setTimeout(() => {
-                        showToast('⏳ Tunggu 15-20 detik untuk koneksi ke: ' + ssid, 'warning');
+                        showToast('⏳ Tunggu 15-20 detik untuk terhubung ke: ' + ssid, 'warning');
                     }, 3500);
                     
                     setTimeout(() => {
@@ -906,11 +904,11 @@
                         btn.textContent = originalText;
                     }, 6000);
                 } else {
-                    throw new Error('Save failed');
+                    throw new Error('Penyimpanan gagal');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('Kesalahan:', error);
                 showToast('❌ Gagal menyimpan WiFi', 'error');
                 btn.disabled = false;
                 btn.textContent = originalText;
@@ -927,7 +925,7 @@
             }
 
             if (password.length > 0 && password.length < 8) {
-                showToast('❌ Password minimal 8 karakter', 'error');
+                showToast('❌ Kata sandi minimal 8 karakter', 'error');
                 return;
             }
 
@@ -945,14 +943,14 @@
             })
             .then(response => {
                 if (response.ok) {
-                    showToast('✅ AP Settings berhasil disimpan!', 'success');
+                    showToast('✅ Pengaturan AP berhasil disimpan!', 'success');
                     
                     setTimeout(() => {
-                        showToast('🔄 Device akan restart dalam 5 detik...', 'warning');
+                        showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
                     }, 1500);
                     
                     setTimeout(() => {
-                        showToast('📡 Setelah restart, sambungkan ke AP: ' + ssid, 'warning');
+                        showToast('📡 Setelah dimulai ulang, sambungkan ke AP: ' + ssid, 'warning');
                     }, 3500);
                     
                     setTimeout(() => {
@@ -966,7 +964,7 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('Kesalahan:', error);
                 showToast('❌ ' + error.message, 'error');
                 btn.disabled = false;
                 btn.textContent = originalText;
@@ -974,7 +972,7 @@
         }
 
         // ================================
-        // TIME SYNC
+        // SINKRONISASI WAKTU
         // ================================
         function syncTime() {
             const d = new Date();
@@ -988,7 +986,7 @@
 
             const btn = event.target;
             btn.disabled = true;
-            btn.textContent = '⏳ Syncing...';
+            btn.textContent = '⏳ Menyinkronkan...';
 
             secureFetch('/synctime', { 
                 method: 'POST',
@@ -999,39 +997,39 @@
             })
             .then(response => response.text())
             .then(data => {
-                showToast('✅ Waktu berhasil di-sync!', 'success');
+                showToast('✅ Waktu berhasil disinkronkan!', 'success');
                 updateDeviceStatus();
                 btn.disabled = false;
-                btn.textContent = '🔄 Sync Time Now';
+                btn.textContent = '🔄 Sinkronkan Waktu Sekarang';
             })
             .catch(error => {
-                console.error('Error:', error);
-                showToast('❌ Gagal sync waktu', 'error');
+                console.error('Kesalahan:', error);
+                showToast('❌ Gagal menyinkronkan waktu', 'error');
                 btn.disabled = false;
-                btn.textContent = '🔄 Sync Time Now';
+                btn.textContent = '🔄 Sinkronkan Waktu Sekarang';
             });
         }
 
         // ================================
-        // FACTORY RESET
+        // RESET PABRIK
         // ================================
         function resetSettings() {
-            if (!confirm('⚠️ Yakin ingin reset semua pengaturan? Device akan restart dan kembali ke default.')) {
+            if (!confirm('⚠️ Yakin ingin mengatur ulang semua pengaturan? Perangkat akan dimulai ulang dan kembali ke pengaturan awal.')) {
                 return;
             }
 
             const btn = event.target;
             const originalText = btn.textContent;
             btn.disabled = true;
-            btn.textContent = '⏳ Resetting...';
+            btn.textContent = '⏳ Mengatur ulang...';
 
             fetch('/reset', { method: 'POST' })
             .then(response => {
                 if (response.ok) {
-                    showToast('✅ Reset berhasil!', 'success');
+                    showToast('✅ Pengaturan ulang berhasil!', 'success');
                     
                     setTimeout(() => {
-                        showToast('🔄 Device akan restart dalam 5 detik...', 'warning');
+                        showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
                     }, 1500);
                     
                     setTimeout(() => {
@@ -1043,19 +1041,19 @@
                         btn.textContent = originalText;
                     }, 6000);
                 } else {
-                    throw new Error('Reset failed');
+                    throw new Error('Pengaturan ulang gagal');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                showToast('❌ Gagal reset device', 'error');
+                console.error('Kesalahan:', error);
+                showToast('❌ Gagal mengatur ulang perangkat', 'error');
                 btn.disabled = false;
                 btn.textContent = originalText;
             });
         }
 
         // ================================
-        // CITIES.JSON UPLOAD FUNCTIONS
+        // FUNGSI UNGGAH CITIES.JSON
         // ================================
         let selectedCitiesFile = null;
 
@@ -1103,16 +1101,16 @@
             
             if (!file) {
                 selectedCitiesFile = null;
-                fileNameDisplay.textContent = 'Belum ada file dipilih';
+                fileNameDisplay.textContent = 'Belum ada berkas dipilih';
                 fileNameDisplay.className = 'help-text text-center';
                 uploadBtn.disabled = true;
                 return;
             }
             
             if (file.name !== 'cities.json') {
-                showToast('❌ Nama file harus cities.json', 'error');
+                showToast('❌ Nama berkas harus cities.json', 'error');
                 selectedCitiesFile = null;
-                fileNameDisplay.innerHTML = '<span class="label alert">❌ Nama file tidak valid</span>';
+                fileNameDisplay.innerHTML = '<span class="label alert">❌ Nama berkas tidak valid</span>';
                 uploadBtn.disabled = true;
                 event.target.value = '';
                 return;
@@ -1120,9 +1118,9 @@
             
             const maxSize = 1 * 1024 * 1024;
             if (file.size > maxSize) {
-                showToast('❌ File terlalu besar (max 1MB)', 'error');
+                showToast('❌ Berkas terlalu besar (maks 1MB)', 'error');
                 selectedCitiesFile = null;
-                fileNameDisplay.innerHTML = '<span class="label alert">❌ File terlalu besar</span>';
+                fileNameDisplay.innerHTML = '<span class="label alert">❌ Berkas terlalu besar</span>';
                 uploadBtn.disabled = true;
                 event.target.value = '';
                 return;
@@ -1138,7 +1136,7 @@
                     }
                     
                     if (json.length === 0) {
-                        throw new Error('JSON array tidak boleh kosong');
+                        throw new Error('Array JSON tidak boleh kosong');
                     }
                     
                     const requiredFields = ['api', 'display', 'province'];
@@ -1148,25 +1146,25 @@
                         
                         for (const field of requiredFields) {
                             if (!item.hasOwnProperty(field) || !item[field]) {
-                                throw new Error(`Item ${i}: field '${field}' tidak ada atau kosong`);
+                                throw new Error(`Item ${i}: kolom '${field}' tidak ada atau kosong`);
                             }
                             
                             if (typeof item[field] !== 'string') {
-                                throw new Error(`Item ${i}: field '${field}' harus string`);
+                                throw new Error(`Item ${i}: kolom '${field}' harus berupa teks`);
                             }
                         }
                         
                         if (item.lat) {
                             const lat = parseFloat(item.lat);
                             if (isNaN(lat) || lat < -90 || lat > 90) {
-                                throw new Error(`Item ${i}: latitude tidak valid (${item.lat})`);
+                                throw new Error(`Item ${i}: lintang tidak valid (${item.lat})`);
                             }
                         }
                         
                         if (item.lon) {
                             const lon = parseFloat(item.lon);
                             if (isNaN(lon) || lon < -180 || lon > 180) {
-                                throw new Error(`Item ${i}: longitude tidak valid (${item.lon})`);
+                                throw new Error(`Item ${i}: bujur tidak valid (${item.lon})`);
                             }
                         }
                     }
@@ -1178,7 +1176,7 @@
                         const sizeKB = (jsonSize / 1024).toFixed(2);
                         const maxKB = (ESP32_MAX_HEAP / 1024).toFixed(2);
                         
-                        showToast(`❌ File terlalu berat untuk ESP32! ${sizeKB} KB > ${maxKB} KB`, 'error');
+                        showToast(`❌ Berkas terlalu berat untuk ESP32! ${sizeKB} KB > ${maxKB} KB`, 'error');
                         
                         selectedCitiesFile = null;
                         fileNameDisplay.innerHTML = `<span class="label alert">❌ Terlalu berat (${sizeKB} KB)</span>`;
@@ -1208,14 +1206,14 @@
                     fileNameDisplay.innerHTML = `<span class="label alert">❌ ${error.message}</span>`;
                     uploadBtn.disabled = true;
                     event.target.value = '';
-                    console.error('JSON validation error:', error);
+                    console.error('Kesalahan validasi JSON:', error);
                 }
             };
             
             reader.onerror = function() {
-                showToast('❌ Gagal membaca file', 'error');
+                showToast('❌ Gagal membaca berkas', 'error');
                 selectedCitiesFile = null;
-                fileNameDisplay.innerHTML = '<span class="label alert">❌ Gagal membaca file</span>';
+                fileNameDisplay.innerHTML = '<span class="label alert">❌ Gagal membaca berkas</span>';
                 uploadBtn.disabled = true;
             };
             
@@ -1224,7 +1222,7 @@
 
         async function uploadCitiesFile() {
             if (!selectedCitiesFile) {
-                showToast('❌ Pilih file terlebih dahulu', 'error');
+                showToast('❌ Pilih berkas terlebih dahulu', 'error');
                 return;
             }
             
@@ -1234,11 +1232,11 @@
             const statusText = document.getElementById('uploadStatus');
             
             uploadBtn.disabled = true;
-            uploadBtn.textContent = '⏳ Uploading...';
+            uploadBtn.textContent = '⏳ Mengunggah...';
             progressDiv.classList.remove('hide');
             progressBar.style.width = '0%';
             progressBar.querySelector('.progress-meter-text').textContent = '0%';
-            statusText.textContent = 'Memulai upload...';
+            statusText.textContent = 'Memulai pengunggahan...';
             
             try {
                 const formData = new FormData();
@@ -1256,7 +1254,7 @@
                         const percentComplete = Math.round((e.loaded / e.total) * 100);
                         progressBar.style.width = percentComplete + '%';
                         progressBar.querySelector('.progress-meter-text').textContent = percentComplete + '%';
-                        statusText.textContent = `Uploading: ${(e.loaded / 1024).toFixed(1)} KB / ${(e.total / 1024).toFixed(1)} KB`;
+                        statusText.textContent = `Mengunggah: ${(e.loaded / 1024).toFixed(1)} KB / ${(e.total / 1024).toFixed(1)} KB`;
                     }
                 });
                 
@@ -1264,17 +1262,17 @@
                     if (xhr.status === 200) {
                         progressBar.style.width = '100%';
                         progressBar.querySelector('.progress-meter-text').textContent = '100%';
-                        statusText.innerHTML = '<span class="label success">✅ Upload berhasil!</span>';
+                        statusText.innerHTML = '<span class="label success">✅ Pengunggahan berhasil!</span>';
                         
                         if (selectedCitiesFile.jsonMetadata) {
                             const jsonSizeKB = (selectedCitiesFile.jsonMetadata.jsonSize / 1024).toFixed(2);
-                            showToast(`✅ cities.json berhasil diupload! ${selectedCitiesFile.jsonMetadata.citiesCount} kota`, 'success');
+                            showToast(`✅ cities.json berhasil diunggah! ${selectedCitiesFile.jsonMetadata.citiesCount} kota`, 'success');
                         } else {
-                            showToast('✅ cities.json berhasil diupload!', 'success');
+                            showToast('✅ cities.json berhasil diunggah!', 'success');
                         }
                         
                         document.getElementById('citiesFileInput').value = '';
-                        document.getElementById('selectedFileName').textContent = 'Belum ada file dipilih';
+                        document.getElementById('selectedFileName').textContent = 'Belum ada berkas dipilih';
                         selectedCitiesFile = null;
                         
                         setTimeout(() => {
@@ -1286,20 +1284,20 @@
                         setTimeout(() => {
                             progressDiv.classList.add('hide');
                             uploadBtn.disabled = false;
-                            uploadBtn.textContent = '📤 Upload File';
+                            uploadBtn.textContent = '📤 Unggah Berkas';
                         }, 5000);
                         
                     } else {
-                        throw new Error('Upload failed');
+                        throw new Error('Pengunggahan gagal');
                     }
                 });
                 
                 xhr.addEventListener('error', () => {
-                    throw new Error('Network error - koneksi terputus');
+                    throw new Error('Kesalahan jaringan - koneksi terputus');
                 });
                 
                 xhr.addEventListener('timeout', () => {
-                    throw new Error('Upload timeout - file terlalu lama');
+                    throw new Error('Waktu pengunggahan habis - berkas terlalu lama');
                 });
                 
                 xhr.open('POST', '/uploadcities', true);
@@ -1307,27 +1305,27 @@
                 xhr.send(formData);
                 
             } catch (error) {
-                console.error('❌ Upload error:', error);
+                console.error('❌ Kesalahan pengunggahan:', error);
                 
                 progressBar.classList.add('alert');
                 progressBar.style.width = '100%';
                 statusText.innerHTML = `<span class="label alert">❌ ${error.message}</span>`;
                 
-                showToast('❌ Upload gagal: ' + error.message, 'error');
+                showToast('❌ Pengunggahan gagal: ' + error.message, 'error');
                 
                 setTimeout(() => {
                     progressDiv.classList.add('hide');
                     uploadBtn.disabled = false;
-                    uploadBtn.textContent = '📤 Upload File';
+                    uploadBtn.textContent = '📤 Unggah Berkas';
                 }, 3000);
             }
         }
 
         // ================================
-        // METHOD SELECTION FUNCTIONS
+        // FUNGSI PEMILIHAN METODE
         // ================================
         async function loadCurrentMethod() {
-            console.log('📖 Loading current method...');
+            console.log('📖 Memuat metode saat ini...');
             
             try {
                 const response = await secureFetch('/getmethod', {
@@ -1348,7 +1346,7 @@
                 const methodDropdown = document.getElementById('methodDropdown');
                 
                 if (data.methodId !== undefined) {
-                    // Update KEDUA elemen
+                    // Perbarui KEDUA elemen
                     if (currentMethodTop) {
                         currentMethodTop.textContent = data.methodName;
                     }
@@ -1358,9 +1356,9 @@
                     
                     methodDropdown.value = data.methodId;
                     
-                    console.log('✅ Method loaded:', data.methodName);
+                    console.log('✅ Metode dimuat:', data.methodName);
                 } else {
-                    // Default method
+                    // Metode bawaan
                     if (currentMethodTop) {
                         currentMethodTop.textContent = 'Egyptian General Authority of Survey';
                     }
@@ -1371,11 +1369,11 @@
                 }
                 
             } catch (error) {
-                console.error('❌ Error loading current method:', error);
+                console.error('❌ Kesalahan memuat metode saat ini:', error);
                 const currentMethodTop = document.getElementById('currentMethodTop');
                 const currentMethodBottom = document.getElementById('currentMethodBottom');
-                if (currentMethodTop) currentMethodTop.textContent = 'Error loading';
-                if (currentMethodBottom) currentMethodBottom.textContent = 'Error loading';
+                if (currentMethodTop) currentMethodTop.textContent = 'Kesalahan memuat';
+                if (currentMethodBottom) currentMethodBottom.textContent = 'Kesalahan memuat';
             }
         }
 
@@ -1419,7 +1417,7 @@
                     
                     showToast('✅ Metode kalkulasi berhasil disimpan!', 'success');
                     
-                    // Update KEDUA elemen
+                    // Perbarui KEDUA elemen
                     const currentMethodTop = document.getElementById('currentMethodTop');
                     const currentMethodBottom = document.getElementById('currentMethodBottom');
                     
@@ -1432,7 +1430,7 @@
                     
                     if (result.prayerTimesUpdating) {
                         setTimeout(() => {
-                            showToast('🔄 Jadwal shalat sedang diperbarui dengan metode baru...', 'warning');
+                            showToast('🔄 Jadwal salat sedang diperbarui dengan metode baru...', 'warning');
                         }, 1500);
                         
                         setTimeout(() => {
@@ -1440,16 +1438,16 @@
                         }, 4000);
                     } else {
                         setTimeout(() => {
-                            showToast('ℹ️ Metode tersimpan. Pilih kota untuk menghitung jadwal shalat.', 'warning');
+                            showToast('ℹ️ Metode tersimpan. Pilih kota untuk menghitung jadwal salat.', 'warning');
                         }, 1500);
                     }
                     
                 } else {
-                    throw new Error('Failed to save method');
+                    throw new Error('Gagal menyimpan metode');
                 }
                 
             } catch (error) {
-                console.error('❌ Error saving method:', error);
+                console.error('❌ Kesalahan menyimpan metode:', error);
                 showToast('❌ Gagal menyimpan metode', 'error');
                 
             } finally {
@@ -1459,14 +1457,14 @@
         }
 
         async function restartDevice() {
-            if (!confirm('🔄 Yakin ingin restart device? Device akan offline ~15 detik.')) {
+            if (!confirm('🔄 Yakin ingin memulai ulang perangkat? Perangkat akan tidak terhubung ~15 detik.')) {
                 return;
             }
 
             const btn = event.target;
             const originalText = btn.textContent;
             btn.disabled = true;
-            btn.textContent = '⏳ Restarting...';
+            btn.textContent = '⏳ Memulai ulang...';
 
             try {
                 const response = await secureFetch('/restart', { 
@@ -1477,43 +1475,43 @@
                 });
                 
                 if (response.ok) {
-                    showToast('✅ Restart command sent!', 'success');
+                    showToast('✅ Perintah mulai ulang terkirim!', 'success');
                     
                     setTimeout(() => {
-                        showToast('🔄 Device akan restart dalam 5 detik...', 'warning');
+                        showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
                     }, 1500);
                     
                     setTimeout(() => {
-                        showToast('⏳ Tunggu ~15 detik, lalu refresh halaman ini', 'warning');
+                        showToast('⏳ Tunggu ~15 detik, lalu muat ulang halaman ini', 'warning');
                     }, 3500);
                     
-                    // Disable semua tombol untuk mencegah request lain
+                    // Nonaktifkan semua tombol untuk mencegah permintaan lain
                     document.querySelectorAll('button').forEach(b => b.disabled = true);
                     
-                    // Auto-refresh setelah 20 detik
+                    // Muat ulang otomatis setelah 20 detik
                     setTimeout(() => {
-                        showToast('🔄 Auto-refreshing page...', 'warning');
+                        showToast('🔄 Memuat ulang halaman otomatis...', 'warning');
                         setTimeout(() => {
                             window.location.reload();
                         }, 2000);
                     }, 18000);
                     
                 } else {
-                    throw new Error('Restart command failed');
+                    throw new Error('Perintah mulai ulang gagal');
                 }
             } catch (error) {
-                console.error('Error:', error);
-                showToast('❌ Gagal restart device', 'error');
+                console.error('Kesalahan:', error);
+                showToast('❌ Gagal memulai ulang perangkat', 'error');
                 btn.disabled = false;
                 btn.textContent = originalText;
             }
         }
 
         // ================================
-        // INITIALIZATION
+        // INISIALISASI
         // ================================
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Page loaded - Islamic Prayer Clock (Foundation CSS)');
+            console.log('🚀 Halaman dimuat - Jam Salat Islam (Foundation CSS)');
             
             loadCities();
             loadCurrentMethod();
@@ -1524,7 +1522,7 @@
             setInterval(updateDeviceStatus, 5000);
             setInterval(loadSavedPrayerTimes, 30000);
             
-            console.log('✅ All timers configured');
+            console.log('✅ Semua pengatur waktu dikonfigurasi');
         });
     </script>
 </body>
