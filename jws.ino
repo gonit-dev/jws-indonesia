@@ -761,6 +761,9 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
         return;
     }
 
+    // ============================================
+    // VALIDASI WAKTU SEBELUM REQUEST API
+    // ============================================
     time_t now_t;
     if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         now_t = timeConfig.currentTime;
@@ -769,13 +772,23 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
         now_t = time(nullptr);
     }
     
+    if (now_t < 946684800) {
+        Serial.println("\n⚠️ PRAYER TIMES UPDATE BLOCKED!");
+        Serial.println("========================================");
+        Serial.println("Reason: Invalid system time detected");
+        Serial.printf("  Current timestamp: %ld\n", now_t);
+        Serial.println("  This would send wrong date to API!");
+        Serial.println("  Waiting for NTP sync to fix time...");
+        Serial.println("========================================\n");
+        return;
+    }
+    
     char dateStr[12];
     sprintf(dateStr, "%02d-%02d-%04d", 
             day(now_t), 
             month(now_t), 
             year(now_t));
     
-    // Ambil method ID dari config
     int currentMethod = methodConfig.methodId;
     
     String url = "http://api.aladhan.com/v1/timings/" + String(dateStr) + 
@@ -1234,9 +1247,6 @@ void ntpTask(void *parameter) {
             continue;
         }
         
-        // ================================================
-        // SET FLAGS: NTP SYNC STARTED
-        // ================================================
         ntpSyncInProgress = true;
         ntpSyncCompleted = false;
         
@@ -1252,7 +1262,7 @@ void ntpTask(void *parameter) {
                 Serial.printf("Trying NTP server: %s\n", ntpServers[serverIndex]);
                 
                 timeClient.setPoolServerName(ntpServers[serverIndex]);
-                timeClient.setTimeOffset(25200); // UTC+7 for Indonesia
+                timeClient.setTimeOffset(25200); // UTC+7
                 timeClient.begin();
                 
                 unsigned long startTime = millis();
@@ -1273,15 +1283,15 @@ void ntpTask(void *parameter) {
                     syncSuccess = true;
                     timeConfig.ntpServer = String(ntpServers[serverIndex]);
                     
-                    Serial.println("✓ NTP Sync successful!");
+                    Serial.println("✅ NTP Sync successful!");
                     Serial.printf("   Server: %s\n", ntpServers[serverIndex]);
                     Serial.printf("   Time: %02d:%02d:%02d %02d/%02d/%04d\n",
                                  hour(ntpTime), minute(ntpTime), second(ntpTime),
                                  day(ntpTime), month(ntpTime), year(ntpTime));
                     
-                    // ================================
-                    // SAVE TO RTC (OVERWRITE RESET TIME)
-                    // ================================
+                    // ============================================
+                    // SAVE TO RTC (FIX RESET TIME)
+                    // ============================================
                     if (rtcAvailable) {
                         DateTime dt(year(ntpTime),
                                    month(ntpTime),
@@ -1292,13 +1302,43 @@ void ntpTask(void *parameter) {
                         
                         rtc.adjust(dt);
                         
-                        Serial.println("✓ NTP time saved to RTC");
-                        Serial.println("   (RTC time updated from NTP)");
+                        Serial.println("✅ NTP time saved to RTC");
+                        Serial.println("   (RTC overwritten from NTP)");
                     }
                     
                     DisplayUpdate update;
                     update.type = DisplayUpdate::TIME_UPDATE;
                     xQueueSend(displayQueue, &update, 0);
+                    
+                    // ============================================
+                    // BACKUP: AUTO UPDATE PRAYER TIMES AFTER NTP
+                    // ============================================
+                    Serial.println("\n🔄 Post-NTP: Checking prayer times...");
+                    
+                    if (prayerConfig.latitude.length() > 0 && 
+                        prayerConfig.longitude.length() > 0) {
+                        
+                        Serial.println("   City configured: " + prayerConfig.selectedCity);
+                        Serial.println("   Updating prayer times with correct date...");
+                        
+                        // Release mutex sebelum call API
+                        xSemaphoreGive(timeMutex);
+                        
+                        // Update prayer times (sekarang waktu sudah valid!)
+                        getPrayerTimesByCoordinates(
+                            prayerConfig.latitude, 
+                            prayerConfig.longitude
+                        );
+                        
+                        Serial.println("✅ Prayer times updated post-NTP sync");
+                        
+                        xSemaphoreTake(timeMutex, portMAX_DELAY);
+                        
+                    } else {
+                        Serial.println("   ⚠️ No city coordinates - skipping prayer update");
+                        xSemaphoreGive(timeMutex);
+                        xSemaphoreTake(timeMutex, portMAX_DELAY);
+                    }
                     
                     Serial.println("========================================\n");
                     break;
@@ -1309,22 +1349,18 @@ void ntpTask(void *parameter) {
             }
             
             if (!syncSuccess) {
-                Serial.println("✗ All NTP servers failed!");
+                Serial.println("❌ All NTP servers failed!");
                 Serial.println("   Keeping current time");
                 Serial.println("========================================\n");
             }
             
-            // ================================================
-            // SET FLAGS: NTP SYNC COMPLETED
-            // ================================================
             ntpSyncInProgress = false;
             ntpSyncCompleted = syncSuccess;
             
             xSemaphoreGive(timeMutex);
             
         } else {
-            // Gagal acquire mutex
-            Serial.println("✗ Failed to acquire time mutex");
+            Serial.println("❌ Failed to acquire time mutex");
             Serial.println("========================================\n");
             
             ntpSyncInProgress = false;
