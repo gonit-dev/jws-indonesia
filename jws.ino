@@ -1097,9 +1097,13 @@ void wifiTask(void *parameter) {
                         
                         WiFi.scanDelete();
                         delay(100);
-                        
-                        WiFi.disconnect(false);
-                        delay(500);
+
+                        WiFi.disconnect(true);
+                        WiFi.mode(WIFI_OFF);
+                        delay(100);
+
+                        WiFi.mode(WIFI_AP_STA);
+                        delay(50);
                         
                         wifi_mode_t currentMode;
                         esp_wifi_get_mode(&currentMode);
@@ -1115,13 +1119,6 @@ void wifiTask(void *parameter) {
                                 Serial.println("   ✓ AP restarted: " + String(wifiConfig.apSSID));
                             }
                         }
-                        
-                        WiFi.disconnect(true);
-                        WiFi.mode(WIFI_OFF);
-                        delay(100);
-
-                        WiFi.mode(WIFI_AP_STA);
-                        delay(50);
 
                         WiFi.setHostname("JWS Indonesia");
                         delay(50);
