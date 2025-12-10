@@ -870,10 +870,6 @@
             const ssid = document.getElementById('wifiSSID').value.trim();
             const password = document.getElementById('wifiPassword').value;
 
-            if (!confirm('📡 Yakin ingin terhubung ke WiFi ' + ssid + '?')) {
-                return;
-            }
-
             if (!ssid) {
                 showToast('❌ SSID tidak boleh kosong', 'error');
                 return;
@@ -926,10 +922,6 @@
         function setAP() {
             const ssid = document.getElementById('apSSID').value.trim();
             const password = document.getElementById('apPassword').value;
-
-            if (!confirm('📶 Yakin ingin merubah ke AP ' + ssid + '?')) {
-                return;
-            }
 
             if (!ssid) {
                 showToast('❌ SSID AP tidak boleh kosong', 'error');
@@ -1035,10 +1027,6 @@
         // RESET PABRIK
         // ================================
         function resetSettings() {
-            if (!confirm('⚠️ Yakin ingin mengatur ulang semua pengaturan? Perangkat akan dimulai ulang dan kembali ke pengaturan awal.')) {
-                return;
-            }
-
             const btn = event.target;
             const originalText = btn.textContent;
             btn.disabled = true;
@@ -1486,10 +1474,6 @@
         }
 
         async function restartDevice() {
-            if (!confirm('🔄 Yakin ingin memulai ulang perangkat? Perangkat akan tidak terhubung ~15 detik.')) {
-                return;
-            }
-
             const btn = event.target;
             const originalText = btn.textContent;
             btn.disabled = true;
