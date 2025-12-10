@@ -1100,10 +1100,10 @@ void wifiTask(void *parameter) {
 
                         WiFi.disconnect(true);
                         WiFi.mode(WIFI_OFF);
-                        delay(100);
+                        delay(500);
 
                         WiFi.mode(WIFI_AP_STA);
-                        delay(50);
+                        delay(500);
                         
                         wifi_mode_t currentMode;
                         esp_wifi_get_mode(&currentMode);
