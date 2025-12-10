@@ -1256,7 +1256,6 @@ void wifiTask(void *parameter) {
             }
                 
             case WIFI_CONNECTED: {
-                // WAIT FOR NTP + UPDATE PRAYER TIMES
                 if (!autoUpdateDone && wifiConfig.isConnected) {
                     
                     if (!ntpSyncInProgress && !ntpSyncCompleted) {
