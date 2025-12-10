@@ -200,6 +200,8 @@ enum WiFiState {
     WIFI_FAILED
 };
 volatile WiFiState wifiState = WIFI_IDLE;
+volatile bool ntpSyncInProgress = false;
+volatile bool ntpSyncCompleted = false;
 
 // ================================
 // AUTO SESSION MANAGEMENT
@@ -944,8 +946,7 @@ void wifiTask(void *parameter) {
     const unsigned long RECONNECT_INTERVAL = 30000;
     bool wasConnected = false;
     
-    // PENTING: Hilangkan 'static' agar bisa reset setiap kali reconnect
-    bool autoUpdateDone = false;  // ← UBAH INI (hapus 'static')
+    bool autoUpdateDone = false;
     
     while (true) {
         esp_task_wdt_reset();
@@ -1015,10 +1016,18 @@ void wifiTask(void *parameter) {
                         
                         xSemaphoreGive(wifiMutex);
                         
-                        // Trigger NTP sync
+                        // ================================================
+                        // TRIGGER NTP SYNC FIRST
+                        // ================================================
                         if (ntpTaskHandle != NULL) {
                             Serial.println("→ Auto-triggering NTP sync...");
+                            
+                            ntpSyncInProgress = false;
+                            ntpSyncCompleted = false;
+                            
                             xTaskNotifyGive(ntpTaskHandle);
+                            
+                            Serial.println("   Waiting for NTP sync to complete...\n");
                         }
                     }
                 } else {
@@ -1052,40 +1061,117 @@ void wifiTask(void *parameter) {
                 break;
                 
             case WIFI_CONNECTED:
+                // ================================================
+                // WAIT FOR NTP SYNC BEFORE UPDATING PRAYER TIMES
+                // ================================================
                 if (!autoUpdateDone && wifiConfig.isConnected) {
-                    vTaskDelay(pdMS_TO_TICKS(3000));
-                    esp_task_wdt_reset();
                     
-                    if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-                        Serial.println("\n========================================");
-                        Serial.println("AUTO-UPDATING PRAYER TIMES");
-                        Serial.println("========================================");
-                        Serial.println("→ City: " + prayerConfig.selectedCity);
-                        Serial.println("→ Coordinates: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
-                        
-                        // Update prayer times
-                        getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
-                        
-                        Serial.println("✓ Prayer times updated successfully");
-                        Serial.println("========================================\n");
-                    } else {
-                        Serial.println("\n========================================");
-                        Serial.println("⚠ PRAYER TIMES AUTO-UPDATE SKIPPED");
-                        Serial.println("========================================");
-                        Serial.println("Reason: No city coordinates available");
-                        Serial.println("Action: Please select city via web interface");
-                        Serial.println("========================================\n");
+                    if (!ntpSyncInProgress && !ntpSyncCompleted) {
+                        vTaskDelay(pdMS_TO_TICKS(500));
+                        break;
                     }
                     
-                    autoUpdateDone = true;
+                    if (ntpSyncInProgress) {
+                        static int ntpWaitCounter = 0;
+                        ntpWaitCounter++;
+                        
+                        if (ntpWaitCounter % 10 == 0) {
+                            Serial.println("⏳ Waiting for NTP sync to complete...");
+                        }
+                        
+                        vTaskDelay(pdMS_TO_TICKS(500));
+                        
+                        // Timeout after 30 seconds
+                        if (ntpWaitCounter > 60) {
+                            Serial.println("⚠ NTP sync timeout - proceeding anyway");
+                            ntpSyncInProgress = false;
+                            ntpWaitCounter = 0;
+                        }
+                        break;
+                    }
+                    
+                    if (ntpSyncCompleted || timeConfig.ntpSynced) {
+                        Serial.println("\n========================================");
+                        Serial.println("NTP SYNC COMPLETED - UPDATING PRAYER TIMES");
+                        Serial.println("========================================");
+                        
+                        // Tunggu 1 detik untuk memastikan waktu sudah stabil
+                        vTaskDelay(pdMS_TO_TICKS(1000));
+                        esp_task_wdt_reset();
+                        
+                        if (prayerConfig.latitude.length() > 0 && 
+                            prayerConfig.longitude.length() > 0) {
+                            
+                            // Log current time
+                            char timeStr[20], dateStr[20];
+                            sprintf(timeStr, "%02d:%02d:%02d",
+                                    hour(timeConfig.currentTime),
+                                    minute(timeConfig.currentTime),
+                                    second(timeConfig.currentTime));
+                            sprintf(dateStr, "%02d/%02d/%04d",
+                                    day(timeConfig.currentTime),
+                                    month(timeConfig.currentTime),
+                                    year(timeConfig.currentTime));
+                            
+                            Serial.println("Current System Time: " + String(timeStr));
+                            Serial.println("Current Date: " + String(dateStr));
+                            Serial.println("City: " + prayerConfig.selectedCity);
+                            Serial.println("Coordinates: " + prayerConfig.latitude + 
+                                         ", " + prayerConfig.longitude);
+                            Serial.println("");
+                            
+                            // Update prayer times
+                            getPrayerTimesByCoordinates(
+                                prayerConfig.latitude, 
+                                prayerConfig.longitude
+                            );
+                            
+                            Serial.println("✓ Prayer times update completed");
+                            Serial.println("========================================\n");
+                            
+                        } else {
+                            Serial.println("\n========================================");
+                            Serial.println("⚠ PRAYER TIMES AUTO-UPDATE SKIPPED");
+                            Serial.println("========================================");
+                            Serial.println("Reason: No city coordinates available");
+                            Serial.println("Action: Please select city via web interface");
+                            Serial.println("========================================\n");
+                        }
+                        
+                        autoUpdateDone = true;
+                        
+                    } else {
+                        // NTP sync failed, tapi tetap lanjut
+                        Serial.println("\n========================================");
+                        Serial.println("⚠ NTP SYNC FAILED");
+                        Serial.println("========================================");
+                        Serial.println("Proceeding with prayer times update anyway");
+                        Serial.println("Warning: Time may be inaccurate!");
+                        Serial.println("========================================\n");
+                        
+                        vTaskDelay(pdMS_TO_TICKS(1000));
+                        
+                        if (prayerConfig.latitude.length() > 0 && 
+                            prayerConfig.longitude.length() > 0) {
+                            getPrayerTimesByCoordinates(
+                                prayerConfig.latitude, 
+                                prayerConfig.longitude
+                            );
+                        }
+                        
+                        autoUpdateDone = true;
+                    }
                 }
                 
+                // Monitor WiFi status
                 if (WiFi.status() != WL_CONNECTED) {
                     if (xSemaphoreTake(wifiMutex, portMAX_DELAY) == pdTRUE) {
                         wifiConfig.isConnected = false;
                         wifiState = WIFI_IDLE;
                         
                         autoUpdateDone = false;
+                        ntpSyncInProgress = false;
+                        ntpSyncCompleted = false;
                         
                         wasConnected = true;
                         
@@ -1111,7 +1197,7 @@ void wifiTask(void *parameter) {
                     }
                 }
                 
-                vTaskDelay(pdMS_TO_TICKS(3000));
+                vTaskDelay(pdMS_TO_TICKS(500));
                 break;
                 
             case WIFI_FAILED:
@@ -1148,6 +1234,12 @@ void ntpTask(void *parameter) {
             continue;
         }
         
+        // ================================================
+        // SET FLAGS: NTP SYNC STARTED
+        // ================================================
+        ntpSyncInProgress = true;
+        ntpSyncCompleted = false;
+        
         Serial.println("\n========================================");
         Serial.println("AUTO NTP SYNC STARTED");
         Serial.println("========================================");
@@ -1181,7 +1273,7 @@ void ntpTask(void *parameter) {
                     syncSuccess = true;
                     timeConfig.ntpServer = String(ntpServers[serverIndex]);
                     
-                    Serial.println(" NTP Sync successful!");
+                    Serial.println("✓ NTP Sync successful!");
                     Serial.printf("   Server: %s\n", ntpServers[serverIndex]);
                     Serial.printf("   Time: %02d:%02d:%02d %02d/%02d/%04d\n",
                                  hour(ntpTime), minute(ntpTime), second(ntpTime),
@@ -1200,7 +1292,7 @@ void ntpTask(void *parameter) {
                         
                         rtc.adjust(dt);
                         
-                        Serial.println(" NTP time saved to RTC");
+                        Serial.println("✓ NTP time saved to RTC");
                         Serial.println("   (RTC time updated from NTP)");
                     }
                     
@@ -1217,12 +1309,26 @@ void ntpTask(void *parameter) {
             }
             
             if (!syncSuccess) {
-                Serial.println(" All NTP servers failed!");
+                Serial.println("✗ All NTP servers failed!");
                 Serial.println("   Keeping current time");
                 Serial.println("========================================\n");
             }
             
+            // ================================================
+            // SET FLAGS: NTP SYNC COMPLETED
+            // ================================================
+            ntpSyncInProgress = false;
+            ntpSyncCompleted = syncSuccess;
+            
             xSemaphoreGive(timeMutex);
+            
+        } else {
+            // Gagal acquire mutex
+            Serial.println("✗ Failed to acquire time mutex");
+            Serial.println("========================================\n");
+            
+            ntpSyncInProgress = false;
+            ntpSyncCompleted = false;
         }
     }
 }
