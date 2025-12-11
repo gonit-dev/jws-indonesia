@@ -2226,107 +2226,122 @@ void setupServerRoutes() {
         resp->addHeader("Connection", "close");
         request->send(resp);
     });
+    
+server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest *request){
+    if (!requireAuth(request)) return;
+    
+    Serial.println("\n========================================");
+    Serial.println("POST /setmethod received");
+    Serial.print("Client IP: ");
+    Serial.println(request->client()->remoteIP().toString());
+    Serial.println("========================================");
 
-    server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest *request){
-        if (!requireAuth(request)) return;
-        Serial.println("\n========================================");
-        Serial.println("POST /setmethod received");
-        Serial.println("========================================");
-
-        if (!request->hasParam("methodId", true) || !request->hasParam("methodName", true)) {
-            Serial.println("ERROR: Missing parameters");
-            request->send(400, "application/json", 
-                "{\"error\":\"Missing methodId or methodName parameter\"}");
-            return;
+    if (!request->hasParam("methodId", true) || !request->hasParam("methodName", true)) {
+        Serial.println("ERROR: Missing parameters");
+        
+        int params = request->params();
+        Serial.printf("Received parameters (%d):\n", params);
+        for(int i = 0; i < params; i++) {
+            const AsyncWebParameter* p = request->getParam(i);
+            Serial.printf("  %s = %s\n", p->name().c_str(), p->value().c_str());
         }
+        
+        request->send(400, "application/json", 
+            "{\"error\":\"Missing methodId or methodName parameter\"}");
+        return;
+    }
 
-        String methodIdStr = request->getParam("methodId", true)->value();
-        String methodName = request->getParam("methodName", true)->value();
-        
-        methodIdStr.trim();
-        methodName.trim();
-        
-        int methodId = methodIdStr.toInt();
-        
-        Serial.println("Received data:");
-        Serial.println("  Method ID: " + String(methodId));
-        Serial.println("  Method Name: " + methodName);
-        
-        if (methodId < 0 || methodId > 20) {
-            Serial.println("ERROR: Invalid method ID");
-            request->send(400, "application/json", 
-                "{\"error\":\"Invalid method ID\"}");
-            return;
-        }
+    String methodIdStr = request->getParam("methodId", true)->value();
+    String methodName = request->getParam("methodName", true)->value();
+    
+    methodIdStr.trim();
+    methodName.trim();
+    
+    int methodId = methodIdStr.toInt();
+    
+    Serial.println("Received data:");
+    Serial.println("  Method ID: " + String(methodId));
+    Serial.println("  Method Name: " + methodName);
+    
+    if (methodId < 0 || methodId > 20) {
+        Serial.println("ERROR: Invalid method ID");
+        request->send(400, "application/json", 
+            "{\"error\":\"Invalid method ID\"}");
+        return;
+    }
+    
+    if (methodName.length() == 0) {
+        Serial.println("ERROR: Empty method name");
+        request->send(400, "application/json", 
+            "{\"error\":\"Method name cannot be empty\"}");
+        return;
+    }
+    
+    if (methodName.length() > 100) {
+        Serial.println("ERROR: Method name too long");
+        request->send(400, "application/json", 
+            "{\"error\":\"Method name too long (max 100 chars)\"}");
+        return;
+    }
 
-        Serial.println("Saving to memory...");
+    const AsyncWebServerResponse *resp;
+
+    // SIMPAN KE MEMORY
+    Serial.println("Saving to memory...");
+    
+    if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+        methodConfig.methodId = methodId;
+        methodConfig.methodName = methodName;
         
-        bool memorySuccess = false;
-        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(5000)) == pdTRUE) {
-            methodConfig.methodId = methodId;
-            methodConfig.methodName = methodName;
+        xSemaphoreGive(settingsMutex);
+        Serial.println("✓ Memory updated");
+        Serial.println("  Method ID: " + String(methodConfig.methodId));
+        Serial.println("  Method Name: " + methodConfig.methodName);
+    }
+    
+    // SIMPAN KE FILE
+    Serial.println("Writing to LittleFS...");
+    saveMethodSelection();
+    
+    // UPDATE PRAYER TIMES (JIKA ONLINE & ADA KOORDINAT)
+    bool willFetchPrayerTimes = false;
+    
+    if (WiFi.status() == WL_CONNECTED) {
+        if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
+            Serial.println("Fetching prayer times with new method...");
+            Serial.println("  City: " + prayerConfig.selectedCity);
+            Serial.println("  Method: " + methodName);
             
-            xSemaphoreGive(settingsMutex);
-            Serial.println("✓ Memory updated");
-            Serial.println("  Method ID: " + String(methodConfig.methodId));
-            Serial.println("  Method Name: " + methodConfig.methodName);
-            memorySuccess = true;
+            getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
+            
+            Serial.println("✓ Prayer times update initiated");
+            willFetchPrayerTimes = true;
         } else {
-            Serial.println("ERROR: Cannot acquire settings mutex");
-            request->send(500, "application/json", 
-                "{\"error\":\"System busy, please retry\"}");
-            return;
+            Serial.println("⚠ No coordinates available");
         }
-        
-        if (!memorySuccess) {
-            Serial.println("ERROR: Memory update failed");
-            request->send(500, "application/json", 
-                "{\"error\":\"Failed to update memory\"}");
-            return;
-        }
-        
-        Serial.println("Writing to LittleFS...");
-        saveMethodSelection();
-        
-        Serial.println("Updating prayer times with new method...");
-        bool willFetchPrayerTimes = false;
-        
-        if (WiFi.status() == WL_CONNECTED) {
-            if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-                Serial.println("Fetching prayer times with new method...");
-                Serial.println("  City: " + prayerConfig.selectedCity);
-                Serial.println("  Method: " + methodName);
-                
-                getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
-                
-                Serial.println("✓ Prayer times update initiated");
-                willFetchPrayerTimes = true;
-            } else {
-                Serial.println("⚠ No coordinates available");
-            }
-        } else {
-            Serial.println("⚠ WiFi not connected");
-        }
-        
-        Serial.println("========================================");
-        Serial.println("SUCCESS: Method saved successfully");
-        Serial.println("  Method: " + methodName);
-        if (willFetchPrayerTimes) {
-            Serial.println("  Prayer times will update shortly...");
-        }
-        Serial.println("========================================\n");
-        
-        String response = "{";
-        response += "\"success\":true,";
-        response += "\"methodId\":" + String(methodId) + ",";
-        response += "\"methodName\":\"" + methodName + "\",";
-        response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
-        response += "}";
-        
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
-        resp->addHeader("Connection", "close");
-        request->send(resp);
-    });
+    } else {
+        Serial.println("⚠ WiFi not connected");
+    }
+    
+    Serial.println("========================================");
+    Serial.println("SUCCESS: Method saved successfully");
+    Serial.println("  Method: " + methodName);
+    if (willFetchPrayerTimes) {
+        Serial.println("  Prayer times will update shortly...");
+    }
+    Serial.println("========================================\n");
+    
+    String response = "{";
+    response += "\"success\":true,";
+    response += "\"methodId\":" + String(methodId) + ",";
+    response += "\"methodName\":\"" + methodName + "\",";
+    response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
+    response += "}";
+    
+    AsyncWebServerResponse *resp2 = request->beginResponse(200, "application/json", response);
+    resp2->addHeader("Connection", "close");
+    request->send(resp2);
+});
 
     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!requireAuth(request)) return;
