@@ -496,49 +496,6 @@
         }
 
         // ================================
-        // PEMBUNGKUS FETCH AMAN
-        // ================================
-        async function secureFetch(url, options = {}) {
-            if (!options.credentials) {
-                options.credentials = 'same-origin';
-            }
-            
-            if (!options.headers) {
-                options.headers = {};
-            }
-            
-            const cookies = document.cookie.split(';');
-            let sessionToken = '';
-            for (let cookie of cookies) {
-                const [name, value] = cookie.trim().split('=');
-                if (name === 'session') {
-                    sessionToken = value;
-                    break;
-                }
-            }
-            
-            if (sessionToken) {
-                options.headers['X-Session-Token'] = sessionToken;
-            }
-            
-            try {
-                const response = await fetch(url, options);
-                
-                if (response.status === 403) {
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
-                    throw new Error('Sesi telah berakhir');
-                }
-                
-                return response;
-            } catch (error) {
-                console.error('Kesalahan fetch:', error);
-                throw error;
-            }
-        }
-
-        // ================================
         // NOTIFIKASI TOAST (menggunakan Foundation Callout)
         // ================================
         function showToast(message, type = 'success') {
@@ -567,7 +524,7 @@
         // ================================
         async function updateDeviceStatus() {
             try {
-                const response = await secureFetch('/devicestatus');
+                const response = await fetch('/devicestatus');
                 const data = await response.json();
                 
                 isOnline = data.connected === true;
@@ -640,7 +597,7 @@
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 15000);
                 
-                const response = await secureFetch('/getcities', {
+                const response = await fetch('/getcities', {
                     method: 'GET',
                     signal: controller.signal,
                     headers: {
@@ -731,7 +688,7 @@
             console.log('🔄 Memuat pilihan kota saat ini...');
             
             try {
-                const response = await secureFetch('/getcityinfo', {
+                const response = await fetch('/getcityinfo', {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json'
@@ -808,7 +765,7 @@
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000);
                 
-                const response = await secureFetch('/setcity', {
+                const response = await fetch('/setcity', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -850,7 +807,7 @@
         // ================================
         async function loadSavedPrayerTimes() {
             try {
-                const response = await secureFetch('/getprayertimes');
+                const response = await fetch('/getprayertimes');
                 const data = await response.json();
                 
                 document.getElementById('subuhTime').textContent = data.subuh || '--:--';
@@ -870,6 +827,10 @@
             const ssid = document.getElementById('wifiSSID').value.trim();
             const password = document.getElementById('wifiPassword').value;
 
+            if (!confirm('📡 Yakin ingin terhubung ke WiFi ' + ssid + '?')) {
+                return;
+            }
+
             if (!ssid) {
                 showToast('❌ SSID tidak boleh kosong', 'error');
                 return;
@@ -880,7 +841,7 @@
             btn.disabled = true;
             btn.textContent = '⏳ Menyimpan...';
 
-            secureFetch('/setwifi', {
+            fetch('/setwifi', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -923,6 +884,10 @@
             const ssid = document.getElementById('apSSID').value.trim();
             const password = document.getElementById('apPassword').value;
 
+            if (!confirm('📶 Yakin ingin merubah ke AP ' + ssid + '?')) {
+                return;
+            }
+
             if (!ssid) {
                 showToast('❌ SSID AP tidak boleh kosong', 'error');
                 return;
@@ -939,7 +904,7 @@
             btn.disabled = true;
             btn.textContent = '⏳ Menyimpan...';
 
-            secureFetch('/setap', {
+            fetch('/setap', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -1001,7 +966,7 @@
             btn.disabled = true;
             btn.textContent = '⏳ Menyinkronkan...';
 
-            secureFetch('/synctime', { 
+            fetch('/synctime', { 
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -1027,6 +992,10 @@
         // RESET PABRIK
         // ================================
         function resetSettings() {
+            if (!confirm('⚠️ Yakin ingin mengatur ulang semua pengaturan? Perangkat akan dimulai ulang dan kembali ke pengaturan awal.')) {
+                return;
+            }
+
             const btn = event.target;
             const originalText = btn.textContent;
             btn.disabled = true;
@@ -1345,7 +1314,7 @@
             console.log('📖 Memuat metode saat ini...');
             
             try {
-                const response = await secureFetch('/getmethod', {
+                const response = await fetch('/getmethod', {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json'
@@ -1417,7 +1386,7 @@
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000);
                 
-                const response = await secureFetch('/setmethod', {
+                const response = await fetch('/setmethod', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -1474,13 +1443,17 @@
         }
 
         async function restartDevice() {
+            if (!confirm('🔄 Yakin ingin memulai ulang perangkat? Perangkat akan tidak terhubung ~15 detik.')) {
+                return;
+            }
+
             const btn = event.target;
             const originalText = btn.textContent;
             btn.disabled = true;
             btn.textContent = '⏳ Memulai ulang...';
 
             try {
-                const response = await secureFetch('/restart', { 
+                const response = await fetch('/restart', { 
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'

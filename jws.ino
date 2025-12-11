@@ -213,20 +213,6 @@ volatile WiFiState wifiState = WIFI_IDLE;
 volatile bool ntpSyncInProgress = false;
 volatile bool ntpSyncCompleted = false;
 
-// ================================
-// AUTO SESSION MANAGEMENT
-// ================================
-struct Session {
-    String token;
-    unsigned long expiry;
-    IPAddress clientIP;
-    unsigned long createdAt;
-};
-
-const int MAX_SESSIONS = 5;
-Session activeSessions[MAX_SESSIONS];
-const unsigned long SESSION_DURATION = 900000;
-
 // Forward Declarations
 void updateTimeDisplay();
 void updatePrayerDisplay();
@@ -234,6 +220,65 @@ void getPrayerTimesByCoordinates(String lat, String lon);
 void saveWiFiCredentials();
 void savePrayerTimes();
 void setupServerRoutes();
+
+// ================================
+// SECURITY HELPER FUNCTIONS
+// ================================
+
+// Fungsi untuk memeriksa apakah request berasal dari index.html
+bool isValidReferer(AsyncWebServerRequest *request) {
+    if (!request->hasHeader("Referer")) {
+        return false;
+    }
+    
+    String referer = request->header("Referer");
+    
+    IPAddress clientIP = request->client()->remoteIP();
+    String apIP = WiFi.softAPIP().toString();
+    String staIP = WiFi.localIP().toString();
+    
+    if (referer.indexOf(apIP) > 0 || referer.indexOf(staIP) > 0) {
+        return true;
+    }
+    
+    return false;
+}
+
+// Middleware untuk endpoint yang dilindungi
+bool requireAuth(AsyncWebServerRequest *request) {
+    if (!isValidReferer(request)) {
+        Serial.printf("[BLOCKED] Unauthorized access attempt from %s to %s\n", 
+            request->client()->remoteIP().toString().c_str(),
+            request->url().c_str());
+        
+            String html = "<!DOCTYPE html><html><head>";
+            html += "<meta charset='UTF-8'>";
+            html += "<meta name='viewport' content='width=device-width,initial-scale=1.0'>";
+            html += "<title>404 - Not Found</title>";
+            html += "<style>";
+            html += "body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}";
+            html += ".container{max-width:500px;margin:20px;background:white;padding:50px 40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}";
+            html += ".error-code{font-size:120px;font-weight:800;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0;line-height:1}";
+            html += "h2{color:#333;font-size:28px;margin:20px 0 10px;font-weight:600}";
+            html += "p{color:#666;font-size:16px;line-height:1.6;margin:20px 0 30px}";
+            html += ".btn{display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;text-decoration:none;border-radius:50px;font-weight:600;font-size:16px;transition:all 0.3s;box-shadow:0 4px 15px rgba(102,126,234,0.4)}";
+            html += ".btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(102,126,234,0.6)}";
+            html += ".icon{font-size:80px;margin-bottom:20px}";
+            html += "</style></head><body>";
+            html += "<div class='container'>";
+            html += "<div class='icon'></div>";
+            html += "<div class='error-code'>404</div>";
+            html += "<h2>Page Not Found</h2>";
+            html += "<p>The page you're looking for doesn't exist or you don't have permission to access it. Please return to the home page.</p>";
+            html += "<a href='/' class='btn'>← Back to Home</a>";
+            html += "</div></body></html>";
+        
+        request->send(403, "text/html", html);
+        return false;
+    }
+    
+    return true;
+}
 
 // ================================
 // FLUSH CALLBACK
@@ -297,87 +342,6 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data) {
     }
     data->state = LV_INDEV_STATE_REL;
     touchPressed = false;
-}
-
-String generateSessionToken() {
-    String token = "";
-    const char chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    
-    for (int i = 0; i < 32; i++) {
-        token += chars[random(0, sizeof(chars) - 1)];
-    }
-    
-    return token;
-}
-
-String getOrCreateSession(IPAddress clientIP) {
-    unsigned long now = millis();
-    
-    for (int i = 0; i < MAX_SESSIONS; i++) {
-        if (activeSessions[i].clientIP == clientIP && 
-            activeSessions[i].expiry > now) {
-            activeSessions[i].expiry = now + SESSION_DURATION;
-            return activeSessions[i].token;
-        }
-    }
-    
-    int slot = -1;
-    unsigned long oldestExpiry = ULONG_MAX;
-    
-    for (int i = 0; i < MAX_SESSIONS; i++) {
-        if (activeSessions[i].token.length() == 0 || 
-            activeSessions[i].expiry < now) {
-            slot = i;
-            break;
-        }
-        if (activeSessions[i].expiry < oldestExpiry) {
-            oldestExpiry = activeSessions[i].expiry;
-            slot = i;
-        }
-    }
-    
-    if (slot >= 0) {
-        activeSessions[slot].token = generateSessionToken();
-        activeSessions[slot].expiry = now + SESSION_DURATION;
-        activeSessions[slot].clientIP = clientIP;
-        
-        Serial.printf("New session created for %s\n", clientIP.toString().c_str());
-        return activeSessions[slot].token;
-    }
-    
-    return "";
-}
-
-bool validateSession(AsyncWebServerRequest *request) {
-    unsigned long now = millis();
-    
-    String token = "";
-    
-    if (request->hasHeader("X-Session-Token")) {
-        token = request->getHeader("X-Session-Token")->value();
-    } else if (request->hasHeader("Cookie")) {
-        String cookies = request->getHeader("Cookie")->value();
-        int pos = cookies.indexOf("session=");
-        if (pos >= 0) {
-            int endPos = cookies.indexOf(";", pos);
-            if (endPos < 0) endPos = cookies.length();
-            token = cookies.substring(pos + 8, endPos);
-        }
-    }
-    
-    if (token.length() == 0) {
-        return false;
-    }
-    
-    for (int i = 0; i < MAX_SESSIONS; i++) {
-        if (activeSessions[i].token == token && 
-            activeSessions[i].expiry > now) {
-            activeSessions[i].expiry = now + SESSION_DURATION;
-            return true;
-        }
-    }
-    
-    return false;
 }
 
 // ================================
@@ -1578,7 +1542,6 @@ void webTask(void *parameter) {
     
     Serial.println(" Web server started");
     Serial.println("   Port: 80");
-    Serial.println("   Max Clients: " + String(MAX_SESSIONS));
     Serial.println("========================================\n");
     
     unsigned long lastReport = 0;
@@ -1610,41 +1573,6 @@ void webTask(void *parameter) {
                 
                 Serial.println(" AP restored: " + String(wifiConfig.apSSID));
             }
-        }
-        
-        // ================================
-        // STATUS MONITORING EVERY 30 SECONDS
-        // ================================
-        if (millis() - lastReport > 30000) {
-            Serial.println("\n=== WEB SERVER STATUS ===");
-            Serial.printf("Free Heap: %d bytes (%.1f KB)\n", 
-                ESP.getFreeHeap(), 
-                ESP.getFreeHeap() / 1024.0);
-            
-            int sessionCount = 0;
-            unsigned long now = millis();
-            
-            Serial.println("Active Sessions:");
-            for (int i = 0; i < MAX_SESSIONS; i++) {
-                if (::activeSessions[i].token.length() > 0 && 
-                    ::activeSessions[i].expiry > now) {
-                    sessionCount++;
-                    unsigned long remaining = (::activeSessions[i].expiry - now) / 1000;
-                    Serial.printf("   [%d] %s (expires in %lu sec)\n", 
-                        i, 
-                        ::activeSessions[i].clientIP.toString().c_str(),
-                        remaining);
-                }
-            }
-            
-            if (sessionCount == 0) {
-                Serial.println("   No active sessions");
-            }
-            
-            Serial.printf("Total: %d/%d sessions\n", sessionCount, MAX_SESSIONS);
-            Serial.println("========================\n");
-            
-            lastReport = millis();
         }
     }
 }
@@ -1892,15 +1820,10 @@ void scheduleRestart(int delaySeconds) {
 // ================================
 void setupServerRoutes() {
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-        IPAddress clientIP = request->client()->remoteIP();
-        String sessionToken = getOrCreateSession(clientIP);
-        
         AsyncWebServerResponse *response = request->beginResponse(
             LittleFS, "/index.html", "text/html"
         );
         
-        response->addHeader("Set-Cookie", 
-            "session=" + sessionToken + "; Max-Age=3600; Path=/; SameSite=Strict");
         response->addHeader("Connection", "close");  // FORCE CLOSE
         response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         
@@ -1908,12 +1831,6 @@ void setupServerRoutes() {
     });
     
     server.on("/assets/css/foundation.css", HTTP_GET, [](AsyncWebServerRequest *request){
-        if (!validateSession(request)) {
-            Serial.println("Unauthorized access to CSS");
-            request->send(403, "text/css", "/* Forbidden */");
-            return;
-        }
-        
         AsyncWebServerResponse *response = request->beginResponse(
             LittleFS, "/assets/css/foundation.css", "text/css"
         );
@@ -1925,12 +1842,7 @@ void setupServerRoutes() {
     });
 
     server.on("/devicestatus", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (!validateSession(request)) {
-            Serial.println("Unauthorized access to /devicestatus");
-            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
-            return;
-        }
-
+        if (!requireAuth(request)) return;
         char timeStr[20];
         char dateStr[20];
         
@@ -1975,12 +1887,7 @@ void setupServerRoutes() {
     });
 
     server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest *request){
-        if (!validateSession(request)) {
-            Serial.println("Unauthorized access to /getprayertimes");
-            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
-            return;
-        }
-
+        if (!requireAuth(request)) return;
         String json = "{";
         json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
         json += "\"dzuhur\":\"" + prayerConfig.zuhurTime + "\",";
@@ -1995,12 +1902,7 @@ void setupServerRoutes() {
     });
 
     server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request){
-        if (!validateSession(request)) {
-            Serial.println("Unauthorized access to /getcities");
-            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
-            return;
-        }
-
+        if (!requireAuth(request)) return;
         Serial.println("GET /getcities");
         
         if (!LittleFS.exists("/cities.json")) {
@@ -2015,7 +1917,7 @@ void setupServerRoutes() {
             "application/json"
         );
         
-        response->addHeader("Connection", "close");  // FORCE CLOSE
+        response->addHeader("Connection", "close");
         response->addHeader("Access-Control-Allow-Origin", "*");
         response->addHeader("Cache-Control", "public, max-age=3600");
         
@@ -2027,27 +1929,12 @@ void setupServerRoutes() {
     });
 
     server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request){
+        if (!requireAuth(request)) return;
         Serial.println("\n========================================");
         Serial.println("POST /setcity received");
         Serial.print("Client IP: ");
         Serial.println(request->client()->remoteIP().toString());
         Serial.println("========================================");
-        
-        if (!validateSession(request)) {
-            Serial.println("ERROR: Session validation failed");
-            
-            int headers = request->headers();
-            Serial.printf("Request headers (%d):\n", headers);
-            for(int i = 0; i < headers; i++) {
-                const AsyncWebHeader* h = request->getHeader(i);
-                Serial.printf("  %s: %s\n", h->name().c_str(), h->value().c_str());
-            }
-            
-            request->send(403, "application/json", 
-                "{\"error\":\"Session expired or invalid. Please refresh page.\"}");
-            return;
-        }
-        Serial.println("Session validated");
 
         if (!request->hasParam("city", true)) {
             Serial.println("ERROR: Missing 'city' parameter");
@@ -2288,12 +2175,7 @@ void setupServerRoutes() {
     });
 
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request){
-        if (!validateSession(request)) {
-            Serial.println("Unauthorized access to /getcityinfo");
-            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
-            return;
-        }
-
+        if (!requireAuth(request)) return;
         String json = "{";
         
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
@@ -2324,12 +2206,7 @@ void setupServerRoutes() {
     });
 
     server.on("/getmethod", HTTP_GET, [](AsyncWebServerRequest *request){
-        if (!validateSession(request)) {
-            Serial.println("Unauthorized access to /getmethod");
-            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
-            return;
-        }
-
+        if (!requireAuth(request)) return;
         String json = "{";
         
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
@@ -2351,17 +2228,10 @@ void setupServerRoutes() {
     });
 
     server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest *request){
+        if (!requireAuth(request)) return;
         Serial.println("\n========================================");
         Serial.println("POST /setmethod received");
         Serial.println("========================================");
-        
-        if (!validateSession(request)) {
-            Serial.println("ERROR: Session validation failed");
-            request->send(403, "application/json", 
-                "{\"error\":\"Session expired or invalid. Please refresh page.\"}");
-            return;
-        }
-        Serial.println("✓ Session validated");
 
         if (!request->hasParam("methodId", true) || !request->hasParam("methodName", true)) {
             Serial.println("ERROR: Missing parameters");
@@ -2459,12 +2329,7 @@ void setupServerRoutes() {
     });
 
     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (!validateSession(request)) {
-            Serial.println("Unauthorized access to /setwifi");
-            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
-            return;
-        }
-
+        if (!requireAuth(request)) return;
         if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
             wifiConfig.routerSSID = request->getParam("ssid", true)->value();
             wifiConfig.routerPassword = request->getParam("password", true)->value();
@@ -2484,12 +2349,7 @@ void setupServerRoutes() {
     });
 
     server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (!validateSession(request)) {
-            Serial.println("Unauthorized access to /setap");
-            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
-            return;
-        }
-
+        if (!requireAuth(request)) return;
         if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
             String ssid = request->getParam("ssid", true)->value();
             String pass = request->getParam("password", true)->value();
@@ -2517,12 +2377,7 @@ void setupServerRoutes() {
 
     server.on("/uploadcities", HTTP_POST, 
         [](AsyncWebServerRequest *request) {
-            if (!validateSession(request)) {
-                Serial.println("Unauthorized file upload attempt");
-                request->send(403, "application/json", "{\"error\":\"Not Found\"}");
-                return;
-            }
-            
+            if (!requireAuth(request)) return;
             String jsonSizeStr = "";
             String citiesCountStr = "";
             
@@ -2557,11 +2412,6 @@ void setupServerRoutes() {
             static unsigned long uploadStartTime = 0;
             
             if (index == 0) {
-                if (!validateSession(request)) {
-                    Serial.println("Unauthorized file upload attempt");
-                    return;
-                }
-                
                 Serial.println("\n========================================");
                 Serial.println("CITIES.JSON UPLOAD STARTED");
                 Serial.println("========================================");
@@ -2649,12 +2499,7 @@ void setupServerRoutes() {
     );
 
     server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (!validateSession(request)) {
-            Serial.println("Unauthorized access to /synctime");
-            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
-            return;
-        }
-
+        if (!requireAuth(request)) return;
         if (request->hasParam("y", true) && request->hasParam("m", true) &&
             request->hasParam("d", true) && request->hasParam("h", true) &&
             request->hasParam("i", true) && request->hasParam("s", true)) {
@@ -2792,12 +2637,7 @@ void setupServerRoutes() {
     });
 
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (!validateSession(request)) {
-            Serial.println("Unauthorized access to /reset");
-            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
-            return;
-        }
-
+        if (!requireAuth(request)) return;
         Serial.println("\n========================================");
         Serial.println("FACTORY RESET STARTED");
         Serial.println("========================================");
@@ -2911,12 +2751,7 @@ void setupServerRoutes() {
     });
 
     server.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (!validateSession(request)) {
-            Serial.println("Unauthorized access to /restart");
-            request->send(403, "application/json", "{\"error\":\"Not Found\"}");
-            return;
-        }
-
+        if (!requireAuth(request)) return;
         Serial.println("\n========================================");
         Serial.println("MANUAL RESTART REQUESTED");
         Serial.println("========================================");
@@ -2952,32 +2787,6 @@ void setupServerRoutes() {
             
             Serial.println("   → Static asset not found (returning 404)");
             request->send(404, "text/plain", "File not found");
-            return;
-        }
-        
-        bool isProtectedEndpoint = (
-            url.startsWith("/api/") ||
-            url == "/devicestatus" ||
-            url == "/getprayertimes" ||
-            url == "/getcities" ||
-            url == "/setcity" ||
-            url == "/setwifi" ||
-            url == "/setap" ||
-            url == "/synctime" ||
-            url == "/reset" ||
-            url == "/getcityinfo"
-        );
-        
-        if (isProtectedEndpoint) {
-            if (!validateSession(request)) {
-                Serial.println("   → Protected endpoint, Not Found");
-                Serial.println("   → Redirecting to /notfound");
-                request->redirect("/notfound");
-                return;
-            }
-            
-            Serial.println("   → Protected endpoint Not Found (session valid)");
-            request->redirect("/notfound");
             return;
         }
         
@@ -3288,27 +3097,6 @@ void setup() {
     }
     
     // ================================
-    // SESSION SYSTEM INIT
-    // ================================
-    randomSeed(analogRead(0) + millis());
-    
-    Serial.println("\n========================================");
-    Serial.println("SESSION SYSTEM INITIALIZATION");
-    Serial.println("========================================");
-    Serial.println(" Clearing all sessions...");
-    
-    for (int i = 0; i < MAX_SESSIONS; i++) {
-        activeSessions[i].token = "";
-        activeSessions[i].expiry = 0;
-        activeSessions[i].clientIP = IPAddress(0, 0, 0, 0);
-    }
-    
-    Serial.println(" All sessions cleared");
-    Serial.printf("   Max sessions: %d\n", MAX_SESSIONS);
-    Serial.printf("   Session duration: %lu minutes\n", SESSION_DURATION / 60000);
-    Serial.println("========================================\n");
-    
-    // ================================
     // CREATE FREERTOS TASKS
     // ================================
     Serial.println("Starting FreeRTOS Tasks...");
@@ -3419,7 +3207,6 @@ void setup() {
     Serial.println("========================================");
     Serial.println(" Multi-client concurrent access enabled");
     Serial.println(" WiFi sleep disabled for better response");
-    Serial.println(" Max " + String(MAX_SESSIONS) + " simultaneous connections");
     Serial.println("========================================\n");
     
     if (wifiConfig.routerSSID.length() > 0) {
