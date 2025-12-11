@@ -1384,7 +1384,7 @@
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000);
                 
-                const response = await fetch('/setmethod', {
+                const response = await secureFetch('/setmethod', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -1400,7 +1400,7 @@
                     const result = await response.json();
                     
                     showToast('✅ Metode kalkulasi berhasil disimpan!', 'success');
-                    f
+                    
                     // Perbarui KEDUA elemen
                     const currentMethodTop = document.getElementById('currentMethodTop');
                     const currentMethodBottom = document.getElementById('currentMethodBottom');
@@ -1439,7 +1439,7 @@
                 btn.textContent = originalText;
             }
         }
-
+        
         async function restartDevice() {
             if (!confirm('🔄 Yakin ingin memulai ulang perangkat? Perangkat akan tidak terhubung ~15 detik.')) {
                 return;
