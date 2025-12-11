@@ -825,10 +825,6 @@
             const ssid = document.getElementById('wifiSSID').value.trim();
             const password = document.getElementById('wifiPassword').value;
 
-            if (!confirm('📡 Yakin ingin terhubung ke WiFi ' + ssid + '?')) {
-                return;
-            }
-
             if (!ssid) {
                 showToast('❌ SSID tidak boleh kosong', 'error');
                 return;
@@ -871,46 +867,16 @@
                 }
             })
             .catch(error => {
-                if (error.message.includes('Failed to fetch') || 
-                    error.message.includes('NetworkError') ||
-                    error.name === 'TypeError') {
-                    
-                    console.log('⚠️ Network error, but WiFi data likely saved');
-                    showToast('✅ WiFi berhasil disimpan!', 'success');
-                    
-                    setTimeout(() => {
-                        showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
-                    }, 1500);
-                    
-                    setTimeout(() => {
-                        btn.disabled = false;
-                        btn.textContent = originalText;
-                    }, 6000);
-                    
-                    setTimeout(() => {
-                        showToast('🔄 Memuat ulang halaman otomatis...', 'warning');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                    }, 18000);
-                    
-                } else {
-                    // Error lain (bukan network error)
-                    console.error('Kesalahan:', error);
-                    showToast('❌ Gagal menyimpan WiFi', 'error');
-                    btn.disabled = false;
-                    btn.textContent = originalText;
-                }
+                console.error('Kesalahan:', error);
+                showToast('❌ Gagal menyimpan WiFi', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
             });
         }
 
         function setAP() {
             const ssid = document.getElementById('apSSID').value.trim();
             const password = document.getElementById('apPassword').value;
-
-            if (!confirm('📶 Yakin ingin merubah ke AP ' + ssid + '?')) {
-                return;
-            }
 
             if (!ssid) {
                 showToast('❌ SSID AP tidak boleh kosong', 'error');
@@ -966,40 +932,10 @@
                 }
             })
             .catch(error => {
-                if (error.message.includes('Failed to fetch') || 
-                    error.message.includes('NetworkError') ||
-                    error.name === 'TypeError') {
-                    
-                    console.log('⚠️ Network error, but AP settings likely saved');
-                    showToast('✅ Pengaturan AP berhasil disimpan!', 'success');
-                    
-                    setTimeout(() => {
-                        showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
-                    }, 1500);
-                    
-                    setTimeout(() => {
-                        showToast('📡 Setelah dimulai ulang, sambungkan ke AP: ' + ssid, 'warning');
-                    }, 3500);
-                    
-                    setTimeout(() => {
-                        btn.disabled = false;
-                        btn.textContent = originalText;
-                    }, 6000);
-                    
-                    setTimeout(() => {
-                        showToast('🔄 Memuat ulang halaman otomatis...', 'warning');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                    }, 18000);
-                    
-                } else {
-                    // Error lain (bukan network error)
-                    console.error('Kesalahan:', error);
-                    showToast('❌ ' + error.message, 'error');
-                    btn.disabled = false;
-                    btn.textContent = originalText;
-                }
+                console.error('Kesalahan:', error);
+                showToast('❌ ' + error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
             });
         }
 
@@ -1085,40 +1021,10 @@
                 }
             })
             .catch(error => {
-                if (error.message.includes('Failed to fetch') || 
-                    error.message.includes('NetworkError') ||
-                    error.name === 'TypeError') {
-                    
-                    console.log('⚠️ Network error, but reset likely successful');
-                    showToast('✅ Pengaturan ulang berhasil!', 'success');
-                    
-                    setTimeout(() => {
-                        showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
-                    }, 1500);
-                    
-                    setTimeout(() => {
-                        showToast('📡 Sambungkan kembali ke AP: JWS Indonesia', 'warning');
-                    }, 3500);
-                    
-                    setTimeout(() => {
-                        btn.disabled = false;
-                        btn.textContent = originalText;
-                    }, 6000);
-                    
-                    setTimeout(() => {
-                        showToast('🔄 Memuat ulang halaman otomatis...', 'warning');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                    }, 18000);
-                    
-                } else {
-                    // Error lain (bukan network error)
-                    console.error('Kesalahan:', error);
-                    showToast('❌ Gagal mengatur ulang perangkat', 'error');
-                    btn.disabled = false;
-                    btn.textContent = originalText;
-                }
+                console.error('Kesalahan:', error);
+                showToast('❌ Gagal mengatur ulang perangkat', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
             });
         }
 
@@ -1566,36 +1472,11 @@
                 } else {
                     throw new Error('Perintah mulai ulang gagal');
                 }
-            } catch (error) {  // ← HANYA SATU catch
-                if (error.message.includes('Failed to fetch') || 
-                    error.message.includes('NetworkError') ||
-                    error.name === 'TypeError') {
-                    
-                    console.log('⚠️ Network error, but restart command likely sent');
-                    showToast('✅ Perintah mulai ulang terkirim!', 'success');
-                    
-                    setTimeout(() => {
-                        showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
-                    }, 1500);
-                    
-                    setTimeout(() => {
-                        btn.disabled = false;
-                        btn.textContent = originalText;
-                    }, 6000);
-                    
-                    setTimeout(() => {
-                        showToast('🔄 Memuat ulang halaman otomatis...', 'warning');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                    }, 18000);
-                    
-                } else {
-                    console.error('Kesalahan:', error);
-                    showToast('❌ Gagal memulai ulang perangkat', 'error');
-                    btn.disabled = false;
-                    btn.textContent = originalText;
-                }
+            } catch (error) {
+                console.error('Kesalahan:', error);
+                showToast('❌ Gagal memulai ulang perangkat', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
             }
         }
 

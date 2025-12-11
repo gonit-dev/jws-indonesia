@@ -1787,6 +1787,7 @@ void updatePrayerDisplay() {
 // ================================
 // DELAYED RESTART HELPER
 // ================================
+// Tambahkan delay SEBELUM restart untuk memastikan response terkirim
 void delayedRestart(void *parameter) {
     int delaySeconds = *((int*)parameter);
     
@@ -2356,13 +2357,11 @@ void setupServerRoutes() {
             
             Serial.println("WiFi credentials saved successfully");
             
-            request->send(200, "text/plain", "OK");
+            AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
+            resp->addHeader("Connection", "close");
+            request->send(resp);
             
-            request->onDisconnect([](){
-                Serial.println("Client disconnected, scheduling restart...");
-                vTaskDelay(pdMS_TO_TICKS(500));
-                scheduleRestart(5);
-            });
+            scheduleRestart(5);
         } else {
             request->send(400, "text/plain", "Missing parameters");
         }
@@ -2385,13 +2384,11 @@ void setupServerRoutes() {
             
             Serial.println("AP Settings berhasil disimpan");
             
-            request->send(200, "text/plain", "OK");
+            AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
+            resp->addHeader("Connection", "close");
+            request->send(resp);
             
-            request->onDisconnect([](){
-                Serial.println("Client disconnected, scheduling restart...");
-                vTaskDelay(pdMS_TO_TICKS(500));
-                scheduleRestart(5);
-            });
+            scheduleRestart(5);
         } else {
             request->send(400, "text/plain", "Missing parameters");
         }
@@ -2765,11 +2762,11 @@ void setupServerRoutes() {
         Serial.println("Device will restart in 5 seconds...");
         Serial.println("========================================\n");
         
-        request->onDisconnect([](){
-            Serial.println("Client disconnected, scheduling restart...");
-            vTaskDelay(pdMS_TO_TICKS(500));
-            scheduleRestart(5);
-        });
+        AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
+        resp->addHeader("Connection", "close");
+        request->send(resp);
+        
+        scheduleRestart(5);
     });
 
     server.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -2780,13 +2777,11 @@ void setupServerRoutes() {
         Serial.println("Device will restart in 5 seconds...");
         Serial.println("========================================\n");
         
-        request->send(200, "text/plain", "OK");
+        AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
+        resp->addHeader("Connection", "close");
+        request->send(resp);
         
-        request->onDisconnect([](){
-            Serial.println("Client disconnected, scheduling restart...");
-            vTaskDelay(pdMS_TO_TICKS(500));
-            scheduleRestart(5);
-        });
+        scheduleRestart(5);
     });
 
     server.onNotFound([](AsyncWebServerRequest *request){
