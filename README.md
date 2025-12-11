@@ -30,7 +30,7 @@
 | 🌐 **REST API** | Akses data via HTTP endpoint untuk integrasi IoT |
 | 🔄 **Auto WiFi Reconnect** | Otomatis reconnect jika koneksi terputus |
 | 📊 **Multi-Core FreeRTOS** | Task scheduling optimal di dual-core ESP32 |
-| 🔧 **Custom Hostname** | Hostname mengikuti nama WiFi Access Point |
+| 🔧 **Custom Hostname** | Hostname fixed: `JWS-Indonesia` (tidak dinamis) |
 
 ---
 
@@ -353,17 +353,23 @@ displayQueue    // UI update requests (10 items)
 
 ### 🔐 Security Features
 
+**Referer-Based Protection:**
+- Semua endpoint POST dilindungi dengan `requireAuth()`
+- Validasi `Referer` header harus dari IP device sendiri
+- Akses tanpa referer valid → HTTP 403 Forbidden
+- Response 403 berupa HTML error page (bukan redirect)
+- Logging setiap unauthorized access attempt
+
 **Session Management:**
-- Token-based session (32 karakter random)
-- Session expired: 15 menit (900 detik)
-- Maksimal 5 session bersamaan
-- Auto-redirect ke `notfound` jika session invalid
-- Session auto-refresh saat digunakan
+- ❌ TIDAK ADA token-based session
+- ❌ TIDAK ADA session expiry
+- ✅ Proteksi berbasis HTTP Referer header
+- ✅ Cocok untuk single-user local network
 
 **URL Protection:**
-- Protected endpoints: Redirect ke `notfound` jika no session
-- Static assets: Return 404 plain text
-- Random URLs: Redirect ke `notfound`
+- Protected endpoints: Return HTTP 403 jika no valid referer
+- Static assets: Return 404 plain text jika not found
+- Random URLs: Redirect ke `/notfound` (HTML 404 page)
 
 ### 💡 Display Configuration
 
@@ -396,9 +402,11 @@ trigger_panic = true    // Auto-restart jika hang
 
 | Item | Refresh Rate | Method |
 |------|--------------|--------|
-| Real-time clock | 1 detik | Client-side increment |
+| Real-time clock | **5 detik** | Fetch `/devicestatus` |
 | Device status | 5 detik | Fetch `/devicestatus` |
 | Prayer times | 30 detik | Fetch `/getprayertimes` |
+
+**Note:** Tidak ada client-side increment untuk jam. Waktu selalu fetch dari server setiap 5 detik.
 
 ### 🌍 Prayer Time Calculation
 
@@ -444,6 +452,12 @@ trigger_panic = true    // Auto-restart jika hang
 ### 📡 GET `/api/data`
 
 Endpoint untuk integrasi IoT - memberikan semua data dalam satu request.
+
+⚠️ **SECURITY WARNING:**
+- Endpoint ini **BELUM** dilindungi `requireAuth()`
+- Siapapun di network bisa akses tanpa validasi
+- Data sensitif: WiFi status, koordinat, jadwal shalat
+- **Rekomendasi:** Tambahkan `requireAuth()` di handler
 
 **Access URL:**
 ```
@@ -668,15 +682,6 @@ Solusi:
 5. Gunakan AP mode jika WiFi bermasalah
 ```
 
-**Session expired terus**
-```
-Solusi:
-1. Normal jika idle > 15 menit
-2. Refresh page untuk session baru
-3. Jangan gunakan multiple tabs bersamaan
-4. Clear browser cookies
-```
-
 **Cities dropdown kosong**
 ```
 Solusi:
@@ -709,12 +714,19 @@ Serial.printf("Free heap: %d bytes\n", ESP.getFreeHeap());
 
 **Check Task States:**
 ```bash
-# Via serial monitor, output otomatis setiap 30 detik:
-=== WEB SERVER STATUS ===
-Free Heap: 257000 bytes (251.0 KB)
-Active Sessions: 2/5
-Total: 2/5 sessions
-========================
+# Serial monitor menampilkan event log secara real-time:
+
+[WIFI] Connecting... 5/20 (Disconnected)
+✅ WiFi Connected Successfully!
+SSID: MyWiFi
+IP: 192.168.1.100
+RSSI: -45 dBm
+
+✅ NTP Sync successful!
+Server: pool.ntp.org
+Time: 12:34:56 08/12/2024
+
+📄 Prayer times updated successfully
 ```
 
 ---
@@ -778,12 +790,12 @@ AP Password: 12345678
 | Feature | Status | Notes |
 |---------|--------|-------|
 | HTTPS | ❌ | HTTP only (local network) |
-| Authentication | ✅ | Session-based (15 min expire) |
+| Authentication | ✅ | Referer-based validation |
+| CSRF Protection | ⚠️ | Referer check (basic) |
 | CORS | ✅ | Enabled untuk `/api/data` |
 | Rate Limiting | ❌ | No limit (trust local network) |
 | Input Validation | ✅ | Server-side validation |
 | XSS Protection | ✅ | HTML escaping |
-| CSRF Protection | ⚠️ | Session token (basic) |
 
 **Threat Model:**
 - ✅ Designed for: Home/office local network
