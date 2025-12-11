@@ -1566,8 +1566,7 @@
                 } else {
                     throw new Error('Perintah mulai ulang gagal');
                 }
-            }
-            .catch(error => {
+            } catch (error) {  // ← HANYA SATU catch
                 if (error.message.includes('Failed to fetch') || 
                     error.message.includes('NetworkError') ||
                     error.name === 'TypeError') {
@@ -1592,13 +1591,12 @@
                     }, 18000);
                     
                 } else {
-                    // Error lain (bukan network error)
                     console.error('Kesalahan:', error);
                     showToast('❌ Gagal memulai ulang perangkat', 'error');
                     btn.disabled = false;
                     btn.textContent = originalText;
                 }
-            });
+            }
         }
 
         // ================================
