@@ -682,6 +682,17 @@ Solusi:
 5. Gunakan AP mode jika WiFi bermasalah
 ```
 
+**Web interface tidak bisa diakses (403 Forbidden)**
+```
+Solusi:
+1. Pastikan akses dari browser yang sama yang buka halaman utama
+2. Jangan akses endpoint langsung (harus via index.html)
+3. Cek Referer header tidak di-block oleh browser/extension
+4. Disable browser extension yang mengubah header (privacy tools)
+5. Gunakan Incognito/Private mode untuk test
+6. Restart browser
+```
+
 **Cities dropdown kosong**
 ```
 Solusi:
