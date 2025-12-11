@@ -258,7 +258,7 @@ STA Mode: http://<IP-ESP32>  (cek serial monitor)
 - ✅ **Manual Time Sync**: Sinkronisasi waktu dari browser
 - ✅ **Upload Cities JSON**: Update database kota (max 1MB)
 - ✅ **Factory Reset**: Reset semua pengaturan ke default
-- ✅ **Real-time Clock**: Update setiap 1 detik
+- ✅ **Real-time Clock**: Server sync setiap 5 detik + client-side increment
 - ✅ **Auto-refresh Status**: Device status update setiap 5 detik
 
 ---
