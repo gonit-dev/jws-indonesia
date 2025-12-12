@@ -38,9 +38,129 @@
         .toast.show {
             top: 30px;
         }
+        
+        /* ← TAMBAHKAN CSS LOADING DI SINI (LOKASI 1) */
+        /* Loading Screen Styles */
+        #pageLoader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        #pageLoader.loaded {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loader-content {
+            text-align: center;
+            max-width: 400px;
+            padding: 0 20px;
+        }
+        
+        .loader-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        .loader-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1779ba;
+            margin-bottom: 10px;
+        }
+        
+        .loader-subtitle {
+            font-size: 14px;
+            color: #8a8a8a;
+            margin-bottom: 30px;
+        }
+        
+        .progress-container {
+            width: 100%;
+            height: 6px;
+            background: #e6e6e6;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #1779ba 0%, #14679e 100%);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255,255,255,0.3) 50%, 
+                transparent 100%);
+            animation: shimmer 1.5s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .loader-status {
+            font-size: 13px;
+            color: #1779ba;
+            font-weight: 500;
+            min-height: 20px;
+        }
+        
+        .loader-percentage {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1779ba;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
+    <!-- Page Loading Screen -->
+    <div id="pageLoader">
+        <div class="loader-content">
+            <div class="loader-icon">🕌</div>
+            <div class="loader-title">Islamic Prayer Clock</div>
+            <div class="loader-subtitle">Memuat pengaturan...</div>
+            <div class="progress-container">
+                <div class="progress-bar" id="loadingProgress"></div>
+            </div>
+            <div class="loader-percentage" id="loadingPercentage">0%</div>
+            <div class="loader-status" id="loadingStatus">Memulai...</div>
+        </div>
+    </div>
     <!-- Toast Notification menggunakan Foundation Callout -->
     <div id="toast" class="toast callout success"></div>
 
@@ -406,6 +526,81 @@
 
     <script>
         // ================================
+        // LOADING MANAGER
+        // ================================
+        const LoadingManager = {
+            totalSteps: 6,
+            currentStep: 0,
+            steps: [
+                { name: 'Foundation CSS', progress: 0 },
+                { name: 'DOM Ready', progress: 16 },
+                { name: 'Device Status', progress: 33 },
+                { name: 'Cities Data', progress: 50 },
+                { name: 'Prayer Times', progress: 66 },
+                { name: 'Method Config', progress: 83 }
+            ],
+            
+            updateProgress(stepIndex, statusText) {
+                const progress = this.steps[stepIndex].progress;
+                const progressBar = document.getElementById('loadingProgress');
+                const percentage = document.getElementById('loadingPercentage');
+                const status = document.getElementById('loadingStatus');
+                
+                if (progressBar) progressBar.style.width = progress + '%';
+                if (percentage) percentage.textContent = progress + '%';
+                if (status) status.textContent = statusText || this.steps[stepIndex].name;
+                
+                console.log(`📊 Loading: ${progress}% - ${statusText || this.steps[stepIndex].name}`);
+            },
+            
+            completeLoading() {
+                const loader = document.getElementById('pageLoader');
+                const progressBar = document.getElementById('loadingProgress');
+                const percentage = document.getElementById('loadingPercentage');
+                const status = document.getElementById('loadingStatus');
+                
+                if (progressBar) progressBar.style.width = '100%';
+                if (percentage) percentage.textContent = '100%';
+                if (status) status.textContent = '✅ Siap!';
+                
+                console.log('✅ Loading complete!');
+                
+                setTimeout(() => {
+                    if (loader) {
+                        loader.classList.add('loaded');
+                        setTimeout(() => {
+                            loader.style.display = 'none';
+                        }, 500);
+                    }
+                }, 300);
+            }
+        };
+
+        // Check CSS loaded
+        const cssLoaded = new Promise((resolve) => {
+            const checkCSS = setInterval(() => {
+                const testDiv = document.createElement('div');
+                testDiv.className = 'grid-container';
+                document.body.appendChild(testDiv);
+                const hasCSS = getComputedStyle(testDiv).width !== '100%';
+                document.body.removeChild(testDiv);
+                
+                if (hasCSS) {
+                    clearInterval(checkCSS);
+                    LoadingManager.updateProgress(0, '✓ Foundation CSS loaded');
+                    resolve();
+                }
+            }, 50);
+            
+            // Timeout fallback
+            setTimeout(() => {
+                clearInterval(checkCSS);
+                LoadingManager.updateProgress(0, '⚠ CSS timeout (proceeding)');
+                resolve();
+            }, 5000);
+        });
+
+        // ================================
         // VARIABEL GLOBAL
         // ================================
         let isOnline = false;
@@ -417,6 +612,19 @@
         let localStartTime = 0;
         let serverUptimeStart = 0;
         let lastSyncTime = 0;
+
+        let prayerConfig = {
+            subuhTime: '--:--',
+            zuhurTime: '--:--',
+            asarTime: '--:--',
+            maghribTime: '--:--',
+            isyaTime: '--:--'
+        };
+
+        let methodConfig = {
+            methodId: 5,
+            methodName: 'Egyptian General Authority of Survey'
+        };
 
         // ================================
         // FUNGSI JAM REAL-TIME
@@ -808,13 +1016,25 @@
                 const response = await fetch('/getprayertimes');
                 const data = await response.json();
                 
-                document.getElementById('subuhTime').textContent = data.subuh || '--:--';
-                document.getElementById('dzuhurTime').textContent = data.dzuhur || '--:--';
-                document.getElementById('asharTime').textContent = data.ashar || '--:--';
-                document.getElementById('maghribTime').textContent = data.maghrib || '--:--';
-                document.getElementById('isyaTime').textContent = data.isya || '--:--';
+                // 🔧 FIX: Update variable global DULU
+                prayerConfig.subuhTime = data.subuh || '--:--';
+                prayerConfig.zuhurTime = data.dzuhur || '--:--';
+                prayerConfig.asarTime = data.ashar || '--:--';
+                prayerConfig.maghribTime = data.maghrib || '--:--';
+                prayerConfig.isyaTime = data.isya || '--:--';
+                
+                // Baru update DOM
+                document.getElementById('subuhTime').textContent = prayerConfig.subuhTime;
+                document.getElementById('dzuhurTime').textContent = prayerConfig.zuhurTime;
+                document.getElementById('asharTime').textContent = prayerConfig.asarTime;
+                document.getElementById('maghribTime').textContent = prayerConfig.maghribTime;
+                document.getElementById('isyaTime').textContent = prayerConfig.isyaTime;
+                
+                console.log('✅ Prayer times loaded:', prayerConfig.subuhTime);
+                return true; // 🔧 Return success
             } catch (error) {
                 console.error('Kesalahan memuat jadwal salat:', error);
+                return false; // 🔧 Return failure
             }
         }
 
@@ -1317,39 +1537,46 @@
                 
                 const data = await response.json();
                 
+                // 🔧 FIX: Update variable global DULU
+                if (data.methodId !== undefined) {
+                    methodConfig.methodId = data.methodId;
+                    methodConfig.methodName = data.methodName;
+                } else {
+                    methodConfig.methodId = 5;
+                    methodConfig.methodName = 'Egyptian General Authority of Survey';
+                }
+                
+                // Baru update DOM
                 const currentMethodTop = document.getElementById('currentMethodTop');
                 const currentMethodBottom = document.getElementById('currentMethodBottom');
                 const methodDropdown = document.getElementById('methodDropdown');
                 
-                if (data.methodId !== undefined) {
-                    // Perbarui KEDUA elemen
-                    if (currentMethodTop) {
-                        currentMethodTop.textContent = data.methodName;
-                    }
-                    if (currentMethodBottom) {
-                        currentMethodBottom.textContent = data.methodName;
-                    }
-                    
-                    methodDropdown.value = data.methodId;
-                    
-                    console.log('✅ Metode dimuat:', data.methodName);
-                } else {
-                    // Metode bawaan
-                    if (currentMethodTop) {
-                        currentMethodTop.textContent = 'Egyptian General Authority of Survey';
-                    }
-                    if (currentMethodBottom) {
-                        currentMethodBottom.textContent = 'Egyptian General Authority of Survey';
-                    }
-                    methodDropdown.value = '5';
+                if (currentMethodTop) {
+                    currentMethodTop.textContent = methodConfig.methodName;
                 }
+                if (currentMethodBottom) {
+                    currentMethodBottom.textContent = methodConfig.methodName;
+                }
+                if (methodDropdown) {
+                    methodDropdown.value = methodConfig.methodId;
+                }
+                
+                console.log('✅ Metode dimuat:', methodConfig.methodName);
+                return true;
                 
             } catch (error) {
                 console.error('❌ Kesalahan memuat metode saat ini:', error);
+                
+                // Set default on error
+                methodConfig.methodId = 5;
+                methodConfig.methodName = 'Egyptian General Authority of Survey';
+                
                 const currentMethodTop = document.getElementById('currentMethodTop');
                 const currentMethodBottom = document.getElementById('currentMethodBottom');
-                if (currentMethodTop) currentMethodTop.textContent = 'Kesalahan memuat';
-                if (currentMethodBottom) currentMethodBottom.textContent = 'Kesalahan memuat';
+                if (currentMethodTop) currentMethodTop.textContent = methodConfig.methodName;
+                if (currentMethodBottom) currentMethodBottom.textContent = methodConfig.methodName;
+                
+                return false;
             }
         }
 
@@ -1483,20 +1710,236 @@
         // ================================
         // INISIALISASI
         // ================================
+        async function initializeApp() {
+            const progressBar = document.getElementById('loadingProgress');
+            const percentage = document.getElementById('loadingPercentage');
+            const status = document.getElementById('loadingStatus');
+            
+            let currentProgress = 0;
+            
+            function updateProgress(targetProgress, message) {
+                return new Promise((resolve) => {
+                    const interval = setInterval(() => {
+                        if (currentProgress < targetProgress) {
+                            currentProgress += 1;
+                            if (progressBar) progressBar.style.width = currentProgress + '%';
+                            if (percentage) percentage.textContent = currentProgress + '%';
+                            if (status) status.textContent = message;
+                        } else {
+                            clearInterval(interval);
+                            resolve();
+                        }
+                    }, 20);
+                });
+            }
+            
+            const LOADING_TIMEOUT = 10000;
+            let timeoutReached = false;
+            
+            const timeoutTimer = setTimeout(() => {
+                timeoutReached = true;
+                console.warn('⚠️ Loading timeout reached - forcing completion');
+                if (status) status.textContent = '⚠️ Timeout - melanjutkan...';
+                setTimeout(() => {
+                    LoadingManager.completeLoading();
+                }, 500);
+            }, LOADING_TIMEOUT);
+            
+            try {
+                // ================================
+                // STEP 1: CSS Check (0-15%)
+                // ================================
+                console.log('📦 Step 1: Checking CSS...');
+                if (status) status.textContent = '⏳ Memuat Foundation CSS...';
+                await updateProgress(5, '⏳ Memuat Foundation CSS...');
+                
+                await cssLoaded;
+                await updateProgress(15, '✓ Foundation CSS loaded');
+                await new Promise(r => setTimeout(r, 150));
+                
+                if (timeoutReached) return;
+                
+                // ================================
+                // STEP 2: Device Status (15-35%)
+                // ================================
+                console.log('📡 Step 2: Loading device status...');
+                if (status) status.textContent = '⏳ Menghubungkan ke perangkat...';
+                await updateProgress(20, '⏳ Menghubungkan ke perangkat...');
+                
+                try {
+                    await updateDeviceStatus();
+                    console.log('✅ Device status loaded');
+                    await updateProgress(35, '✓ Status perangkat terhubung');
+                } catch (err) {
+                    console.error('❌ Device status error:', err);
+                    await updateProgress(35, '⚠️ Status perangkat gagal (lanjut)');
+                }
+                await new Promise(r => setTimeout(r, 150));
+                
+                if (timeoutReached) return;
+                
+                // ================================
+                // STEP 3: Cities Data (35-60%) + RETRY
+                // ================================
+                console.log('🏙️ Step 3: Loading cities...');
+                if (status) status.textContent = '⏳ Memuat data kota Indonesia...';
+                await updateProgress(40, '⏳ Memuat data kota...');
+                
+                let citiesLoaded = false;
+                let citiesRetryCount = 0;
+                const MAX_CITIES_RETRY = 3;
+                
+                while (!citiesLoaded && citiesRetryCount < MAX_CITIES_RETRY && !timeoutReached) {
+                    try {
+                        if (citiesRetryCount > 0) {
+                            console.log(`🔄 Retry ${citiesRetryCount}/${MAX_CITIES_RETRY} untuk memuat cities...`);
+                            if (status) status.textContent = `🔄 Mencoba lagi (${citiesRetryCount}/${MAX_CITIES_RETRY})...`;
+                        }
+                        
+                        citiesLoaded = await loadCities();
+                        
+                        if (citiesLoaded && cityList.length > 0) {
+                            console.log(`✅ Cities loaded: ${cityList.length} cities`);
+                            await updateProgress(60, `✓ ${cityList.length} kota dimuat`);
+                            break; // Keluar dari loop jika berhasil
+                        } else {
+                            console.warn('⚠️ Cities loaded but empty, retrying...');
+                            citiesRetryCount++;
+                            
+                            if (citiesRetryCount < MAX_CITIES_RETRY) {
+                                await updateProgress(45 + (citiesRetryCount * 5), `⏳ Mencoba ulang ${citiesRetryCount}...`);
+                                await new Promise(r => setTimeout(r, 1000));
+                            }
+                        }
+                    } catch (err) {
+                        console.error(`❌ Cities load error (attempt ${citiesRetryCount + 1}):`, err);
+                        citiesRetryCount++;
+                        
+                        if (citiesRetryCount < MAX_CITIES_RETRY) {
+                            await updateProgress(45 + (citiesRetryCount * 5), `⚠️ Gagal, coba lagi...`);
+                            await new Promise(r => setTimeout(r, 1000));
+                        }
+                    }
+                }
+                
+                if (!citiesLoaded) {
+                    console.error('❌ Cities load failed after retries');
+                    await updateProgress(60, '⚠️ Data kota gagal dimuat');
+                } else {
+                    console.log('✅ Cities successfully loaded');
+                }
+                
+                await new Promise(r => setTimeout(r, 150));
+                
+                if (timeoutReached) return;
+                
+                // ================================
+                // STEP 4: Prayer Times (60-80%)
+                // ================================
+                console.log('🕌 Step 4: Loading prayer times...');
+                if (status) status.textContent = '⏳ Memuat jadwal shalat...';
+                await updateProgress(65, '⏳ Memuat jadwal shalat...');
+                
+                try {
+                    const prayerSuccess = await loadSavedPrayerTimes(); // 🔧 FIX: Ambil return value
+                    
+                    // 🔧 FIX: Validasi menggunakan variable global yang sudah di-update
+                    if (prayerSuccess && prayerConfig.subuhTime && prayerConfig.subuhTime !== '--:--') {
+                        console.log('✅ Prayer times loaded:', prayerConfig.subuhTime);
+                        await updateProgress(80, '✓ Jadwal shalat dimuat');
+                    } else {
+                        console.warn('⚠️ Prayer times empty or not configured');
+                        await updateProgress(80, '⚠️ Jadwal belum diatur');
+                    }
+                } catch (err) {
+                    console.error('❌ Prayer times error:', err);
+                    await updateProgress(80, '⚠️ Jadwal gagal dimuat');
+                }
+                await new Promise(r => setTimeout(r, 150));
+                
+                if (timeoutReached) return;
+                
+                // ================================
+                // STEP 5: Method Config (80-95%)
+                // ================================
+                console.log('⚙️ Step 5: Loading method config...');
+                if (status) status.textContent = '⏳ Memuat konfigurasi metode...';
+                await updateProgress(85, '⏳ Memuat metode kalkulasi...');
+                
+                try {
+                    const methodSuccess = await loadCurrentMethod();
+                    
+                    if (methodSuccess && methodConfig.methodName) {
+                        console.log('✅ Method loaded:', methodConfig.methodName);
+                        const displayName = methodConfig.methodName.length > 30 
+                            ? methodConfig.methodName.substring(0, 27) + '...' 
+                            : methodConfig.methodName;
+                        await updateProgress(95, '✓ Metode: ' + displayName);
+                    } else {
+                        console.warn('⚠️ Method using default');
+                        await updateProgress(95, '✓ Metode default digunakan');
+                    }
+                } catch (err) {
+                    console.error('❌ Method load error:', err);
+                    await updateProgress(95, '⚠️ Metode default digunakan');
+                }
+                await new Promise(r => setTimeout(r, 150));
+                
+                if (timeoutReached) return;
+                
+                // ================================
+                // STEP 6: Finalize (95-100%)
+                // ================================
+                console.log('✨ Step 6: Finalizing...');
+                if (status) status.textContent = '⏳ Finalisasi...';
+                await updateProgress(98, '⏳ Menyiapkan antarmuka...');
+                
+                // Start all intervals
+                setInterval(updateRealtimeDisplay, 1000);
+                setInterval(updateDeviceStatus, 5000);
+                setInterval(loadSavedPrayerTimes, 30000);
+                setInterval(loadCurrentMethod, 30000);
+                
+                console.log('✅ All intervals configured');
+                
+                await updateProgress(100, '✅ Siap digunakan!');
+                await new Promise(r => setTimeout(r, 300));
+                
+                // Clear timeout timer
+                clearTimeout(timeoutTimer);
+                
+                console.log('🎉 Initialization complete!');
+                console.log('========================================\n');
+                
+                // Complete loading
+                LoadingManager.completeLoading();
+                
+            } catch (error) {
+                console.error('❌ CRITICAL ERROR during initialization:', error);
+                
+                // Clear timeout
+                clearTimeout(timeoutTimer);
+                
+                // Force complete on error
+                if (status) status.textContent = '❌ Error: ' + error.message;
+                await updateProgress(100, '⚠️ Selesai dengan error');
+                
+                setTimeout(() => {
+                    LoadingManager.completeLoading();
+                }, 1500);
+                
+                // Still start intervals even on error
+                setInterval(updateRealtimeDisplay, 1000);
+                setInterval(updateDeviceStatus, 5000);
+                setInterval(loadSavedPrayerTimes, 30000);
+                setInterval(loadCurrentMethod, 30000);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 Halaman dimuat - Jam Salat Islam (Foundation CSS)');
-            
-            loadCities();
-            loadCurrentMethod();
-            updateDeviceStatus();
-            loadSavedPrayerTimes();
-            
-            setInterval(updateRealtimeDisplay, 1000);
-            setInterval(updateDeviceStatus, 5000);
-            setInterval(loadSavedPrayerTimes, 30000);
-            setInterval(loadCurrentMethod, 30000);
-            
-            console.log('✅ Semua pengatur waktu dikonfigurasi');
+            LoadingManager.updateProgress(1, '✓ DOM Ready');
+            initializeApp();
         });
     </script>
 </body>
