@@ -947,7 +947,7 @@ void wifiTask(void *parameter) {
         esp_task_wdt_reset();
         
         // ================================================
-        // FIX 2: STOP SCANNING SAAT CONNECTED
+        // STOP SCANNING SAAT CONNECTED
         // ================================================
         if (wifiConfig.isConnected && WiFi.status() == WL_CONNECTED) {
             // Hapus scan results saat connected
@@ -990,10 +990,58 @@ void wifiTask(void *parameter) {
                         
                         if (wifiState != WIFI_CONNECTING) {
                             Serial.println("   → Triggering immediate connection...\n");
-                            WiFi.scanDelete();
-                            wifiState = WIFI_CONNECTING;
-                            lastConnectAttempt = millis();
-                            connectAttempt = 0;
+                            
+                            if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                                
+                                WiFi.scanDelete();
+                                delay(100);
+                                
+                                wifi_mode_t currentMode;
+                                esp_wifi_get_mode(&currentMode);
+                                
+                                if (currentMode != WIFI_MODE_APSTA) {
+                                    Serial.println("⚠️ Mode bukan AP_STA, forcing restore...");
+                                    WiFi.mode(WIFI_AP_STA);
+                                    delay(100);
+                                    
+                                    // Pastikan AP masih hidup
+                                    if (WiFi.softAPgetStationNum() == 0 && WiFi.softAPIP() == IPAddress(0,0,0,0)) {
+                                        WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+                                        delay(100);
+                                        Serial.println("   ✓ AP restarted: " + String(wifiConfig.apSSID));
+                                    }
+                                }
+                                
+                                // Set hostname
+                                WiFi.setHostname("JWS-Indonesia");
+                                delay(100);
+                                
+                                // Set power
+                                WiFi.setTxPower(WIFI_POWER_19_5dBm);
+                                
+                                // CONNECT!
+                                Serial.println("========================================");
+                                Serial.println("🔌 FAST RECONNECT: Connecting to router...");
+                                Serial.println("========================================");
+                                Serial.println("SSID: " + wifiConfig.routerSSID);
+                                Serial.println("Signal: " + String(bestRSSI) + " dBm");
+                                
+                                WiFi.begin(wifiConfig.routerSSID.c_str(), wifiConfig.routerPassword.c_str());
+                                
+                                wifiState = WIFI_CONNECTING;
+                                connectAttempt = 0;
+                                lastConnectAttempt = millis();
+                                reconnectAttempts++;
+                                
+                                Serial.printf("Connecting... (reconnect attempt %d/%d)\n", 
+                                    reconnectAttempts, MAX_RECONNECT_ATTEMPTS);
+                                Serial.println("========================================\n");
+                                
+                                xSemaphoreGive(wifiMutex);
+                                
+                            } else {
+                                Serial.println("⚠️ Failed to acquire wifiMutex for fast reconnect");
+                            }
                         }
                         
                     } else {
@@ -1179,7 +1227,7 @@ void wifiTask(void *parameter) {
                     
                     if (connectAttempt >= MAX_CONNECT_ATTEMPTS) {
                         Serial.println("\n========================================");
-                        Serial.println("✗ WiFi Connection Timeout");
+                        Serial.println("❌ WiFi Connection Timeout");
                         Serial.println("========================================");
                         Serial.println("Failed after " + String(MAX_CONNECT_ATTEMPTS) + " seconds");
                         Serial.printf("Status: %d\n", WiFi.status());
@@ -1207,11 +1255,22 @@ void wifiTask(void *parameter) {
                         
                         wifiState = WIFI_FAILED;
                         
+                        // ============================================
+                        //  PASTIKAN AP TETAP HIDUP SETELAH TIMEOUT
+                        // ============================================
                         WiFi.disconnect(false);
-                        delay(100);
+                        delay(200);
                         
                         WiFi.mode(WIFI_AP_STA);
-                        delay(100);
+                        delay(200);
+                        
+                        IPAddress apIP = WiFi.softAPIP();
+                        if (apIP == IPAddress(0,0,0,0)) {
+                            Serial.println("⚠️ AP died during timeout! Restarting...");
+                            WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+                            delay(200);
+                            Serial.println("✅ AP restarted: " + WiFi.softAPIP().toString());
+                        }
                     }
                 }
                 
@@ -1365,6 +1424,30 @@ void wifiTask(void *parameter) {
                             wasConnected = true;
                             wifiDisconnectedTime = millis();
                             
+                            // ============================================
+                            //  PASTIKAN AP TETAP HIDUP SAAT DISCONNECT
+                            // ============================================
+                            Serial.println("→ Checking AP status...");
+                            
+                            IPAddress apIP = WiFi.softAPIP();
+                            String apSSID = WiFi.softAPSSID();
+                            
+                            if (apIP == IPAddress(0,0,0,0) || apSSID.length() == 0) {
+                                Serial.println("⚠️ AP died during disconnect! Restarting...");
+                                
+                                WiFi.mode(WIFI_AP_STA);
+                                delay(100);
+                                
+                                WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+                                delay(200);
+                                
+                                Serial.println("✅ AP restarted: " + String(wifiConfig.apSSID));
+                                Serial.println("   AP IP: " + WiFi.softAPIP().toString());
+                            } else {
+                                Serial.println("✅ AP still alive: " + apSSID);
+                                Serial.println("   AP IP: " + apIP.toString());
+                            }
+                            
                             Serial.println("→ Initiating fast reconnect mode...");
                             Serial.println("   🔍 Background scan every 3 seconds");
                             Serial.println("   ⚡ Will connect immediately when router detected");
@@ -1455,7 +1538,7 @@ void ntpTask(void *parameter) {
                                  day(ntpTime), month(ntpTime), year(ntpTime));
                     
                     // ============================================
-                    // SAVE TO RTC (FIX RESET TIME)
+                    // SAVE TO RTC
                     // ============================================
                     if (rtcAvailable) {
                         DateTime dt(year(ntpTime),
@@ -1659,7 +1742,7 @@ void clockTickTask(void *parameter) {
     while (true) {
         if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
             // ================================
-            // CRITICAL FIX: Prevent 1970 epoch bug
+            // Prevent 1970 epoch bug
             // ================================
             if (timeConfig.currentTime < 946684800) { 
                 
