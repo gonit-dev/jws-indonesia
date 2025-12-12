@@ -227,51 +227,196 @@ void setupServerRoutes();
 
 // Fungsi untuk memeriksa apakah request berasal dari index.html
 bool isValidReferer(AsyncWebServerRequest *request) {
+    String url = request->url();
+    
+    // ================================================================
+    // Akses langsung dari browser (tanpa Referer)
+    // ================================================================
     if (!request->hasHeader("Referer")) {
+        if (url == "/") {
+            Serial.println("[AUTH] ✅ Direct access to root - ALLOWED");
+            return true;
+        }
+        
+        if (url.startsWith("/assets/") || 
+            url.endsWith(".css") || 
+            url.endsWith(".js") || 
+            url.endsWith(".png") || 
+            url.endsWith(".jpg") || 
+            url.endsWith(".jpeg") || 
+            url.endsWith(".gif") || 
+            url.endsWith(".svg") || 
+            url.endsWith(".ico") || 
+            url.endsWith(".woff") || 
+            url.endsWith(".woff2") || 
+            url.endsWith(".ttf")) {
+            Serial.println("[AUTH] ✅ Static asset - ALLOWED");
+            return true;
+        }
+        
+        if (url == "/devicestatus" || 
+            url == "/getprayertimes" || 
+            url == "/getcities" || 
+            url == "/getcityinfo" || 
+            url == "/getmethod" || 
+            url == "/api/data") {
+            Serial.println("[AUTH] ✅ Read-only API - ALLOWED");
+            return true;
+        }
+        
+        if (url.startsWith("/set") || 
+            url.startsWith("/upload") || 
+            url.startsWith("/sync") || 
+            url.startsWith("/reset") ||
+            url.startsWith("/restart")) {
+            Serial.printf("[AUTH] ❌ Write API without Referer - BLOCKED: %s from %s\n", 
+                url.c_str(), 
+                request->client()->remoteIP().toString().c_str());
+            return false;
+        }
+        
+        Serial.println("[AUTH] ✅ Other endpoint without Referer - ALLOWED");
+        return true;
+    }
+    
+    // ================================================================
+    // Request dengan Referer (subsequent requests)
+    // ================================================================
+    String referer = request->header("Referer");
+    
+    // Parse Referer untuk ambil host
+    int protoEnd = referer.indexOf("://");
+    if (protoEnd == -1) {
+        Serial.printf("[AUTH] ❌ Invalid Referer format: %s\n", referer.c_str());
         return false;
     }
     
-    String referer = request->header("Referer");
+    int hostStart = protoEnd + 3;
+    int hostEnd = referer.indexOf("/", hostStart);
+    if (hostEnd == -1) hostEnd = referer.length();
     
-    IPAddress clientIP = request->client()->remoteIP();
+    String refererHost = referer.substring(hostStart, hostEnd);
+    
+    String requestHost = "";
+    if (request->hasHeader("Host")) {
+        requestHost = request->header("Host");
+    }
+    
+    Serial.printf("[AUTH] Referer Host: %s | Request Host: %s\n", 
+        refererHost.c_str(), requestHost.c_str());
+    
+    // ================================================================
+    // Referer host HARUS SAMA dengan request host
+    // ================================================================
+    if (refererHost == requestHost) {
+        Serial.println("[AUTH] ✅ Same-origin request - ALLOWED");
+        return true;
+    }
+    
+    // ================================================================
+    // Cek apakah Referer dari IP ESP32 yang valid
+    // ================================================================
     String apIP = WiFi.softAPIP().toString();
     String staIP = WiFi.localIP().toString();
     
-    if (referer.indexOf(apIP) > 0 || referer.indexOf(staIP) > 0) {
+    // Format: 192.168.4.1 atau 192.168.4.1:80
+    if (refererHost == apIP || refererHost.startsWith(apIP + ":")) {
+        Serial.println("[AUTH] ✅ From AP IP - ALLOWED");
         return true;
     }
+    
+    if (staIP != "0.0.0.0" && 
+        (refererHost == staIP || refererHost.startsWith(staIP + ":"))) {
+        Serial.println("[AUTH] ✅ From STA IP - ALLOWED");
+        return true;
+    }
+    
+    // ================================================================
+    // Cek apakah ada port forwarding / domain pointing
+    // ================================================================
+    if (requestHost.length() > 0) {
+        // Extract IP dari Host header (hilangkan port)
+        String requestIP = requestHost;
+        int portPos = requestIP.indexOf(":");
+        if (portPos > 0) {
+            requestIP = requestIP.substring(0, portPos);
+        }
+        
+        String refererIP = refererHost;
+        portPos = refererIP.indexOf(":");
+        if (portPos > 0) {
+            refererIP = refererIP.substring(0, portPos);
+        }
+        
+        if (requestIP == refererIP) {
+            Serial.println("[AUTH] ✅ Same IP, different port - ALLOWED");
+            return true;
+        }
+    }
+    
+    // ================================================================
+    // FINAL: BLOCK - Referer dari external site (CSRF attack)
+    // ================================================================
+    Serial.printf("[AUTH] ❌ CSRF BLOCKED - External referer: %s\n", referer.c_str());
+    Serial.printf("   Request from: %s\n", request->client()->remoteIP().toString().c_str());
+    Serial.printf("   Referer host: %s\n", refererHost.c_str());
+    Serial.printf("   Request host: %s\n", requestHost.c_str());
     
     return false;
 }
 
-// Middleware untuk endpoint yang dilindungi
 bool requireAuth(AsyncWebServerRequest *request) {
     if (!isValidReferer(request)) {
-        Serial.printf("[BLOCKED] Unauthorized access attempt from %s to %s\n", 
+        Serial.printf("[BLOCKED] ❌ Unauthorized access from %s to %s\n", 
             request->client()->remoteIP().toString().c_str(),
             request->url().c_str());
         
-            String html = "<!DOCTYPE html><html><head>";
-            html += "<meta charset='UTF-8'>";
-            html += "<meta name='viewport' content='width=device-width,initial-scale=1.0'>";
-            html += "<title>404 - Not Found</title>";
-            html += "<style>";
-            html += "body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}";
-            html += ".container{max-width:500px;margin:20px;background:white;padding:50px 40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}";
-            html += ".error-code{font-size:120px;font-weight:800;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0;line-height:1}";
-            html += "h2{color:#333;font-size:28px;margin:20px 0 10px;font-weight:600}";
-            html += "p{color:#666;font-size:16px;line-height:1.6;margin:20px 0 30px}";
-            html += ".btn{display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;text-decoration:none;border-radius:50px;font-weight:600;font-size:16px;transition:all 0.3s;box-shadow:0 4px 15px rgba(102,126,234,0.4)}";
-            html += ".btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(102,126,234,0.6)}";
-            html += ".icon{font-size:80px;margin-bottom:20px}";
-            html += "</style></head><body>";
-            html += "<div class='container'>";
-            html += "<div class='icon'></div>";
-            html += "<div class='error-code'>404</div>";
-            html += "<h2>Page Not Found</h2>";
-            html += "<p>The page you're looking for doesn't exist or you don't have permission to access it. Please return to the home page.</p>";
-            html += "<a href='/' class='btn'>← Back to Home</a>";
-            html += "</div></body></html>";
+        String html = "<!DOCTYPE html><html><head>";
+        html += "<meta charset='UTF-8'>";
+        html += "<meta name='viewport' content='width=device-width,initial-scale=1.0'>";
+        html += "<title>404 - Not Found</title>";
+        html += "<style>";
+        html += "body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}";
+        html += ".container{max-width:500px;margin:20px;background:white;padding:50px 40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}";
+        html += ".error-code{font-size:120px;font-weight:800;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0;line-height:1}";
+        html += "h2{color:#333;font-size:28px;margin:20px 0 10px;font-weight:600}";
+        html += "p{color:#666;font-size:16px;line-height:1.6;margin:20px 0 30px}";
+        html += ".btn{display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;text-decoration:none;border-radius:50px;font-weight:600;font-size:16px;transition:all 0.3s;box-shadow:0 4px 15px rgba(102,126,234,0.4)}";
+        html += ".btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(102,126,234,0.6)}";
+        html += ".icon{font-size:80px;margin-bottom:20px}";
+        html += "</style></head><body>";
+        html += "<div class='container'>";
+        html += "<div class='icon'></div>";
+        html += "<div class='error-code'>404</div>";
+        html += "<h2>Page Not Found</h2>";
+        html += "<p>The page you're looking for doesn't exist or you don't have permission to access it. Please return to the home page.</p>";
+        html += "<a href='/' class='btn'>← Back to Home</a>";
+        html += "</div></body></html>";
+        
+        // Show technical details
+        html += "<div class='details'>";
+        html += "<strong>🔍 Request Details:</strong><br>";
+        html += "URL: <code>" + request->url() + "</code><br>";
+        html += "From: <code>" + request->client()->remoteIP().toString() + "</code><br>";
+        
+        if (request->hasHeader("Referer")) {
+            html += "Referer: <code>" + request->header("Referer") + "</code><br>";
+        } else {
+            html += "Referer: <code>None (direct POST blocked)</code><br>";
+        }
+        
+        if (request->hasHeader("Host")) {
+            html += "Host: <code>" + request->header("Host") + "</code>";
+        }
+        html += "</div>";
+        
+        html += "<p><strong>✅ How to fix:</strong></p>";
+        html += "<p>1. Access this device directly via browser<br>";
+        html += "2. Don't embed this page in external websites<br>";
+        html += "3. Don't use automated tools without proper headers</p>";
+        
+        html += "<a href='/' class='btn'>← Go to Home Page</a>";
+        html += "</div></body></html>";
         
         request->send(403, "text/html", html);
         return false;
