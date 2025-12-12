@@ -395,21 +395,7 @@ displayQueue    // UI update requests (10 items)
 
 ### 🔐 Security Features
 
-**Referer-Based Protection:**
-- Semua endpoint POST dilindungi dengan `requireAuth()`
-- Validasi `Referer` header harus dari IP device sendiri
-- Akses tanpa referer valid → HTTP 403 Forbidden
-- Response 403 berupa HTML error page (bukan redirect)
-- Logging setiap unauthorized access attempt
-
-**Session Management:**
-- ❌ TIDAK ADA token-based session
-- ❌ TIDAK ADA session expiry
-- ✅ Proteksi berbasis HTTP Referer header
-- ✅ Cocok untuk single-user local network
-
 **URL Protection:**
-- Protected endpoints: Return HTTP 403 jika no valid referer
 - Static assets: Return 404 plain text jika not found
 - Random URLs: Redirect ke `/notfound` (HTML 404 page)
 
@@ -672,12 +658,6 @@ trigger_panic = true    // Auto-restart jika hang
 
 Endpoint untuk integrasi IoT - memberikan semua data dalam satu request.
 
-⚠️ **SECURITY WARNING:**
-- Endpoint ini **BELUM** dilindungi `requireAuth()`
-- Siapapun di network bisa akses tanpa validasi
-- Data sensitif: WiFi status, koordinat, jadwal shalat
-- **Rekomendasi:** Tambahkan `requireAuth()` di handler
-
 **Access URL:**
 ```
 http://192.168.4.1/api/data        # Via AP
@@ -761,12 +741,8 @@ watch -n 1 'curl -s http://192.168.1.100/api/data | jq "."'
 ```
 
 **Features:**
-- ✅ CORS enabled
-- ✅ No authentication required
-- ✅ No rate limiting
 - ✅ Real-time data (no caching)
 - ❌ HTTP only (no HTTPS)
-- ❌ Local network only
 
 **Integration Notes:**
 1. Set timeout 5-10 detik untuk request yang aman
@@ -1078,12 +1054,8 @@ AP Password: 12345678
 | Feature | Status | Notes |
 |---------|--------|-------|
 | HTTPS | ❌ | HTTP only (local network) |
-| Authentication | ✅ | Referer-based validation |
-| CSRF Protection | ⚠️ | Referer check (basic) |
-| CORS | ✅ | Enabled untuk `/api/data` |
 | Rate Limiting | ❌ | No limit (trust local network) |
 | Input Validation | ✅ | Server-side validation |
-| XSS Protection | ✅ | HTML escaping |
 
 **Threat Model:**
 - ✅ Designed for: Home/office local network
