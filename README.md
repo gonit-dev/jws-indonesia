@@ -32,6 +32,7 @@
 | 📊 **Multi-Core FreeRTOS** | Task scheduling optimal di dual-core ESP32 |
 | 🔧 **Custom Hostname** | Hostname fixed: `JWS-Indonesia` (tidak dinamis) |
 | 🕋 **8 Calculation Methods** | Pilih metode kalkulasi: Kemenag, MWL, Egyptian, ISNA, dll |
+| 📍 **Manual Coordinates** | Edit koordinat GPS manual dengan tombol reset ke default JSON |
 
 ---
 
@@ -233,15 +234,20 @@ Device membuat Access Point:
 4. Catat IP baru dari serial monitor
 ```
 
-### 4️⃣ Pilih Kota & Metode
+### 4️⃣ Pilih Kota & Edit Koordinat (Optional)
 ```
 1. Buka web interface (IP baru)
 2. Pilih kota dari dropdown (500+ kota Indonesia)
-3. (Opsional) Pilih metode kalkulasi:
+3. **Form koordinat muncul otomatis:**
+   - Koordinat auto-fill dari cities.json
+   - Edit manual jika perlu akurasi lebih tinggi
+   - Klik "Default" untuk reset ke cities.json
+4. (Opsional) Pilih metode kalkulasi:
    - Kemenag Indonesia (ID: 20) - Resmi RI
    - Egyptian (ID: 5) - Default/Klasik
    - 6 metode lainnya tersedia
-4. Prayer times auto-update tanpa restart!
+5. Klik "Simpan Kota"
+6. Prayer times auto-update tanpa restart!
 ```
 
 ---
@@ -258,7 +264,8 @@ STA Mode: http://<IP-ESP32>  (cek serial monitor)
 - ✅ **Device Status**: WiFi, IP, NTP, RTC, Uptime, Free Heap
 - ✅ **WiFi Configuration**: Ubah SSID & Password WiFi
 - ✅ **AP Configuration**: Ubah nama & password Access Point
-- ✅ **City Selection**: Dropdown 500+ kota Indonesia dengan koordinat GPS
+- ✅ **City Selection**: Dropdown 500+ kota Indonesia dengan koordinat GPS tersimpan
+- ✅ **Manual Coordinates Editor**: Edit GPS coordinates dengan tombol reset default
 - ✅ **Calculation Method**: Pilih dari 8 metode kalkulasi berbeda
 - ✅ **Manual Restart**: Restart device tanpa reset settings
 - ✅ **Prayer Times Display**: Subuh, Dzuhur, Ashar, Maghrib, Isya
@@ -499,7 +506,6 @@ trigger_panic = true    // Auto-restart jika hang
 - User bisa ganti via web interface tanpa restart
 
 **Metode Kemenag Indonesia (ID: 20):**
-- Tersedia sejak versi 2.1
 - Metode resmi Kementerian Agama RI
 - Direkomendasikan untuk pengguna di Indonesia
 
@@ -515,13 +521,136 @@ trigger_panic = true    // Auto-restart jika hang
 **Current Implementation:**
 - Koordinat disimpan dalam `cities.json`
 - Format: `{"city":"Jakarta","lat":"-6.2088","lon":"106.8456"}`
+- User dapat mengedit koordinat GPS secara manual untuk akurasi yang lebih presisi.
 - Akurasi: 4 desimal (±11 meter)
+
+**Flow Penggunaan:**
+```
+1. Pilih kota dari dropdown
+   ↓
+2. Form koordinat muncul otomatis
+   ↓
+3. Koordinat terisi dengan:
+   - Data tersimpan (jika sudah pernah edit)
+   - Atau default dari cities.json (first time)
+   ↓
+4. User bisa:
+   a) Edit manual → Simpan
+   b) Klik "Default" → Kembali ke cities.json → Simpan
+```
+
+**Form Components:**
+
+| Field | Description | Validation |
+|-------|-------------|------------|
+| **Latitude** | Koordinat lintang | -90 hingga 90 |
+| **Longitude** | Koordinat bujur | -180 hingga 180 |
+| **Tombol Default** | Reset ke koordinat cities.json | - |
+| **Info Default** | Menampilkan koordinat original | Read-only |
+
+**Use Cases:**
+
+1. **Koordinat cities.json kurang akurat**
+   - Contoh: Jakarta center vs Jakarta Selatan
+   - Solusi: Edit manual sesuai GPS smartphone
+   
+2. **Lokasi spesifik (RT/RW level)**
+   - cities.json: Koordinat pusat kota
+   - Manual edit: Koordinat rumah/masjid eksak
+   
+3. **Testing berbagai lokasi**
+   - Test prayer times di lokasi berbeda
+   - Tombol "Default" untuk reset cepat
+
+**Perbedaan Koordinat:**
+
+| Source | Akurasi | Update | Persistent |
+|--------|---------|--------|------------|
+| **cities.json** | ±1-5 km | Via upload file | Ya (device) |
+| **Manual Edit** | Sesuai input user | Via web form | Ya (LittleFS) |
+| **Tombol Default** | Reset ke cities.json | Instant | Setelah Save |
+
+
+**Cara Dapat Koordinat Akurat:**
+
+1. **Google Maps**
+```
+   - Buka Google Maps
+   - Klik kanan di lokasi
+   - Pilih koordinat (otomatis copy)
+   - Paste ke form (format: -6.2088, 106.8456)
+```
+
+2. **Smartphone GPS**
+```
+   - Install app "GPS Coordinates"
+   - Buka app di lokasi target
+   - Copy koordinat decimal degrees
+   - Input ke form web interface
+```
+
+3. **GPS Module (Future)**
+```cpp
+   // Bisa dimodifikasi menggunakan GPS NEO-6M/NEO-7M
+   // GPS real-time → Auto-update coordinates
+```
+
+**Validation Rules:**
+```javascript
+// Format
+- Harus angka (integer atau decimal)
+- Gunakan titik (.) bukan koma (,)
+- Contoh valid: -6.2088, 106.8456
+- Contoh invalid: -6,2088 atau "enam koma dua"
+
+// Range
+- Latitude: -90.0000 hingga 90.0000
+  - Negatif = Selatan (Indonesia)
+  - Positif = Utara
+  
+- Longitude: -180.0000 hingga 180.0000
+  - Positif = Timur (Indonesia: 95-141°)
+  - Negatif = Barat
+```
+
+**Example Scenarios:**
+
+**Scenario 1: Koordinat Default Akurat**
+```
+1. User pilih "Jakarta" → Lat: -6.2088, Lon: 106.8456
+2. Test prayer times → Cocok dengan masjid lokal
+3. Langsung simpan → Selesai
+```
+
+**Scenario 2: Perlu Edit Manual**
+```
+1. User pilih "Bandung" → Lat: -6.9175, Lon: 107.6191 (pusat kota)
+2. Lokasi rumah: Lat: -6.9500, Lon: 107.6500 (pinggiran)
+3. Edit form → Input koordinat rumah
+4. Simpan → Prayer times lebih akurat
+```
+
+**Scenario 3: Reset ke Default**
+```
+1. User sudah edit: Lat: -6.9500, Lon: 107.6500
+2. Mau coba koordinat default lagi
+3. Klik tombol "Default" → Kembali: -6.9175, 107.6191
+4. Simpan → Prayer times pakai koordinat cities.json
+```
 
 **Future Enhancement:**
 ```cpp
 // Bisa dimodifikasi menggunakan modul GPS (NEO-6M/NEO-7M)
 // GPS → Real-time coordinates → Aladhan API
 ```
+
+**Notes:**
+
+- ⚠️ Koordinat yang salah = Prayer times tidak akurat
+- ✅ Gunakan koordinat masjid terdekat untuk hasil terbaik
+- ✅ Akurasi 4 desimal = ±11 meter (cukup untuk prayer times)
+- ❌ Jangan gunakan koordinat dari luar Indonesia (validasi server)
+- 💡 cities.json tetap original (tidak di-overwrite)
 
 ### 📤 Cities JSON Upload
 
@@ -728,6 +857,30 @@ Solusi:
 3. Tunggu midnight (00:00) atau restart device
 4. Cek koordinat city di cities.json valid
 5. Test manual: Web interface → "Sync Prayer Times"
+```
+
+**Prayer times tidak akurat dengan masjid lokal**
+```
+Solusi:
+1. Cek koordinat yang digunakan (web interface)
+2. Koordinat mungkin pusat kota (kurang akurat)
+3. Edit koordinat manual:
+   - Buka Google Maps di lokasi masjid
+   - Klik kanan → Copy koordinat
+   - Paste ke form "Edit Koordinat"
+   - Klik "Simpan Kota"
+4. Atau ganti metode kalkulasi (8 pilihan)
+5. Koordinat akurat = prayer times akurat (±1-2 menit)
+```
+
+**Tombol "Default" tidak bekerja**
+```
+Solusi:
+1. Pastikan sudah pilih kota dari dropdown
+2. Tombol hanya aktif jika ada kota terpilih
+3. Cek console browser (F12) untuk error
+4. Refresh halaman dan coba lagi
+5. Koordinat default berasal dari cities.json
 ```
 
 **Jam tidak akurat setelah mati lampu**
