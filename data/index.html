@@ -329,7 +329,7 @@
                                 <!-- Dropdown Kota -->
                                 <div class="large-9 medium-8 small-12 cell">
                                     <label>Pilih Kota/Kabupaten</label>
-                                    <select id="cityDropdown">
+                                    <select id="cityDropdown" onchange="handleCityChange()">
                                         <option value="">-- Pilih Kota/Kabupaten --</option>
                                     </select>
                                 </div>
@@ -340,6 +340,46 @@
                                     <button class="button success expanded" onclick="saveCity()">
                                         💾 Simpan Kota
                                     </button>
+                                </div>
+                                
+                                <!-- Form Edit Koordinat (Hidden by default) -->
+                                <div id="coordinatesForm" class="large-12 cell hide" style="margin-top: 20px;">
+                                    <div class="callout primary">
+                                        <h6><strong>📍 Edit Koordinat</strong></h6>
+                                        <p class="help-text">Sesuaikan koordinat jika diperlukan</p>
+                                        
+                                        <div class="grid-x grid-margin-x">
+                                            <!-- Latitude -->
+                                            <div class="large-5 medium-5 small-12 cell">
+                                                <label>Latitude (Lintang)</label>
+                                                <input type="text" id="latInput" placeholder="-6.2088" pattern="^-?\d+\.?\d*$">
+                                                <p class="help-text">Contoh: -6.2088</p>
+                                            </div>
+                                            
+                                            <!-- Longitude -->
+                                            <div class="large-5 medium-5 small-12 cell">
+                                                <label>Longitude (Bujur)</label>
+                                                <input type="text" id="lonInput" placeholder="106.8456" pattern="^-?\d+\.?\d*$">
+                                                <p class="help-text">Contoh: 106.8456</p>
+                                            </div>
+                                            
+                                            <!-- Tombol Reset ke Default -->
+                                            <div class="large-2 medium-2 small-12 cell">
+                                                <label>Reset</label>
+                                                <button class="button secondary expanded" onclick="resetToDefaultCoordinates()" title="Reset ke koordinat default dari JSON">
+                                                    🔄 Default
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="callout secondary">
+                                            <p class="help-text">
+                                                ℹ️ Koordinat default: <span id="defaultCoords">-</span><br>
+                                                ⚠️ Pastikan format benar (angka dengan titik desimal)<br>
+                                                📍 Latitude: -90 hingga 90 | Longitude: -180 hingga 180
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                                 
                                 <!-- Dropdown Metode -->
@@ -626,6 +666,11 @@
             methodName: 'Egyptian General Authority of Survey'
         };
 
+        let defaultCoordinates = {
+            lat: '',
+            lon: ''
+        };
+
         // ================================
         // FUNGSI JAM REAL-TIME
         // ================================
@@ -890,6 +935,73 @@
             }
         }
 
+        // ================================
+        // FUNGSI HANDLE CITY CHANGE
+        // ================================
+        function handleCityChange() {
+            const dropdown = document.getElementById('cityDropdown');
+            const selectedCity = dropdown.value;
+            const coordinatesForm = document.getElementById('coordinatesForm');
+            const latInput = document.getElementById('latInput');
+            const lonInput = document.getElementById('lonInput');
+            const defaultCoordsSpan = document.getElementById('defaultCoords');
+            
+            if (!selectedCity || selectedCity === '') {
+                coordinatesForm.classList.add('hide');
+                latInput.value = '';
+                lonInput.value = '';
+                defaultCoordinates.lat = '';
+                defaultCoordinates.lon = '';
+                defaultCoordsSpan.textContent = '-';
+                return;
+            }
+            
+            const selectedOption = dropdown.options[dropdown.selectedIndex];
+            const lat = selectedOption.getAttribute('data-lat');
+            const lon = selectedOption.getAttribute('data-lon');
+            
+            if (lat && lon) {
+                defaultCoordinates.lat = lat;
+                defaultCoordinates.lon = lon;
+                
+                coordinatesForm.classList.remove('hide');
+                
+                latInput.value = lat;
+                lonInput.value = lon;
+                
+                defaultCoordsSpan.textContent = `${parseFloat(lat).toFixed(4)}°, ${parseFloat(lon).toFixed(4)}°`;
+                
+                console.log('✅ Form koordinat ditampilkan');
+                console.log('   Default Lat:', lat);
+                console.log('   Default Lon:', lon);
+            } else {
+                console.warn('⚠️ Koordinat tidak tersedia untuk kota ini');
+                coordinatesForm.classList.add('hide');
+            }
+        }
+
+        // ================================
+        // FUNGSI RESET KE KOORDINAT DEFAULT
+        // ================================
+        function resetToDefaultCoordinates() {
+            const latInput = document.getElementById('latInput');
+            const lonInput = document.getElementById('lonInput');
+            
+            if (!defaultCoordinates.lat || !defaultCoordinates.lon) {
+                showToast('⚠️ Tidak ada koordinat default tersedia', 'warning');
+                return;
+            }
+            
+            latInput.value = defaultCoordinates.lat;
+            lonInput.value = defaultCoordinates.lon;
+            
+            showToast('✅ Koordinat direset ke default', 'success');
+            
+            console.log('🔄 Koordinat direset ke default:');
+            console.log('   Lat:', defaultCoordinates.lat);
+            console.log('   Lon:', defaultCoordinates.lon);
+        }
+
         async function loadCurrentCity() {
             console.log('🔄 Memuat pilihan kota saat ini...');
             
@@ -909,6 +1021,10 @@
                 
                 const currentCitySpan = document.getElementById('currentCity');
                 const dropdown = document.getElementById('cityDropdown');
+                const coordinatesForm = document.getElementById('coordinatesForm');
+                const latInput = document.getElementById('latInput');
+                const lonInput = document.getElementById('lonInput');
+                const defaultCoordsSpan = document.getElementById('defaultCoords');
                 
                 if (data.hasSelection && data.selectedCityApi) {
                     let displayText = data.selectedCity;
@@ -922,11 +1038,39 @@
                     
                     dropdown.value = data.selectedCityApi;
                     
+                    if (data.latitude && data.longitude) {
+                        const selectedOption = dropdown.options[dropdown.selectedIndex];
+                        if (selectedOption) {
+                            const defaultLat = selectedOption.getAttribute('data-lat');
+                            const defaultLon = selectedOption.getAttribute('data-lon');
+                            
+                            if (defaultLat && defaultLon) {
+                                defaultCoordinates.lat = defaultLat;
+                                defaultCoordinates.lon = defaultLon;
+                                defaultCoordsSpan.textContent = `${parseFloat(defaultLat).toFixed(4)}°, ${parseFloat(defaultLon).toFixed(4)}°`;
+                            }
+                        }
+                        
+                        latInput.value = data.latitude;
+                        lonInput.value = data.longitude;
+                        
+                        // Tampilkan form
+                        coordinatesForm.classList.remove('hide');
+                        
+                        console.log('✅ Form koordinat ditampilkan dengan data tersimpan');
+                        console.log('   Current Lat:', data.latitude);
+                        console.log('   Current Lon:', data.longitude);
+                    }
+                    
                     console.log('✅ Kota dimuat:', displayText);
                 } else {
                     currentCitySpan.textContent = 'Belum dipilih';
                     currentCitySpan.className = 'subheader';
                     dropdown.selectedIndex = 0;
+                    
+                    if (coordinatesForm) {
+                        coordinatesForm.classList.add('hide');
+                    }
                 }
                 
             } catch (error) {
@@ -945,16 +1089,39 @@
             }
             
             const selectedOption = dropdown.options[dropdown.selectedIndex];
-            const lat = selectedOption.getAttribute('data-lat');
-            const lon = selectedOption.getAttribute('data-lon');
+            
+            const latInput = document.getElementById('latInput');
+            const lonInput = document.getElementById('lonInput');
+            
+            let lat = latInput.value.trim();
+            let lon = lonInput.value.trim();
+            
+            // Validasi koordinat
+            if (!lat || !lon) {
+                showToast('❌ Koordinat latitude dan longitude harus diisi', 'error');
+                return;
+            }
+            
+            const latNum = parseFloat(lat);
+            const lonNum = parseFloat(lon);
+            
+            if (isNaN(latNum) || isNaN(lonNum)) {
+                showToast('❌ Format koordinat tidak valid. Gunakan angka dengan titik desimal', 'error');
+                return;
+            }
+            
+            if (latNum < -90 || latNum > 90) {
+                showToast('❌ Latitude harus antara -90 hingga 90', 'error');
+                return;
+            }
+            
+            if (lonNum < -180 || lonNum > 180) {
+                showToast('❌ Longitude harus antara -180 hingga 180', 'error');
+                return;
+            }
             
             const cityData = cityList.find(c => c.api === selectedCity);
             const displayName = cityData ? cityData.display : selectedCity;
-            
-            if (!lat || !lon) {
-                showToast('❌ Data koordinat tidak lengkap', 'error');
-                return;
-            }
             
             const btn = event.target;
             const originalText = btn.textContent;
@@ -965,8 +1132,8 @@
                 const formData = new URLSearchParams();
                 formData.append('city', selectedCity);
                 formData.append('cityName', displayName);
-                formData.append('lat', lat);
-                formData.append('lon', lon);
+                formData.append('lat', lat);  // Gunakan koordinat dari form
+                formData.append('lon', lon);  // Gunakan koordinat dari form
                 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000);
