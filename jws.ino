@@ -230,14 +230,16 @@ bool isValidReferer(AsyncWebServerRequest *request) {
     String url = request->url();
     
     // ================================================================
-    // Akses langsung dari browser (tanpa Referer)
+    // FASE 1: ALLOW - Akses langsung dari browser (tanpa Referer)
     // ================================================================
     if (!request->hasHeader("Referer")) {
+        // ✅ ALLOW: Akses pertama ke halaman utama
         if (url == "/") {
             Serial.println("[AUTH] ✅ Direct access to root - ALLOWED");
             return true;
         }
         
+        // ✅ ALLOW: Static assets (CSS, JS, fonts, images)
         if (url.startsWith("/assets/") || 
             url.endsWith(".css") || 
             url.endsWith(".js") || 
@@ -254,6 +256,7 @@ bool isValidReferer(AsyncWebServerRequest *request) {
             return true;
         }
         
+        // ✅ ALLOW: Read-only API endpoints (GET)
         if (url == "/devicestatus" || 
             url == "/getprayertimes" || 
             url == "/getcities" || 
@@ -264,6 +267,7 @@ bool isValidReferer(AsyncWebServerRequest *request) {
             return true;
         }
         
+        // ❌ BLOCK: Write API endpoints tanpa Referer (CSRF prevention)
         if (url.startsWith("/set") || 
             url.startsWith("/upload") || 
             url.startsWith("/sync") || 
@@ -275,12 +279,13 @@ bool isValidReferer(AsyncWebServerRequest *request) {
             return false;
         }
         
+        // ✅ ALLOW: Endpoint lainnya tanpa Referer
         Serial.println("[AUTH] ✅ Other endpoint without Referer - ALLOWED");
         return true;
     }
     
     // ================================================================
-    // Request dengan Referer (subsequent requests)
+    // FASE 2: VALIDATE - Request dengan Referer (subsequent requests)
     // ================================================================
     String referer = request->header("Referer");
     
@@ -297,6 +302,7 @@ bool isValidReferer(AsyncWebServerRequest *request) {
     
     String refererHost = referer.substring(hostStart, hostEnd);
     
+    // Ambil host dari request saat ini
     String requestHost = "";
     if (request->hasHeader("Host")) {
         requestHost = request->header("Host");
@@ -306,7 +312,7 @@ bool isValidReferer(AsyncWebServerRequest *request) {
         refererHost.c_str(), requestHost.c_str());
     
     // ================================================================
-    // Referer host HARUS SAMA dengan request host
+    // VALIDASI 1: Referer host HARUS SAMA dengan request host
     // ================================================================
     if (refererHost == requestHost) {
         Serial.println("[AUTH] ✅ Same-origin request - ALLOWED");
@@ -314,7 +320,7 @@ bool isValidReferer(AsyncWebServerRequest *request) {
     }
     
     // ================================================================
-    // Cek apakah Referer dari IP ESP32 yang valid
+    // VALIDASI 2: Cek apakah Referer dari IP ESP32 yang valid
     // ================================================================
     String apIP = WiFi.softAPIP().toString();
     String staIP = WiFi.localIP().toString();
@@ -332,8 +338,9 @@ bool isValidReferer(AsyncWebServerRequest *request) {
     }
     
     // ================================================================
-    // Cek apakah ada port forwarding / domain pointing
+    // VALIDASI 3: Cek apakah ada port forwarding / domain pointing
     // ================================================================
+    // Jika Host header berbeda dengan IP ESP, tapi Referer valid
     if (requestHost.length() > 0) {
         // Extract IP dari Host header (hilangkan port)
         String requestIP = requestHost;
@@ -342,12 +349,14 @@ bool isValidReferer(AsyncWebServerRequest *request) {
             requestIP = requestIP.substring(0, portPos);
         }
         
+        // Extract IP dari Referer
         String refererIP = refererHost;
         portPos = refererIP.indexOf(":");
         if (portPos > 0) {
             refererIP = refererIP.substring(0, portPos);
         }
         
+        // Allow jika IP sama (walaupun port berbeda)
         if (requestIP == refererIP) {
             Serial.println("[AUTH] ✅ Same IP, different port - ALLOWED");
             return true;
@@ -371,6 +380,7 @@ bool requireAuth(AsyncWebServerRequest *request) {
             request->client()->remoteIP().toString().c_str(),
             request->url().c_str());
         
+        // Enhanced 403 page with detailed info
         String html = "<!DOCTYPE html><html><head>";
         html += "<meta charset='UTF-8'>";
         html += "<meta name='viewport' content='width=device-width,initial-scale=1.0'>";
