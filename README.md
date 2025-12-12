@@ -31,6 +31,7 @@
 | 🔄 **Auto WiFi Reconnect** | Otomatis reconnect jika koneksi terputus |
 | 📊 **Multi-Core FreeRTOS** | Task scheduling optimal di dual-core ESP32 |
 | 🔧 **Custom Hostname** | Hostname fixed: `JWS-Indonesia` (tidak dinamis) |
+| 🕋 **8 Calculation Methods** | Pilih metode kalkulasi: Kemenag, MWL, Egyptian, ISNA, dll |
 
 ---
 
@@ -232,11 +233,15 @@ Device membuat Access Point:
 4. Catat IP baru dari serial monitor
 ```
 
-### 4️⃣ Pilih Kota
+### 4️⃣ Pilih Kota & Metode
 ```
 1. Buka web interface (IP baru)
 2. Pilih kota dari dropdown (500+ kota Indonesia)
-3. Prayer times auto-update!
+3. (Opsional) Pilih metode kalkulasi:
+   - Kemenag Indonesia (ID: 20) - Resmi RI
+   - Egyptian (ID: 5) - Default/Klasik
+   - 6 metode lainnya tersedia
+4. Prayer times auto-update tanpa restart!
 ```
 
 ---
@@ -253,7 +258,9 @@ STA Mode: http://<IP-ESP32>  (cek serial monitor)
 - ✅ **Device Status**: WiFi, IP, NTP, RTC, Uptime, Free Heap
 - ✅ **WiFi Configuration**: Ubah SSID & Password WiFi
 - ✅ **AP Configuration**: Ubah nama & password Access Point
-- ✅ **City Selection**: Dropdown 500+ kota Indonesia
+- ✅ **City Selection**: Dropdown 500+ kota Indonesia dengan koordinat GPS
+- ✅ **Calculation Method**: Pilih dari 8 metode kalkulasi berbeda
+- ✅ **Manual Restart**: Restart device tanpa reset settings
 - ✅ **Prayer Times Display**: Subuh, Dzuhur, Ashar, Maghrib, Isya
 - ✅ **Manual Time Sync**: Sinkronisasi waktu dari browser
 - ✅ **Upload Cities JSON**: Update database kota (max 1MB)
@@ -299,6 +306,16 @@ Prioritas server NTP:
 4. time.cloudflare.com
 5. time.windows.com
 ```
+### 2.5️⃣ Method-Based Prayer Update
+```cpp
+// Saat ganti metode kalkulasi via web interface:
+// 1. Method disimpan ke LittleFS (/method_selection.txt)
+// 2. Prayer times auto-fetch dengan method baru
+// 3. Display auto-update tanpa restart
+// 4. Method persisten setelah restart
+
+POST /setmethod → Save method → Auto getPrayerTimesByCoordinates()
+```
 
 ---
 
@@ -330,6 +347,24 @@ spiMutex        // SPI bus arbitration (display + touch)
 ```cpp
 displayQueue    // UI update requests (10 items)
 ```
+
+### Configuration Storage (LittleFS)
+
+**Persistent Files:**
+```cpp
+/wifi_creds.txt      // WiFi SSID & Password
+/ap_creds.txt        // Access Point credentials
+/prayer_times.txt    // Cached prayer times
+/city_selection.txt  // Selected city + coordinates
+/method_selection.txt // Calculation method ID & name
+/cities.json         // Cities database (uploaded)
+```
+
+**Auto-save Behavior:**
+- WiFi credentials → Saved on change, restart required
+- City selection → Saved immediately, no restart
+- Calculation method → Saved immediately, auto-update prayer times
+- Prayer times → Auto-saved setiap update dari API
 
 ---
 
@@ -373,6 +408,36 @@ displayQueue    // UI update requests (10 items)
 
 ### 💡 Display Configuration
 
+### 🕋 Calculation Method Persistence
+
+**Method Storage:**
+```cpp
+File: /method_selection.txt
+Line 1: Method ID (0-20)
+Line 2: Method Name (string)
+```
+
+**Default Behavior:**
+- First boot → Egyptian (ID: 5) - Format klasik Indonesia
+- User change → Saved to LittleFS + auto-update prayer times
+- Device restart → Load saved method dari file
+- Factory reset → Reset ke Egyptian (ID: 5)
+
+**Method Change Flow:**
+```
+User select method → POST /setmethod
+    ↓
+Save to /method_selection.txt
+    ↓
+Auto fetch prayer times with new method
+    ↓
+Update display (no restart needed)
+```
+
+**Available via:**
+- Web interface: Dropdown "Metode Kalkulasi Jadwal Shalat"
+- REST API: GET /getmethod, POST /setmethod
+
 **Backlight PWM:**
 ```cpp
 #define TFT_BL_BRIGHTNESS 180  // 0-255 (180 = ~70%)
@@ -410,15 +475,40 @@ trigger_panic = true    // Auto-restart jika hang
 
 ### 🌍 Prayer Time Calculation
 
-**Metode Perhitungan:**
-- API: Aladhan (https://aladhan.com)
-- Method: `5` (Egyptian General Authority of Survey)
-- Koordinat: Dari database `cities.json`
+**API & Sumber Data:**
+- API: Aladhan (https://aladhan.com/v1/timings)
+- Koordinat: Dari database `cities.json` (500+ kota)
+- Update: Otomatis setiap tengah malam (00:00-00:05 WIB)
 
-**Mengapa Metode Mesir?**
-- Format perhitungan lama Indonesia
-- Kemenag RI mengubah metode sejak 2024
-- Metode baru belum digunakan secara nasional
+**Metode Kalkulasi yang Tersedia:**
+
+| ID | Method Name | Organization | Region |
+|----|-------------|--------------|--------|
+| **20** | **Kementerian Agama Indonesia** | **Kemenag RI** | **🇮🇩 Indonesia** |
+| 3 | Muslim World League | MWL | 🌍 Global |
+| **5** | **Egyptian General Authority** | Egypt Survey | 🇪🇬 Egypt *(Default)* |
+| 2 | Islamic Society of North America | ISNA | 🇺🇸 North America |
+| 0 | Shia Ithna-Ashari | Leva Institute | 🇮🇷 Shia |
+| 1 | University of Islamic Sciences | Karachi University | 🇵🇰 Pakistan |
+| 4 | Umm Al-Qura University | Makkah University | 🇸🇦 Saudi Arabia |
+| 7 | Institute of Geophysics | Tehran University | 🇮🇷 Iran |
+
+**Default Method:**
+- Egyptian General Authority (ID: 5)
+- Dipilih karena format perhitungan klasik Indonesia
+- User bisa ganti via web interface tanpa restart
+
+**Metode Kemenag Indonesia (ID: 20):**
+- Tersedia sejak versi 2.1
+- Metode resmi Kementerian Agama RI
+- Direkomendasikan untuk pengguna di Indonesia
+
+**Cara Ganti Metode:**
+1. Buka web interface
+2. Pilih metode dari dropdown "Metode Kalkulasi"
+3. Klik "Simpan Metode"
+4. Jadwal shalat otomatis update dengan metode baru
+5. Tidak perlu restart device
 
 ### 📍 GPS Coordinates System
 
@@ -488,6 +578,11 @@ http://192.168.1.100/api/data      # Via WiFi (ganti IP sesuai device)
     "latitude": "-6.2088",
     "longitude": "106.8456"
   },
+  
+  "method": {
+    "id": 5,
+    "name": "Egyptian General Authority of Survey"
+  },
 
   "device": {
     "wifiConnected": true,
@@ -516,6 +611,8 @@ http://192.168.1.100/api/data      # Via WiFi (ganti IP sesuai device)
 | `location.city` | string | Selected city name |
 | `location.latitude` | string | City latitude |
 | `location.longitude` | string | City longitude |
+| `method.id` | number | Calculation method ID (0-20) |
+| `method.name` | string | Calculation method name |
 | `device.ntpSynced` | boolean | NTP sync status |
 | `device.freeHeap` | number | Free RAM (bytes) |
 
@@ -702,6 +799,27 @@ Solusi:
 4. Re-upload data/ folder
 ```
 
+**Metode kalkulasi tidak tersimpan setelah restart**
+```
+Solusi:
+1. Cek LittleFS mounted: Serial → "LittleFS Mounted"
+2. Cek file saved: Serial → "Method selection saved"
+3. Pastikan tidak factory reset setelah set method
+4. Test write: Upload cities.json (jika berhasil = LittleFS OK)
+5. Ganti metode lagi, tunggu 3 detik, restart manual
+```
+
+**Jadwal shalat berbeda dengan masjid lokal**
+```
+Solusi:
+1. Cek metode yang digunakan: Web interface → bagian atas
+2. Tanya masjid menggunakan metode apa
+3. Ganti metode via dropdown (8 pilihan tersedia)
+4. Metode Kemenag (ID: 20) = resmi Indonesia
+5. Egyptian (ID: 5) = format lama/klasik Indonesia
+6. Koordinat city bisa berbeda beberapa menit
+```
+
 ---
 
 ### 🔧 Advanced Debugging
@@ -754,11 +872,17 @@ esp32-prayer-clock/
 │   ├── images.h
 │   └── fonts.h
 ├── data/                   # LittleFS filesystem (upload ke ESP32)
-│   ├── index.html          # Web interface (responsive)
+│   ├── index.html          # Web interface (responsive, Foundation CSS)
 │   ├── assets/
 │   │   └── css/
-│   │       └── foundation.css  # Zurb Foundation CSS
-│   └── cities.json         # 500+ cities database
+│   │       └── foundation.css  # Zurb Foundation 6.x (minified)
+│   └── cities.json         # 500+ cities database (with GPS coordinates)
+├── runtime_generated/      # Auto-created by device (DO NOT UPLOAD)
+│   ├── wifi_creds.txt      # WiFi credentials (plain text)
+│   ├── ap_creds.txt        # AP credentials
+│   ├── prayer_times.txt    # Cached prayer times
+│   ├── city_selection.txt  # City + lat/lon
+│   └── method_selection.txt # Calculation method
 ├── README.md               # This file
 ├── LICENSE                 # MIT License
 └── platformio.ini          # PlatformIO config (optional)
