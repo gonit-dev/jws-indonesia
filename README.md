@@ -25,7 +25,6 @@
 | 💾 **RTC DS3231** | Jam tetap akurat meski mati lampu (dengan baterai CR2032) |
 | 🖥️ **LVGL 9.2.0** | UI touchscreen yang smooth & responsive |
 | 📱 **AP Mode** | Setup awal tanpa perlu WiFi eksternal |
-| 🔐 **Session Security** | Akses tanpa referer valid → HTTP 403 Forbidden |
 | 📤 **Upload Cities** | Update data kota/kabupaten via web interface (max 1MB) |
 | 🌐 **REST API** | Akses data via HTTP endpoint untuk integrasi IoT |
 | 🔄 **Auto WiFi Reconnect** | Otomatis reconnect jika koneksi terputus |
