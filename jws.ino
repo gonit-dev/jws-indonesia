@@ -222,227 +222,6 @@ void savePrayerTimes();
 void setupServerRoutes();
 
 // ================================
-// SECURITY HELPER FUNCTIONS
-// ================================
-
-// Fungsi untuk memeriksa apakah request berasal dari index.html
-bool isValidReferer(AsyncWebServerRequest *request) {
-    String url = request->url();
-    
-    // ================================================================
-    // FASE 1: ALLOW - Akses langsung dari browser (tanpa Referer)
-    // ================================================================
-    if (!request->hasHeader("Referer")) {
-        // ✅ ALLOW: Akses pertama ke halaman utama
-        if (url == "/") {
-            Serial.println("[AUTH] ✅ Direct access to root - ALLOWED");
-            return true;
-        }
-        
-        // ✅ ALLOW: Static assets (CSS, JS, fonts, images)
-        if (url.startsWith("/assets/") || 
-            url.endsWith(".css") || 
-            url.endsWith(".js") || 
-            url.endsWith(".png") || 
-            url.endsWith(".jpg") || 
-            url.endsWith(".jpeg") || 
-            url.endsWith(".gif") || 
-            url.endsWith(".svg") || 
-            url.endsWith(".ico") || 
-            url.endsWith(".woff") || 
-            url.endsWith(".woff2") || 
-            url.endsWith(".ttf")) {
-            Serial.println("[AUTH] ✅ Static asset - ALLOWED");
-            return true;
-        }
-        
-        // ✅ ALLOW: Read-only API endpoints (GET)
-        if (url == "/devicestatus" || 
-            url == "/getprayertimes" || 
-            url == "/getcities" || 
-            url == "/getcityinfo" || 
-            url == "/getmethod" || 
-            url == "/api/data") {
-            Serial.println("[AUTH] ✅ Read-only API - ALLOWED");
-            return true;
-        }
-        
-        // ❌ BLOCK: Write API endpoints tanpa Referer (CSRF prevention)
-        if (url.startsWith("/set") || 
-            url.startsWith("/upload") || 
-            url.startsWith("/sync") || 
-            url.startsWith("/reset") ||
-            url.startsWith("/restart")) {
-            Serial.printf("[AUTH] ❌ Write API without Referer - BLOCKED: %s from %s\n", 
-                url.c_str(), 
-                request->client()->remoteIP().toString().c_str());
-            return false;
-        }
-        
-        // ✅ ALLOW: Endpoint lainnya tanpa Referer
-        Serial.println("[AUTH] ✅ Other endpoint without Referer - ALLOWED");
-        return true;
-    }
-    
-    // ================================================================
-    // FASE 2: VALIDATE - Request dengan Referer (subsequent requests)
-    // ================================================================
-    String referer = request->header("Referer");
-    
-    // Parse Referer untuk ambil host
-    int protoEnd = referer.indexOf("://");
-    if (protoEnd == -1) {
-        Serial.printf("[AUTH] ❌ Invalid Referer format: %s\n", referer.c_str());
-        return false;
-    }
-    
-    int hostStart = protoEnd + 3;
-    int hostEnd = referer.indexOf("/", hostStart);
-    if (hostEnd == -1) hostEnd = referer.length();
-    
-    String refererHost = referer.substring(hostStart, hostEnd);
-    
-    // Ambil host dari request saat ini
-    String requestHost = "";
-    if (request->hasHeader("Host")) {
-        requestHost = request->header("Host");
-    }
-    
-    Serial.printf("[AUTH] Referer Host: %s | Request Host: %s\n", 
-        refererHost.c_str(), requestHost.c_str());
-    
-    // ================================================================
-    // VALIDASI 1: Referer host HARUS SAMA dengan request host
-    // ================================================================
-    if (refererHost == requestHost) {
-        Serial.println("[AUTH] ✅ Same-origin request - ALLOWED");
-        return true;
-    }
-    
-    // ================================================================
-    // VALIDASI 2: Cek apakah Referer dari IP ESP32 yang valid
-    // ================================================================
-    String apIP = WiFi.softAPIP().toString();
-    String staIP = WiFi.localIP().toString();
-    
-    // Format: 192.168.4.1 atau 192.168.4.1:80
-    if (refererHost == apIP || refererHost.startsWith(apIP + ":")) {
-        Serial.println("[AUTH] ✅ From AP IP - ALLOWED");
-        return true;
-    }
-    
-    if (staIP != "0.0.0.0" && 
-        (refererHost == staIP || refererHost.startsWith(staIP + ":"))) {
-        Serial.println("[AUTH] ✅ From STA IP - ALLOWED");
-        return true;
-    }
-    
-    // ================================================================
-    // VALIDASI 3: Cek apakah ada port forwarding / domain pointing
-    // ================================================================
-    // Jika Host header berbeda dengan IP ESP, tapi Referer valid
-    if (requestHost.length() > 0) {
-        // Extract IP dari Host header (hilangkan port)
-        String requestIP = requestHost;
-        int portPos = requestIP.indexOf(":");
-        if (portPos > 0) {
-            requestIP = requestIP.substring(0, portPos);
-        }
-        
-        // Extract IP dari Referer
-        String refererIP = refererHost;
-        portPos = refererIP.indexOf(":");
-        if (portPos > 0) {
-            refererIP = refererIP.substring(0, portPos);
-        }
-        
-        // Allow jika IP sama (walaupun port berbeda)
-        if (requestIP == refererIP) {
-            Serial.println("[AUTH] ✅ Same IP, different port - ALLOWED");
-            return true;
-        }
-    }
-    
-    // ================================================================
-    // FINAL: BLOCK - Referer dari external site (CSRF attack)
-    // ================================================================
-    Serial.printf("[AUTH] ❌ CSRF BLOCKED - External referer: %s\n", referer.c_str());
-    Serial.printf("   Request from: %s\n", request->client()->remoteIP().toString().c_str());
-    Serial.printf("   Referer host: %s\n", refererHost.c_str());
-    Serial.printf("   Request host: %s\n", requestHost.c_str());
-    
-    return false;
-}
-
-bool requireAuth(AsyncWebServerRequest *request) {
-    if (!isValidReferer(request)) {
-        Serial.printf("[BLOCKED] ❌ Unauthorized access from %s to %s\n", 
-            request->client()->remoteIP().toString().c_str(),
-            request->url().c_str());
-        
-        // Enhanced 403 page with detailed info
-        String html = "<!DOCTYPE html><html><head>";
-        html += "<meta charset='UTF-8'>";
-        html += "<meta name='viewport' content='width=device-width,initial-scale=1.0'>";
-        html += "<title>403 - Access Denied</title>";
-        html += "<style>";
-        html += "body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;";
-        html += "background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;";
-        html += "display:flex;align-items:center;justify-content:center;padding:20px}";
-        html += ".container{max-width:600px;background:white;padding:40px;border-radius:12px;";
-        html += "box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}";
-        html += ".icon{font-size:80px;margin-bottom:20px}";
-        html += "h1{color:#e74c3c;font-size:48px;margin:0 0 10px;font-weight:700}";
-        html += "h2{color:#333;font-size:28px;margin:0 0 20px;font-weight:600}";
-        html += "p{color:#666;line-height:1.6;margin:15px 0}";
-        html += ".details{background:#f8f9fa;padding:20px;border-radius:8px;margin:20px 0;text-align:left}";
-        html += ".details strong{color:#333}";
-        html += ".details code{background:#e9ecef;padding:2px 6px;border-radius:3px;font-size:14px}";
-        html += ".btn{display:inline-block;margin-top:20px;padding:14px 32px;";
-        html += "background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;";
-        html += "text-decoration:none;border-radius:50px;font-weight:600;font-size:16px;";
-        html += "transition:all 0.3s;box-shadow:0 4px 15px rgba(102,126,234,0.4)}";
-        html += ".btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(102,126,234,0.6)}";
-        html += "</style></head><body>";
-        html += "<div class='container'>";
-        html += "<div class='icon'>🚫</div>";
-        html += "<h1>403</h1>";
-        html += "<h2>CSRF Protection Active</h2>";
-        html += "<p>This request was blocked because it appears to be a Cross-Site Request Forgery attack.</p>";
-        
-        // Show technical details
-        html += "<div class='details'>";
-        html += "<strong>🔍 Request Details:</strong><br>";
-        html += "URL: <code>" + request->url() + "</code><br>";
-        html += "From: <code>" + request->client()->remoteIP().toString() + "</code><br>";
-        
-        if (request->hasHeader("Referer")) {
-            html += "Referer: <code>" + request->header("Referer") + "</code><br>";
-        } else {
-            html += "Referer: <code>None (direct POST blocked)</code><br>";
-        }
-        
-        if (request->hasHeader("Host")) {
-            html += "Host: <code>" + request->header("Host") + "</code>";
-        }
-        html += "</div>";
-        
-        html += "<p><strong>✅ How to fix:</strong></p>";
-        html += "<p>1. Access this device directly via browser<br>";
-        html += "2. Don't embed this page in external websites<br>";
-        html += "3. Don't use automated tools without proper headers</p>";
-        
-        html += "<a href='/' class='btn'>← Go to Home Page</a>";
-        html += "</div></body></html>";
-        
-        request->send(403, "text/html", html);
-        return false;
-    }
-    
-    return true;
-}
-
-// ================================
 // FLUSH CALLBACK
 // ================================
 void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
@@ -2094,7 +1873,6 @@ void setupServerRoutes() {
     });
 
     server.on("/devicestatus", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (!requireAuth(request)) return;
         char timeStr[20];
         char dateStr[20];
         
@@ -2139,7 +1917,6 @@ void setupServerRoutes() {
     });
 
     server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest *request){
-        if (!requireAuth(request)) return;
         String json = "{";
         json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
         json += "\"dzuhur\":\"" + prayerConfig.zuhurTime + "\",";
@@ -2154,7 +1931,6 @@ void setupServerRoutes() {
     });
 
     server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request){
-        if (!requireAuth(request)) return;
         Serial.println("GET /getcities");
         
         if (!LittleFS.exists("/cities.json")) {
@@ -2181,7 +1957,6 @@ void setupServerRoutes() {
     });
 
     server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request){
-        if (!requireAuth(request)) return;
         Serial.println("\n========================================");
         Serial.println("POST /setcity received");
         Serial.print("Client IP: ");
@@ -2427,7 +2202,6 @@ void setupServerRoutes() {
     });
 
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request){
-        if (!requireAuth(request)) return;
         String json = "{";
         
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
@@ -2458,7 +2232,6 @@ void setupServerRoutes() {
     });
 
     server.on("/getmethod", HTTP_GET, [](AsyncWebServerRequest *request){
-        if (!requireAuth(request)) return;
         String json = "{";
         
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
@@ -2480,7 +2253,6 @@ void setupServerRoutes() {
     });
     
     server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest *request){
-        if (!requireAuth(request)) return;
         
         Serial.println("\n========================================");
         Serial.println("POST /setmethod received");
@@ -2593,7 +2365,6 @@ void setupServerRoutes() {
     });
 
     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (!requireAuth(request)) return;
         if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
             wifiConfig.routerSSID = request->getParam("ssid", true)->value();
             wifiConfig.routerPassword = request->getParam("password", true)->value();
@@ -2613,7 +2384,6 @@ void setupServerRoutes() {
     });
 
     server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (!requireAuth(request)) return;
         if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
             String ssid = request->getParam("ssid", true)->value();
             String pass = request->getParam("password", true)->value();
@@ -2641,8 +2411,7 @@ void setupServerRoutes() {
 
     server.on("/uploadcities", HTTP_POST, 
         [](AsyncWebServerRequest *request) {
-            if (!requireAuth(request)) return;
-            String jsonSizeStr = "";
+                String jsonSizeStr = "";
             String citiesCountStr = "";
             
             if (request->hasParam("jsonSize", true)) {
@@ -2763,7 +2532,6 @@ void setupServerRoutes() {
     );
 
     server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (!requireAuth(request)) return;
         if (request->hasParam("y", true) && request->hasParam("m", true) &&
             request->hasParam("d", true) && request->hasParam("h", true) &&
             request->hasParam("i", true) && request->hasParam("s", true)) {
@@ -2901,7 +2669,6 @@ void setupServerRoutes() {
     });
 
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (!requireAuth(request)) return;
         Serial.println("\n========================================");
         Serial.println("FACTORY RESET STARTED");
         Serial.println("========================================");
@@ -3015,7 +2782,6 @@ void setupServerRoutes() {
     });
 
     server.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (!requireAuth(request)) return;
         Serial.println("\n========================================");
         Serial.println("MANUAL RESTART REQUESTED");
         Serial.println("========================================");
