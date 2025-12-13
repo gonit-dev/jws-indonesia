@@ -32,6 +32,8 @@
 | 🔧 **Custom Hostname** | Hostname fixed: `JWS-Indonesia` (tidak dinamis) |
 | 🕋 **8 Calculation Methods** | Pilih metode kalkulasi: Kemenag, MWL, Egyptian, ISNA, dll |
 | 📍 **Manual Coordinates** | Edit koordinat GPS manual dengan tombol reset ke default JSON |
+| 🕐 **Timezone Configuration** | Set timezone manual (UTC-12 hingga UTC+14) |
+| 🔄 **Auto NTP Re-sync** | Otomatis re-sync setelah timezone berubah |
 
 ---
 
@@ -59,11 +61,9 @@ SCL    ─────── GPIO 22
 ```
 
 **Keuntungan RTC:**
-- ✅ Jam tetap akurat saat mati lampu
-- ✅ Akurasi tinggi (±2 ppm drift)
-- ✅ Kompensasi suhu otomatis
-- ✅ Baterai backup CR2032 (opsional)
-- ❌ Tanpa RTC: Jam reset ke 01/01/2000 00:00:00 setiap restart
+- ✅ Jam tetap akurat saat mati lampu (dengan baterai CR2032)
+- ✅ Auto-load time saat boot (jika valid tahun 2000-2100)
+- ✅ Auto-save time setiap NTP sync berhasil
 
 ---
 
@@ -249,6 +249,21 @@ Device membuat Access Point:
 6. Prayer times auto-update tanpa restart!
 ```
 
+### 5️⃣ Konfigurasi Timezone (Optional)
+```
+1. Default: UTC+7 (WIB Indonesia)
+2. Klik tombol 🕘 di bagian "Auto NTP Sync"
+3. Edit offset (contoh: +8 untuk WITA, +9 untuk WIT)
+4. Klik 💾 atau tekan Enter
+5. NTP akan otomatis re-sync dengan timezone baru
+6. Tidak perlu restart!
+
+**Timezone untuk Indonesia:**
+- WIB (Jawa, Sumatera) = +7
+- WITA (Kalimantan, Sulawesi) = +8
+- WIT (Papua, Maluku) = +9
+```
+
 ---
 
 ## 🌐 Web Interface
@@ -269,6 +284,8 @@ STA Mode: http://<IP-ESP32>  (cek serial monitor)
 - ✅ **Manual Restart**: Restart device tanpa reset settings
 - ✅ **Prayer Times Display**: Subuh, Dzuhur, Ashar, Maghrib, Isya
 - ✅ **Manual Time Sync**: Sinkronisasi waktu dari browser
+- ✅ **Timezone Configuration**: Set UTC offset manual dengan inline editing
+- ✅ **Auto NTP Re-sync**: Trigger otomatis setelah timezone berubah
 - ✅ **Upload Cities JSON**: Update database kota (max 1MB)
 - ✅ **Factory Reset**: Reset semua pengaturan ke default
 - ✅ **Real-time Clock**: Server sync setiap 5 detik + client-side increment
@@ -278,7 +295,7 @@ STA Mode: http://<IP-ESP32>  (cek serial monitor)
 
 ## ⏰ Auto-Update System
 
-### 1️⃣ Midnight Prayer Update
+### Midnight Prayer Update
 ```cpp
 // Setiap hari jam 00:00-00:05
 // Auto-fetch prayer times dari Aladhan API
@@ -287,23 +304,24 @@ if (currentHour == 0 && currentMinute < 5 && !hasUpdatedToday) {
 }
 ```
 
-### 2️⃣ Hourly NTP Sync
+### Hourly NTP Sync
 ```cpp
-// Setiap 1 jam (3600 detik)
-// Auto-sync dengan NTP server
+// Setiap 1 jam (3600 detik) - berjalan di clockTickTask
+// Auto-increment counter, trigger NTP sync saat counter >= 3600
+// Counter reset ke 0 setelah sync
 if (autoSyncCounter >= 3600) {
     xTaskNotifyGive(ntpTaskHandle);
 }
 ```
 
-### 3️⃣ RTC Sync Task
+### RTC Sync Task
 ```cpp
 // Setiap 1 menit
 // Sync system time ← RTC time (jika selisih > 2 detik)
 // NTP sync → RTC (setiap NTP berhasil)
 ```
 
-### 4️⃣ NTP Server Fallback
+### NTP Server Fallback
 ```
 Prioritas server NTP:
 1. pool.ntp.org
@@ -312,7 +330,8 @@ Prioritas server NTP:
 4. time.cloudflare.com
 5. time.windows.com
 ```
-### 2.5️⃣ Method-Based Prayer Update
+
+### Method-Based Prayer Update
 ```cpp
 // Saat ganti metode kalkulasi via web interface:
 // 1. Method disimpan ke LittleFS (/method_selection.txt)
@@ -323,9 +342,40 @@ Prioritas server NTP:
 POST /setmethod → Save method → Auto getPrayerTimesByCoordinates()
 ```
 
+### Timezone Auto-Apply
+```cpp
+// Saat timezone berubah via web interface:
+// 1. Timezone disimpan ke LittleFS (/timezone.txt)
+// 2. Update timeClient.setTimeOffset() dengan offset baru
+// 3. Trigger NTP re-sync otomatis
+// 4. Apply ke RTC (jika tersedia)
+// 5. Update display tanpa restart
+
+POST /settimezone → Save config → Auto NTP re-sync → Update RTC
+```
+
+**Validasi Timezone:**
+- Offset valid: -12 hingga +14
+- Format input: +7, -5, +9 (dengan tanda +/-)
+- Default fallback: +7 (WIB)
+- Persistent setelah restart
+````
+
 ---
 
 ## 📊 System Architecture
+
+### ESP32 Core Usage
+
+| Core | Tasks | Load |
+|------|-------|------|
+| **Core 0** | WiFi, NTP, Web, Prayer, Clock, RTC Sync | High |
+| **Core 1** | UI Task (LVGL rendering) | Dedicated |
+
+**Why Core 1 for UI:**
+- Smooth 20 FPS rendering without blocking
+- WiFi/network operations tidak ganggu UI
+- Touch response lebih responsif
 
 ### FreeRTOS Tasks (Multi-Core)
 
@@ -364,6 +414,7 @@ displayQueue    // UI update requests (10 items)
 /city_selection.txt  // Selected city + coordinates
 /method_selection.txt // Calculation method ID & name
 /cities.json         // Cities database (uploaded)
+/timezone.txt        // UTC offset configuration (default: +7)
 ```
 
 **Auto-save Behavior:**
@@ -386,11 +437,16 @@ displayQueue    // UI update requests (10 items)
 - Ini mencegah timestamp invalid (bug epoch 1970)
 
 **Time Sync Priority:**
-```
-1. RTC time (saat boot)
-2. NTP sync (setiap 1 jam)
+1. RTC time (saat boot, jika valid tahun 2000-2100)
+2. NTP sync (setiap 1 jam + saat timezone berubah)
 3. Manual sync (via web interface)
-```
+4. Browser sync (via button "Sync Time Now")
+
+**Timezone Behavior:**
+- Timezone tersimpan di `/timezone.txt`
+- Apply ke NTP offset: `timezoneOffset * 3600` seconds
+- Perubahan timezone trigger auto NTP re-sync
+- RTC menyimpan waktu lokal (bukan UTC)
 
 ### 🔐 Security Features
 
@@ -401,6 +457,51 @@ displayQueue    // UI update requests (10 items)
 ### 💡 Display Configuration
 
 ### 🕋 Calculation Method Persistence
+
+### 🕐 Timezone Management
+
+**Timezone Storage:**
+````cpp
+File: /timezone.txt
+Line 1: Offset integer (-12 hingga +14)
+Example: 7 (untuk UTC+7)
+````
+
+**Default Behavior:**
+- First boot → UTC+7 (WIB Indonesia)
+- User change → Saved to LittleFS + auto NTP re-sync
+- Device restart → Load saved timezone dari file
+- Factory reset → Reset ke UTC+7
+
+**Timezone Change Flow:**
+````
+User edit timezone → POST /settimezone
+    ↓
+Save to /timezone.txt
+    ↓
+Update timeClient.setTimeOffset(offset * 3600)
+    ↓
+Trigger NTP re-sync
+    ↓
+Save synced time to RTC (if available)
+    ↓
+Update display (no restart needed)
+````
+
+**Available via:**
+- Web interface: Inline editing dengan tombol 🕘
+- REST API: GET /gettimezone, POST /settimezone
+- Serial monitor: Tampilkan "Timezone loaded: UTC+7"
+
+**Validation:**
+- Range: -12 hingga +14 (sesuai standar timezone dunia)
+- Format: Integer (dengan tanda +/- di display)
+- Input: +7, -5, 0, +14, -12 (valid)
+- Auto-validation di server-side
+
+**Keyboard Shortcuts:**
+- ESC = Cancel edit mode
+- Enter = Save timezone
 
 **Method Storage:**
 ```cpp
@@ -698,7 +799,8 @@ http://192.168.1.100/api/data      # Via WiFi (ganti IP sesuai device)
     "ntpSynced": true,
     "ntpServer": "pool.ntp.org",
     "freeHeap": 257000,
-    "uptime": 123456
+    "uptime": 123456,
+    "timezone": 7
   }
 }
 ```
@@ -723,21 +825,7 @@ http://192.168.1.100/api/data      # Via WiFi (ganti IP sesuai device)
 | `method.name` | string | Calculation method name |
 | `device.ntpSynced` | boolean | NTP sync status |
 | `device.freeHeap` | number | Free RAM (bytes) |
-
-**Usage Example (cURL):**
-```bash
-# Simple request
-curl http://192.168.1.100/api/data
-
-# Pretty print with jq
-curl -s http://192.168.1.100/api/data | jq '.'
-
-# Get only prayer times
-curl -s http://192.168.1.100/api/data | jq '.prayerTimes'
-
-# Watch mode (update every 1 second)
-watch -n 1 'curl -s http://192.168.1.100/api/data | jq "."'
-```
+| `timezone` | number | Current UTC offset (-12 hingga +14) |
 
 **Features:**
 - ✅ Real-time data (no caching)
@@ -986,6 +1074,37 @@ Time: 12:34:56 08/12/2024
 📄 Prayer times updated successfully
 ```
 
+**Timezone tidak tersimpan setelah restart**
+````
+Solusi:
+1. Cek LittleFS mounted: Serial → "LittleFS Mounted"
+2. Cek file saved: Serial → "Timezone saved: UTC+X"
+3. Pastikan tidak factory reset setelah set timezone
+4. Test write: Upload cities.json (jika berhasil = LittleFS OK)
+5. Ganti timezone lagi, tunggu 3 detik, restart manual
+6. Verifikasi: Cek serial boot → "Timezone loaded: UTC+X"
+````
+
+**Waktu tidak sesuai timezone setelah NTP sync**
+````
+Solusi:
+1. Cek timezone yang digunakan: Web interface → bagian Auto NTP Sync
+2. Pastikan offset benar (WIB=+7, WITA=+8, WIT=+9)
+3. Edit timezone → Klik 💾 → Tunggu auto re-sync
+4. Cek serial: "✅ NTP Sync successful! ... Using timezone: UTC+X"
+5. Jika masih salah, factory reset dan set ulang
+````
+
+**NTP sync berhasil tapi jam masih salah beberapa jam**
+````
+Solusi:
+1. Kemungkinan besar timezone salah
+2. Contoh: Set UTC+7 tapi lokasi UTC+8 = selisih 1 jam
+3. Verifikasi timezone: Serial → "Using timezone: UTC+X (Y seconds)"
+4. Ganti timezone sesuai lokasi sebenarnya
+5. Atau gunakan browser sync jika NTP tidak akurat
+````
+
 ---
 
 ## 📁 File Structure
@@ -1010,7 +1129,8 @@ esp32-prayer-clock/
 │   ├── ap_creds.txt        # AP credentials
 │   ├── prayer_times.txt    # Cached prayer times
 │   ├── city_selection.txt  # City + lat/lon
-│   └── method_selection.txt # Calculation method
+│   ├── method_selection.txt # Calculation method
+│   └── timezone.txt        # Timezone offset (default: 7)
 ├── README.md               # This file
 ├── LICENSE                 # MIT License
 └── platformio.ini          # PlatformIO config (optional)
