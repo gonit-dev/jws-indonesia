@@ -654,7 +654,6 @@
             }
         };
 
-        // Check CSS loaded
         const cssLoaded = new Promise((resolve) => {
             const checkCSS = setInterval(() => {
                 const testDiv = document.createElement('div');
@@ -670,7 +669,6 @@
                 }
             }, 50);
             
-            // Timeout fallback
             setTimeout(() => {
                 clearInterval(checkCSS);
                 LoadingManager.updateProgress(0, '⚠ CSS timeout (proceeding)');
@@ -685,6 +683,10 @@
         let cityList = [];
         let loadAttempts = 0;
         const MAX_LOAD_ATTEMPTS = 3;
+
+        let isLoadingDeviceStatus = false;
+        let isLoadingPrayerTimes = false;
+        let isLoadingMethod = false;
         
         let serverTimestamp = 0;
         let localStartTime = 0;
@@ -710,7 +712,7 @@
         };
 
         let timezoneConfig = {
-            offset: 7  // Default +7 (WIB)
+            offset: 7
         };
 
         // ================================
@@ -719,13 +721,11 @@
         function extractLocationType(displayName) {
             if (!displayName) return null;
             
-            // Match pattern: "Name (Type)"
             const match = displayName.match(/\(([^)]+)\)$/);
             if (!match) return null;
             
             const typeInBracket = match[1].toLowerCase().trim();
             
-            // Mapping tipe lokasi
             const typeMap = {
                 'kota': { emoji: '🏙️', label: 'City' },
                 'city': { emoji: '🏙️', label: 'City' },
@@ -815,7 +815,7 @@
         }
 
         // ================================
-        // NOTIFIKASI TOAST (menggunakan Foundation Callout)
+        // NOTIFIKASI TOAST
         // ================================
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
@@ -842,6 +842,13 @@
         // PEMBARUAN STATUS PERANGKAT
         // ================================
         async function updateDeviceStatus() {
+            if (isLoadingDeviceStatus) {
+                console.log('⏩ SKIP: updateDeviceStatus (already loading)');
+                return;
+            }
+            
+            isLoadingDeviceStatus = true;
+            
             try {
                 const response = await fetch('/devicestatus');
                 const data = await response.json();
@@ -900,9 +907,11 @@
                 isOnline = false;
                 document.getElementById('internetStatus').textContent = '❌ Kesalahan';
                 document.getElementById('internetStatus').className = 'label alert';
+            } finally {
+                isLoadingDeviceStatus = false;
             }
         }
-        
+
         // ================================
         // FUNGSI MEMUAT LOKASI
         // ================================
@@ -961,8 +970,6 @@
                     option.setAttribute('data-lat', city.lat);
                     option.setAttribute('data-lon', city.lon);
 
-                    // ⭐ TAMBAHKAN INI:
-                    // Extract dan simpan type sebagai data attribute
                     const typeInfo = extractLocationType(city.display);
                     if (typeInfo) {
                         option.setAttribute('data-type', typeInfo.label);
@@ -1286,6 +1293,13 @@
         // JADWAL SALAT
         // ================================
         async function loadSavedPrayerTimes() {
+            if (isLoadingPrayerTimes) {
+                console.log('⏩ SKIP: loadSavedPrayerTimes (already loading)');
+                return false;
+            }
+            
+            isLoadingPrayerTimes = true;
+            
             try {
                 const response = await fetch('/getprayertimes');
                 const data = await response.json();
@@ -1307,6 +1321,8 @@
             } catch (error) {
                 console.error('Kesalahan memuat jadwal salat:', error);
                 return false;
+            } finally {
+                isLoadingPrayerTimes = false;
             }
         }
 
@@ -1793,6 +1809,13 @@
         // FUNGSI PEMILIHAN METODE
         // ================================
         async function loadCurrentMethod() {
+            if (isLoadingMethod) {
+                console.log('⏩ SKIP: loadCurrentMethod (already loading)');
+                return false;
+            }
+            
+            isLoadingMethod = true;
+            
             console.log('📖 Memuat metode saat ini...');
             
             try {
@@ -1846,6 +1869,8 @@
                 if (currentMethodBottom) currentMethodBottom.textContent = methodConfig.methodName;
                 
                 return false;
+            } finally {
+                isLoadingMethod = false;
             }
         }
 
@@ -2268,9 +2293,8 @@
                 await updateProgress(65, '⏳ Memuat jadwal shalat...');
                 
                 try {
-                    const prayerSuccess = await loadSavedPrayerTimes(); // 🔧 FIX: Ambil return value
+                    const prayerSuccess = await loadSavedPrayerTimes();
                     
-                    // 🔧 FIX: Validasi menggunakan variable global yang sudah di-update
                     if (prayerSuccess && prayerConfig.subuhTime && prayerConfig.subuhTime !== '--:--') {
                         console.log('✅ Prayer times loaded:', prayerConfig.subuhTime);
                         await updateProgress(80, '✓ Jadwal shalat dimuat');
@@ -2398,14 +2422,12 @@
                     const input = document.getElementById('timezoneInput');
                     const btn = document.getElementById('timezoneBtn');
                     
-                    // Cancel edit mode
                     displayText.style.display = 'inline';
                     input.style.display = 'none';
                     btn.textContent = '🕐';
                     btn.title = 'Edit Timezone';
                     isEditingTimezone = false;
                     
-                    // Reset value
                     input.value = timezoneConfig.offset >= 0 ? '+' + timezoneConfig.offset : timezoneConfig.offset;
                 }
             });

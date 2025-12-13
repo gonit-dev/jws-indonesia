@@ -63,15 +63,21 @@
 #define NTP_TASK_STACK_SIZE     8192
 #define WEB_TASK_STACK_SIZE     16384
 #define PRAYER_TASK_STACK_SIZE  8192
-#define WEB_SERVER_MAX_CLIENTS 5
-#define WEB_SERVER_STACK_SIZE 8192
-
+#define AP_MONITOR_TASK_STACK_SIZE 4096
 
 #define UI_TASK_PRIORITY        3
 #define WIFI_TASK_PRIORITY      2
 #define NTP_TASK_PRIORITY       2
 #define WEB_TASK_PRIORITY       1
 #define PRAYER_TASK_PRIORITY    1
+#define AP_MONITOR_PRIORITY     1
+
+// ================================
+// AP CLIENT MANAGEMENT - STRICT SINGLE CLIENT
+// ================================
+#define MAX_AP_CLIENTS          1     // ONLY 1 client allowed
+#define CLIENT_IDLE_TIMEOUT     300   // 5 minutes idle = auto kick
+#define AP_MONITOR_INTERVAL     2000  // Check every 2 seconds
 
 // Task Handles
 TaskHandle_t rtcTaskHandle = NULL;
@@ -80,6 +86,7 @@ TaskHandle_t wifiTaskHandle = NULL;
 TaskHandle_t ntpTaskHandle = NULL;
 TaskHandle_t webTaskHandle = NULL;
 TaskHandle_t prayerTaskHandle = NULL;
+TaskHandle_t apMonitorTaskHandle = NULL;
 
 // ================================
 // SEMAPHORES & MUTEXES
@@ -89,9 +96,66 @@ SemaphoreHandle_t timeMutex;
 SemaphoreHandle_t wifiMutex;
 SemaphoreHandle_t settingsMutex;
 SemaphoreHandle_t spiMutex;
+SemaphoreHandle_t apClientMutex;
 
 // Queue for display updates
 QueueHandle_t displayQueue;
+
+// ================================
+// AP CLIENT TRACKING
+// ================================
+struct APClientInfo {
+    uint8_t mac[6];
+    IPAddress ip;
+    unsigned long lastActivity;
+    bool isActive;
+    uint8_t slotId;
+};
+
+APClientInfo connectedClients[MAX_AP_CLIENTS];
+
+void initClientSlots() {
+    for (int i = 0; i < MAX_AP_CLIENTS; i++) {
+        memset(connectedClients[i].mac, 0, 6);
+        connectedClients[i].ip = IPAddress(0, 0, 0, 0);
+        connectedClients[i].lastActivity = 0;
+        connectedClients[i].isActive = false;
+        connectedClients[i].slotId = i;
+    }
+}
+
+bool isIPWhitelisted(IPAddress clientIP) {
+    if (clientIP == WiFi.softAPIP()) {
+        return true;
+    }
+    
+    IPAddress apIP = WiFi.softAPIP();
+    IPAddress apSubnet = WiFi.softAPSubnetMask();
+    
+    bool inSubnet = true;
+    for (int i = 0; i < 4; i++) {
+        if ((clientIP[i] & apSubnet[i]) != (apIP[i] & apSubnet[i])) {
+            inSubnet = false;
+            break;
+        }
+    }
+    
+    if (!inSubnet) {
+        return false;
+    }
+    
+    if (xSemaphoreTake(apClientMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+        for (int i = 0; i < MAX_AP_CLIENTS; i++) {
+            if (connectedClients[i].isActive && connectedClients[i].ip == clientIP) {
+                xSemaphoreGive(apClientMutex);
+                return true;
+            }
+        }
+        xSemaphoreGive(apClientMutex);
+    }
+    
+    return inSubnet;
+}
 
 // ================================
 // GLOBAL OBJECTS
@@ -270,6 +334,7 @@ void webTask(void *parameter);
 void prayerTask(void *parameter);
 void rtcSyncTask(void *parameter);
 void clockTickTask(void *parameter);
+void apMonitorTask(void *parameter);
 
 // ================================
 // FLUSH CALLBACK
@@ -378,6 +443,38 @@ void loadWiFiCredentials() {
         }
         xSemaphoreGive(settingsMutex);
     }
+}
+
+// Helper function untuk kick client by MAC address
+bool kickClientByMAC(const uint8_t* mac) {
+    wifi_sta_list_t stationList;
+    esp_err_t err = esp_wifi_ap_get_sta_list(&stationList);
+    
+    if (err != ESP_OK) {
+        return false;
+    }
+    
+    for (int i = 0; i < stationList.num; i++) {
+        if (memcmp(stationList.sta[i].mac, mac, 6) == 0) {
+            
+            uint8_t deauth_frame[26] = {
+                0xC0, 0x00, 0x00, 0x00
+            };
+            memcpy(&deauth_frame[4], mac, 6);
+            
+            uint8_t ap_mac[6];
+            esp_wifi_get_mac(WIFI_IF_AP, ap_mac);
+            memcpy(&deauth_frame[10], ap_mac, 6);
+            memcpy(&deauth_frame[16], ap_mac, 6);
+            
+            deauth_frame[22] = 0x00; deauth_frame[23] = 0x00;
+            deauth_frame[24] = 0x02; deauth_frame[25] = 0x00;
+            
+            esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame, sizeof(deauth_frame), false);
+            return true;
+        }
+    }
+    return false;
 }
 
 void saveWiFiCredentials() {
@@ -981,7 +1078,6 @@ void wifiTask(void *parameter) {
         // STOP SCANNING SAAT CONNECTED
         // ================================================
         if (wifiConfig.isConnected && WiFi.status() == WL_CONNECTED) {
-            // Hapus scan results saat connected
             WiFi.scanDelete();
         }
         
@@ -1589,7 +1685,7 @@ void ntpTask(void *parameter) {
                     xQueueSend(displayQueue, &update, 0);
                     
                     // ============================================
-                    // BACKUP: AUTO UPDATE PRAYER TIMES AFTER NTP
+                    // AUTO UPDATE PRAYER TIMES AFTER NTP
                     // ============================================
                     Serial.println("\n🔄 Post-NTP: Checking prayer times...");
                     
@@ -1900,7 +1996,6 @@ void updatePrayerDisplay() {
 // ================================
 // DELAYED RESTART HELPER
 // ================================
-// Tambahkan delay SEBELUM restart untuk memastikan response terkirim
 void delayedRestart(void *parameter) {
     int delaySeconds = *((int*)parameter);
     
@@ -1939,28 +2034,54 @@ void scheduleRestart(int delaySeconds) {
 // ================================
 void setupServerRoutes() {
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to / from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        updateClientActivity();
         AsyncWebServerResponse *response = request->beginResponse(
             LittleFS, "/index.html", "text/html"
         );
         
-        response->addHeader("Connection", "close");  // FORCE CLOSE
+        response->addHeader("Connection", "keep-alive");
+        response->addHeader("Keep-Alive", "timeout=5, max=100");
         response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         
         request->send(response);
     });
     
     server.on("/assets/css/foundation.css", HTTP_GET, [](AsyncWebServerRequest *request){
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to / from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        updateClientActivity();
         AsyncWebServerResponse *response = request->beginResponse(
             LittleFS, "/assets/css/foundation.css", "text/css"
         );
         
-        response->addHeader("Connection", "close");  // FORCE CLOSE
-        response->addHeader("Cache-Control", "public, max-age=3600");  // CACHE 1 JAM
+        response->addHeader("Connection", "keep-alive");
+        response->addHeader("Keep-Alive", "timeout=5, max=100");
+        response->addHeader("Cache-Control", "public, max-age=3600");
         
         request->send(response);
     });
 
     server.on("/devicestatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to / from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        updateClientActivity();
         char timeStr[20];
         char dateStr[20];
         
@@ -1999,12 +2120,20 @@ void setupServerRoutes() {
         response += "}";
         
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
-        resp->addHeader("Connection", "close");  // FORCE CLOSE
+        resp->addHeader("Connection", "close");
         resp->addHeader("Cache-Control", "no-cache");
         request->send(resp);
     });
 
     server.on("/gettimezone", HTTP_GET, [](AsyncWebServerRequest *request){
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to / from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        updateClientActivity();
         String json = "{";
         
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
@@ -2024,6 +2153,14 @@ void setupServerRoutes() {
     });
 
     server.on("/settimezone", HTTP_POST, [](AsyncWebServerRequest *request){
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to / from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        updateClientActivity();
         Serial.println("\n========================================");
         Serial.println("POST /settimezone received");
         Serial.println("========================================");
@@ -2065,7 +2202,7 @@ void setupServerRoutes() {
         Serial.println("========================================\n");
         
         // ============================================
-        // 🔄 AUTO-UPDATE PRAYER TIMES SETELAH TIMEZONE BERUBAH
+        // AUTO-UPDATE PRAYER TIMES SETELAH TIMEZONE BERUBAH
         // ============================================
         bool prayerTimesUpdated = false;
         
@@ -2103,7 +2240,6 @@ void setupServerRoutes() {
             Serial.println("");
         }
         
-        // Trigger NTP sync untuk update waktu dengan timezone baru
         if (wifiConfig.isConnected && ntpTaskHandle != NULL) {
             Serial.println("\n========================================");
             Serial.println("🔄 AUTO-TRIGGERING NTP RE-SYNC");
@@ -2145,6 +2281,14 @@ void setupServerRoutes() {
     });
 
     server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest *request){
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to / from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        updateClientActivity();
         String json = "{";
         json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
         json += "\"dzuhur\":\"" + prayerConfig.zuhurTime + "\",";
@@ -2159,6 +2303,14 @@ void setupServerRoutes() {
     });
 
     server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request){
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to / from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        updateClientActivity();
         Serial.println("GET /getcities");
         
         if (!LittleFS.exists("/cities.json")) {
@@ -2173,7 +2325,8 @@ void setupServerRoutes() {
             "application/json"
         );
         
-        response->addHeader("Connection", "close");
+        response->addHeader("Connection", "keep-alive");
+        response->addHeader("Keep-Alive", "timeout=5, max=100");
         response->addHeader("Access-Control-Allow-Origin", "*");
         response->addHeader("Cache-Control", "public, max-age=3600");
         
@@ -2185,6 +2338,14 @@ void setupServerRoutes() {
     });
 
     server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request){
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to / from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        updateClientActivity();
         Serial.println("\n========================================");
         Serial.println("POST /setcity received");
         Serial.print("Client IP: ");
@@ -2425,11 +2586,19 @@ void setupServerRoutes() {
         response += "}";
         
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
-        resp->addHeader("Connection", "close");  // FORCE CLOSE
+        resp->addHeader("Connection", "close");
         request->send(resp);
     });
 
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request){
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to / from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        updateClientActivity();
         String json = "{";
         
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
@@ -2460,6 +2629,14 @@ void setupServerRoutes() {
     });
 
     server.on("/getmethod", HTTP_GET, [](AsyncWebServerRequest *request){
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to / from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        updateClientActivity();
         String json = "{";
         
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
@@ -2481,7 +2658,14 @@ void setupServerRoutes() {
     });
     
     server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest *request){
+        IPAddress clientIP = request->client()->remoteIP();
         
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to / from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        updateClientActivity();
         Serial.println("\n========================================");
         Serial.println("POST /setmethod received");
         Serial.print("Client IP: ");
@@ -2593,6 +2777,14 @@ void setupServerRoutes() {
     });
 
     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to / from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        updateClientActivity();
         if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
             wifiConfig.routerSSID = request->getParam("ssid", true)->value();
             wifiConfig.routerPassword = request->getParam("password", true)->value();
@@ -2612,6 +2804,14 @@ void setupServerRoutes() {
     });
 
     server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to / from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        updateClientActivity();
         if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
             String ssid = request->getParam("ssid", true)->value();
             String pass = request->getParam("password", true)->value();
@@ -2639,7 +2839,15 @@ void setupServerRoutes() {
 
     server.on("/uploadcities", HTTP_POST, 
         [](AsyncWebServerRequest *request) {
-                String jsonSizeStr = "";
+            IPAddress clientIP = request->client()->remoteIP();
+            
+            if (!isIPWhitelisted(clientIP)) {
+                Serial.println("🚫 BLOCKED access to /uploadcities from: " + clientIP.toString());
+                request->send(403, "text/plain", "Access Denied");
+                return;
+            }
+            
+            String jsonSizeStr = "";
             String citiesCountStr = "";
             
             if (request->hasParam("jsonSize", true)) {
@@ -2679,24 +2887,24 @@ void setupServerRoutes() {
                 Serial.printf("Filename: %s\n", filename.c_str());
                 
                 if (filename != "cities.json") {
-                    Serial.printf(" Invalid filename: %s (must be cities.json)\n", filename.c_str());
+                    Serial.printf("⚠️ Invalid filename: %s (must be cities.json)\n", filename.c_str());
                     return;
                 }
                 
                 if (LittleFS.exists("/cities.json")) {
                     LittleFS.remove("/cities.json");
-                    Serial.println(" Old cities.json deleted");
+                    Serial.println("✓ Old cities.json deleted");
                 }
                 
                 uploadFile = LittleFS.open("/cities.json", "w");
                 if (!uploadFile) {
-                    Serial.println(" Failed to open file for writing");
+                    Serial.println("❌ Failed to open file for writing");
                     return;
                 }
                 
                 totalSize = 0;
                 uploadStartTime = millis();
-                Serial.println(" Writing to LittleFS...");
+                Serial.println("✓ Writing to LittleFS...");
             }
             
             if (uploadFile) {
@@ -2719,7 +2927,7 @@ void setupServerRoutes() {
                     
                     unsigned long uploadDuration = millis() - uploadStartTime;
                     
-                    Serial.println("\n Upload complete!");
+                    Serial.println("\n✅ Upload complete!");
                     Serial.printf("   Total size: %d bytes (%.2f KB)\n", 
                                 totalSize, totalSize / 1024.0);
                     Serial.printf("   Duration: %lu ms\n", uploadDuration);
@@ -2737,13 +2945,13 @@ void setupServerRoutes() {
                             
                             verifyFile.close();
                             
-                            Serial.printf(" File verified: %d bytes\n", fileSize);
+                            Serial.printf("✓ File verified: %d bytes\n", fileSize);
                             Serial.println("First 100 chars:");
                             Serial.println(buffer);
                             
                             String preview(buffer);
                             if (preview.indexOf('[') >= 0 && preview.indexOf('{') >= 0) {
-                                Serial.println(" JSON format looks valid");
+                                Serial.println("✓ JSON format looks valid");
                             } else {
                                 Serial.println("Warning: File may not be valid JSON");
                             }
@@ -2751,7 +2959,7 @@ void setupServerRoutes() {
                             Serial.println("========================================\n");
                         }
                     } else {
-                        Serial.println(" File verification failed - file not found");
+                        Serial.println("⚠️ File verification failed - file not found");
                         Serial.println("========================================\n");
                     }
                 }
@@ -2760,6 +2968,16 @@ void setupServerRoutes() {
     );
 
     server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest *request) {
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to /synctime from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        
+        updateClientActivity();
+        
         if (request->hasParam("y", true) && request->hasParam("m", true) &&
             request->hasParam("d", true) && request->hasParam("h", true) &&
             request->hasParam("i", true) && request->hasParam("s", true)) {
@@ -2897,6 +3115,14 @@ void setupServerRoutes() {
     });
 
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to /reset from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        
         Serial.println("\n========================================");
         Serial.println("FACTORY RESET STARTED");
         Serial.println("========================================");
@@ -2910,7 +3136,7 @@ void setupServerRoutes() {
             LittleFS.remove("/prayer_times.txt");
             Serial.println("Prayer times deleted");
         }
-    
+
         if (LittleFS.exists("/ap_creds.txt")) {
             LittleFS.remove("/ap_creds.txt");
             Serial.println("AP creds deleted");
@@ -2940,7 +3166,7 @@ void setupServerRoutes() {
 
         timezoneOffset = 7;
         Serial.println("✓ Timezone reset to default (+7)");
-    
+
         // RESET TIME TO 00:00:00 01/01/2000
         Serial.println("\nResetting time to default...");
         
@@ -2969,7 +3195,7 @@ void setupServerRoutes() {
             
             xSemaphoreGive(timeMutex);
         }
-    
+
         // CLEAR MEMORY SETTINGS
         if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
             wifiConfig.routerSSID = "";
@@ -3018,6 +3244,14 @@ void setupServerRoutes() {
     });
 
     server.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
+        IPAddress clientIP = request->client()->remoteIP();
+        
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("🚫 BLOCKED access to /restart from: " + clientIP.toString());
+            request->send(403, "text/plain", "Access Denied");
+            return;
+        }
+        
         Serial.println("\n========================================");
         Serial.println("MANUAL RESTART REQUESTED");
         Serial.println("========================================");
@@ -3034,6 +3268,41 @@ void setupServerRoutes() {
     server.onNotFound([](AsyncWebServerRequest *request){
         String url = request->url();
         IPAddress clientIP = request->client()->remoteIP();
+        
+        // Whitelist check
+        if (!isIPWhitelisted(clientIP)) {
+            Serial.println("\n🚫 BLOCKED: Unauthorized access attempt");
+            Serial.println("========================================");
+            Serial.println("Client IP: " + clientIP.toString());
+            Serial.println("URL: " + url);
+            Serial.println("Reason: Not connected to AP");
+            Serial.println("========================================\n");
+            
+            String html = "<!DOCTYPE html><html><head>";
+            html += "<meta charset='UTF-8'>";
+            html += "<meta name='viewport' content='width=device-width,initial-scale=1.0'>";
+            html += "<title>404 - Not Found</title>";
+            html += "<style>";
+            html += "body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}";
+            html += ".container{max-width:500px;margin:20px;background:white;padding:50px 40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}";
+            html += ".error-code{font-size:120px;font-weight:800;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0;line-height:1}";
+            html += "h2{color:#333;font-size:28px;margin:20px 0 10px;font-weight:600}";
+            html += "p{color:#666;font-size:16px;line-height:1.6;margin:20px 0 30px}";
+            html += ".btn{display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;text-decoration:none;border-radius:50px;font-weight:600;font-size:16px;transition:all 0.3s;box-shadow:0 4px 15px rgba(102,126,234,0.4)}";
+            html += ".btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(102,126,234,0.6)}";
+            html += ".icon{font-size:80px;margin-bottom:20px}";
+            html += "</style></head><body>";
+            html += "<div class='container'>";
+            html += "<div class='icon'></div>";
+            html += "<div class='error-code'>404</div>";
+            html += "<h2>Page Not Found</h2>";
+            html += "<p>The page you're looking for doesn't exist or you don't have permission to access it. Please return to the home page.</p>";
+            html += "<a href='/' class='btn'>← Back to Home</a>";
+            html += "</div></body></html>";
+            
+            request->send(403, "text/html", html);
+            return;
+        }
         
         Serial.printf("\n[404] Client: %s | URL: %s\n", 
             clientIP.toString().c_str(), url.c_str());
@@ -3059,6 +3328,113 @@ void setupServerRoutes() {
         Serial.println("   → Invalid URL, redirecting to /notfound");
         request->redirect("/notfound");
     });
+}
+
+// ================================
+// AP CLIENT MANAGEMENT FUNCTIONS
+// ================================
+String macToString(const uint8_t* mac) {
+    char buf[18];
+    snprintf(buf, sizeof(buf), "%02X:%02X:%02X:%02X:%02X:%02X",
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    return String(buf);
+}
+
+int findClientSlot(const uint8_t* mac) {
+    for (int i = 0; i < MAX_AP_CLIENTS; i++) {
+        if (connectedClients[i].isActive) {
+            if (memcmp(connectedClients[i].mac, mac, 6) == 0) {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+int findFreeSlot() {
+    for (int i = 0; i < MAX_AP_CLIENTS; i++) {
+        if (!connectedClients[i].isActive) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int getActiveClientCount() {
+    if (xSemaphoreTake(apClientMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+        int count = 0;
+        for (int i = 0; i < MAX_AP_CLIENTS; i++) {
+            if (connectedClients[i].isActive) {
+                count++;
+            }
+        }
+        xSemaphoreGive(apClientMutex);
+        return count;
+    }
+    return 0;
+}
+
+void disconnectAllAPClients() {
+    Serial.println("\n🚫 Disconnecting all AP clients...");
+    
+    wifi_sta_list_t stationList;
+    esp_wifi_ap_get_sta_list(&stationList);
+    
+    for (int i = 0; i < stationList.num; i++) {
+        kickClientByMAC(stationList.sta[i].mac);
+        Serial.printf("   Kicked: %s\n", macToString(stationList.sta[i].mac).c_str());
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+    
+    if (xSemaphoreTake(apClientMutex, portMAX_DELAY) == pdTRUE) {
+        for (int i = 0; i < MAX_AP_CLIENTS; i++) {
+            memset(connectedClients[i].mac, 0, 6);
+            connectedClients[i].ip = IPAddress(0, 0, 0, 0);
+            connectedClients[i].lastActivity = 0;
+            connectedClients[i].isActive = false;
+        }
+        xSemaphoreGive(apClientMutex);
+    }
+    
+    Serial.println("✅ All clients disconnected");
+}
+
+void updateClientActivity() {
+    if (xSemaphoreTake(apClientMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+        unsigned long now = millis();
+        
+        wifi_sta_list_t stationList;
+        esp_wifi_ap_get_sta_list(&stationList);
+        
+        for (int i = 0; i < MAX_AP_CLIENTS; i++) {
+            if (connectedClients[i].isActive) {
+                connectedClients[i].lastActivity = now;
+                
+                for (int j = 0; j < stationList.num; j++) {
+                    if (memcmp(stationList.sta[j].mac, connectedClients[i].mac, 6) == 0) {
+                        break;
+                    }
+                }
+            }
+        }
+        xSemaphoreGive(apClientMutex);
+    }
+}
+
+void removeClientSlot(const uint8_t* mac) {
+    if (xSemaphoreTake(apClientMutex, portMAX_DELAY) == pdTRUE) {
+        int slot = findClientSlot(mac);
+        if (slot >= 0) {
+            String clientMAC = macToString(mac);
+            Serial.printf("🗑️  Removing client from slot %d: %s\n", slot, clientMAC.c_str());
+            
+            memset(connectedClients[slot].mac, 0, 6);
+            connectedClients[slot].ip = IPAddress(0, 0, 0, 0);
+            connectedClients[slot].lastActivity = 0;
+            connectedClients[slot].isActive = false;
+        }
+        xSemaphoreGive(apClientMutex);
+    }
 }
 
 void setupWiFiEvents() {
@@ -3125,21 +3501,227 @@ void setupWiFiEvents() {
             case ARDUINO_EVENT_WIFI_AP_START:
                 Serial.println("📶 AP Started: " + String(WiFi.softAPSSID()));
                 Serial.println("   AP IP: " + WiFi.softAPIP().toString());
+                Serial.println("   ⚙️  MODE: Max 1 client only");
                 break;
                 
-            case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
-                Serial.println("👤 Client connected to AP");
-                Serial.printf("   Stations: %d\n", WiFi.softAPgetStationNum());
-                break;
+            case ARDUINO_EVENT_WIFI_AP_STACONNECTED: {
+                Serial.println("\n========================================");
+                Serial.println("📱 NEW CLIENT CONNECTION ATTEMPT");
+                Serial.println("========================================");
                 
-            case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
-                Serial.println("👤 Client disconnected from AP");
-                Serial.printf("   Stations: %d\n", WiFi.softAPgetStationNum());
+                wifi_event_ap_staconnected_t* event_data = (wifi_event_ap_staconnected_t*)&info;
+                String newClientMAC = macToString(event_data->mac);
+                
+                Serial.println("Client MAC: " + newClientMAC);
+                
+                if (xSemaphoreTake(apClientMutex, portMAX_DELAY) == pdTRUE) {
+                    int freeSlot = findFreeSlot();
+                    int activeCount = 0;
+                    
+                    for (int i = 0; i < MAX_AP_CLIENTS; i++) {
+                        if (connectedClients[i].isActive) activeCount++;
+                    }
+                    
+                    if (freeSlot >= 0) {
+                        memcpy(connectedClients[freeSlot].mac, event_data->mac, 6);
+                        connectedClients[freeSlot].lastActivity = millis();
+                        connectedClients[freeSlot].isActive = true;
+                        
+                        Serial.println("\n✅ CONNECTION ACCEPTED");
+                        Serial.println("========================================");
+                        Serial.printf("Assigned to: SLOT %d\n", freeSlot);
+                        Serial.println("Client MAC: " + newClientMAC);
+                        Serial.printf("Active clients: %d/%d\n", activeCount + 1, MAX_AP_CLIENTS);
+                        Serial.println("Idle timeout: " + String(CLIENT_IDLE_TIMEOUT) + " seconds");
+                        Serial.println("========================================\n");
+                        
+                        xSemaphoreGive(apClientMutex);
+                        
+                    } else {
+                        Serial.println("\n❌ CONNECTION REJECTED!");
+                        Serial.println("========================================");
+                        Serial.printf("Reason: All %d slots occupied\n", MAX_AP_CLIENTS);
+                        Serial.println("Active clients:");
+                        for (int i = 0; i < MAX_AP_CLIENTS; i++) {
+                            if (connectedClients[i].isActive) {
+                                Serial.printf("   Slot %d: %s\n", i, macToString(connectedClients[i].mac).c_str());
+                            }
+                        }
+                        Serial.println("========================================");
+                        
+                        xSemaphoreGive(apClientMutex);
+                        
+                        vTaskDelay(pdMS_TO_TICKS(100));
+                        kickClientByMAC(event_data->mac);
+                        
+                        Serial.println("⚡ Client kicked: " + newClientMAC);
+                        Serial.println("========================================\n");
+                    }
+                } else {
+                    Serial.println("⚠️  Mutex timeout - rejecting connection");
+                    vTaskDelay(pdMS_TO_TICKS(100));
+                    kickClientByMAC(event_data->mac);
+                }
+                
+                Serial.printf("   Total stations: %d\n", WiFi.softAPgetStationNum());
                 break;
+            }
+                
+            case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED: {
+                wifi_event_ap_stadisconnected_t* event_data = (wifi_event_ap_stadisconnected_t*)&info;
+                String disconnectedMAC = macToString(event_data->mac);
+                
+                Serial.println("\n========================================");
+                Serial.println("📤 CLIENT DISCONNECTED");
+                Serial.println("========================================");
+                Serial.println("Client MAC: " + disconnectedMAC);
+                
+                removeClientSlot(event_data->mac);
+                
+                int remaining = getActiveClientCount();
+                Serial.printf("✅ Slot freed - %d/%d slots used\n", remaining, MAX_AP_CLIENTS);
+                Serial.printf("   Remaining stations: %d\n", WiFi.softAPgetStationNum());
+                Serial.println("========================================\n");
+                break;
+            }
         }
     });
     
-    Serial.println("✅ WiFi Event Handler registered");
+    Serial.println("✅ WiFi Event Handler registered (SINGLE-CLIENT MODE)");
+}
+
+// ================================
+// AP MONITOR TASK - ENFORCE SINGLE CLIENT
+// ================================
+void apMonitorTask(void *parameter) {
+    Serial.println("\n========================================");
+    Serial.println("🔒 AP MONITOR TASK STARTED");
+    Serial.println("========================================");
+    Serial.println("Mode: SINGLE CLIENT ONLY");
+    Serial.println("Max clients: " + String(MAX_AP_CLIENTS));
+    Serial.println("Idle timeout: " + String(CLIENT_IDLE_TIMEOUT) + "s");
+    Serial.println("Check interval: " + String(AP_MONITOR_INTERVAL / 1000) + "s");
+    Serial.println("========================================\n");
+    
+    while (true) {
+        vTaskDelay(pdMS_TO_TICKS(AP_MONITOR_INTERVAL));
+        
+        uint8_t stationCount = WiFi.softAPgetStationNum();
+        
+        // ================================
+        // ENFORCE MAX CLIENTS
+        // ================================
+        if (stationCount > MAX_AP_CLIENTS) {
+            Serial.println("\n⚠️  TOO MANY CLIENTS DETECTED!");
+            Serial.println("========================================");
+            Serial.printf("Current: %d clients (MAX: %d)\n", stationCount, MAX_AP_CLIENTS);
+            Serial.println("Action: Kicking all clients and resetting...");
+            Serial.println("========================================");
+            
+            disconnectAllAPClients();
+            
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
+        }
+        
+        // ================================
+        // CHECK IDLE TIMEOUT FOR EACH CLIENT
+        // ================================
+        if (xSemaphoreTake(apClientMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            unsigned long now = millis();
+            
+            for (int i = 0; i < MAX_AP_CLIENTS; i++) {
+                if (connectedClients[i].isActive) {
+                    unsigned long idleTime = (now - connectedClients[i].lastActivity) / 1000;
+                    
+                    if (idleTime > CLIENT_IDLE_TIMEOUT) {
+                        String clientMAC = macToString(connectedClients[i].mac);
+                        
+                        Serial.println("\n⏱️  CLIENT IDLE TIMEOUT");
+                        Serial.println("========================================");
+                        Serial.printf("Slot %d: %s\n", i, clientMAC.c_str());
+                        Serial.printf("Idle time: %lu seconds\n", idleTime);
+                        Serial.println("Action: Auto-disconnect");
+                        Serial.println("========================================\n");
+                        
+                        uint8_t mac[6];
+                        memcpy(mac, connectedClients[i].mac, 6);
+                        
+                        xSemaphoreGive(apClientMutex);
+                        
+                        kickClientByMAC(mac);
+                        removeClientSlot(mac);
+                        
+                        vTaskDelay(pdMS_TO_TICKS(500));
+                        
+                        xSemaphoreTake(apClientMutex, portMAX_DELAY);
+                    }
+                }
+            }
+            
+            static unsigned long lastDebugLog = 0;
+            if (millis() - lastDebugLog > 30000) {
+                int activeCount = 0;
+                Serial.println("\n📊 CLIENT STATUS REPORT");
+                Serial.println("========================================");
+                
+                for (int i = 0; i < MAX_AP_CLIENTS; i++) {
+                    if (connectedClients[i].isActive) {
+                        activeCount++;
+                        unsigned long idleTime = (now - connectedClients[i].lastActivity) / 1000;
+                        Serial.printf("Slot %d: %s | Idle: %lu/%ds\n", 
+                            i,
+                            macToString(connectedClients[i].mac).c_str(), 
+                            idleTime, 
+                            CLIENT_IDLE_TIMEOUT);
+                    } else {
+                        Serial.printf("Slot %d: [EMPTY]\n", i);
+                    }
+                }
+                
+                Serial.printf("Active: %d/%d | WiFi reports: %d stations\n", 
+                    activeCount, MAX_AP_CLIENTS, stationCount);
+                Serial.println("========================================\n");
+                
+                lastDebugLog = millis();
+            }
+            
+            xSemaphoreGive(apClientMutex);
+        }
+        
+        // ================================
+        // SYNC CHECK
+        // ================================
+        int trackedCount = getActiveClientCount();
+        
+        if (stationCount != trackedCount) {
+            Serial.println("\n🔄 SYNC MISMATCH DETECTED");
+            Serial.println("========================================");
+            Serial.printf("WiFi reports: %d stations\n", stationCount);
+            Serial.printf("Tracked: %d clients\n", trackedCount);
+            
+            if (stationCount == 0 && trackedCount > 0) {
+                Serial.println("Action: Clearing all tracked clients");
+                
+                if (xSemaphoreTake(apClientMutex, portMAX_DELAY) == pdTRUE) {
+                    for (int i = 0; i < MAX_AP_CLIENTS; i++) {
+                        if (connectedClients[i].isActive) {
+                            Serial.printf("   Clearing slot %d: %s\n", 
+                                i, macToString(connectedClients[i].mac).c_str());
+                            
+                            memset(connectedClients[i].mac, 0, 6);
+                            connectedClients[i].ip = IPAddress(0, 0, 0, 0);
+                            connectedClients[i].lastActivity = 0;
+                            connectedClients[i].isActive = false;
+                        }
+                    }
+                    xSemaphoreGive(apClientMutex);
+                }
+            }
+            
+            Serial.println("========================================\n");
+        }
+    }
 }
 
 // ================================
@@ -3183,10 +3765,13 @@ void setup() {
     wifiMutex = xSemaphoreCreateMutex();
     settingsMutex = xSemaphoreCreateMutex();
     spiMutex = xSemaphoreCreateMutex();
+    apClientMutex = xSemaphoreCreateMutex();
     
     displayQueue = xQueueCreate(10, sizeof(DisplayUpdate));
     
     Serial.println("Semaphores & Queue created");
+
+    initClientSlots();
     
     // ================================
     // LITTLEFS & LOAD SETTINGS
@@ -3447,6 +4032,17 @@ void setup() {
         );
         Serial.println("   RTC Sync Task (Core 0)");
     }
+
+    xTaskCreatePinnedToCore(
+        apMonitorTask,
+        "AP Monitor",
+        AP_MONITOR_TASK_STACK_SIZE,
+        NULL,
+        AP_MONITOR_PRIORITY,
+        &apMonitorTaskHandle,
+        0  // Core 0
+    );
+    Serial.println("   AP Monitor Task (Core 0)");
     
     vTaskDelay(pdMS_TO_TICKS(500));
     
@@ -3470,8 +4066,11 @@ void setup() {
     Serial.println("========================================");
     Serial.println("SYSTEM READY!");
     Serial.println("========================================");
-    Serial.println(" Multi-client concurrent access enabled");
-    Serial.println(" WiFi sleep disabled for better response");
+    Serial.println(" ✅ SINGLE-CLIENT MODE ENABLED");
+    Serial.println(" ✅ Only 1 device can connect at a time");
+    Serial.println(" ✅ Auto-kick when 2nd client attempts to connect");
+    Serial.println(" ✅ " + String(CLIENT_IDLE_TIMEOUT) + "s idle timeout");
+    Serial.println(" ✅ Strict exclusive access control");
     Serial.println("========================================\n");
     
     if (wifiConfig.routerSSID.length() > 0) {
