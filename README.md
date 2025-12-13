@@ -767,41 +767,35 @@ http://192.168.1.100/api/data      # Via WiFi (ganti IP sesuai device)
 **Response Format:**
 ```json
 {
-  "time": "12:34:56",
-  "date": "08/12/2024",
-  "day": "Sunday",
-  "timestamp": 1733673296,
-
+  "time": "14:35:22",
+  "date": "13/12/2025",
+  "day": "Saturday",
+  "timestamp": 1734075322,
   "prayerTimes": {
-    "subuh": "04:32",
-    "dzuhur": "11:58",
-    "ashar": "15:21",
-    "maghrib": "17:52",
-    "isya": "19:03"
+    "imsak": "03:57",
+    "subuh": "04:07",
+    "sunrise": "05:32",
+    "dzuhur": "11:47",
+    "ashar": "15:14",
+    "maghrib": "18:01",
+    "isya": "19:17"
   },
-
   "location": {
     "city": "Jakarta",
     "cityId": "Jakarta",
-    "displayName": "Jakarta",
-    "latitude": "-6.2088",
-    "longitude": "106.8456"
+    "displayName": "Jakarta (Kota)",
+    "latitude": "-6.175392",
+    "longitude": "106.827153"
   },
-  
-  "method": {
-    "id": 5,
-    "name": "Egyptian General Authority of Survey"
-  },
-
   "device": {
     "wifiConnected": true,
     "apIP": "192.168.4.1",
     "ntpSynced": true,
     "ntpServer": "pool.ntp.org",
-    "freeHeap": 257000,
-    "uptime": 123456,
-    "timezone": 7
+    "freeHeap": 245632,
+    "uptime": 3600
   }
+}
 }
 ```
 
