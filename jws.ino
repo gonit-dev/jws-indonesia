@@ -1943,7 +1943,6 @@ void setupServerRoutes() {
             LittleFS, "/index.html", "text/html"
         );
         
-        response->addHeader("Connection", "close");  // FORCE CLOSE
         response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         
         request->send(response);
@@ -1954,7 +1953,6 @@ void setupServerRoutes() {
             LittleFS, "/assets/css/foundation.css", "text/css"
         );
         
-        response->addHeader("Connection", "close");  // FORCE CLOSE
         response->addHeader("Cache-Control", "public, max-age=3600");  // CACHE 1 JAM
         
         request->send(response);
@@ -1999,7 +1997,6 @@ void setupServerRoutes() {
         response += "}";
         
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
-        resp->addHeader("Connection", "close");  // FORCE CLOSE
         resp->addHeader("Cache-Control", "no-cache");
         request->send(resp);
     });
@@ -2019,7 +2016,6 @@ void setupServerRoutes() {
         Serial.println("GET /gettimezone: " + json);
         
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Connection", "close");
         request->send(resp);
     });
 
@@ -2140,7 +2136,6 @@ void setupServerRoutes() {
         response += "}";
         
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
-        resp->addHeader("Connection", "close");
         request->send(resp);
     });
 
@@ -2154,7 +2149,6 @@ void setupServerRoutes() {
         json += "}";
         
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Connection", "close");
         request->send(resp);
     });
 
@@ -2173,8 +2167,7 @@ void setupServerRoutes() {
             "application/json"
         );
         
-        response->addHeader("Connection", "close");
-        response->addHeader("Access-Control-Allow-Origin", "*");
+        ->addHeader("Access-Control-Allow-Origin", "*");
         response->addHeader("Cache-Control", "public, max-age=3600");
         
         response->setContentLength(LittleFS.open("/cities.json", "r").size());
@@ -2425,7 +2418,6 @@ void setupServerRoutes() {
         response += "}";
         
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
-        resp->addHeader("Connection", "close");  // FORCE CLOSE
         request->send(resp);
     });
 
@@ -2455,7 +2447,6 @@ void setupServerRoutes() {
         Serial.println("GET /getcityinfo: " + json);
         
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Connection", "close");
         request->send(resp);
     });
 
@@ -2476,7 +2467,6 @@ void setupServerRoutes() {
         Serial.println("GET /getmethod: " + json);
         
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Connection", "close");
         request->send(resp);
     });
     
@@ -2602,7 +2592,7 @@ void setupServerRoutes() {
             Serial.println("WiFi credentials saved successfully");
             
             AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
-            resp->addHeader("Connection", "close");
+
             request->send(resp);
             
             scheduleRestart(5);
@@ -2628,7 +2618,7 @@ void setupServerRoutes() {
             Serial.println("AP Settings berhasil disimpan");
             
             AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
-            resp->addHeader("Connection", "close");
+
             request->send(resp);
             
             scheduleRestart(5);
@@ -2664,7 +2654,7 @@ void setupServerRoutes() {
             }
             
             AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", "{\"success\":true}");
-            resp->addHeader("Connection", "close");
+
             request->send(resp);
         },
         [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
@@ -2791,7 +2781,7 @@ void setupServerRoutes() {
             }
 
             AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "Waktu berhasil di-sync!");
-            resp->addHeader("Connection", "close");
+
             request->send(resp);
         } else {
             request->send(400, "text/plain", "Data waktu tidak lengkap");
@@ -2863,7 +2853,6 @@ void setupServerRoutes() {
         Serial.println("API /api/data requested");
         
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Connection", "close");
         resp->addHeader("Cache-Control", "no-cache");
         request->send(resp);
     });
@@ -2892,7 +2881,6 @@ void setupServerRoutes() {
         html += "</div></body></html>";
         
         AsyncWebServerResponse *resp = request->beginResponse(404, "text/html", html);
-        resp->addHeader("Connection", "close");
         request->send(resp);
     });
 
@@ -3011,7 +2999,6 @@ void setupServerRoutes() {
         Serial.println("========================================\n");
         
         AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
-        resp->addHeader("Connection", "close");
         request->send(resp);
         
         scheduleRestart(5);
@@ -3025,7 +3012,6 @@ void setupServerRoutes() {
         Serial.println("========================================\n");
         
         AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
-        resp->addHeader("Connection", "close");
         request->send(resp);
         
         scheduleRestart(5);
