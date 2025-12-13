@@ -1852,7 +1852,12 @@ void updateCityDisplay() {
         String displayText = "--";
         
         if (prayerConfig.selectedCity.length() > 0) {
-            displayText = prayerConfig.selectedCity; 
+            displayText = prayerConfig.selectedCity;
+
+            displayText.replace("Kabupaten ", "Kab ");
+            displayText.replace("Kabupaten", "Kab");
+            displayText.replace("District ", "Dist ");
+            displayText.replace("District", "Dist");
         }
         
         if (objects.city_time) {

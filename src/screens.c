@@ -82,7 +82,7 @@ void create_screen_main() {
                                 lv_obj_t *parent_obj = obj;
                                 {
                                     lv_obj_t *obj = lv_image_create(parent_obj);
-                                    lv_obj_set_pos(obj, 5, 7);
+                                    lv_obj_set_pos(obj, 5, 6);
                                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
                                     lv_image_set_src(obj, &img_location);
                                 }
@@ -90,11 +90,11 @@ void create_screen_main() {
                                     // cityTime
                                     lv_obj_t *obj = lv_label_create(parent_obj);
                                     objects.city_time = obj;
-                                    lv_obj_set_pos(obj, 20, 6);
-                                    lv_obj_set_size(obj, 300, LV_SIZE_CONTENT);
+                                    lv_obj_set_pos(obj, 22, 5);
+                                    lv_obj_set_size(obj, 298, LV_SIZE_CONTENT);
                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
-                                    lv_obj_set_style_text_font(obj, &ui_font_prototype_12, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_text_font(obj, &ui_font_prototype_14, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_text_letter_space(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_label_set_text(obj, "Text");
                                 }
