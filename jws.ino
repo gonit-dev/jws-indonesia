@@ -1944,7 +1944,6 @@ void setupServerRoutes() {
         );
         
         response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        
         request->send(response);
     });
     
@@ -1953,8 +1952,7 @@ void setupServerRoutes() {
             LittleFS, "/assets/css/foundation.css", "text/css"
         );
         
-        response->addHeader("Cache-Control", "public, max-age=3600");  // CACHE 1 JAM
-        
+        response->addHeader("Cache-Control", "public, max-age=3600");
         request->send(response);
     });
 
