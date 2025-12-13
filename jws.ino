@@ -160,6 +160,7 @@ WiFiConfig wifiConfig;
 TimeConfig timeConfig;
 PrayerConfig prayerConfig;
 MethodConfig methodConfig = {5, "Egyptian General Authority of Survey"};
+int timezoneOffset = 7;
 
 unsigned long lastWiFiCheck = 0;
 const unsigned long WIFI_CHECK_INTERVAL = 5000;  // Check every 5 seconds
@@ -178,7 +179,7 @@ struct DisplayUpdate {
     enum Type {
         TIME_UPDATE,
         PRAYER_UPDATE,
-        STATUS_UPDATEz
+        STATUS_UPDATE
     } type;
     String data;
 };
@@ -213,13 +214,62 @@ volatile WiFiState wifiState = WIFI_IDLE;
 volatile bool ntpSyncInProgress = false;
 volatile bool ntpSyncCompleted = false;
 
-// Forward Declarations
+// ================================
+// FORWARD DECLARATIONS
+// ================================
+
+// Display Functions
+void updateCityDisplay();
 void updateTimeDisplay();
 void updatePrayerDisplay();
+void hideAllUIElements();
+void showAllUIElements();
+
+// Prayer Times Functions
 void getPrayerTimesByCoordinates(String lat, String lon);
-void saveWiFiCredentials();
 void savePrayerTimes();
+void loadPrayerTimes();
+
+// WiFi Functions
+void saveWiFiCredentials();
+void loadWiFiCredentials();
+void saveAPCredentials();
+void setupWiFiEvents();
+
+// Settings Functions
+void saveTimezoneConfig();
+void loadTimezoneConfig();
+void saveCitySelection();
+void loadCitySelection();
+void saveMethodSelection();
+void loadMethodSelection();
+
+// Time Functions
+void saveTimeToRTC();
+bool initRTC();
+
+// Server Functions
 void setupServerRoutes();
+
+// Utility Functions
+void scheduleRestart(int delaySeconds);
+void delayedRestart(void *parameter);
+
+// LittleFS Functions
+bool init_littlefs();
+
+// LVGL Callbacks
+void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map);
+void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data);
+
+// RTOS Tasks
+void uiTask(void *parameter);
+void wifiTask(void *parameter);
+void ntpTask(void *parameter);
+void webTask(void *parameter);
+void prayerTask(void *parameter);
+void rtcSyncTask(void *parameter);
+void clockTickTask(void *parameter);
 
 // ================================
 // FLUSH CALLBACK
@@ -367,6 +417,46 @@ void saveAPCredentials() {
             }
         } else {
             Serial.println("Failed to open ap_creds.txt for writing");
+        }
+        xSemaphoreGive(settingsMutex);
+    }
+}
+
+void saveTimezoneConfig() {
+    if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+        fs::File file = LittleFS.open("/timezone.txt", "w");
+        if (file) {
+            file.println(timezoneOffset);
+            file.flush();
+            file.close();
+            Serial.println("Timezone saved: UTC" + String(timezoneOffset >= 0 ? "+" : "") + String(timezoneOffset));
+        } else {
+            Serial.println("Failed to save timezone");
+        }
+        xSemaphoreGive(settingsMutex);
+    }
+}
+
+void loadTimezoneConfig() {
+    if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+        if (LittleFS.exists("/timezone.txt")) {
+            fs::File file = LittleFS.open("/timezone.txt", "r");
+            if (file) {
+                String offsetStr = file.readStringUntil('\n');
+                offsetStr.trim();
+                timezoneOffset = offsetStr.toInt();
+                
+                if (timezoneOffset < -12 || timezoneOffset > 14) {
+                    Serial.println("Invalid timezone offset in file, using default +7");
+                    timezoneOffset = 7;
+                }
+                
+                file.close();
+                Serial.println("Timezone loaded: UTC" + String(timezoneOffset >= 0 ? "+" : "") + String(timezoneOffset));
+            }
+        } else {
+            timezoneOffset = 7;
+            Serial.println("No timezone config found - using default (UTC+7)");
         }
         xSemaphoreGive(settingsMutex);
     }
@@ -945,7 +1035,6 @@ void wifiTask(void *parameter) {
                                     WiFi.mode(WIFI_AP_STA);
                                     delay(100);
                                     
-                                    // Pastikan AP masih hidup
                                     if (WiFi.softAPgetStationNum() == 0 && WiFi.softAPIP() == IPAddress(0,0,0,0)) {
                                         WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
                                         delay(100);
@@ -953,14 +1042,11 @@ void wifiTask(void *parameter) {
                                     }
                                 }
                                 
-                                // Set hostname
                                 WiFi.setHostname("JWS-Indonesia");
                                 delay(100);
                                 
-                                // Set power
                                 WiFi.setTxPower(WIFI_POWER_19_5dBm);
                                 
-                                // CONNECT!
                                 Serial.println("========================================");
                                 Serial.println("🔌 FAST RECONNECT: Connecting to router...");
                                 Serial.println("========================================");
@@ -1451,7 +1537,10 @@ void ntpTask(void *parameter) {
                 Serial.printf("Trying NTP server: %s\n", ntpServers[serverIndex]);
                 
                 timeClient.setPoolServerName(ntpServers[serverIndex]);
-                timeClient.setTimeOffset(25200); // UTC+7
+                int offsetSeconds = timezoneOffset * 3600;
+                timeClient.setTimeOffset(offsetSeconds);
+                Serial.printf("   Using timezone: UTC%s%d (%d seconds)\n", 
+                    timezoneOffset >= 0 ? "+" : "", timezoneOffset, offsetSeconds);
                 timeClient.begin();
                 
                 unsigned long startTime = millis();
@@ -1826,7 +1915,6 @@ void delayedRestart(void *parameter) {
     
     Serial.println("Restarting NOW!");
     
-    // Flush semua buffer sebelum restart
     Serial.flush();
     delay(100);
     
@@ -1913,6 +2001,105 @@ void setupServerRoutes() {
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
         resp->addHeader("Connection", "close");  // FORCE CLOSE
         resp->addHeader("Cache-Control", "no-cache");
+        request->send(resp);
+    });
+
+    server.on("/gettimezone", HTTP_GET, [](AsyncWebServerRequest *request){
+        String json = "{";
+        
+        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            json += "\"offset\":" + String(timezoneOffset);
+            xSemaphoreGive(settingsMutex);
+        } else {
+            json += "\"offset\":7";
+        }
+        
+        json += "}";
+        
+        Serial.println("GET /gettimezone: " + json);
+        
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        resp->addHeader("Connection", "close");
+        request->send(resp);
+    });
+
+    server.on("/settimezone", HTTP_POST, [](AsyncWebServerRequest *request){
+        Serial.println("\n========================================");
+        Serial.println("POST /settimezone received");
+        Serial.println("========================================");
+
+        if (!request->hasParam("offset", true)) {
+            Serial.println("ERROR: Missing offset parameter");
+            request->send(400, "application/json", 
+                "{\"error\":\"Missing offset parameter\"}");
+            return;
+        }
+
+        String offsetStr = request->getParam("offset", true)->value();
+        offsetStr.trim();
+        
+        int offset = offsetStr.toInt();
+        
+        Serial.println("Received offset: " + String(offset));
+        
+        if (offset < -12 || offset > 14) {
+            Serial.println("ERROR: Invalid timezone offset");
+            request->send(400, "application/json", 
+                "{\"error\":\"Invalid timezone offset (must be -12 to +14)\"}");
+            return;
+        }
+
+        Serial.println("Saving to memory and file...");
+        
+        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+            timezoneOffset = offset;
+            xSemaphoreGive(settingsMutex);
+            Serial.println("✓ Memory updated");
+        }
+        
+        saveTimezoneConfig();
+        
+        Serial.println("========================================");
+        Serial.println("SUCCESS: Timezone saved");
+        Serial.println("  Offset: UTC" + String(offset >= 0 ? "+" : "") + String(offset));
+        Serial.println("========================================\n");
+        
+        if (wifiConfig.isConnected && ntpTaskHandle != NULL) {
+            Serial.println("\n========================================");
+            Serial.println("🔄 AUTO-TRIGGERING NTP RE-SYNC");
+            Serial.println("========================================");
+            Serial.println("Reason: Timezone changed");
+            Serial.println("New timezone: UTC" + String(offset >= 0 ? "+" : "") + String(offset));
+            Serial.println("Will apply to system time immediately...");
+            Serial.println("========================================\n");
+            
+            if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                timeConfig.ntpSynced = false;
+                xSemaphoreGive(timeMutex);
+            }
+            
+            xTaskNotifyGive(ntpTaskHandle);
+            
+            Serial.println("✅ NTP re-sync triggered successfully");
+        } else {
+            Serial.println("\n⚠️ Cannot trigger NTP sync:");
+            if (!wifiConfig.isConnected) {
+                Serial.println("   Reason: WiFi not connected");
+            }
+            if (ntpTaskHandle == NULL) {
+                Serial.println("   Reason: NTP task not running");
+            }
+            Serial.println("   Timezone will apply on next connection\n");
+        }
+        
+        String response = "{";
+        response += "\"success\":true,";
+        response += "\"offset\":" + String(offset) + ",";
+        response += "\"ntpTriggered\":" + String((wifiConfig.isConnected && ntpTaskHandle != NULL) ? "true" : "false");
+        response += "}";
+        
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
+        resp->addHeader("Connection", "close");
         request->send(resp);
     });
 
@@ -2704,6 +2891,14 @@ void setupServerRoutes() {
             Serial.println("✓ Method reset to default (Egyptian)");
             xSemaphoreGive(settingsMutex);
         }
+
+        if (LittleFS.exists("/timezone.txt")) {
+            LittleFS.remove("/timezone.txt");
+            Serial.println("✓ Timezone config deleted");
+        }
+
+        timezoneOffset = 7;
+        Serial.println("✓ Timezone reset to default (+7)");
     
         // RESET TIME TO 00:00:00 01/01/2000
         Serial.println("\nResetting time to default...");
@@ -2842,7 +3037,6 @@ void setupWiFiEvents() {
                 Serial.println("❌ STA Disconnected!");
                 Serial.printf("   Reason Code: %d\n", info.wifi_sta_disconnected.reason);
                 
-                // Decode reason
                 switch(info.wifi_sta_disconnected.reason) {
                     case WIFI_REASON_AUTH_EXPIRE:
                         Serial.println("   Detail: Authentication expired");
@@ -2961,7 +3155,7 @@ void setup() {
     loadPrayerTimes();
     loadCitySelection();
     loadMethodSelection();
-    
+    loadTimezoneConfig();
     // ================================
     // RTC DS3231 INIT
     // ================================
