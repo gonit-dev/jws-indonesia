@@ -531,8 +531,16 @@
                                 <table class="unstriped hover">
                                     <tbody>
                                         <tr>
+                                            <td class="text-left"><strong>🌙 Imsak</strong></td>
+                                            <td class="text-right"><h5 id="imsakTime">--:--</h5></td>
+                                        </tr>
+                                        <tr>
                                             <td class="text-left"><strong>🌅 Subuh (Fajr)</strong></td>
                                             <td class="text-right"><h5 id="subuhTime">--:--</h5></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-left"><strong>🌄 Terbit (Sunrise)</strong></td>
+                                            <td class="text-right"><h5 id="sunriseTime">--:--</h5></td>
                                         </tr>
                                         <tr>
                                             <td class="text-left"><strong>☀️ Dzuhur (Dhuhr)</strong></td>
@@ -693,7 +701,9 @@
         let lastSyncTime = 0;
 
         let prayerConfig = {
+            imsakTime: '--:--',
             subuhTime: '--:--',
+            sunriseTime: '--:--',
             zuhurTime: '--:--',
             asarTime: '--:--',
             maghribTime: '--:--',
@@ -1303,13 +1313,17 @@
                 const response = await fetch('/getprayertimes');
                 const data = await response.json();
                 
+                prayerConfig.imsakTime = data.imsak || '--:--';    
                 prayerConfig.subuhTime = data.subuh || '--:--';
+                prayerConfig.sunriseTime = data.sunrise || '--:--';
                 prayerConfig.zuhurTime = data.dzuhur || '--:--';
                 prayerConfig.asarTime = data.ashar || '--:--';
                 prayerConfig.maghribTime = data.maghrib || '--:--';
                 prayerConfig.isyaTime = data.isya || '--:--';
                 
+                document.getElementById('imsakTime').textContent = prayerConfig.imsakTime;  
                 document.getElementById('subuhTime').textContent = prayerConfig.subuhTime;
+                document.getElementById('sunriseTime').textContent = prayerConfig.sunriseTime;
                 document.getElementById('dzuhurTime').textContent = prayerConfig.zuhurTime;
                 document.getElementById('asharTime').textContent = prayerConfig.asarTime;
                 document.getElementById('maghribTime').textContent = prayerConfig.maghribTime;
