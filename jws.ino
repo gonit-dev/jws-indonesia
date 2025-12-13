@@ -2167,7 +2167,7 @@ void setupServerRoutes() {
             "application/json"
         );
         
-        ->addHeader("Access-Control-Allow-Origin", "*");
+        response->addHeader("Access-Control-Allow-Origin", "*");
         response->addHeader("Cache-Control", "public, max-age=3600");
         
         response->setContentLength(LittleFS.open("/cities.json", "r").size());
@@ -2578,7 +2578,6 @@ void setupServerRoutes() {
         response += "}";
         
         AsyncWebServerResponse *resp2 = request->beginResponse(200, "application/json", response);
-        resp2->addHeader("Connection", "close");
         request->send(resp2);
     });
 
