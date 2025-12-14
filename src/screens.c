@@ -194,7 +194,7 @@ void create_screen_main() {
                                     lv_obj_t *obj = lv_obj_create(parent_obj);
                                     objects.sunrise = obj;
                                     lv_obj_set_pos(obj, 0, 167);
-                                    lv_obj_set_size(obj, LV_PCT(100), LV_SIZE_CONTENT);
+                                    lv_obj_set_size(obj, LV_PCT(49), LV_SIZE_CONTENT);
                                     lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -223,10 +223,10 @@ void create_screen_main() {
                                                     lv_obj_t *obj = lv_label_create(parent_obj);
                                                     objects.obj3 = obj;
                                                     lv_obj_set_pos(obj, 5, 4);
-                                                    lv_obj_set_size(obj, 71, LV_SIZE_CONTENT);
+                                                    lv_obj_set_size(obj, 64, LV_SIZE_CONTENT);
                                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
                                                     lv_obj_set_style_text_font(obj, &ui_font_prototype_14, LV_PART_MAIN | LV_STATE_DEFAULT);
-                                                    lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                                    lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
                                                     lv_obj_set_style_text_letter_space(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
                                                     lv_label_set_text(obj, "TERBIT");
                                                 }
@@ -235,33 +235,67 @@ void create_screen_main() {
                                                     lv_obj_t *obj = lv_label_create(parent_obj);
                                                     objects.terbit_time = obj;
                                                     lv_obj_set_pos(obj, 5, 20);
-                                                    lv_obj_set_size(obj, 71, LV_SIZE_CONTENT);
+                                                    lv_obj_set_size(obj, 64, LV_SIZE_CONTENT);
                                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
                                                     lv_obj_set_style_text_font(obj, &ui_font_prototype_14, LV_PART_MAIN | LV_STATE_DEFAULT);
-                                                    lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                                    lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
                                                     lv_obj_set_style_text_letter_space(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
                                                     lv_label_set_text(obj, "00:00");
                                                 }
+                                            }
+                                        }
+                                    }
+                                }
+                                {
+                                    // imsak
+                                    lv_obj_t *obj = lv_obj_create(parent_obj);
+                                    objects.imsak = obj;
+                                    lv_obj_set_pos(obj, 78, 167);
+                                    lv_obj_set_size(obj, LV_PCT(49), LV_SIZE_CONTENT);
+                                    lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_pad_bottom(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_bg_opa(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_border_width(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    lv_obj_set_style_radius(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                    {
+                                        lv_obj_t *parent_obj = obj;
+                                        {
+                                            lv_obj_t *obj = lv_obj_create(parent_obj);
+                                            objects.obj4 = obj;
+                                            lv_obj_set_pos(obj, 0, 0);
+                                            lv_obj_set_size(obj, LV_PCT(100), 40);
+                                            lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                            lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                            lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                            lv_obj_set_style_pad_bottom(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                            lv_obj_set_style_border_width(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                            lv_obj_set_style_bg_color(obj, lv_color_hex(0xff0f0f0f), LV_PART_MAIN | LV_STATE_DEFAULT);
+                                            lv_obj_set_style_bg_opa(obj, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                            lv_obj_set_style_radius(obj, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                            {
+                                                lv_obj_t *parent_obj = obj;
                                                 {
                                                     lv_obj_t *obj = lv_label_create(parent_obj);
-                                                    objects.obj4 = obj;
-                                                    lv_obj_set_pos(obj, 76, 4);
-                                                    lv_obj_set_size(obj, 71, LV_SIZE_CONTENT);
+                                                    objects.obj5 = obj;
+                                                    lv_obj_set_pos(obj, 5, 4);
+                                                    lv_obj_set_size(obj, 64, LV_SIZE_CONTENT);
                                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
                                                     lv_obj_set_style_text_font(obj, &ui_font_prototype_14, LV_PART_MAIN | LV_STATE_DEFAULT);
-                                                    lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_RIGHT, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                                    lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
                                                     lv_obj_set_style_text_letter_space(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
                                                     lv_label_set_text(obj, "IMSAK");
                                                 }
                                                 {
-                                                    // imsakTime
+                                                    // imsakTime_1
                                                     lv_obj_t *obj = lv_label_create(parent_obj);
-                                                    objects.imsak_time = obj;
-                                                    lv_obj_set_pos(obj, 76, 20);
-                                                    lv_obj_set_size(obj, 71, LV_SIZE_CONTENT);
+                                                    objects.imsak_time_1 = obj;
+                                                    lv_obj_set_pos(obj, 5, 20);
+                                                    lv_obj_set_size(obj, 64, LV_SIZE_CONTENT);
                                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
                                                     lv_obj_set_style_text_font(obj, &ui_font_prototype_14, LV_PART_MAIN | LV_STATE_DEFAULT);
-                                                    lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_RIGHT, LV_PART_MAIN | LV_STATE_DEFAULT);
+                                                    lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
                                                     lv_obj_set_style_text_letter_space(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
                                                     lv_label_set_text(obj, "00:00");
                                                 }
@@ -321,7 +355,7 @@ void create_screen_main() {
                                         lv_obj_t *parent_obj = obj;
                                         {
                                             lv_obj_t *obj = lv_label_create(parent_obj);
-                                            objects.obj5 = obj;
+                                            objects.obj6 = obj;
                                             lv_obj_set_pos(obj, 0, 7);
                                             lv_obj_set_size(obj, LV_PCT(100), LV_SIZE_CONTENT);
                                             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -349,7 +383,7 @@ void create_screen_main() {
                                         lv_obj_t *parent_obj = obj;
                                         {
                                             lv_obj_t *obj = lv_obj_create(parent_obj);
-                                            objects.obj6 = obj;
+                                            objects.obj7 = obj;
                                             lv_obj_set_pos(obj, 0, 6);
                                             lv_obj_set_size(obj, LV_PCT(100), LV_PCT(70));
                                             lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -364,7 +398,7 @@ void create_screen_main() {
                                                 lv_obj_t *parent_obj = obj;
                                                 {
                                                     lv_obj_t *obj = lv_label_create(parent_obj);
-                                                    objects.obj7 = obj;
+                                                    objects.obj8 = obj;
                                                     lv_obj_set_pos(obj, 5, 4);
                                                     lv_obj_set_size(obj, 75, LV_SIZE_CONTENT);
                                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -406,7 +440,7 @@ void create_screen_main() {
                                         lv_obj_t *parent_obj = obj;
                                         {
                                             lv_obj_t *obj = lv_obj_create(parent_obj);
-                                            objects.obj8 = obj;
+                                            objects.obj9 = obj;
                                             lv_obj_set_pos(obj, 0, 6);
                                             lv_obj_set_size(obj, LV_PCT(100), LV_PCT(70));
                                             lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -421,7 +455,7 @@ void create_screen_main() {
                                                 lv_obj_t *parent_obj = obj;
                                                 {
                                                     lv_obj_t *obj = lv_label_create(parent_obj);
-                                                    objects.obj9 = obj;
+                                                    objects.obj10 = obj;
                                                     lv_obj_set_pos(obj, 5, 4);
                                                     lv_obj_set_size(obj, 75, LV_SIZE_CONTENT);
                                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -463,7 +497,7 @@ void create_screen_main() {
                                         lv_obj_t *parent_obj = obj;
                                         {
                                             lv_obj_t *obj = lv_obj_create(parent_obj);
-                                            objects.obj10 = obj;
+                                            objects.obj11 = obj;
                                             lv_obj_set_pos(obj, 0, 6);
                                             lv_obj_set_size(obj, LV_PCT(100), LV_PCT(70));
                                             lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -478,7 +512,7 @@ void create_screen_main() {
                                                 lv_obj_t *parent_obj = obj;
                                                 {
                                                     lv_obj_t *obj = lv_label_create(parent_obj);
-                                                    objects.obj11 = obj;
+                                                    objects.obj12 = obj;
                                                     lv_obj_set_pos(obj, 5, 4);
                                                     lv_obj_set_size(obj, 75, LV_SIZE_CONTENT);
                                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -520,7 +554,7 @@ void create_screen_main() {
                                         lv_obj_t *parent_obj = obj;
                                         {
                                             lv_obj_t *obj = lv_obj_create(parent_obj);
-                                            objects.obj12 = obj;
+                                            objects.obj13 = obj;
                                             lv_obj_set_pos(obj, 0, 6);
                                             lv_obj_set_size(obj, LV_PCT(100), LV_PCT(70));
                                             lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -535,7 +569,7 @@ void create_screen_main() {
                                                 lv_obj_t *parent_obj = obj;
                                                 {
                                                     lv_obj_t *obj = lv_label_create(parent_obj);
-                                                    objects.obj13 = obj;
+                                                    objects.obj14 = obj;
                                                     lv_obj_set_pos(obj, 5, 4);
                                                     lv_obj_set_size(obj, 75, LV_SIZE_CONTENT);
                                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -577,7 +611,7 @@ void create_screen_main() {
                                         lv_obj_t *parent_obj = obj;
                                         {
                                             lv_obj_t *obj = lv_obj_create(parent_obj);
-                                            objects.obj14 = obj;
+                                            objects.obj15 = obj;
                                             lv_obj_set_pos(obj, 0, 6);
                                             lv_obj_set_size(obj, LV_PCT(100), LV_PCT(70));
                                             lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -592,7 +626,7 @@ void create_screen_main() {
                                                 lv_obj_t *parent_obj = obj;
                                                 {
                                                     lv_obj_t *obj = lv_label_create(parent_obj);
-                                                    objects.obj15 = obj;
+                                                    objects.obj16 = obj;
                                                     lv_obj_set_pos(obj, 5, 4);
                                                     lv_obj_set_size(obj, 75, LV_SIZE_CONTENT);
                                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);

@@ -1688,6 +1688,60 @@ void ntpTask(void *parameter) {
     }
 }
 
+
+void printStackReport() {
+    Serial.println("\n🔍 STACK USAGE ANALYSIS");
+    Serial.println("========================================");
+    
+    struct TaskInfo {
+        TaskHandle_t handle;
+        const char* name;
+        uint32_t size;
+    };
+    
+    TaskInfo tasks[] = {
+        {uiTaskHandle, "UI", 16384},
+        {webTaskHandle, "Web", 16384},
+        {wifiTaskHandle, "WiFi", 8192},
+        {ntpTaskHandle, "NTP", 8192},
+        {prayerTaskHandle, "Prayer", 8192},
+        {rtcTaskHandle, "RTC", 4096}
+    };
+    
+    uint32_t totalAllocated = 0;
+    uint32_t totalUsed = 0;
+    
+    for (int i = 0; i < 6; i++) {
+        if (tasks[i].handle) {
+            UBaseType_t hwm = uxTaskGetStackHighWaterMark(tasks[i].handle);
+            uint32_t free = hwm * 4;
+            uint32_t used = tasks[i].size - free;
+            float percent = (used * 100.0) / tasks[i].size;
+            
+            totalAllocated += tasks[i].size;
+            totalUsed += used;
+            
+            Serial.printf("%-10s: %5d/%5d (%5.1f%%) ", 
+                tasks[i].name, used, tasks[i].size, percent);
+            
+            if (percent < 50) Serial.println("💚 BOROS - bisa dikurangi");
+            else if (percent < 70) Serial.println("💙 OPTIMAL");
+            else if (percent < 85) Serial.println("💛 PAS");
+            else if (percent < 95) Serial.println("🧡 BAHAYA - harus dinaikkan!");
+            else Serial.println("🔴 KRITIS - segera naikkan!");
+        }
+    }
+    
+    Serial.println("========================================");
+    Serial.printf("Total Allocated: %d bytes (%.1f KB)\n", 
+        totalAllocated, totalAllocated/1024.0);
+    Serial.printf("Total Used:      %d bytes (%.1f KB)\n", 
+        totalUsed, totalUsed/1024.0);
+    Serial.printf("Efficiency:      %.1f%%\n", 
+        (totalUsed * 100.0) / totalAllocated);
+    Serial.println("========================================\n");
+}
+
 void webTask(void *parameter) {
     Serial.println("\n========================================");
     Serial.println("WEB TASK STARTING");
@@ -1773,59 +1827,6 @@ void webTask(void *parameter) {
             }
         }
     }
-}
-
-void printStackReport() {
-    Serial.println("\n🔍 STACK USAGE ANALYSIS");
-    Serial.println("========================================");
-    
-    struct TaskInfo {
-        TaskHandle_t handle;
-        const char* name;
-        uint32_t size;
-    };
-    
-    TaskInfo tasks[] = {
-        {uiTaskHandle, "UI", 16384},
-        {webTaskHandle, "Web", 16384},
-        {wifiTaskHandle, "WiFi", 8192},
-        {ntpTaskHandle, "NTP", 8192},
-        {prayerTaskHandle, "Prayer", 8192},
-        {rtcTaskHandle, "RTC", 4096}
-    };
-    
-    uint32_t totalAllocated = 0;
-    uint32_t totalUsed = 0;
-    
-    for (int i = 0; i < 6; i++) {
-        if (tasks[i].handle) {
-            UBaseType_t hwm = uxTaskGetStackHighWaterMark(tasks[i].handle);
-            uint32_t free = hwm * 4;
-            uint32_t used = tasks[i].size - free;
-            float percent = (used * 100.0) / tasks[i].size;
-            
-            totalAllocated += tasks[i].size;
-            totalUsed += used;
-            
-            Serial.printf("%-10s: %5d/%5d (%5.1f%%) ", 
-                tasks[i].name, used, tasks[i].size, percent);
-            
-            if (percent < 50) Serial.println("💚 BOROS - bisa dikurangi");
-            else if (percent < 70) Serial.println("💙 OPTIMAL");
-            else if (percent < 85) Serial.println("💛 PAS");
-            else if (percent < 95) Serial.println("🧡 BAHAYA - harus dinaikkan!");
-            else Serial.println("🔴 KRITIS - segera naikkan!");
-        }
-    }
-    
-    Serial.println("========================================");
-    Serial.printf("Total Allocated: %d bytes (%.1f KB)\n", 
-        totalAllocated, totalAllocated/1024.0);
-    Serial.printf("Total Used:      %d bytes (%.1f KB)\n", 
-        totalUsed, totalUsed/1024.0);
-    Serial.printf("Efficiency:      %.1f%%\n", 
-        (totalUsed * 100.0) / totalAllocated);
-    Serial.println("========================================\n");
 }
 
 void prayerTask(void *parameter) {
