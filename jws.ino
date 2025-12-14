@@ -28,6 +28,8 @@
 #include "src/images.h"
 #include "src/fonts.h"
 
+#define PRODUCTION_MODE false
+
 // ================================
 // PIN DEFINITIONS
 // ================================
@@ -3289,8 +3291,10 @@ void setupWiFiEvents() {
 // SETUP - ESP32 CORE 3.x
 // ================================
 void setup() {
-    Serial.begin(115200);
-    delay(1000);
+    #if !PRODUCTION_MODE
+        Serial.begin(115200);
+        delay(1000);
+    #endif
 
     Serial.println("\n\n");
     Serial.println("========================================");
