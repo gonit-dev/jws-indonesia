@@ -1293,48 +1293,43 @@ void wifiTask(void *parameter) {
                         Serial.println("\n========================================");
                         Serial.println("❌ WiFi Connection Timeout");
                         Serial.println("========================================");
-                        Serial.println("Failed after " + String(MAX_CONNECT_ATTEMPTS) + " seconds");
                         Serial.printf("Status: %d\n", WiFi.status());
                         Serial.printf("Reconnect attempt: %d/%d\n", reconnectAttempts, MAX_RECONNECT_ATTEMPTS);
                         
-                        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-                            Serial.println("\n⚠️ MAX RECONNECT ATTEMPTS REACHED!");
-                            Serial.println("========================================");
-                            Serial.println("Entered COOLDOWN mode");
-                            Serial.println("   • Failed attempts: " + String(MAX_RECONNECT_ATTEMPTS));
-                            Serial.println("   • Cooldown period: 15 seconds");
-                            Serial.println("   • Fast scan continues in background");
-                            Serial.println("========================================");
-                            
-                            lastConnectAttempt = millis() + 5000;
-                            
-                        } else {
-                            Serial.printf("   Will retry in %d seconds...\n", RECONNECT_INTERVAL/1000);
-                        }
-                        
-                        Serial.println("\nAP remains active: " + String(wifiConfig.apSSID));
-                        Serial.println("   AP IP: " + WiFi.softAPIP().toString());
-                        Serial.println("🔍 Fast scan active - will connect immediately when SSID detected");
-                        Serial.println("========================================\n");
-                        
                         wifiState = WIFI_FAILED;
                         
-                        // ============================================
-                        //  PASTIKAN AP TETAP HIDUP SETELAH TIMEOUT
-                        // ============================================
+                        // ✅ Disconnect dengan aman
+                        Serial.println("→ Disconnecting WiFi safely...");
                         WiFi.disconnect(false);
                         delay(200);
                         
+                        Serial.println("→ Forcing AP_STA mode...");
                         WiFi.mode(WIFI_AP_STA);
                         delay(200);
                         
+                        wifi_mode_t currentMode;
+                        esp_wifi_get_mode(&currentMode);
+                        Serial.printf("   Current mode: %d (expected %d)\n", currentMode, WIFI_MODE_APSTA);
+                        
                         IPAddress apIP = WiFi.softAPIP();
-                        if (apIP == IPAddress(0,0,0,0)) {
+                        String apSSID = WiFi.softAPSSID();
+                        
+                        Serial.println("→ Checking AP status...");
+                        Serial.println("   AP IP: " + apIP.toString());
+                        Serial.println("   AP SSID: " + apSSID);
+                        
+                        if (apIP == IPAddress(0,0,0,0) || apSSID.length() == 0) {
                             Serial.println("⚠️ AP died during timeout! Restarting...");
                             WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
                             delay(200);
-                            Serial.println("✅ AP restarted: " + WiFi.softAPIP().toString());
+                            Serial.println("✅ AP restarted:");
+                            Serial.println("   SSID: " + WiFi.softAPSSID());
+                            Serial.println("   IP: " + WiFi.softAPIP().toString());
+                        } else {
+                            Serial.println("✅ AP still alive");
                         }
+                        
+                        Serial.println("========================================\n");
                     }
                 }
                 
@@ -2770,18 +2765,57 @@ void setupServerRoutes() {
 
     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
-            wifiConfig.routerSSID = request->getParam("ssid", true)->value();
-            wifiConfig.routerPassword = request->getParam("password", true)->value();
+            String newSSID = request->getParam("ssid", true)->value();
+            String newPassword = request->getParam("password", true)->value();
+            
+            Serial.println("\n========================================");
+            Serial.println("POST /setwifi - NO RESTART MODE");
+            Serial.println("========================================");
+            Serial.println("New SSID: " + newSSID);
+            
+            if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                wifiConfig.routerSSID = newSSID;
+                wifiConfig.routerPassword = newPassword;
+                xSemaphoreGive(wifiMutex);
+            }
             
             saveWiFiCredentials();
             
-            Serial.println("WiFi credentials saved successfully");
+            Serial.println("Disconnecting old WiFi...");
+            WiFi.disconnect(false);
+            delay(200);
+            
+            Serial.println("Forcing AP_STA mode...");
+            WiFi.mode(WIFI_AP_STA);
+            delay(100);
+            
+            IPAddress apIP = WiFi.softAPIP();
+            if (apIP == IPAddress(0,0,0,0)) {
+                Serial.println("⚠️ AP died, restarting...");
+                WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+                delay(200);
+                Serial.println("✅ AP restored: " + WiFi.softAPIP().toString());
+            } else {
+                Serial.println("✅ AP still alive: " + apIP.toString());
+            }
+            
+            // 5️⃣ Trigger reconnect via WiFi task
+            Serial.println("Triggering WiFi task reconnect...");
+            if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                wifiConfig.isConnected = false;
+                wifiState = WIFI_IDLE;
+                reconnectAttempts = 0;
+                xSemaphoreGive(wifiMutex);
+            }
+            
+            Serial.println("========================================");
+            Serial.println("✅ WiFi config saved, AP secured");
+            Serial.println("   WiFi task will auto-reconnect");
+            Serial.println("========================================\n");
             
             AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
-
             request->send(resp);
             
-            scheduleRestart(5);
         } else {
             request->send(400, "text/plain", "Missing parameters");
         }
@@ -2797,17 +2831,37 @@ void setupServerRoutes() {
                 return;
             }
             
+            Serial.println("\n========================================");
+            Serial.println("POST /setap - NO RESTART MODE");
+            Serial.println("========================================");
+            Serial.println("New AP SSID: " + ssid);
+            
             ssid.toCharArray(wifiConfig.apSSID, 33);
             pass.toCharArray(wifiConfig.apPassword, 65);
             saveAPCredentials();
             
-            Serial.println("AP Settings berhasil disimpan");
+            Serial.println("Stopping old AP...");
+            WiFi.softAPdisconnect(false);
+            delay(200);
+            
+            Serial.println("Forcing AP_STA mode...");
+            WiFi.mode(WIFI_AP_STA);
+            delay(100);
+            
+            Serial.println("Starting new AP...");
+            WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+            delay(200);
+            
+            IPAddress newAPIP = WiFi.softAPIP();
+            Serial.println("========================================");
+            Serial.println("✅ AP Settings updated");
+            Serial.println("   New SSID: " + String(wifiConfig.apSSID));
+            Serial.println("   New IP: " + newAPIP.toString());
+            Serial.println("========================================\n");
             
             AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
-
             request->send(resp);
             
-            scheduleRestart(5);
         } else {
             request->send(400, "text/plain", "Missing parameters");
         }

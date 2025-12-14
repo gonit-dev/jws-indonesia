@@ -1368,10 +1368,6 @@
                     showToast('✅ WiFi berhasil disimpan!', 'success');
                     
                     setTimeout(() => {
-                        showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
-                    }, 1500);
-                    
-                    setTimeout(() => {
                         btn.disabled = false;
                         btn.textContent = originalText;
                     }, 6000);
@@ -1427,11 +1423,7 @@
                     showToast('✅ Pengaturan AP berhasil disimpan!', 'success');
                     
                     setTimeout(() => {
-                        showToast('🔄 Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
-                    }, 1500);
-                    
-                    setTimeout(() => {
-                        showToast('📡 Setelah dimulai ulang, sambungkan ke AP: ' + ssid, 'warning');
+                        showToast('📡 Sambungkan ke AP: ' + ssid, 'warning');
                     }, 3500);
                     
                     setTimeout(() => {
