@@ -184,11 +184,11 @@
 
     <div class="grid-container">
         <div class="grid-x grid-padding-x">
-            <div class="large-12 text-center cell">
+            <div class="large-12 cell">
                 
                 <!-- Header -->
                 <div class="grid-x grid-padding-y">
-                    <div class="large-12 cell">
+                    <div class="large-12 text-center cell">
                         <h3>🕌 Islamic Prayer Clock Settings</h3>
                         <p class="subheader">Semua pengaturan otomatis - tinggal sambungkan WiFi!</p>
                     </div>
@@ -196,7 +196,7 @@
 
                 <!-- WiFi & Device Status Section -->
                 <div class="grid-x grid-padding-x">
-                    <div class="large-12 cell">
+                    <div class="large-12 text-center cell">
                         <div class="callout">
                             
                             <!-- WiFi Settings -->
@@ -291,7 +291,7 @@
 
                 <!-- Time Sync Section -->
                 <div class="grid-x grid-padding-x">
-                    <div class="large-12 cell">
+                    <div class="large-12 text-center cell">
                         <div class="callout">                     
                             <div class="grid-x grid-padding-y">
                                 <div class="large-12 cell">
@@ -325,9 +325,9 @@
                                         </div>
                                         <div class="large-12 medium-12 cell">
                                             <p class="help-text">
-                                                Auto-sync setiap 1 jam<br>
-                                                Multi-server fallback<br>
-                                                Timezone: UTC<span id="timezoneDisplayText">+7</span>
+                                                    🔄 Auto-sync setiap 1 jam<br>
+                                                    🗄️ Multi-server fallback<br>
+                                                    🌐 Timezone: UTC<span id="timezoneDisplayText">+7</span>
                                                 <input type="text" 
                                                     id="timezoneInput" 
                                                     value="+7" 
@@ -358,7 +358,7 @@
 
                 <!-- City Selection -->
                 <div class="grid-x grid-padding-x">
-                    <div class="large-12 cell">
+                    <div class="large-12 text-center cell">
                         <div class="callout">
                             <div class="grid-x grid-padding-y">
                                 <div class="large-12 cell">
@@ -432,9 +432,9 @@
                                         
                                         <div class="callout secondary">
                                             <p class="help-text">
-                                                Koordinat default: <span id="defaultCoords">-</span><br>
-                                                Pastikan format benar (angka dengan titik desimal)<br>
-                                                Latitude: -90 hingga 90 | Longitude: -180 hingga 180
+                                                📍 Koordinat default: <span id="defaultCoords">-</span><br>
+                                                🧮 Pastikan format benar (angka dengan titik desimal)<br>
+                                                🌐 Latitude: -90 hingga 90 | Longitude: -180 hingga 180
                                             </p>
                                         </div>
                                     </div>
@@ -465,10 +465,10 @@
                             </div>
 
                             <div class="callout secondary">
-                                <p class="help-text text-center">
-                                    Pilih lokasi untuk mendapatkan jadwal shalat yang akurat<br>
-                                    Pilih Metode untuk mengganti perhitungan<br>
-                                    Jadwal akan otomatis update setelah lokasi dipilih
+                                <p class="help-text">
+                                    📍 Pilih lokasi untuk mendapatkan jadwal shalat yang akurat<br>
+                                    📐 Pilih metode untuk mengganti perhitungan<br>
+                                    🔄 Jadwal akan otomatis update setelah lokasi dipilih
                                 </p>
                             </div>
                         </div>
@@ -477,7 +477,7 @@
 
                 <!-- Cities.json Upload Section -->
                 <div class="grid-x grid-padding-x">
-                    <div class="large-12 cell">
+                    <div class="large-12 text-center cell">
                         <div class="callout warning">
                             <div class="grid-x grid-padding-y">
                                 <div class="large-12 cell">
@@ -488,10 +488,12 @@
                             <div class="callout alert">
                                 <p>
                                     <strong>Kapan perlu upload cities.json?</strong><br>
-                                    <div  class="help-text">
-                                        Ada lokasi baru yang ditambahkan<br>
-                                        Data koordinat lokasi ada yang diperbarui<br>
-                                        File cities.json rusak atau terhapus
+                                </p>
+                                <p>
+                                    <div class="help-text">
+                                        ➕ Ada lokasi baru yang ditambahkan<br>
+                                        📍 Data koordinat lokasi ada yang diperbarui<br>
+                                        ⚠️ File <code>cities.json</code> rusak atau terhapus
                                     </div>
                                 </p>
                             </div>
@@ -526,12 +528,14 @@
                             </div>
 
                             <div class="callout secondary">
+                                <p>
+                                    <strong>⚠️ Penting</strong>
+                                </p>
                                 <p class="help-text">
-                                    <strong>Penting:</strong><br>
-                                    File harus bernama <code>cities.json</code><br>
-                                    Format harus valid JSON array<br>
-                                    Ukuran maksimal: 1 MB<br>
-                                    Dropdown lokasi akan otomatis refresh setelah upload berhasil
+                                    📄 File harus bernama <code>cities.json</code><br>
+                                    🧾 Format harus valid JSON array<br>
+                                    📦 Ukuran maksimal: 1 MB<br>
+                                    🔄 Dropdown lokasi akan otomatis refresh setelah upload berhasil
                                 </p>
                             </div>
                         </div>
@@ -540,7 +544,7 @@
 
                 <!-- Prayer Times Section -->
                 <div class="grid-x grid-padding-x">
-                    <div class="large-12 cell">
+                    <div class="large-12 text-center cell">
                         <div class="callout">
                             <div class="grid-x grid-padding-y">
                                 <div class="large-12 cell">
@@ -585,11 +589,11 @@
                             </div>
 
                             <div class="callout secondary">
-                                <p class="help-text text-center">
-                                    Jadwal shalat berdasarkan lokasi yang dipilih<br>
-                                    Auto-refresh setiap tengah malam (00:00 WIB)<br>
-                                    <span id="currentMethodBottom">Egyptian General Authority of Survey</span><br>
-                                    Update otomatis saat device online tanpa restart
+                                <p class="help-text">
+                                    🕌 Jadwal shalat berdasarkan lokasi yang dipilih<br>
+                                    🔄 Auto-refresh setiap tengah malam (00:00 WIB)<br>
+                                    📐 <span id="currentMethodBottom">Egyptian General Authority of Survey</span><br>
+                                    ⚡ Update otomatis saat device online tanpa restart
                                 </p>
                             </div>
                         </div>
@@ -598,7 +602,7 @@
 
                 <!-- Factory Reset Section -->
                 <div class="grid-x grid-padding-x">
-                    <div class="large-12 cell">
+                    <div class="large-12 text-center cell">
                         <div class="callout alert">
                             <div class="grid-x grid-padding-y">
                                 <div class="large-12 cell">
@@ -611,13 +615,13 @@
                                 <p>
                                     <strong>Peringatan:</strong> Ini akan menghapus semua data tersimpan:
                                 </p>
-                                <ul>
-                                    WiFi credentials</br>
-                                    Jadwal shalat tersimpan</br>
-                                    AP settings</br>
-                                    Pilihan lokasi</br>
-                                    Waktu dan tanggal</br>
-                                </ul>
+                                <p class="help-text">
+                                    📶 WiFi credentials</br>
+                                    🕌 Jadwal shalat tersimpan</br>
+                                    📡 AP settings</br>
+                                    📍 Pilihan lokasi</br>
+                                    ⏰ Waktu dan tanggal</br>
+                                </p>
                             </div>
                             
                             <button class="button alert expanded" onclick="resetSettings()">
