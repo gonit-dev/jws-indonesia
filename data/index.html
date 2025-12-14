@@ -419,7 +419,7 @@
                                             <div class="large-2 medium-2 small-12 cell">
                                                 <label>Reset</label>
                                                 <button class="button secondary expanded" onclick="resetToDefaultCoordinates()" title="Reset ke koordinat default dari JSON">
-                                                    Default
+                                                    Reset
                                                 </button>
                                             </div>
                                             <div class="large-2 medium-2 small-12 cell">
@@ -432,7 +432,7 @@
                                         
                                         <div class="callout secondary">
                                             <p class="help-text">
-                                                📍 Koordinat default: <span id="defaultCoords">-</span><br>
+                                                📍 Koordinat bawaan <span id="defaultCoords">-</span><br>
                                                 🧮 Pastikan format benar (angka dengan titik desimal)<br>
                                                 🌐 Latitude: -90 hingga 90 | Longitude: -180 hingga 180
                                             </p>
@@ -1110,23 +1110,23 @@
         }
 
         // ================================
-        // FUNGSI RESET KE KOORDINAT DEFAULT
+        // FUNGSI RESET KE KOORDINAT BAWAAN
         // ================================
         function resetToDefaultCoordinates() {
             const latInput = document.getElementById('latInput');
             const lonInput = document.getElementById('lonInput');
             
             if (!defaultCoordinates.lat || !defaultCoordinates.lon) {
-                showToast('⚠️ Tidak ada koordinat default tersedia', 'warning');
+                showToast('⚠️ Tidak ada koordinat bawaan tersedia', 'warning');
                 return;
             }
             
             latInput.value = defaultCoordinates.lat;
             lonInput.value = defaultCoordinates.lon;
             
-            showToast('✅ Koordinat direset ke default', 'success');
+            showToast('✅ Koordinat direset ke bawaan', 'success');
             
-            console.log('🔄 Koordinat direset ke default:');
+            console.log('🔄 Koordinat direset ke bawaan:');
             console.log('   Lat:', defaultCoordinates.lat);
             console.log('   Lon:', defaultCoordinates.lon);
         }
@@ -1185,13 +1185,13 @@
                         latInput.value = defaultLat;
                         lonInput.value = defaultLon;
                         
-                        console.log('✅ Koordinat dikembalikan ke default JSON:');
+                        console.log('✅ Koordinat dikembalikan ke bawaan JSON:');
                         console.log('   Default Lat:', defaultLat);
                         console.log('   Default Lon:', defaultLon);
                         
-                        showToast('🔄 Koordinat dikembalikan ke default', 'success');
+                        showToast('🔄 Koordinat dikembalikan ke bawaan', 'success');
                     } else {
-                        showToast('⚠️ Tidak ada koordinat default tersedia', 'warning');
+                        showToast('⚠️ Tidak ada koordinat bawaan tersedia', 'warning');
                     }
                 }
             })
@@ -1201,9 +1201,9 @@
                 if (defaultLat && defaultLon) {
                     latInput.value = defaultLat;
                     lonInput.value = defaultLon;
-                    showToast('🔄 Koordinat dikembalikan ke default', 'success');
+                    showToast('🔄 Koordinat dikembalikan ke bawaan', 'success');
                 } else {
-                    showToast('⚠️ Tidak ada koordinat default tersedia', 'warning');
+                    showToast('⚠️ Tidak ada koordinat bawaan tersedia', 'warning');
                 }
             });
         }
@@ -2489,12 +2489,12 @@
                             : methodConfig.methodName;
                         await updateProgress(95, '✓ Metode: ' + displayName);
                     } else {
-                        console.warn('⚠️ Method using default');
-                        await updateProgress(95, '✓ Metode default digunakan');
+                        console.warn('⚠️ Method using bawaan');
+                        await updateProgress(95, '✓ Metode bawaan digunakan');
                     }
                 } catch (err) {
                     console.error('❌ Method load error:', err);
-                    await updateProgress(95, '⚠️ Metode default digunakan');
+                    await updateProgress(95, '⚠️ Metode bawaan digunakan');
                 }
                 await new Promise(r => setTimeout(r, 150));
                 
@@ -2515,11 +2515,11 @@
                         await updateProgress(98, '✓ Timezone: UTC' + (timezoneConfig.offset >= 0 ? '+' : '') + timezoneConfig.offset);
                     } else {
                         console.warn('⚠️ Timezone using default (+7)');
-                        await updateProgress(98, '✓ Timezone default (+7)');
+                        await updateProgress(98, '✓ Timezone bawaan (+7)');
                     }
                 } catch (err) {
                     console.error('❌ Timezone load error:', err);
-                    await updateProgress(98, '⚠️ Timezone default (+7)');
+                    await updateProgress(98, '⚠️ Timezone bawaan (+7)');
                 }
                 await new Promise(r => setTimeout(r, 150));
 
