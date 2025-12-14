@@ -3602,13 +3602,29 @@ void setup() {
     // ================================
     // REGISTER TASKS TO WATCHDOG
     // ================================
+    if (uiTaskHandle) {
+        esp_task_wdt_add(uiTaskHandle);
+        Serial.println("   UI Task → WDT");
+    }
     if (wifiTaskHandle) {
         esp_task_wdt_add(wifiTaskHandle);
         Serial.println("   WiFi Task → WDT");
     }
+    if (ntpTaskHandle) {
+        esp_task_wdt_add(ntpTaskHandle);
+        Serial.println("   NTP Task → WDT");
+    }
     if (webTaskHandle) {
         esp_task_wdt_add(webTaskHandle);
         Serial.println("   Web Task → WDT");
+    }
+    if (prayerTaskHandle) {
+        esp_task_wdt_add(prayerTaskHandle);
+        Serial.println("   Prayer Task → WDT");
+    }
+    if (rtcTaskHandle) {
+        esp_task_wdt_add(rtcTaskHandle);
+        Serial.println("   RTC Task → WDT");
     }
     
     Serial.println("All tasks started\n");
