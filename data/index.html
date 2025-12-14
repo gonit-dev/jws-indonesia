@@ -1371,14 +1371,6 @@
                         btn.disabled = false;
                         btn.textContent = originalText;
                     }, 6000);
-                    
-                    setTimeout(() => {
-                        showToast('🔄 Memuat ulang halaman otomatis...', 'warning');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                    }, 18000);
-
                 } else {
                     throw new Error('Penyimpanan gagal');
                 }
