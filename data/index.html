@@ -212,9 +212,14 @@
                                                 <div class="large-12 medium-12 small-12 cell">
                                                     <input type="password" id="wifiPassword" placeholder="WiFi Password">
                                                 </div>
-                                                <div class="large-12 medium-12 small-12 cell">
+                                                <div class="large-6 medium-6 small-6 cell">
                                                     <button class="button success expanded" onclick="setWiFi()">
-                                                        💾 Set WiFi
+                                                        Simpan
+                                                    </button>
+                                                </div>
+                                                <div class="large-6 medium-6 small-6 cell">
+                                                    <button class="button secondary expanded" onclick="clearWiFiForm()">
+                                                        Batal
                                                     </button>
                                                 </div>
                                             </div>
@@ -232,9 +237,14 @@
                                         <div class="large-12 medium-12 small-12 cell">
                                             <input type="password" id="apPassword" placeholder="AP Password">
                                         </div>
-                                        <div class="large-12 medium-12 small-12 cell">
+                                        <div class="large-6 medium-6 small-6 cell">
                                             <button class="button success expanded" onclick="setAP()">
-                                                💾 Set AP
+                                                Simpan
+                                            </button>
+                                        </div>
+                                        <div class="large-6 medium-6 small-6 cell">
+                                            <button class="button secondary expanded" onclick="clearAPForm()">
+                                                Batal
                                             </button>
                                         </div>
                                     </div>
@@ -269,7 +279,7 @@
                                     <div class="large-12 cell">
                                         <div class="callout warning">
                                             <button class="button alert expanded" onclick="restartDevice()">
-                                                🔄 Restart Device Now
+                                                Restart Device Now
                                             </button>
                                         </div>
                                     </div>
@@ -300,7 +310,7 @@
                                         </div>
                                         <div class="large-12 medium-12 cell">
                                             <button class="button success expanded" onclick="syncTime()">
-                                                🔄 Sync Time Now
+                                                Sync Time Now
                                             </button>
                                         </div>
                                     </div>
@@ -315,9 +325,9 @@
                                         </div>
                                         <div class="large-12 medium-12 cell">
                                             <p class="help-text">
-                                                ✔ Auto-sync setiap 1 jam<br>
-                                                ✔ Multi-server fallback<br>
-                                                ✔ Timezone: UTC<span id="timezoneDisplayText">+7</span>
+                                                Auto-sync setiap 1 jam<br>
+                                                Multi-server fallback<br>
+                                                Timezone: UTC<span id="timezoneDisplayText">+7</span>
                                                 <input type="text" 
                                                     id="timezoneInput" 
                                                     value="+7" 
@@ -328,6 +338,11 @@
                                                         onclick="toggleTimezoneEdit()"  
                                                         style="margin-left: -5px; padding: 5px 10px; line-height: 1;" 
                                                         title="Edit Timezone"> 🕐
+                                                </button>
+                                                <button id="timezoneCancelBtn" 
+                                                        onclick="cancelTimezoneEdit()" 
+                                                        style="display: none; margin-left: -5px; padding: 5px 10px; line-height: 1;"  
+                                                        title="Batal Edit"> ✖
                                                 </button>
                                             </p>
                                             <p class="help-text" style="margin-top: 5px; font-size: 11px; color: #666;">
@@ -375,7 +390,7 @@
                                 <div class="large-3 medium-4 small-12 cell">
                                     <label class="show-for-medium">&nbsp;</label>
                                     <button class="button success expanded" onclick="saveCity()">
-                                        💾 Simpan Lokasi
+                                        Simpan
                                     </button>
                                 </div>
                                 
@@ -404,16 +419,22 @@
                                             <div class="large-2 medium-2 small-12 cell">
                                                 <label>Reset</label>
                                                 <button class="button secondary expanded" onclick="resetToDefaultCoordinates()" title="Reset ke koordinat default dari JSON">
-                                                    🔄 Default
+                                                    Default
+                                                </button>
+                                            </div>
+                                            <div class="large-2 medium-2 small-12 cell">
+                                                <label>Batal</label>
+                                                <button class="button alert expanded" onclick="cancelCoordinatesEdit()" title="Batalkan perubahan koordinat">
+                                                    Batal
                                                 </button>
                                             </div>
                                         </div>
                                         
                                         <div class="callout secondary">
                                             <p class="help-text">
-                                                ℹ️ Koordinat default: <span id="defaultCoords">-</span><br>
-                                                ⚠️ Pastikan format benar (angka dengan titik desimal)<br>
-                                                📍 Latitude: -90 hingga 90 | Longitude: -180 hingga 180
+                                                Koordinat default: <span id="defaultCoords">-</span><br>
+                                                Pastikan format benar (angka dengan titik desimal)<br>
+                                                Latitude: -90 hingga 90 | Longitude: -180 hingga 180
                                             </p>
                                         </div>
                                     </div>
@@ -438,16 +459,16 @@
                                 <div class="large-3 medium-4 small-12 cell">
                                     <label class="show-for-medium">&nbsp;</label>
                                     <button class="button primary expanded" onclick="saveMethod()">
-                                        🕋 Simpan Metode
+                                        Simpan
                                     </button>
                                 </div>
                             </div>
 
                             <div class="callout secondary">
                                 <p class="help-text text-center">
-                                    ℹ️ Pilih lokasi untuk mendapatkan jadwal shalat yang akurat<br>
-                                    ℹ️ Pilih Metode untuk mengganti perhitungan<br>
-                                    🔄 Jadwal akan otomatis update setelah lokasi dipilih
+                                    Pilih lokasi untuk mendapatkan jadwal shalat yang akurat<br>
+                                    Pilih Metode untuk mengganti perhitungan<br>
+                                    Jadwal akan otomatis update setelah lokasi dipilih
                                 </p>
                             </div>
                         </div>
@@ -466,30 +487,31 @@
                             
                             <div class="callout alert">
                                 <p>
-                                    <strong>ℹ️ Kapan perlu upload cities.json?</strong><br>
+                                    <strong>Kapan perlu upload cities.json?</strong><br>
                                     <div  class="help-text">
-                                        🆕 Ada lokasi baru yang ditambahkan<br>
-                                        📝 Data koordinat lokasi ada yang diperbarui<br>
-                                        🔧 File cities.json rusak atau terhapus
+                                        Ada lokasi baru yang ditambahkan<br>
+                                        Data koordinat lokasi ada yang diperbarui<br>
+                                        File cities.json rusak atau terhapus
                                     </div>
                                 </p>
                             </div>
 
-                            <div class="grid-x grid-margin-x">
-                                <div class="large-8 medium-8 small-12 cell">
-                                    <label for="citiesFileInput" class="button hollow expanded">
-                                        📁 Pilih File cities.json
-                                        <input type="file" id="citiesFileInput" accept=".json" class="show-for-sr" onchange="handleCitiesFileSelect(event)">
-                                    </label>
-                                    <p id="selectedFileName" class="help-text text-center">
-                                        Belum ada file dipilih
-                                    </p>
-                                </div>
-                                <div class="large-4 medium-4 small-12 cell">
-                                    <button id="uploadBtn" class="button warning expanded" onclick="uploadCitiesFile()" disabled>
-                                        📤 Upload File
-                                    </button>
-                                </div>
+                            <div class="large-8 medium-8 small-12 cell">
+                                <label for="citiesFileInput" class="button hollow expanded">
+                                    📁 Pilih File cities.json
+                                    <input type="file" id="citiesFileInput" accept=".json" class="show-for-sr" onchange="handleCitiesFileSelect(event)">
+                                </label>
+                                <p id="selectedFileName" class="help-text text-center">
+                                    Belum ada file dipilih
+                                </p>
+                            </div>
+                            <div class="large-4 medium-4 small-12 cell">
+                                <button id="uploadBtn" class="button warning expanded" onclick="uploadCitiesFile()" disabled>
+                                    📤 Upload File
+                                </button>
+                                <button id="clearFileBtn" class="button alert expanded" onclick="clearSelectedFile()" style="display: none; margin-top: 10px;">
+                                    ✖ Hapus File
+                                </button>
                             </div>
 
                             <div id="uploadProgress" class="hide">
@@ -505,11 +527,11 @@
 
                             <div class="callout secondary">
                                 <p class="help-text">
-                                    ⚠️ <strong>Penting:</strong><br>
-                                    📄 File harus bernama <code>cities.json</code><br>
-                                    📋 Format harus valid JSON array<br>
-                                    💾 Ukuran maksimal: 1 MB<br>
-                                    🔄 Dropdown lokasi akan otomatis refresh setelah upload berhasil
+                                    <strong>Penting:</strong><br>
+                                    File harus bernama <code>cities.json</code><br>
+                                    Format harus valid JSON array<br>
+                                    Ukuran maksimal: 1 MB<br>
+                                    Dropdown lokasi akan otomatis refresh setelah upload berhasil
                                 </p>
                             </div>
                         </div>
@@ -564,10 +586,10 @@
 
                             <div class="callout secondary">
                                 <p class="help-text text-center">
-                                    ℹ️ Jadwal shalat berdasarkan lokasi yang dipilih<br>
-                                    📅 Auto-refresh setiap tengah malam (00:00 WIB)<br>
-                                    🕋 <span id="currentMethodBottom">Egyptian General Authority of Survey</span><br>
-                                    🔄 Update otomatis saat device online tanpa restart
+                                    Jadwal shalat berdasarkan lokasi yang dipilih<br>
+                                    Auto-refresh setiap tengah malam (00:00 WIB)<br>
+                                    <span id="currentMethodBottom">Egyptian General Authority of Survey</span><br>
+                                    Update otomatis saat device online tanpa restart
                                 </p>
                             </div>
                         </div>
@@ -587,19 +609,19 @@
                             
                             <div class="callout warning">
                                 <p>
-                                    <strong>⚠️ Peringatan:</strong> Ini akan menghapus semua data tersimpan:
+                                    <strong>Peringatan:</strong> Ini akan menghapus semua data tersimpan:
                                 </p>
                                 <ul>
-                                    📡 WiFi credentials</br>
-                                    🕋 Jadwal shalat tersimpan</br>
-                                    📶 AP settings</br>
-                                    📍 Pilihan lokasi</br>
-                                    📅 Waktu dan tanggal</br>
+                                    WiFi credentials</br>
+                                    Jadwal shalat tersimpan</br>
+                                    AP settings</br>
+                                    Pilihan lokasi</br>
+                                    Waktu dan tanggal</br>
                                 </ul>
                             </div>
                             
                             <button class="button alert expanded" onclick="resetSettings()">
-                                🔄 Reset All Settings & Restart
+                                Reset Pabrik
                             </button>
                         </div>
                     </div>
@@ -1073,7 +1095,7 @@
                 
                 defaultCoordsSpan.textContent = `${parseFloat(lat).toFixed(4)}°, ${parseFloat(lon).toFixed(4)}°`;
                 
-                console.log('✅ Form koordinat ditampilkan');
+                console.log('✅ Koordinat ditampilkan');
                 console.log('   Default Lat:', lat);
                 console.log('   Default Lon:', lon);
                 console.log('   Type:', typeLabel);
@@ -1103,6 +1125,83 @@
             console.log('🔄 Koordinat direset ke default:');
             console.log('   Lat:', defaultCoordinates.lat);
             console.log('   Lon:', defaultCoordinates.lon);
+        }
+
+        function cancelCoordinatesEdit() {
+            const dropdown = document.getElementById('cityDropdown');
+            const latInput = document.getElementById('latInput');
+            const lonInput = document.getElementById('lonInput');
+            const coordinatesForm = document.getElementById('coordinatesForm');
+            const defaultCoordsSpan = document.getElementById('defaultCoords');
+            const cityTypeLabel = document.getElementById('cityTypeLabel');
+            
+            const selectedCity = dropdown.value;
+            
+            if (!selectedCity || selectedCity === '') {
+                coordinatesForm.classList.add('hide');
+                latInput.value = '';
+                lonInput.value = '';
+                defaultCoordinates.lat = '';
+                defaultCoordinates.lon = '';
+                defaultCoordsSpan.textContent = '-';
+                if (cityTypeLabel) cityTypeLabel.textContent = '';
+                
+                showToast('❌ Perubahan dibatalkan', 'warning');
+                return;
+            }
+            
+            const selectedOption = dropdown.options[dropdown.selectedIndex];
+            const defaultLat = selectedOption.getAttribute('data-lat');
+            const defaultLon = selectedOption.getAttribute('data-lon');
+            
+            fetch('/getcityinfo', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.hasSelection && 
+                    data.selectedCityApi === selectedCity && 
+                    data.latitude && 
+                    data.longitude) {
+                    
+                    latInput.value = data.latitude;
+                    lonInput.value = data.longitude;
+                    
+                    console.log('✅ Koordinat dikembalikan ke data tersimpan:');
+                    console.log('   Saved Lat:', data.latitude);
+                    console.log('   Saved Lon:', data.longitude);
+                    
+                    showToast('🔄 Koordinat dikembalikan ke data tersimpan', 'success');
+                    
+                } else {
+                    if (defaultLat && defaultLon) {
+                        latInput.value = defaultLat;
+                        lonInput.value = defaultLon;
+                        
+                        console.log('✅ Koordinat dikembalikan ke default JSON:');
+                        console.log('   Default Lat:', defaultLat);
+                        console.log('   Default Lon:', defaultLon);
+                        
+                        showToast('🔄 Koordinat dikembalikan ke default', 'success');
+                    } else {
+                        showToast('⚠️ Tidak ada koordinat default tersedia', 'warning');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error loading saved data:', error);
+                
+                if (defaultLat && defaultLon) {
+                    latInput.value = defaultLat;
+                    lonInput.value = defaultLon;
+                    showToast('🔄 Koordinat dikembalikan ke default', 'success');
+                } else {
+                    showToast('⚠️ Tidak ada koordinat default tersedia', 'warning');
+                }
+            });
         }
 
         async function loadCurrentCity() {
@@ -1174,7 +1273,7 @@
                         
                         coordinatesForm.classList.remove('hide');
                         
-                        console.log('✅ Form koordinat ditampilkan dengan data tersimpan');
+                        console.log('✅ Koordinat ditampilkan dengan data tersimpan');
                         console.log('   Current Lat:', data.latitude);
                         console.log('   Current Lon:', data.longitude);
                     }
@@ -1245,7 +1344,7 @@
             const btn = event.target;
             const originalText = btn.textContent;
             btn.disabled = true;
-            btn.textContent = '⏳ Menyimpan...';
+            btn.textContent = 'Menyimpan...';
             
             try {
                 const formData = new URLSearchParams();
@@ -1354,7 +1453,7 @@
             const btn = event.target;
             const originalText = btn.textContent;
             btn.disabled = true;
-            btn.textContent = '⏳ Menyimpan...';
+            btn.textContent = 'Menyimpan...';
 
             fetch('/setwifi', {
                 method: 'POST',
@@ -1371,13 +1470,6 @@
                         btn.disabled = false;
                         btn.textContent = originalText;
                     }, 6000);
-                    
-                    setTimeout(() => {
-                        showToast('🔄 Memuat ulang halaman otomatis...', 'warning');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                    }, 18000);
 
                 } else {
                     throw new Error('Penyimpanan gagal');
@@ -1389,6 +1481,12 @@
                 btn.disabled = false;
                 btn.textContent = originalText;
             });
+        }
+        
+        function clearWiFiForm() {
+            document.getElementById('wifiSSID').value = '';
+            document.getElementById('wifiPassword').value = '';
+            showToast('📝 WiFi dikosongkan', 'warning');
         }
 
         function setAP() {
@@ -1409,7 +1507,7 @@
             const btn = event.target;
             const originalText = btn.textContent;
             btn.disabled = true;
-            btn.textContent = '⏳ Menyimpan...';
+            btn.textContent = 'Menyimpan...';
 
             fetch('/setap', {
                 method: 'POST',
@@ -1452,6 +1550,12 @@
             });
         }
 
+        function clearAPForm() {
+            document.getElementById('apSSID').value = '';
+            document.getElementById('apPassword').value = '';
+            showToast('📝 AP dikosongkan', 'warning');
+        }
+
         // ================================
         // SINKRONISASI WAKTU
         // ================================
@@ -1467,7 +1571,7 @@
 
             const btn = event.target;
             btn.disabled = true;
-            btn.textContent = '⏳ Menyinkronkan...';
+            btn.textContent = 'Menyinkronkan...';
 
             fetch('/synctime', { 
                 method: 'POST',
@@ -1481,13 +1585,13 @@
                 showToast('✅ Waktu berhasil disinkronkan!', 'success');
                 updateDeviceStatus();
                 btn.disabled = false;
-                btn.textContent = '🔄 Sinkronkan Waktu Sekarang';
+                btn.textContent = 'Sync Time Now';
             })
             .catch(error => {
                 console.error('Kesalahan:', error);
                 showToast('❌ Gagal menyinkronkan waktu', 'error');
                 btn.disabled = false;
-                btn.textContent = '🔄 Sinkronkan Waktu Sekarang';
+                btn.textContent = ' Sync Time Now';
             });
         }
 
@@ -1502,7 +1606,7 @@
             const btn = event.target;
             const originalText = btn.textContent;
             btn.disabled = true;
-            btn.textContent = '⏳ Mengatur ulang...';
+            btn.textContent = 'Mengatur ulang...';
 
             fetch('/reset', { method: 'POST' })
             .then(response => {
@@ -1587,12 +1691,14 @@
             const file = event.target.files[0];
             const fileNameDisplay = document.getElementById('selectedFileName');
             const uploadBtn = document.getElementById('uploadBtn');
+            const clearBtn = document.getElementById('clearFileBtn');
             
             if (!file) {
                 selectedCitiesFile = null;
                 fileNameDisplay.textContent = 'Belum ada berkas dipilih';
                 fileNameDisplay.className = 'help-text text-center';
                 uploadBtn.disabled = true;
+                clearBtn.style.display = 'none';
                 return;
             }
             
@@ -1601,6 +1707,7 @@
                 selectedCitiesFile = null;
                 fileNameDisplay.innerHTML = '<span class="label alert">❌ Nama berkas tidak valid</span>';
                 uploadBtn.disabled = true;
+                clearBtn.style.display = 'none';
                 event.target.value = '';
                 return;
             }
@@ -1611,6 +1718,7 @@
                 selectedCitiesFile = null;
                 fileNameDisplay.innerHTML = '<span class="label alert">❌ Berkas terlalu besar</span>';
                 uploadBtn.disabled = true;
+                clearBtn.style.display = 'none';
                 event.target.value = '';
                 return;
             }
@@ -1670,6 +1778,7 @@
                         selectedCitiesFile = null;
                         fileNameDisplay.innerHTML = `<span class="label alert">❌ Terlalu berat (${sizeKB} KB)</span>`;
                         uploadBtn.disabled = true;
+                        clearBtn.style.display = 'none';
                         event.target.value = '';
                         return;
                     }
@@ -1688,12 +1797,14 @@
                         `<span class="label success">✅ ${file.name} (${sizeKB} KB)</span><br>` +
                         `<small>📊 ${json.length} lokasi | DynamicJsonDocument: ${jsonSizeKB} KB</small>`;
                     uploadBtn.disabled = false;
+                    clearBtn.style.display = 'block';
                     
                 } catch (error) {
                     showToast('❌ Validasi gagal: ' + error.message, 'error');
                     selectedCitiesFile = null;
                     fileNameDisplay.innerHTML = `<span class="label alert">❌ ${error.message}</span>`;
                     uploadBtn.disabled = true;
+                    clearBtn.style.display = 'none';
                     event.target.value = '';
                     console.error('Kesalahan validasi JSON:', error);
                 }
@@ -1704,6 +1815,7 @@
                 selectedCitiesFile = null;
                 fileNameDisplay.innerHTML = '<span class="label alert">❌ Gagal membaca berkas</span>';
                 uploadBtn.disabled = true;
+                clearBtn.style.display = 'none';
                 event.target.value = '';
             };
             
@@ -1722,7 +1834,7 @@
             const statusText = document.getElementById('uploadStatus');
             
             uploadBtn.disabled = true;
-            uploadBtn.textContent = '⏳ Mengunggah...';
+            uploadBtn.textContent = 'Mengunggah...';
             progressDiv.classList.remove('hide');
             progressBar.style.width = '0%';
             progressBar.querySelector('.progress-meter-text').textContent = '0%';
@@ -1774,7 +1886,7 @@
                         setTimeout(() => {
                             progressDiv.classList.add('hide');
                             uploadBtn.disabled = false;
-                            uploadBtn.textContent = '📤 Unggah Berkas';
+                            uploadBtn.textContent = 'Upload File';
                         }, 5000);
                         
                     } else {
@@ -1809,6 +1921,24 @@
                     uploadBtn.textContent = '📤 Unggah Berkas';
                 }, 3000);
             }
+        }
+
+        function clearSelectedFile() {
+            const fileInput = document.getElementById('citiesFileInput');
+            const fileNameDisplay = document.getElementById('selectedFileName');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const clearBtn = document.getElementById('clearFileBtn');
+            
+            fileInput.value = '';
+            selectedCitiesFile = null;
+            
+            fileNameDisplay.textContent = 'Belum ada file dipilih';
+            fileNameDisplay.className = 'help-text text-center';
+            
+            uploadBtn.disabled = true;
+            clearBtn.style.display = 'none';
+            
+            showToast('🗑️ File dihapus', 'warning');
         }
 
         // ================================
@@ -1893,7 +2023,7 @@
             const btn = event.target;
             const originalText = btn.textContent;
             btn.disabled = true;
-            btn.textContent = '⏳ Menyimpan...';
+            btn.textContent = 'Menyimpan...';
             
             try {
                 const formData = new URLSearchParams();
@@ -1966,7 +2096,7 @@
             const btn = event.target;
             const originalText = btn.textContent;
             btn.disabled = true;
-            btn.textContent = '⏳ Memulai ulang...';
+            btn.textContent = 'Memulai ulang...';
 
             try {
                 const response = await fetch('/restart', { 
@@ -2015,6 +2145,7 @@
             const displayText = document.getElementById('timezoneDisplayText');
             const input = document.getElementById('timezoneInput');
             const btn = document.getElementById('timezoneBtn');
+            const cancelBtn = document.getElementById('timezoneCancelBtn');
             
             if (!isEditingTimezone) {
                 displayText.style.display = 'none';
@@ -2024,12 +2155,31 @@
                 input.select();
                 btn.textContent = '💾';
                 btn.title = 'Simpan Timezone';
+                cancelBtn.style.display = 'inline-block';
                 isEditingTimezone = true;
             } else {
                 saveTimezone();
             }
         }
 
+        function cancelTimezoneEdit() {
+            const displayText = document.getElementById('timezoneDisplayText');
+            const input = document.getElementById('timezoneInput');
+            const btn = document.getElementById('timezoneBtn');
+            const cancelBtn = document.getElementById('timezoneCancelBtn');
+            
+            displayText.style.display = 'inline';
+            input.style.display = 'none';
+            btn.textContent = '🕐';
+            btn.title = 'Edit Timezone';
+            cancelBtn.style.display = 'none';
+            isEditingTimezone = false;
+            
+            input.value = timezoneConfig.offset >= 0 ? '+' + timezoneConfig.offset : timezoneConfig.offset;
+            
+            showToast('❌ Edit timezone dibatalkan', 'warning');
+        }
+        
         async function loadTimezoneConfig() {
             console.log('📍 Loading timezone config...');
             
@@ -2084,6 +2234,7 @@
             const input = document.getElementById('timezoneInput');
             const displayText = document.getElementById('timezoneDisplayText');
             const btn = document.getElementById('timezoneBtn');
+            const cancelBtn = document.getElementById('timezoneCancelBtn');
             
             let offsetStr = input.value.trim();
             
@@ -2108,7 +2259,7 @@
             }
             
             btn.disabled = true;
-            btn.textContent = '⏳';
+            btn.textContent = '...';
             
             try {
                 const formData = new URLSearchParams();
@@ -2144,6 +2295,7 @@
                     btn.title = 'Edit Timezone';
                     btn.disabled = false;
                     isEditingTimezone = false;
+                    cancelBtn.style.display = 'none';
                     
                     showToast('✅ Timezone berhasil disimpan!', 'success');
                     
@@ -2376,7 +2528,6 @@
                 if (status) status.textContent = '⏳ Finalisasi...';
                 await updateProgress(98, '⏳ Menyiapkan antarmuka...');
                 
-                // Start all intervals
                 setInterval(updateRealtimeDisplay, 1000);
                 setInterval(updateDeviceStatus, 5000);
                 setInterval(loadSavedPrayerTimes, 30000);
@@ -2387,22 +2538,18 @@
                 await updateProgress(100, '✅ Siap digunakan!');
                 await new Promise(r => setTimeout(r, 300));
                 
-                // Clear timeout timer
                 clearTimeout(timeoutTimer);
                 
                 console.log('🎉 Initialization complete!');
                 console.log('========================================\n');
                 
-                // Complete loading
                 LoadingManager.completeLoading();
                 
             } catch (error) {
                 console.error('❌ CRITICAL ERROR during initialization:', error);
                 
-                // Clear timeout
                 clearTimeout(timeoutTimer);
                 
-                // Force complete on error
                 if (status) status.textContent = '❌ Error: ' + error.message;
                 await updateProgress(100, '⚠️ Selesai dengan error');
                 
@@ -2410,7 +2557,6 @@
                     LoadingManager.completeLoading();
                 }, 1500);
                 
-                // Still start intervals even on error
                 setInterval(updateRealtimeDisplay, 1000);
                 setInterval(updateDeviceStatus, 5000);
                 setInterval(loadSavedPrayerTimes, 30000);
@@ -2420,24 +2566,28 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 Halaman dimuat - Jam Salat Islam (Foundation CSS)');
-            LoadingManager.updateProgress(1, '✓ DOM Ready');
+            LoadingManager.updateProgress(1, '✔ DOM Ready');
             initializeApp();
+            
+            // ================================
+            // ESC KEY HANDLER
+            // ================================
             document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && isEditingTimezone) {
-                    const displayText = document.getElementById('timezoneDisplayText');
-                    const input = document.getElementById('timezoneInput');
-                    const btn = document.getElementById('timezoneBtn');
+                if (e.key === 'Escape') {
+                    if (isEditingTimezone) {
+                        cancelTimezoneEdit();
+                    }
                     
-                    displayText.style.display = 'inline';
-                    input.style.display = 'none';
-                    btn.textContent = '🕐';
-                    btn.title = 'Edit Timezone';
-                    isEditingTimezone = false;
-                    
-                    input.value = timezoneConfig.offset >= 0 ? '+' + timezoneConfig.offset : timezoneConfig.offset;
+                    const clearBtn = document.getElementById('clearFileBtn');
+                    if (clearBtn && clearBtn.style.display === 'block') {
+                        clearSelectedFile();
+                    }
                 }
             });
             
+            // ================================
+            // TIMEZONE INPUT - ENTER KEY TO SAVE
+            // ================================
             const timezoneInput = document.getElementById('timezoneInput');
             if (timezoneInput) {
                 timezoneInput.addEventListener('keydown', function(e) {
@@ -2445,8 +2595,305 @@
                         e.preventDefault();
                         saveTimezone();
                     }
+                    
+                    if (e.key === 'Escape' && isEditingTimezone) {
+                        e.preventDefault();
+                        cancelTimezoneEdit();
+                    }
+                });
+                
+                timezoneInput.addEventListener('keypress', function(e) {
+                    const char = String.fromCharCode(e.which);
+                    const currentValue = this.value;
+                    
+                    if (!/[\d\+\-]/.test(char)) {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    if ((char === '+' || char === '-') && currentValue.length > 0) {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    if ((char === '+' || char === '-') && /[\+\-]/.test(currentValue)) {
+                        e.preventDefault();
+                        return;
+                    }
                 });
             }
+            
+            // ================================
+            // KOORDINAT INPUT - VALIDATION
+            // ================================
+            const latInput = document.getElementById('latInput');
+            if (latInput) {
+                latInput.addEventListener('keypress', function(e) {
+                    const char = String.fromCharCode(e.which);
+                    const currentValue = this.value;
+                    
+                    if (!/[\d\.\-]/.test(char)) {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    if (char === '-' && currentValue.length > 0) {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    if (char === '.' && currentValue.includes('.')) {
+                        e.preventDefault();
+                        return;
+                    }
+                });
+                
+                latInput.addEventListener('blur', function() {
+                    const val = parseFloat(this.value);
+                    if (!isNaN(val) && (val < -90 || val > 90)) {
+                        showToast('⚠️ Latitude harus antara -90 hingga 90', 'warning');
+                        this.style.borderColor = '#cc4b37';
+                    } else {
+                        this.style.borderColor = '';
+                    }
+                });
+            }
+            
+            const lonInput = document.getElementById('lonInput');
+            if (lonInput) {
+                lonInput.addEventListener('keypress', function(e) {
+                    const char = String.fromCharCode(e.which);
+                    const currentValue = this.value;
+                    
+                    if (!/[\d\.\-]/.test(char)) {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    if (char === '-' && currentValue.length > 0) {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    if (char === '.' && currentValue.includes('.')) {
+                        e.preventDefault();
+                        return;
+                    }
+                });
+                
+                lonInput.addEventListener('blur', function() {
+                    const val = parseFloat(this.value);
+                    if (!isNaN(val) && (val < -180 || val > 180)) {
+                        showToast('⚠️ Longitude harus antara -180 hingga 180', 'warning');
+                        this.style.borderColor = '#cc4b37';
+                    } else {
+                        this.style.borderColor = '';
+                    }
+                });
+            }
+            
+            // ================================
+            // WIFI SSID INPUT - PREVENT SPACES
+            // ================================
+            const wifiSSID = document.getElementById('wifiSSID');
+            if (wifiSSID) {
+                wifiSSID.addEventListener('keypress', function(e) {
+                    if (e.which === 32 && this.value.length === 0) {
+                        e.preventDefault();
+                    }
+                });
+                
+                wifiSSID.addEventListener('paste', function(e) {
+                    setTimeout(() => {
+                        this.value = this.value.trim();
+                    }, 0);
+                });
+            }
+            
+            const apSSID = document.getElementById('apSSID');
+            if (apSSID) {
+                apSSID.addEventListener('keypress', function(e) {
+                    if (e.which === 32 && this.value.length === 0) {
+                        e.preventDefault();
+                    }
+                });
+                
+                apSSID.addEventListener('paste', function(e) {
+                    setTimeout(() => {
+                        this.value = this.value.trim();
+                    }, 0);
+                });
+            }
+            
+            // ================================
+            // FILE INPUT - DRAG & DROP SUPPORT
+            // ================================
+            const citiesFileInput = document.getElementById('citiesFileInput');
+            const fileLabel = citiesFileInput ? citiesFileInput.closest('label') : null;
+            
+            if (fileLabel) {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    fileLabel.addEventListener(eventName, preventDefaults, false);
+                    document.body.addEventListener(eventName, preventDefaults, false);
+                });
+                
+                function preventDefaults(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    fileLabel.addEventListener(eventName, function() {
+                        this.style.borderColor = '#1779ba';
+                        this.style.backgroundColor = '#e7f4ff';
+                    }, false);
+                });
+                
+                ['dragleave', 'drop'].forEach(eventName => {
+                    fileLabel.addEventListener(eventName, function() {
+                        this.style.borderColor = '';
+                        this.style.backgroundColor = '';
+                    }, false);
+                });
+                
+                fileLabel.addEventListener('drop', function(e) {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    
+                    if (files.length > 0) {
+                        citiesFileInput.files = files;
+                        
+                        const event = new Event('change', { bubbles: true });
+                        citiesFileInput.dispatchEvent(event);
+                    }
+                }, false);
+            }
+            
+            // ================================
+            // CITY DROPDOWN - SEARCH FUNCTIONALITY
+            // ================================
+            const cityDropdown = document.getElementById('cityDropdown');
+            if (cityDropdown) {
+                cityDropdown.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        handleCityChange();
+                    }
+                });
+                
+                cityDropdown.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    if (selectedOption && selectedOption.value) {
+                        const lat = selectedOption.getAttribute('data-lat');
+                        const lon = selectedOption.getAttribute('data-lon');
+                        
+                        if (lat && lon) {
+                            console.log(`📍 Selected: ${selectedOption.text}`);
+                            console.log(`   Coordinates: ${lat}, ${lon}`);
+                        }
+                    }
+                });
+            }
+            
+            // ================================
+            // METHOD DROPDOWN - LOG SELECTION
+            // ================================
+            const methodDropdown = document.getElementById('methodDropdown');
+            if (methodDropdown) {
+                methodDropdown.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    console.log(`📖 Method selected: ${selectedOption.text} (ID: ${this.value})`);
+                });
+            }
+            
+            // ================================
+            // FORM INPUTS - CLEAR ERROR ON FOCUS
+            // ================================
+            const allInputs = document.querySelectorAll('input[type="text"], input[type="password"]');
+            allInputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.style.borderColor = '';
+                    this.style.backgroundColor = '';
+                });
+            });
+            
+            // ================================
+            // PREVENT ACCIDENTAL FORM SUBMISSION
+            // ================================
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'BUTTON') {
+                    if (e.target.id !== 'timezoneInput') {
+                        const form = e.target.closest('form');
+                        if (!form) {
+                            e.preventDefault();
+                        }
+                    }
+                }
+            });
+            
+            // ================================
+            // VISIBILITY CHANGE - PAUSE/RESUME UPDATES
+            // ================================
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    console.log('👁️ Page hidden - updates paused');
+                } else {
+                    console.log('👁️ Page visible - updates resumed');
+                    updateDeviceStatus();
+                    loadSavedPrayerTimes();
+                }
+            });
+            
+            // ================================
+            // WINDOW BEFOREUNLOAD - WARN IF EDITING
+            // ================================
+            window.addEventListener('beforeunload', function(e) {
+                if (isEditingTimezone) {
+                    e.preventDefault();
+                    e.returnValue = 'Anda sedang mengedit timezone. Yakin ingin meninggalkan halaman?';
+                    return e.returnValue;
+                }
+                
+                const clearBtn = document.getElementById('clearFileBtn');
+                if (clearBtn && clearBtn.style.display === 'block') {
+                    e.preventDefault();
+                    e.returnValue = 'File belum diupload. Yakin ingin meninggalkan halaman?';
+                    return e.returnValue;
+                }
+            });
+            
+            // ================================
+            // ONLINE/OFFLINE DETECTION
+            // ================================
+            window.addEventListener('online', function() {
+                console.log('🌐 Browser online');
+                showToast('🌐 Koneksi internet tersambung', 'success');
+                
+                setTimeout(() => {
+                    updateDeviceStatus();
+                }, 1000);
+            });
+            
+            window.addEventListener('offline', function() {
+                console.log('📡 Browser offline');
+                showToast('📡 Tidak ada koneksi internet', 'warning');
+            });
+            
+            // ================================
+            // CONSOLE LOG STARTUP INFO
+            // ================================
+            console.log('\n========================================');
+            console.log('🕌 ISLAMIC PRAYER CLOCK WEB INTERFACE');
+            console.log('========================================');
+            console.log('✅ All event listeners registered');
+            console.log('✅ Drag & drop support enabled');
+            console.log('✅ Keyboard shortcuts active');
+            console.log('✅ Input validation enabled');
+            console.log('========================================\n');
+            
+            console.log('⌨️ KEYBOARD SHORTCUTS:');
+            console.log('   ESC         - Cancel editing');
+            console.log('   ENTER       - Save timezone (when editing)');
+            console.log('========================================\n');
         });
     </script>
 </body>
