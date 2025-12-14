@@ -1871,11 +1871,40 @@ void rtcSyncTask(void *parameter) {
                 time_t systemTime = timeConfig.currentTime;
                 time_t rtcUnix = rtcTime.unixtime();
                 
-                if (abs(systemTime - rtcUnix) > 2 && rtcTime.year() >= 2000) {
+                // ========================================
+                // 🔒 VALIDASI KETAT: Cegah waktu aneh
+                // ========================================
+                bool rtcValid = true;
+                
+                // 1️⃣ Tahun harus dalam range wajar (2000-2100)
+                if (rtcTime.year() < 2000 || rtcTime.year() > 2100) {
+                    Serial.println("⚠️ RTC INVALID: Year out of range (" + String(rtcTime.year()) + ")");
+                    rtcValid = false;
+                }
+                
+                // 2️⃣ Selisih waktu tidak boleh terlalu besar (max 1 jam = 3600 detik)
+                //    Kecuali system time masih default (< 946684800 = 01/01/2000)
+                long timeDiff = abs(systemTime - rtcUnix);
+                if (systemTime >= 946684800 && timeDiff > 3600) {
+                    Serial.printf("⚠️ RTC SUSPICIOUS: Time diff too large (%ld seconds)\n", timeDiff);
+                    Serial.printf("   System: %02d:%02d:%02d %02d/%02d/%04d\n",
+                                 hour(systemTime), minute(systemTime), second(systemTime),
+                                 day(systemTime), month(systemTime), year(systemTime));
+                    Serial.printf("   RTC:    %02d:%02d:%02d %02d/%02d/%04d\n",
+                                 rtcTime.hour(), rtcTime.minute(), rtcTime.second(),
+                                 rtcTime.day(), rtcTime.month(), rtcTime.year());
+                    Serial.println("   → Keeping system time (RTC probably corrupted)");
+                    rtcValid = false;
+                }
+                
+                // ========================================
+                // ✅ Hanya update jika RTC valid DAN selisih kecil
+                // ========================================
+                if (rtcValid && timeDiff > 2) {
                     timeConfig.currentTime = rtcUnix;
                     setTime(rtcUnix);
                     
-                    Serial.println("System time synced from RTC");
+                    Serial.println("✅ System time synced from RTC");
                     Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
                                  rtcTime.hour(), rtcTime.minute(), rtcTime.second(),
                                  rtcTime.day(), rtcTime.month(), rtcTime.year());
@@ -1883,10 +1912,22 @@ void rtcSyncTask(void *parameter) {
                     DisplayUpdate update;
                     update.type = DisplayUpdate::TIME_UPDATE;
                     xQueueSend(displayQueue, &update, 0);
-                } else if (rtcTime.year() < 2000) {
-                    Serial.println("RTC time invalid (year < 2000), keeping system time");
-                        DateTime resetTime(2000, 1, 1, 0, 0, 0);
-                        rtc.adjust(resetTime);
+                    
+                } else if (!rtcValid) {
+                    // 🔧 Reset RTC ke system time jika RTC rusak
+                    Serial.println("🔧 RTC corrupted, resetting to system time...");
+                    
+                    DateTime fixedTime(
+                        year(systemTime),
+                        month(systemTime),
+                        day(systemTime),
+                        hour(systemTime),
+                        minute(systemTime),
+                        second(systemTime)
+                    );
+                    
+                    rtc.adjust(fixedTime);
+                    Serial.println("✅ RTC reset to system time");
                 }
                 
                 xSemaphoreGive(timeMutex);
