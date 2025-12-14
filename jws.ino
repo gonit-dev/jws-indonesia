@@ -826,114 +826,124 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
     Serial.println("   Method: " + String(currentMethod) + " (" + methodConfig.methodName + ")");
     Serial.println("   URL: " + url);
     
-    HTTPClient http;
-    WiFiClient client;
-    
-    http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
-    http.begin(client, url);
-    http.setTimeout(15000);
-    
-    int httpResponseCode = http.GET();
-    Serial.println("Response code: " + String(httpResponseCode));
-    
-    if (httpResponseCode == 200) {
-        String payload = http.getString();
+    // ============================================
+    // GUNAKAN SCOPE UNTUK AUTO-CLEANUP
+    // ============================================
+    {
+        HTTPClient http;
+        WiFiClient client;
         
-        DynamicJsonDocument doc(8192);
-        DeserializationError error = deserializeJson(doc, payload);
+        http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+        http.begin(client, url);
+        http.setTimeout(15000);
         
-        if (!error) {
-            JsonObject timings = doc["data"]["timings"];
-                        
-            String tempSubuh   = timings["Fajr"].as<String>().substring(0, 5);
-            String tempTerbit  = timings["Sunrise"].as<String>().substring(0, 5); 
-            String tempZuhur   = timings["Dhuhr"].as<String>().substring(0, 5);
-            String tempAshar    = timings["Asr"].as<String>().substring(0, 5);
-            String tempMaghrib = timings["Maghrib"].as<String>().substring(0, 5);
-            String tempIsya    = timings["Isha"].as<String>().substring(0, 5);
-            String tempImsak   = timings["Imsak"].as<String>().substring(0, 5);
+        int httpResponseCode = http.GET();
+        Serial.println("Response code: " + String(httpResponseCode));
+        
+        if (httpResponseCode == 200) {
+            String payload = http.getString();
             
-            bool allValid = true;
-            
-            if (tempSubuh.length() != 5 || tempSubuh.indexOf(':') != 2) {
-                Serial.println("Invalid Subuh time format");
-                allValid = false;
-            }
-            if (tempTerbit.length() != 5 || tempTerbit.indexOf(':') != 2) {
-                Serial.println("Invalid Terbit time format");
-                allValid = false;
-            }
-            if (tempZuhur.length() != 5 || tempZuhur.indexOf(':') != 2) {
-                Serial.println("Invalid Zuhur time format");
-                allValid = false;
-            }
-            if (tempAshar.length() != 5 || tempAshar.indexOf(':') != 2) {
-                Serial.println("Invalid Ashar time format");
-                allValid = false;
-            }
-            if (tempMaghrib.length() != 5 || tempMaghrib.indexOf(':') != 2) {
-                Serial.println("Invalid Maghrib time format");
-                allValid = false;
-            }
-            if (tempIsya.length() != 5 || tempIsya.indexOf(':') != 2) {
-                Serial.println("Invalid Isya time format");
-                allValid = false;
-            }
-            if (tempImsak.length() != 5 || tempImsak.indexOf(':') != 2) {
-                Serial.println("Invalid Imsak time format");
-                allValid = false;
-            }
+            // ============================================
+            // JSON PROCESSING DALAM SCOPE TERPISAH
+            // ============================================
+            {
+                DynamicJsonDocument doc(8192);
+                DeserializationError error = deserializeJson(doc, payload);
+                
+                if (!error) {
+                    JsonObject timings = doc["data"]["timings"];
+                                
+                    String tempSubuh   = timings["Fajr"].as<String>().substring(0, 5);
+                    String tempTerbit  = timings["Sunrise"].as<String>().substring(0, 5); 
+                    String tempZuhur   = timings["Dhuhr"].as<String>().substring(0, 5);
+                    String tempAshar    = timings["Asr"].as<String>().substring(0, 5);
+                    String tempMaghrib = timings["Maghrib"].as<String>().substring(0, 5);
+                    String tempIsya    = timings["Isha"].as<String>().substring(0, 5);
+                    String tempImsak   = timings["Imsak"].as<String>().substring(0, 5);
+                    
+                    bool allValid = true;
+                    
+                    if (tempSubuh.length() != 5 || tempSubuh.indexOf(':') != 2) {
+                        Serial.println("Invalid Subuh time format");
+                        allValid = false;
+                    }
+                    if (tempTerbit.length() != 5 || tempTerbit.indexOf(':') != 2) {
+                        Serial.println("Invalid Terbit time format");
+                        allValid = false;
+                    }
+                    if (tempZuhur.length() != 5 || tempZuhur.indexOf(':') != 2) {
+                        Serial.println("Invalid Zuhur time format");
+                        allValid = false;
+                    }
+                    if (tempAshar.length() != 5 || tempAshar.indexOf(':') != 2) {
+                        Serial.println("Invalid Ashar time format");
+                        allValid = false;
+                    }
+                    if (tempMaghrib.length() != 5 || tempMaghrib.indexOf(':') != 2) {
+                        Serial.println("Invalid Maghrib time format");
+                        allValid = false;
+                    }
+                    if (tempIsya.length() != 5 || tempIsya.indexOf(':') != 2) {
+                        Serial.println("Invalid Isya time format");
+                        allValid = false;
+                    }
+                    if (tempImsak.length() != 5 || tempImsak.indexOf(':') != 2) {
+                        Serial.println("Invalid Imsak time format");
+                        allValid = false;
+                    }
 
-            if (allValid) {
-                prayerConfig.subuhTime = tempSubuh;
-                prayerConfig.terbitTime = tempTerbit;
-                prayerConfig.zuhurTime = tempZuhur;
-                prayerConfig.asharTime = tempAshar;
-                prayerConfig.maghribTime = tempMaghrib;
-                prayerConfig.isyaTime = tempIsya;
-                prayerConfig.imsakTime = tempImsak;
-                
-                Serial.println("\nPrayer times updated successfully:");
-                Serial.println("   Method: " + methodConfig.methodName);
-                Serial.println("   Imsak: " + prayerConfig.imsakTime);
-                Serial.println("   Subuh: " + prayerConfig.subuhTime);
-                Serial.println("   Terbit: " + prayerConfig.terbitTime);
-                Serial.println("   Zuhur: " + prayerConfig.zuhurTime);
-                Serial.println("   Ashar: " + prayerConfig.asharTime);
-                Serial.println("   Maghrib: " + prayerConfig.maghribTime);
-                Serial.println("   Isya: " + prayerConfig.isyaTime);
-                
-                savePrayerTimes();
-                
-                DisplayUpdate update;
-                update.type = DisplayUpdate::PRAYER_UPDATE;
-                xQueueSend(displayQueue, &update, 0);
-            } else {
-                Serial.println("Invalid prayer times data - keeping existing times");
+                    if (allValid) {
+                        prayerConfig.subuhTime = tempSubuh;
+                        prayerConfig.terbitTime = tempTerbit;
+                        prayerConfig.zuhurTime = tempZuhur;
+                        prayerConfig.asharTime = tempAshar;
+                        prayerConfig.maghribTime = tempMaghrib;
+                        prayerConfig.isyaTime = tempIsya;
+                        prayerConfig.imsakTime = tempImsak;
+                        
+                        Serial.println("\nPrayer times updated successfully:");
+                        Serial.println("   Method: " + methodConfig.methodName);
+                        Serial.println("   Imsak: " + prayerConfig.imsakTime);
+                        Serial.println("   Subuh: " + prayerConfig.subuhTime);
+                        Serial.println("   Terbit: " + prayerConfig.terbitTime);
+                        Serial.println("   Zuhur: " + prayerConfig.zuhurTime);
+                        Serial.println("   Ashar: " + prayerConfig.asharTime);
+                        Serial.println("   Maghrib: " + prayerConfig.maghribTime);
+                        Serial.println("   Isya: " + prayerConfig.isyaTime);
+                        
+                        savePrayerTimes();
+                        
+                        DisplayUpdate update;
+                        update.type = DisplayUpdate::PRAYER_UPDATE;
+                        xQueueSend(displayQueue, &update, 0);
+                    } else {
+                        Serial.println("Invalid prayer times data - keeping existing times");
+                    }
+                } else {
+                    Serial.print("JSON parse error: ");
+                    Serial.println(error.c_str());
+                    Serial.println("Keeping existing prayer times");
+                }
             }
         } else {
-            Serial.print("JSON parse error: ");
-            Serial.println(error.c_str());
+            Serial.printf("HTTP request failed: %d\n", httpResponseCode);
             Serial.println("Keeping existing prayer times");
+            
+            if (httpResponseCode < 0) {
+                Serial.println("   Network error (timeout/connection failed)");
+            } else if (httpResponseCode == 404) {
+                Serial.println("   API endpoint not found");
+            } else if (httpResponseCode >= 500) {
+                Serial.println("   Server error");
+            }
         }
-    } else {
-        Serial.printf("HTTP request failed: %d\n", httpResponseCode);
-        Serial.println("Keeping existing prayer times");
         
-        if (httpResponseCode < 0) {
-            Serial.println("   Network error (timeout/connection failed)");
-        } else if (httpResponseCode == 404) {
-            Serial.println("   API endpoint not found");
-        } else if (httpResponseCode >= 500) {
-            Serial.println("   Server error");
-        }
+        http.end();
+        client.stop();
     }
     
-    http.end();
-    client.stop();
     vTaskDelay(pdMS_TO_TICKS(100));
 }
-
 
 // ================================
 // TASKS
@@ -1686,28 +1696,64 @@ void webTask(void *parameter) {
     setupServerRoutes();
     server.begin();
     
-    Serial.println(" Web server started");
+    Serial.println("✅ Web server started");
     Serial.println("   Port: 80");
     Serial.println("========================================\n");
     
     unsigned long lastReport = 0;
-    unsigned long lastAPCheck;
+    unsigned long lastAPCheck = 0;
+    unsigned long lastMemCheck = 0;
+    
+    size_t initialHeap = ESP.getFreeHeap();
+    size_t lowestHeap = initialHeap;
     
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(5000));
         esp_task_wdt_reset();
         
+        unsigned long now = millis();
+        
+        // ================================
+        // MEMORY CHECK SETIAP 30 DETIK
+        // ================================
+        if (now - lastMemCheck > 30000) {
+            lastMemCheck = now;
+            
+            size_t currentHeap = ESP.getFreeHeap();
+            if (currentHeap < lowestHeap) {
+                lowestHeap = currentHeap;
+            }
+            
+            size_t heapDiff = initialHeap - currentHeap;
+            
+            Serial.printf("\n📊 MEMORY STATUS:\n");
+            Serial.printf("   Initial: %d bytes (%.2f KB)\n", initialHeap, initialHeap / 1024.0);
+            Serial.printf("   Current: %d bytes (%.2f KB)\n", currentHeap, currentHeap / 1024.0);
+            Serial.printf("   Lowest:  %d bytes (%.2f KB)\n", lowestHeap, lowestHeap / 1024.0);
+            Serial.printf("   Lost:    %d bytes (%.2f KB)\n", heapDiff, heapDiff / 1024.0);
+            
+            if (heapDiff > 20480) {
+                Serial.println("   ⚠️ WARNING: Possible memory leak detected!");
+                Serial.println("   Consider restarting if memory continues dropping");
+            } else if (currentHeap < 50000) {
+                Serial.println("   ⚠️ WARNING: Low memory! Consider restarting soon");
+            } else {
+                Serial.println("   ✅ Memory stable");
+            }
+            Serial.println();
+        }
+        
         // ================================
         // AP MODE MONITORING EVERY 5 SECONDS
         // ================================
-        if (millis() - lastAPCheck > 5000) {
-            lastAPCheck = millis();
+        if (now - lastAPCheck > 5000) {
+            lastAPCheck = now;
             
             wifi_mode_t mode;
             esp_wifi_get_mode(&mode);
             
             if (mode != WIFI_MODE_APSTA) {
-                Serial.println("\n CRITICAL: WiFi mode changed!");
+                Serial.println("\n⚠️ CRITICAL: WiFi mode changed!");
                 Serial.printf("   Current mode: %d (should be %d)\n", mode, WIFI_MODE_APSTA);
                 Serial.println("   Forcing back to AP_STA...");
                 
@@ -1717,7 +1763,7 @@ void webTask(void *parameter) {
                 WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
                 delay(100);
                 
-                Serial.println(" AP restored: " + String(wifiConfig.apSSID));
+                Serial.println("✅ AP restored: " + String(wifiConfig.apSSID));
             }
         }
     }

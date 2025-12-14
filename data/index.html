@@ -1712,6 +1712,7 @@
                 selectedCitiesFile = null;
                 fileNameDisplay.innerHTML = '<span class="label alert">❌ Gagal membaca berkas</span>';
                 uploadBtn.disabled = true;
+                event.target.value = '';
             };
             
             reader.readAsText(file);
