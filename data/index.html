@@ -613,11 +613,11 @@
                             
                             <div class="callout warning">
                                 <p>
-                                    <strong>Peringatan:</strong> Ini akan menghapus semua data tersimpan:
+                                    <strong>Peringatan:</strong> Ini akan menghapus semua data disimpan:
                                 </p>
                                 <p class="help-text">
                                     📶 WiFi credentials</br>
-                                    🕌 Jadwal shalat tersimpan</br>
+                                    🕌 Jadwal shalat disimpan</br>
                                     📡 AP settings</br>
                                     📍 Pilihan lokasi</br>
                                     ⏰ Waktu dan tanggal</br>
@@ -1174,11 +1174,11 @@
                     latInput.value = data.latitude;
                     lonInput.value = data.longitude;
                     
-                    console.log('✅ Koordinat dikembalikan ke data tersimpan:');
+                    console.log('✅ Koordinat dikembalikan ke data disimpan:');
                     console.log('   Saved Lat:', data.latitude);
                     console.log('   Saved Lon:', data.longitude);
                     
-                    showToast('🔄 Koordinat dikembalikan ke data tersimpan', 'success');
+                    showToast('🔄 Koordinat dikembalikan ke data disimpan', 'success');
                     
                 } else {
                     if (defaultLat && defaultLon) {
@@ -1277,7 +1277,7 @@
                         
                         coordinatesForm.classList.remove('hide');
                         
-                        console.log('✅ Koordinat ditampilkan dengan data tersimpan');
+                        console.log('✅ Koordinat ditampilkan dengan data disimpan');
                         console.log('   Current Lat:', data.latitude);
                         console.log('   Current Lon:', data.longitude);
                     }
@@ -2074,7 +2074,7 @@
                         }, 4000);
                     } else {
                         setTimeout(() => {
-                            showToast('ℹ️ Metode tersimpan. Pilih lokasi untuk menghitung jadwal salat.', 'warning');
+                            showToast('ℹ️ Metode disimpan. Pilih lokasi untuk menghitung jadwal salat.', 'warning');
                         }, 1500);
                     }
                     
