@@ -24,7 +24,7 @@ typedef struct _objects_t {
     lv_obj_t *imsak;
     lv_obj_t *obj4;
     lv_obj_t *obj5;
-    lv_obj_t *imsak_time_1;
+    lv_obj_t *imsak_time;
     lv_obj_t *pray;
     lv_obj_t *prayer;
     lv_obj_t *obj6;

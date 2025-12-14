@@ -288,9 +288,9 @@ void create_screen_main() {
                                                     lv_label_set_text(obj, "IMSAK");
                                                 }
                                                 {
-                                                    // imsakTime_1
+                                                    // imsakTime
                                                     lv_obj_t *obj = lv_label_create(parent_obj);
-                                                    objects.imsak_time_1 = obj;
+                                                    objects.imsak_time = obj;
                                                     lv_obj_set_pos(obj, 5, 20);
                                                     lv_obj_set_size(obj, 64, LV_SIZE_CONTENT);
                                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
