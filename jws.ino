@@ -3328,7 +3328,7 @@ void setup() {
     loadPrayerTimes();
     loadCitySelection();
     loadMethodSelection();
-    loadTimezoneConfig();
+    
     // ================================
     // RTC DS3231 INIT
     // ================================
