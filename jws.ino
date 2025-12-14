@@ -1757,21 +1757,25 @@ void webTask(void *parameter) {
     unsigned long lastReport = 0;
     unsigned long lastAPCheck = 0;
     unsigned long lastMemCheck = 0;
+    unsigned long lastStackReport = 0;
     
+    // ✅ MEMORY MONITORING
     size_t initialHeap = ESP.getFreeHeap();
     size_t lowestHeap = initialHeap;
     
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(5000));
-
-        if (millis() - lastStackReport > 120000) {
-            lastStackReport = millis();
-            printStackReport();
-        }
-
         esp_task_wdt_reset();
         
         unsigned long now = millis();
+        
+        // ================================
+        // STACK USAGE REPORT SETIAP 2 MENIT
+        // ================================
+        if (now - lastStackReport > 120000) {
+            lastStackReport = now;
+            printStackReport();
+        }
         
         // ================================
         // MEMORY CHECK SETIAP 30 DETIK
