@@ -228,8 +228,8 @@ Device membuat Access Point:
 ### 3️⃣ Konfigurasi WiFi
 ```
 1. Masukkan SSID & Password WiFi rumah
-2. Klik "Simpan & Restart"
-3. Device restart dan connect ke WiFi
+2. Klik "Simpan"
+3. Device langsung terhubung
 4. Catat IP baru dari serial monitor
 ```
 
@@ -246,7 +246,7 @@ Device membuat Access Point:
    - Egyptian (ID: 5) - Default/Klasik
    - 6 metode lainnya tersedia
 5. Klik "Simpan Kota"
-6. Prayer times auto-update tanpa restart!
+6. Prayer times auto-update
 ```
 
 ### 5️⃣ Konfigurasi Timezone (Optional)
@@ -256,7 +256,6 @@ Device membuat Access Point:
 3. Edit offset (contoh: +8 untuk WITA, +9 untuk WIT)
 4. Klik 💾 atau tekan Enter
 5. NTP akan otomatis re-sync dengan timezone baru
-6. Tidak perlu restart!
 
 **Timezone untuk Indonesia:**
 - WIB (Jawa, Sumatera) = +7
@@ -336,8 +335,6 @@ Prioritas server NTP:
 // Saat ganti metode kalkulasi via web interface:
 // 1. Method disimpan ke LittleFS (/method_selection.txt)
 // 2. Prayer times auto-fetch dengan method baru
-// 3. Display auto-update tanpa restart
-// 4. Method persisten setelah restart
 
 POST /setmethod → Save method → Auto getPrayerTimesByCoordinates()
 ```
@@ -349,7 +346,6 @@ POST /setmethod → Save method → Auto getPrayerTimesByCoordinates()
 // 2. Update timeClient.setTimeOffset() dengan offset baru
 // 3. Trigger NTP re-sync otomatis
 // 4. Apply ke RTC (jika tersedia)
-// 5. Update display tanpa restart
 
 POST /settimezone → Save config → Auto NTP re-sync → Update RTC
 ```
@@ -358,7 +354,6 @@ POST /settimezone → Save config → Auto NTP re-sync → Update RTC
 - Offset valid: -12 hingga +14
 - Format input: +7, -5, +9 (dengan tanda +/-)
 - Default fallback: +7 (WIB)
-- Persistent setelah restart
 ````
 
 ---
@@ -418,8 +413,8 @@ displayQueue    // UI update requests (10 items)
 ```
 
 **Auto-save Behavior:**
-- WiFi credentials → Saved on change, restart required
-- City selection → Saved immediately, no restart
+- WiFi credentials → Saved on change
+- City selection → Saved immediately
 - Calculation method → Saved immediately, auto-update prayer times
 - Prayer times → Auto-saved setiap update dari API
 
@@ -485,7 +480,7 @@ Trigger NTP re-sync
     ↓
 Save synced time to RTC (if available)
     ↓
-Update display (no restart needed)
+Update display
 ````
 
 **Available via:**
@@ -524,7 +519,7 @@ Save to /method_selection.txt
     ↓
 Auto fetch prayer times with new method
     ↓
-Update display (no restart needed)
+Update display
 ```
 
 **Available via:**
@@ -589,7 +584,7 @@ trigger_panic = true    // Auto-restart jika hang
 **Default Method:**
 - Egyptian General Authority (ID: 5)
 - Dipilih karena format perhitungan klasik Indonesia
-- User bisa ganti via web interface tanpa restart
+- User bisa ganti via web interface
 
 **Metode Kemenag Indonesia (ID: 20):**
 - Metode resmi Kementerian Agama RI
@@ -600,7 +595,6 @@ trigger_panic = true    // Auto-restart jika hang
 2. Pilih metode dari dropdown "Metode Kalkulasi"
 3. Klik "Simpan Metode"
 4. Jadwal shalat otomatis update dengan metode baru
-5. Tidak perlu restart device
 
 ### 📍 GPS Coordinates System
 
@@ -748,7 +742,6 @@ trigger_panic = true    // Auto-restart jika hang
 
 **Auto-refresh:**
 - Dropdown city otomatis reload setelah upload
-- Tidak perlu restart device
 
 ---
 
@@ -1208,3 +1201,4 @@ Option 3: Hardware
 ```
 
 ---
+
