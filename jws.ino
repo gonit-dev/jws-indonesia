@@ -1714,7 +1714,7 @@ void printStackReport() {
     for (int i = 0; i < 6; i++) {
         if (tasks[i].handle) {
             UBaseType_t hwm = uxTaskGetStackHighWaterMark(tasks[i].handle);
-            uint32_t free = hwm * 4;
+            uint32_t free = hwm;
             uint32_t used = tasks[i].size - free;
             float percent = (used * 100.0) / tasks[i].size;
             
