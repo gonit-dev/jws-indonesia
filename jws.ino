@@ -621,9 +621,9 @@ bool initRTC() {
     Serial.println("INITIALIZING DS3231 RTC");
     Serial.println("========================================");
     
-    Wire.begin(/*RTC_SDA, RTC_SCL*/);
+    Wire.begin();
     
-    if (!rtc.begin(/*&Wire*/)) {
+    if (!rtc.begin(&Wire)) {
     Serial.println(" DS3231 not found!");
     Serial.println("   - SDA -> GPIO21");
     Serial.println("   - SCL -> GPIO22");
