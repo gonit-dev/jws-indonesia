@@ -20,7 +20,7 @@ typedef struct _objects_t {
     lv_obj_t *sunrise;
     lv_obj_t *obj2;
     lv_obj_t *obj3;
-    lv_obj_t *sunrise_time;
+    lv_obj_t *terbit_time;
     lv_obj_t *obj4;
     lv_obj_t *imsak_time;
     lv_obj_t *pray;

@@ -535,19 +535,19 @@
                                             <td class="text-right"><h5 id="imsakTime">--:--</h5></td>
                                         </tr>
                                         <tr>
-                                            <td class="text-left"><strong>🌅 Subuh (Fajr)</strong></td>
+                                            <td class="text-left"><strong>🌅 Subuh</strong></td>
                                             <td class="text-right"><h5 id="subuhTime">--:--</h5></td>
                                         </tr>
                                         <tr>
-                                            <td class="text-left"><strong>🌄 Terbit (Sunrise)</strong></td>
-                                            <td class="text-right"><h5 id="sunriseTime">--:--</h5></td>
+                                            <td class="text-left"><strong>🌄 Terbit</strong></td>
+                                            <td class="text-right"><h5 id="terbitTime">--:--</h5></td>
                                         </tr>
                                         <tr>
-                                            <td class="text-left"><strong>☀️ Dzuhur (Dhuhr)</strong></td>
-                                            <td class="text-right"><h5 id="dzuhurTime">--:--</h5></td>
+                                            <td class="text-left"><strong>☀️ Zuhur</strong></td>
+                                            <td class="text-right"><h5 id="zuhurTime">--:--</h5></td>
                                         </tr>
                                         <tr>
-                                            <td class="text-left"><strong>🌤️ Ashar (Asr)</strong></td>
+                                            <td class="text-left"><strong>🌤️ Ashar</strong></td>
                                             <td class="text-right"><h5 id="asharTime">--:--</h5></td>
                                         </tr>
                                         <tr>
@@ -555,7 +555,7 @@
                                             <td class="text-right"><h5 id="maghribTime">--:--</h5></td>
                                         </tr>
                                         <tr>
-                                            <td class="text-left"><strong>🌙 Isya (Isha)</strong></td>
+                                            <td class="text-left"><strong>🌙 Isya</strong></td>
                                             <td class="text-right"><h5 id="isyaTime">--:--</h5></td>
                                         </tr>
                                     </tbody>
@@ -703,9 +703,9 @@
         let prayerConfig = {
             imsakTime: '--:--',
             subuhTime: '--:--',
-            sunriseTime: '--:--',
+            terbitTime: '--:--',
             zuhurTime: '--:--',
-            asarTime: '--:--',
+            asharTime: '--:--',
             maghribTime: '--:--',
             isyaTime: '--:--'
         };
@@ -1315,17 +1315,17 @@
                 
                 prayerConfig.imsakTime = data.imsak || '--:--';    
                 prayerConfig.subuhTime = data.subuh || '--:--';
-                prayerConfig.sunriseTime = data.sunrise || '--:--';
-                prayerConfig.zuhurTime = data.dzuhur || '--:--';
-                prayerConfig.asarTime = data.ashar || '--:--';
+                prayerConfig.terbitTime = data.terbit || '--:--';
+                prayerConfig.zuhurTime = data.zuhur || '--:--';
+                prayerConfig.asharTime = data.ashar || '--:--';
                 prayerConfig.maghribTime = data.maghrib || '--:--';
                 prayerConfig.isyaTime = data.isya || '--:--';
                 
                 document.getElementById('imsakTime').textContent = prayerConfig.imsakTime;  
                 document.getElementById('subuhTime').textContent = prayerConfig.subuhTime;
-                document.getElementById('sunriseTime').textContent = prayerConfig.sunriseTime;
-                document.getElementById('dzuhurTime').textContent = prayerConfig.zuhurTime;
-                document.getElementById('asharTime').textContent = prayerConfig.asarTime;
+                document.getElementById('terbitTime').textContent = prayerConfig.terbitTime;
+                document.getElementById('zuhurTime').textContent = prayerConfig.zuhurTime;
+                document.getElementById('asharTime').textContent = prayerConfig.asharTime;
                 document.getElementById('maghribTime').textContent = prayerConfig.maghribTime;
                 document.getElementById('isyaTime').textContent = prayerConfig.isyaTime;
                 

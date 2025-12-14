@@ -140,9 +140,9 @@ struct TimeConfig {
 
 struct PrayerConfig {
     String subuhTime;
-    String sunriseTime;
+    String terbitTime;
     String zuhurTime;
-    String asarTime;
+    String asharTime;
     String maghribTime;
     String isyaTime;
     String imsakTime;
@@ -491,9 +491,9 @@ void savePrayerTimes() {
         fs::File file = LittleFS.open("/prayer_times.txt", "w");
         if (file) {
             file.println(prayerConfig.subuhTime);
-            file.println(prayerConfig.sunriseTime);
+            file.println(prayerConfig.terbitTime);
             file.println(prayerConfig.zuhurTime);
-            file.println(prayerConfig.asarTime);
+            file.println(prayerConfig.asharTime);
             file.println(prayerConfig.maghribTime);
             file.println(prayerConfig.isyaTime);
             file.println(prayerConfig.imsakTime);
@@ -523,14 +523,14 @@ void loadPrayerTimes() {
                 prayerConfig.subuhTime = file.readStringUntil('\n'); 
                 prayerConfig.subuhTime.trim();
                 
-                prayerConfig.sunriseTime = file.readStringUntil('\n');
-                prayerConfig.sunriseTime.trim();
+                prayerConfig.terbitTime = file.readStringUntil('\n');
+                prayerConfig.terbitTime.trim();
                 
                 prayerConfig.zuhurTime = file.readStringUntil('\n'); 
                 prayerConfig.zuhurTime.trim();
                 
-                prayerConfig.asarTime = file.readStringUntil('\n'); 
-                prayerConfig.asarTime.trim();
+                prayerConfig.asharTime = file.readStringUntil('\n'); 
+                prayerConfig.asharTime.trim();
                 
                 prayerConfig.maghribTime = file.readStringUntil('\n'); 
                 prayerConfig.maghribTime.trim();
@@ -846,9 +846,9 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
             JsonObject timings = doc["data"]["timings"];
                         
             String tempSubuh   = timings["Fajr"].as<String>().substring(0, 5);
-            String tempSunrise = timings["Sunrise"].as<String>().substring(0, 5);
+            String tempTerbit  = timings["Sunrise"].as<String>().substring(0, 5); 
             String tempZuhur   = timings["Dhuhr"].as<String>().substring(0, 5);
-            String tempAsar    = timings["Asr"].as<String>().substring(0, 5);
+            String tempAshar    = timings["Asr"].as<String>().substring(0, 5);
             String tempMaghrib = timings["Maghrib"].as<String>().substring(0, 5);
             String tempIsya    = timings["Isha"].as<String>().substring(0, 5);
             String tempImsak   = timings["Imsak"].as<String>().substring(0, 5);
@@ -859,16 +859,16 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
                 Serial.println("Invalid Subuh time format");
                 allValid = false;
             }
-            if (tempSunrise.length() != 5 || tempSunrise.indexOf(':') != 2) {
-                Serial.println("Invalid Sunrise time format");
+            if (tempTerbit.length() != 5 || tempTerbit.indexOf(':') != 2) {
+                Serial.println("Invalid Terbit time format");
                 allValid = false;
             }
             if (tempZuhur.length() != 5 || tempZuhur.indexOf(':') != 2) {
                 Serial.println("Invalid Zuhur time format");
                 allValid = false;
             }
-            if (tempAsar.length() != 5 || tempAsar.indexOf(':') != 2) {
-                Serial.println("Invalid Asar time format");
+            if (tempAshar.length() != 5 || tempAshar.indexOf(':') != 2) {
+                Serial.println("Invalid Ashar time format");
                 allValid = false;
             }
             if (tempMaghrib.length() != 5 || tempMaghrib.indexOf(':') != 2) {
@@ -886,9 +886,9 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
 
             if (allValid) {
                 prayerConfig.subuhTime = tempSubuh;
-                prayerConfig.sunriseTime = tempSunrise;
+                prayerConfig.terbitTime = tempTerbit;
                 prayerConfig.zuhurTime = tempZuhur;
-                prayerConfig.asarTime = tempAsar;
+                prayerConfig.asharTime = tempAshar;
                 prayerConfig.maghribTime = tempMaghrib;
                 prayerConfig.isyaTime = tempIsya;
                 prayerConfig.imsakTime = tempImsak;
@@ -897,9 +897,9 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
                 Serial.println("   Method: " + methodConfig.methodName);
                 Serial.println("   Imsak: " + prayerConfig.imsakTime);
                 Serial.println("   Subuh: " + prayerConfig.subuhTime);
-                Serial.println("   Sunrise: " + prayerConfig.sunriseTime);
-                Serial.println("   Dzuhur: " + prayerConfig.zuhurTime);
-                Serial.println("   Ashar: " + prayerConfig.asarTime);
+                Serial.println("   Terbit: " + prayerConfig.terbitTime);
+                Serial.println("   Zuhur: " + prayerConfig.zuhurTime);
+                Serial.println("   Ashar: " + prayerConfig.asharTime);
                 Serial.println("   Maghrib: " + prayerConfig.maghribTime);
                 Serial.println("   Isya: " + prayerConfig.isyaTime);
                 
@@ -1864,7 +1864,7 @@ void hideAllUIElements() {
     if (objects.city_time) lv_obj_add_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.imsak_time) lv_obj_add_flag(objects.imsak_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.subuh_time) lv_obj_add_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
-    if (objects.sunrise_time) lv_obj_add_flag(objects.sunrise_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.terbit_time) lv_obj_add_flag(objects.terbit_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.zuhur_time) lv_obj_add_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.ashar_time) lv_obj_add_flag(objects.ashar_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.maghrib_time) lv_obj_add_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
@@ -1877,7 +1877,7 @@ void showAllUIElements() {
     if (objects.city_time) lv_obj_clear_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.imsak_time) lv_obj_clear_flag(objects.imsak_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.subuh_time) lv_obj_clear_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
-    if (objects.sunrise_time) lv_obj_clear_flag(objects.sunrise_time, LV_OBJ_FLAG_HIDDEN);
+    if (objects.terbit_time) lv_obj_clear_flag(objects.terbit_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.zuhur_time) lv_obj_clear_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.ashar_time) lv_obj_clear_flag(objects.ashar_time, LV_OBJ_FLAG_HIDDEN);
     if (objects.maghrib_time) lv_obj_clear_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
@@ -1934,9 +1934,9 @@ void updateTimeDisplay() {
 void updatePrayerDisplay() {
     if(objects.imsak_time) lv_label_set_text(objects.imsak_time, prayerConfig.imsakTime.c_str());
     if(objects.subuh_time) lv_label_set_text(objects.subuh_time, prayerConfig.subuhTime.c_str());
-    if(objects.sunrise_time) lv_label_set_text(objects.sunrise_time, prayerConfig.sunriseTime.c_str());
+    if(objects.terbit_time) lv_label_set_text(objects.terbit_time, prayerConfig.terbitTime.c_str());
     if(objects.zuhur_time) lv_label_set_text(objects.zuhur_time, prayerConfig.zuhurTime.c_str());
-    if(objects.ashar_time) lv_label_set_text(objects.ashar_time, prayerConfig.asarTime.c_str());
+    if(objects.ashar_time) lv_label_set_text(objects.ashar_time, prayerConfig.asharTime.c_str());
     if(objects.maghrib_time) lv_label_set_text(objects.maghrib_time, prayerConfig.maghribTime.c_str());
     if(objects.isya_time) lv_label_set_text(objects.isya_time, prayerConfig.isyaTime.c_str());
 }
@@ -2185,9 +2185,9 @@ void setupServerRoutes() {
         String json = "{";
         json += "\"imsak\":\"" + prayerConfig.imsakTime + "\",";
         json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
-        json += "\"sunrise\":\"" + prayerConfig.sunriseTime + "\",";
-        json += "\"dzuhur\":\"" + prayerConfig.zuhurTime + "\",";
-        json += "\"ashar\":\"" + prayerConfig.asarTime + "\",";
+        json += "\"terbit\":\"" + prayerConfig.terbitTime + "\",";
+        json += "\"zuhur\":\"" + prayerConfig.zuhurTime + "\",";
+        json += "\"ashar\":\"" + prayerConfig.asharTime + "\",";
         json += "\"maghrib\":\"" + prayerConfig.maghribTime + "\",";
         json += "\"isya\":\"" + prayerConfig.isyaTime + "\"";
         json += "}";
@@ -2865,9 +2865,9 @@ void setupServerRoutes() {
             json += "\"prayerTimes\":{";
             json += "\"imsak\":\"" + prayerConfig.imsakTime + "\",";
             json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
-            json += "\"sunrise\":\"" + prayerConfig.sunriseTime + "\",";
-            json += "\"dzuhur\":\"" + prayerConfig.zuhurTime + "\",";
-            json += "\"ashar\":\"" + prayerConfig.asarTime + "\",";
+            json += "\"terbit\":\"" + prayerConfig.terbitTime + "\",";
+            json += "\"zuhur\":\"" + prayerConfig.zuhurTime + "\",";
+            json += "\"ashar\":\"" + prayerConfig.asharTime + "\",";
             json += "\"maghrib\":\"" + prayerConfig.maghribTime + "\",";
             json += "\"isya\":\"" + prayerConfig.isyaTime + "\"";
             json += "},";
@@ -3011,9 +3011,9 @@ void setupServerRoutes() {
             
             prayerConfig.imsakTime = "";
             prayerConfig.subuhTime = "";
-            prayerConfig.sunriseTime = "";
+            prayerConfig.terbitTime = "";
             prayerConfig.zuhurTime = "";
-            prayerConfig.asarTime = "";
+            prayerConfig.asharTime = "";
             prayerConfig.maghribTime = "";
             prayerConfig.isyaTime = "";
             prayerConfig.selectedCity = "";
@@ -3362,9 +3362,9 @@ void setup() {
         Serial.println("   City: " + prayerConfig.selectedCity);
         Serial.println("   Imsak: " + prayerConfig.imsakTime);
         Serial.println("   Subuh: " + prayerConfig.subuhTime);
-        Serial.println("   Sunrise: " + prayerConfig.sunriseTime);
-        Serial.println("   Dzuhur: " + prayerConfig.zuhurTime);
-        Serial.println("   Ashar: " + prayerConfig.asarTime);
+        Serial.println("   Terbit: " + prayerConfig.terbitTime);
+        Serial.println("   Zuhur: " + prayerConfig.zuhurTime);
+        Serial.println("   Ashar: " + prayerConfig.asharTime);
         Serial.println("   Maghrib: " + prayerConfig.maghribTime);
         Serial.println("   Isya: " + prayerConfig.isyaTime);
 
