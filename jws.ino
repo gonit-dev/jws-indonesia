@@ -28,7 +28,7 @@
 #include "src/images.h"
 #include "src/fonts.h"
 
-#define PRODUCTION_MODE false
+#define PRODUCTION_MODE true
 
 // ================================
 // PIN DEFINITIONS
