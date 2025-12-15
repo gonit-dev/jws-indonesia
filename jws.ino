@@ -273,6 +273,7 @@ void prayerTask(void *parameter);
 void rtcSyncTask(void *parameter);
 void clockTickTask(void *parameter);
 
+// Display Functions
 void updateCityDisplay() {
   if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
     String displayText = "--";
@@ -356,6 +357,7 @@ void showAllUIElements() {
   if (objects.isya_time) lv_obj_clear_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
 }
 
+// Prayer Times Functions
 void getPrayerTimesByCoordinates(String lat, String lon) {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi not connected - keeping existing prayer times");
@@ -560,8 +562,8 @@ void loadPrayerTimes() {
         prayerConfig.isyaTime = file.readStringUntil('\n');
         prayerConfig.isyaTime.trim();
 
-        prayerConfig.imsakTime = file.readStringUntil('\n');  // ← TAMBAH INI
-        prayerConfig.imsakTime.trim();                        // ← TAMBAH INI
+        prayerConfig.imsakTime = file.readStringUntil('\n');
+        prayerConfig.imsakTime.trim();
 
         if (file.available()) {
           prayerConfig.selectedCity = file.readStringUntil('\n');
@@ -581,6 +583,7 @@ void loadPrayerTimes() {
   }
 }
 
+// WiFi Functions
 void saveWiFiCredentials() {
   if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
     fs::File file = LittleFS.open("/wifi_creds.txt", "w");
@@ -736,6 +739,7 @@ void setupWiFiEvents() {
   Serial.println("WiFi Event Handler registered");
 }
 
+// Settings Functions
 void saveTimezoneConfig() {
   if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
     fs::File file = LittleFS.open("/timezone.txt", "w");
@@ -873,6 +877,7 @@ void loadMethodSelection() {
   }
 }
 
+// Time Functions
 void saveTimeToRTC() {
   if (!rtcAvailable) return;
 
@@ -1043,6 +1048,7 @@ bool initRTC() {
   return true;
 }
 
+// Server Functions
 void setupServerRoutes() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse(
@@ -2238,6 +2244,7 @@ void setupServerRoutes() {
   });
 }
 
+// Utility Functions
 void scheduleRestart(int delaySeconds) {
   static int delay = delaySeconds;
   xTaskCreate(
@@ -2280,6 +2287,7 @@ bool init_littlefs() {
   return true;
 }
 
+// LVGL Callbacks
 void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
   if (spiMutex != NULL && xSemaphoreTake(spiMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
     uint32_t w = area->x2 - area->x1 + 1;
@@ -2338,7 +2346,7 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data) {
   touchPressed = false;
 }
 
-
+// RTOS Tasks
 void uiTask(void *parameter) {
   TickType_t xLastWakeTime = xTaskGetTickCount();
   const TickType_t xFrequency = pdMS_TO_TICKS(50);
