@@ -3156,9 +3156,7 @@ void setupServerRoutes() {
         request->send(resp);
     });
 
-    server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (!requireAuth(request)) return;
-        
+    server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {        
         Serial.println("\n========================================");
         Serial.println("FACTORY RESET STARTED");
         Serial.println("========================================");
