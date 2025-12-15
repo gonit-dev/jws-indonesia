@@ -3325,7 +3325,7 @@ void setupServerRoutes() {
         // DISCONNECT WIFI
         // ========================================
         WiFi.disconnect(true);
-        Serial.println("✓ WiFi disconnected");
+        Serial.println("WiFi disconnected");
         
         // ========================================
         // FINAL SUMMARY

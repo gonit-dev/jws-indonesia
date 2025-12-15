@@ -269,9 +269,9 @@
                                             <div class="large-6 medium-6 small-12 cell text-left">
                                                 <p><strong>NTP Status:</strong> <span id="ntpStatus">-</span></p>
                                                 <p><strong>NTP Server:</strong> <span id="ntpServerUsed">-</span></p>
-                                                <p><strong>Current Time:</strong> <span id="currentTime">-</span></p>
-                                                <p><strong>Current Date:</strong> <span id="currentDate">-</span></p>
-                                                <p><strong>Uptime:</strong> <span id="uptime">--:--:--</span></p>
+                                                <p><strong>Current Time:</strong> <span id="currentTime">00:00:00</span></p>
+                                                <p><strong>Current Date:</strong> <span id="currentDate">01/01/2000</span></p>
+                                                <p><strong>Uptime:</strong> <span id="uptime">00:00:00</span></p>
                                             </div>
                                         </div>
                                     </div>
@@ -556,31 +556,31 @@
                                     <tbody>
                                         <tr>
                                             <td class="text-left"><strong>🌙 Imsak</strong></td>
-                                            <td class="text-right"><h5 id="imsakTime">--:--</h5></td>
+                                            <td class="text-right"><h5 id="imsakTime">00:00</h5></td>
                                         </tr>
                                         <tr>
                                             <td class="text-left"><strong>🌅 Subuh</strong></td>
-                                            <td class="text-right"><h5 id="subuhTime">--:--</h5></td>
+                                            <td class="text-right"><h5 id="subuhTime">00:00</h5></td>
                                         </tr>
                                         <tr>
                                             <td class="text-left"><strong>🌄 Terbit</strong></td>
-                                            <td class="text-right"><h5 id="terbitTime">--:--</h5></td>
+                                            <td class="text-right"><h5 id="terbitTime">00:00</h5></td>
                                         </tr>
                                         <tr>
                                             <td class="text-left"><strong>☀️ Zuhur</strong></td>
-                                            <td class="text-right"><h5 id="zuhurTime">--:--</h5></td>
+                                            <td class="text-right"><h5 id="zuhurTime">00:00</h5></td>
                                         </tr>
                                         <tr>
                                             <td class="text-left"><strong>🌤️ Ashar</strong></td>
-                                            <td class="text-right"><h5 id="asharTime">--:--</h5></td>
+                                            <td class="text-right"><h5 id="asharTime">00:00</h5></td>
                                         </tr>
                                         <tr>
                                             <td class="text-left"><strong>🌆 Maghrib</strong></td>
-                                            <td class="text-right"><h5 id="maghribTime">--:--</h5></td>
+                                            <td class="text-right"><h5 id="maghribTime">00:00</h5></td>
                                         </tr>
                                         <tr>
                                             <td class="text-left"><strong>🌙 Isya</strong></td>
-                                            <td class="text-right"><h5 id="isyaTime">--:--</h5></td>
+                                            <td class="text-right"><h5 id="isyaTime">00:00</h5></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -721,13 +721,13 @@
         let lastSyncTime = 0;
 
         let prayerConfig = {
-            imsakTime: '--:--',
-            subuhTime: '--:--',
-            terbitTime: '--:--',
-            zuhurTime: '--:--',
-            asharTime: '--:--',
-            maghribTime: '--:--',
-            isyaTime: '--:--'
+            imsakTime: '00:00',
+            subuhTime: '00:00',
+            terbitTime: '00:00',
+            zuhurTime: '00:00',
+            asharTime: '00:00',
+            maghribTime: '00:00',
+            isyaTime: '00:00'
         };
 
         let methodConfig = {
@@ -791,8 +791,8 @@
             return serverUptimeStart + Math.floor(elapsedMs / 1000);
         }
 
-        function formatTime(date) {
-            if (!date) return '--:--:--';
+00:00:00       function formatTime(date) {
+01/01/2000         if (!date) return '00:00:00';
             
             const hours = String(date.getHours()).padStart(2, '0');
             const minutes = String(date.getMinutes()).padStart(2, '0');
@@ -801,8 +801,8 @@
             return `${hours}:${minutes}:${seconds}`;
         }
 
-        function formatUptime(seconds) {
-            if (seconds === 0) return '--:--:--';
+00:00:00       function formatUptime(seconds) {
+01/01/2000         if (seconds === 0) return '00:00:00';
             
             const days = Math.floor(seconds / 86400);
             const hours = Math.floor((seconds % 86400) / 3600);
@@ -1358,13 +1358,13 @@
                 const response = await fetch('/getprayertimes');
                 const data = await response.json();
                 
-                prayerConfig.imsakTime = data.imsak || '--:--';    
-                prayerConfig.subuhTime = data.subuh || '--:--';
-                prayerConfig.terbitTime = data.terbit || '--:--';
-                prayerConfig.zuhurTime = data.zuhur || '--:--';
-                prayerConfig.asharTime = data.ashar || '--:--';
-                prayerConfig.maghribTime = data.maghrib || '--:--';
-                prayerConfig.isyaTime = data.isya || '--:--';
+                prayerConfig.imsakTime = data.imsak || '00:00';    
+                prayerConfig.subuhTime = data.subuh || '00:00';
+                prayerConfig.terbitTime = data.terbit || '00:00';
+                prayerConfig.zuhurTime = data.zuhur || '00:00';
+                prayerConfig.asharTime = data.ashar || '00:00';
+                prayerConfig.maghribTime = data.maghrib || '00:00';
+                prayerConfig.isyaTime = data.isya || '00:00';
                 
                 document.getElementById('imsakTime').textContent = prayerConfig.imsakTime;  
                 document.getElementById('subuhTime').textContent = prayerConfig.subuhTime;
@@ -2430,7 +2430,7 @@
                 try {
                     const prayerSuccess = await loadSavedPrayerTimes();
                     
-                    if (prayerSuccess && prayerConfig.subuhTime && prayerConfig.subuhTime !== '--:--') {
+                    if (prayerSuccess && prayerConfig.subuhTime && prayerConfig.subuhTime !== '00:00') {
                         await updateProgress(80, 'Jadwal shalat dimuat');
                     } else {
                         await updateProgress(80, 'Jadwal belum diatur');
