@@ -3157,80 +3157,136 @@ void setupServerRoutes() {
     });
 
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
+        if (!requireAuth(request)) return;
+        
         Serial.println("\n========================================");
         Serial.println("FACTORY RESET STARTED");
         Serial.println("========================================");
         
-        // DELETE ALL FILES
+        // ========================================
+        // RESET TIMEZONE
+        // ========================================
+        Serial.println("\nResetting timezone to default...");
+        
+        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+            timezoneOffset = 7;  // ← Set ke default +7
+            Serial.println("Timezone reset to: UTC+7");
+            xSemaphoreGive(settingsMutex);
+        }
+        
+        if (LittleFS.exists("/timezone.txt")) {
+            LittleFS.remove("/timezone.txt");
+            Serial.println("✓ Old timezone config deleted");
+        }
+        
+        saveTimezoneConfig();
+        Serial.println("Default timezone saved to file");
+        
+        // ========================================
+        // RESET WAKTU KE 00:00:00 01/01/2000
+        // ========================================
+        Serial.println("\nResetting time to default...");
+        
+        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+            // Reset system time
+            setTime(0, 0, 0, 1, 1, 2000);
+            timeConfig.currentTime = now();
+            
+            // Validasi timestamp
+            if (timeConfig.currentTime < 946684800) {
+                timeConfig.currentTime = 946684800;  // Force ke 01/01/2000 00:00:00
+            }
+            
+            timeConfig.ntpSynced = false;
+            timeConfig.ntpServer = "";
+            
+            Serial.println("System time reset to: 00:00:00 01/01/2000");
+            Serial.printf("Timestamp: %ld\n", timeConfig.currentTime);
+            
+            xSemaphoreGive(timeMutex);
+        }
+        
+        // ========================================
+        // RESET RTC
+        // ========================================
+        if (rtcAvailable) {
+            Serial.println("\nResetting RTC module...");
+            
+            // Buat objek DateTime dengan waktu default
+            DateTime resetTime(2000, 1, 1, 0, 0, 0);
+            
+            // Paksa tulis ke RTC
+            rtc.adjust(resetTime);
+            delay(100);
+            
+            // Verifikasi RTC sudah ter-reset
+            DateTime verifyTime = rtc.now();
+            Serial.printf("RTC verification: %02d:%02d:%02d %02d/%02d/%04d\n",
+                        verifyTime.hour(), verifyTime.minute(), verifyTime.second(),
+                        verifyTime.day(), verifyTime.month(), verifyTime.year());
+            
+            if (verifyTime.year() == 2000 && verifyTime.month() == 1 && verifyTime.day() == 1) {
+                Serial.println("RTC successfully reset");
+            } else {
+                Serial.println("RTC reset failed - trying again...");
+                
+                // Coba reset sekali lagi
+                rtc.adjust(resetTime);
+                delay(100);
+                
+                DateTime verify2 = rtc.now();
+                Serial.printf("  2nd attempt: %02d:%02d:%02d %02d/%02d/%04d\n",
+                            verify2.hour(), verify2.minute(), verify2.second(),
+                            verify2.day(), verify2.month(), verify2.year());
+            }
+            
+            Serial.println("  RTC will maintain this time until NTP sync");
+        } else {
+            Serial.println("⚠️ No RTC detected - time will reset on power loss");
+        }
+        
+        // ========================================
+        // UPDATE DISPLAY
+        // ========================================
+        DisplayUpdate update;
+        update.type = DisplayUpdate::TIME_UPDATE;
+        xQueueSend(displayQueue, &update, 0);
+        
+        // ========================================
+        // HAPUS FILE KONFIGURASI
+        // ========================================
+        Serial.println("\nDeleting configuration files...");
+        
         if (LittleFS.exists("/wifi_creds.txt")) {
             LittleFS.remove("/wifi_creds.txt");
-            Serial.println("WiFi creds deleted");
+            Serial.println("WiFi credentials deleted");
         }
+        
         if (LittleFS.exists("/prayer_times.txt")) {
             LittleFS.remove("/prayer_times.txt");
             Serial.println("Prayer times deleted");
         }
-    
+        
         if (LittleFS.exists("/ap_creds.txt")) {
             LittleFS.remove("/ap_creds.txt");
-            Serial.println("AP creds deleted");
+            Serial.println("AP credentials deleted");
         }
         
         if (LittleFS.exists("/city_selection.txt")) {
             LittleFS.remove("/city_selection.txt");
             Serial.println("City selection deleted");
         }
-
+        
         if (LittleFS.exists("/method_selection.txt")) {
             LittleFS.remove("/method_selection.txt");
             Serial.println("Method selection deleted");
         }
-
-        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
-            methodConfig.methodId = 5;
-            methodConfig.methodName = "Egyptian General Authority of Survey";
-            Serial.println("Method reset to default (Egyptian)");
-            xSemaphoreGive(settingsMutex);
-        }
-
-        if (LittleFS.exists("/timezone.txt")) {
-            LittleFS.remove("/timezone.txt");
-            Serial.println("Timezone config deleted");
-        }
-
-        timezoneOffset = 7;
-        Serial.println("Timezone reset to default (+7)");
-    
-        // RESET TIME TO 00:00:00 01/01/2000
-        Serial.println("\nResetting time to default...");
         
-        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            setTime(0, 0, 0, 1, 1, 2000);
-            timeConfig.currentTime = now();
-            timeConfig.ntpSynced = false;
-            timeConfig.ntpServer = "";
-            Serial.println("System time reset to: 00:00:00 01/01/2000");
-                    
-            // SAVE TO RTC IF AVAILABLE
-            if (rtcAvailable) {
-                DateTime resetTime(2000, 1, 1, 0, 0, 0);
-                rtc.adjust(resetTime);
-                
-                Serial.println("RTC time reset to: 00:00:00 01/01/2000");
-                Serial.println("(RTC will keep this time until NTP sync)");
-            } else {
-                Serial.println("System time reset (no RTC detected)");
-                Serial.println("(Time will be lost on power cycle)");
-            }
-            
-            DisplayUpdate update;
-            update.type = DisplayUpdate::TIME_UPDATE;
-            xQueueSend(displayQueue, &update, 0);
-            
-            xSemaphoreGive(timeMutex);
-        }
-    
-        // CLEAR MEMORY SETTINGS
+        // ========================================
+        // RESET MEMORY SETTINGS
+        // ========================================
+        Serial.println("\nResetting memory settings...");
+        
         if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
             wifiConfig.routerSSID = "";
             wifiConfig.routerPassword = "";
@@ -3248,31 +3304,57 @@ void setupServerRoutes() {
             prayerConfig.latitude = "";
             prayerConfig.longitude = "";
             
+            // Reset AP credentials
             strcpy(wifiConfig.apSSID, "JWS Indonesia");
             strcpy(wifiConfig.apPassword, "12345678");
+            
+            // Reset method config
+            methodConfig.methodId = 5;
+            methodConfig.methodName = "Egyptian General Authority of Survey";
             
             Serial.println("Memory settings cleared");
             
             xSemaphoreGive(settingsMutex);
         }
         
-        // UPDATE DISPLAY
+        // ========================================
+        // UPDATE DISPLAY UI
+        // ========================================
         updateCityDisplay();
+        updatePrayerDisplay();
         
+        // ========================================
         // DISCONNECT WIFI
+        // ========================================
         WiFi.disconnect(true);
-        Serial.println("WiFi disconnected");
+        Serial.println("✓ WiFi disconnected");
         
+        // ========================================
+        // FINAL SUMMARY
+        // ========================================
         Serial.println("\n========================================");
         Serial.println("FACTORY RESET COMPLETE");
-        Serial.println("System time reset to: 00:00:00 01/01/2000");
+        Serial.println("========================================");
+        Serial.println("System time: 00:00:00 01/01/2000");
+        Serial.println("Timezone: UTC+7 (default)");
+        
         if (rtcAvailable) {
+            Serial.println("RTC module: Reset to 00:00:00 01/01/2000");
             Serial.println("RTC will maintain this time until NTP sync");
+        } else {
+            Serial.println("No RTC - time will reset on power loss");
         }
+        
+        Serial.println("WiFi: Disconnected");
+        Serial.println("Prayer times: Cleared");
+        Serial.println("Location: Not selected");
+        Serial.println("Method: Egyptian (default)");
+        Serial.println("========================================");
         Serial.println("Device will restart in 5 seconds...");
         Serial.println("========================================\n");
         
         AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
+        resp->addHeader("Connection", "close");
         request->send(resp);
         
         scheduleRestart(5);
