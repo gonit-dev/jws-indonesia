@@ -1,6 +1,6 @@
 # 🕌 ESP32 Islamic Prayer Clock
 
-> Jam Waktu Sholat Digital dengan Touchscreen, Auto-Update, dan Web Interface
+> Jam Waktu Sholat Digital dengan Touchscreen, Auto-Update, dan Web Interface</br>
 > Supaya webnya normal gunakan smartphone
 
 ![Version](https://img.shields.io/badge/version-2.1-blue)
