@@ -1123,9 +1123,7 @@
             
             latInput.value = defaultCoordinates.lat;
             lonInput.value = defaultCoordinates.lon;
-            
-            showToast('✅ Koordinat direset ke bawaan', 'success');
-            
+                        
             console.log('🔄 Koordinat direset ke bawaan:');
             console.log('   Lat:', defaultCoordinates.lat);
             console.log('   Lon:', defaultCoordinates.lon);
@@ -1150,7 +1148,6 @@
                 defaultCoordsSpan.textContent = '-';
                 if (cityTypeLabel) cityTypeLabel.textContent = '';
                 
-                showToast('❌ Perubahan dibatalkan', 'warning');
                 return;
             }
             
@@ -1177,9 +1174,6 @@
                     console.log('✅ Koordinat dikembalikan ke data disimpan:');
                     console.log('   Saved Lat:', data.latitude);
                     console.log('   Saved Lon:', data.longitude);
-                    
-                    showToast('🔄 Koordinat dikembalikan ke data disimpan', 'success');
-                    
                 } else {
                     if (defaultLat && defaultLon) {
                         latInput.value = defaultLat;
@@ -1188,8 +1182,6 @@
                         console.log('✅ Koordinat dikembalikan ke bawaan JSON:');
                         console.log('   Default Lat:', defaultLat);
                         console.log('   Default Lon:', defaultLon);
-                        
-                        showToast('🔄 Koordinat dikembalikan ke bawaan', 'success');
                     } else {
                         showToast('⚠️ Tidak ada koordinat bawaan tersedia', 'warning');
                     }
@@ -1201,7 +1193,6 @@
                 if (defaultLat && defaultLon) {
                     latInput.value = defaultLat;
                     lonInput.value = defaultLon;
-                    showToast('🔄 Koordinat dikembalikan ke bawaan', 'success');
                 } else {
                     showToast('⚠️ Tidak ada koordinat bawaan tersedia', 'warning');
                 }
@@ -1554,12 +1545,6 @@
             if (wifiPasswordInput) {
                 wifiPasswordInput.value = '';
             }
-            
-            if (savedWiFiConfig.routerSSID) {
-                showToast('🔄 Form WiFi dikembalikan ke data tersimpan', 'warning');
-            } else {
-                showToast('🔄 Form WiFi dikosongkan (belum ada data tersimpan)', 'warning');
-            }
         }
 
         function setAP() {
@@ -1638,12 +1623,6 @@
             }
             if (apPasswordInput) {
                 apPasswordInput.value = '';
-            }
-            
-            if (savedWiFiConfig.apSSID) {
-                showToast('🔄 Form AP dikembalikan ke data tersimpan', 'warning');
-            } else {
-                showToast('🔄 Form AP dikosongkan (belum ada data tersimpan)', 'warning');
             }
         }
         // ================================
@@ -2266,8 +2245,6 @@
             isEditingTimezone = false;
             
             input.value = timezoneConfig.offset >= 0 ? '+' + timezoneConfig.offset : timezoneConfig.offset;
-            
-            showToast('❌ Edit timezone dibatalkan', 'warning');
         }
         
         async function loadTimezoneConfig() {
