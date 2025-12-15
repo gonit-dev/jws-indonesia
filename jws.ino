@@ -2769,7 +2769,7 @@ void setupServerRoutes() {
             String newPassword = request->getParam("password", true)->value();
             
             Serial.println("\n========================================");
-            Serial.println("POST /setwifi - NO RESTART MODE");
+            Serial.println("POST /setwifi");
             Serial.println("========================================");
             Serial.println("New SSID: " + newSSID);
             
@@ -2821,6 +2821,36 @@ void setupServerRoutes() {
         }
     });
 
+    server.on("/getwificonfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String json = "{";
+        
+        if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            json += "\"routerSSID\":\"" + wifiConfig.routerSSID + "\",";
+            
+            xSemaphoreGive(wifiMutex);
+        } else {
+            json += "\"routerSSID\":\"\",";
+        }
+        
+        String currentAPSSID = WiFi.softAPSSID();
+        if (currentAPSSID.length() == 0 || currentAPSSID == "null") {
+            currentAPSSID = String(wifiConfig.apSSID);
+        }
+        
+        if (currentAPSSID.length() == 0) {
+            currentAPSSID = "JWS Indonesia";
+        }
+        
+        json += "\"apSSID\":\"" + currentAPSSID + "\"";
+        json += "}";
+        
+        Serial.println("GET /getwificonfig: " + json);
+        
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        resp->addHeader("Cache-Control", "no-cache");
+        request->send(resp);
+    });
+
     server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
             String ssid = request->getParam("ssid", true)->value();
@@ -2832,7 +2862,7 @@ void setupServerRoutes() {
             }
             
             Serial.println("\n========================================");
-            Serial.println("POST /setap - NO RESTART MODE");
+            Serial.println("POST /setap");
             Serial.println("========================================");
             Serial.println("New AP SSID: " + ssid);
             
