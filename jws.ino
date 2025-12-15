@@ -1620,9 +1620,6 @@ void ntpTask(void *parameter) {
           vTaskDelay(pdMS_TO_TICKS(100));
         }
 
-        // ================================
-        // BAGIAN INI YANG DIGANTI!
-        // ================================
         if (updateResult) {
           time_t ntpTime = timeClient.getEpochTime();
 
@@ -3269,31 +3266,32 @@ void setupServerRoutes() {
         timezoneOffset = 7;
         Serial.println("Timezone reset to default (+7)");
     
-        Serial.println("\nResetting time to default...");
+        Serial.println("\nResetting time to 00:00:00 01/01/2000...");
         
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
             setTime(0, 0, 0, 1, 1, 2000);
-            timeConfig.currentTime = now();
+            timeConfig.currentTime = makeTime({0, 0, 0, 0, 1, 1, 2000 - 1970});
             timeConfig.ntpSynced = false;
+            timeConfig.lastNTPUpdate = 0;
             timeConfig.ntpServer = "";
-            Serial.println("System time reset to: 00:00:00 01/01/2000");
-                    
-            if (rtcAvailable) {
-                DateTime resetTime(2000, 1, 1, 0, 0, 0);
-                rtc.adjust(resetTime);
-                
-                Serial.println("RTC time reset to: 00:00:00 01/01/2000");
-                Serial.println("  (RTC will keep this time until NTP sync)");
-            } else {
-                Serial.println("System time reset (no RTC detected)");
-                Serial.println("  (Time will be lost on power cycle)");
-            }
             
-            DisplayUpdate update;
-            update.type = DisplayUpdate::TIME_UPDATE;
-            xQueueSend(displayQueue, &update, 0);
+            Serial.println("System time reset: 00:00:00 01/01/2000");
             
             xSemaphoreGive(timeMutex);
+        }
+        
+        if (rtcAvailable) {
+            Serial.println("\nResetting RTC...");
+            
+            DateTime resetTime(2000, 1, 1, 0, 0, 0);
+            rtc.adjust(resetTime);
+            
+            Serial.println("RTC reset: 00:00:00 01/01/2000");
+            Serial.println("RTC now stores valid time");
+            Serial.println("Will auto-update when NTP sync occurs");
+        } else {
+            Serial.println("\nNo RTC detected - skipping RTC reset");
+            Serial.println("System time will reset on power loss");
         }
     
         // CLEAR MEMORY SETTINGS
@@ -3324,6 +3322,10 @@ void setupServerRoutes() {
         
         // UPDATE DISPLAY
         updateCityDisplay();
+        
+        DisplayUpdate update;
+        update.type = DisplayUpdate::TIME_UPDATE;
+        xQueueSend(displayQueue, &update, 0);
         
         // DISCONNECT WIFI
         WiFi.disconnect(true);
