@@ -2100,124 +2100,135 @@ void setupServerRoutes() {
     });
 
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
-      Serial.println("\n========================================");
-      Serial.println("FACTORY RESET STARTED");
-      Serial.println("========================================");
-      
-      // DELETE ALL FILES
-      if (LittleFS.exists("/wifi_creds.txt")) {
-          LittleFS.remove("/wifi_creds.txt");
-          Serial.println("WiFi creds deleted");
-      }
-      if (LittleFS.exists("/prayer_times.txt")) {
-          LittleFS.remove("/prayer_times.txt");
-          Serial.println("Prayer times deleted");
-      }
-  
-      if (LittleFS.exists("/ap_creds.txt")) {
-          LittleFS.remove("/ap_creds.txt");
-          Serial.println("AP creds deleted");
-      }
-      
-      if (LittleFS.exists("/city_selection.txt")) {
-          LittleFS.remove("/city_selection.txt");
-          Serial.println("City selection deleted");
-      }
+        Serial.println("\n========================================");
+        Serial.println("FACTORY RESET STARTED");
+        Serial.println("========================================");
+        
+        // DELETE ALL FILES
+        if (LittleFS.exists("/wifi_creds.txt")) {
+            LittleFS.remove("/wifi_creds.txt");
+            Serial.println("WiFi creds deleted");
+        }
+        if (LittleFS.exists("/prayer_times.txt")) {
+            LittleFS.remove("/prayer_times.txt");
+            Serial.println("Prayer times deleted");
+        }
+    
+        if (LittleFS.exists("/ap_creds.txt")) {
+            LittleFS.remove("/ap_creds.txt");
+            Serial.println("AP creds deleted");
+        }
+        
+        if (LittleFS.exists("/city_selection.txt")) {
+            LittleFS.remove("/city_selection.txt");
+            Serial.println("City selection deleted");
+        }
 
-      if (LittleFS.exists("/method_selection.txt")) {
-          LittleFS.remove("/method_selection.txt");
-          Serial.println("Method selection deleted");
-      }
+        if (LittleFS.exists("/method_selection.txt")) {
+            LittleFS.remove("/method_selection.txt");
+            Serial.println("✓ Method selection deleted");
+        }
 
-      if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
-          methodConfig.methodId = 5;
-          methodConfig.methodName = "Egyptian General Authority of Survey";
-          Serial.println("Method reset to default (Egyptian)");
-          xSemaphoreGive(settingsMutex);
-      }
+        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+            methodConfig.methodId = 5;
+            methodConfig.methodName = "Egyptian General Authority of Survey";
+            Serial.println("✓ Method reset to default (Egyptian)");
+            xSemaphoreGive(settingsMutex);
+        }
 
-      if (LittleFS.exists("/timezone.txt")) {
-          LittleFS.remove("/timezone.txt");
-          Serial.println("Timezone config deleted");
-      }
+        if (LittleFS.exists("/timezone.txt")) {
+            LittleFS.remove("/timezone.txt");
+            Serial.println("✓ Timezone config deleted");
+        }
 
-      timezoneOffset = 7;
-      Serial.println("Timezone reset to default (+7)");
-  
-      Serial.println("\nResetting time to default...");
-      
-      if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-          setTime(0, 0, 0, 1, 1, 2000);
-          timeConfig.currentTime = now();
-          timeConfig.ntpSynced = false;
-          timeConfig.ntpServer = "";
-          Serial.println("System time reset to: 00:00:00 01/01/2000");
-                  
-          if (rtcAvailable) {
-              DateTime resetTime(0, 1, 1, 0, 0, 0);
-              rtc.adjust(resetTime);
-              
-              Serial.println("RTC time reset to: 00:00:00 01/01/2000");
-              Serial.println("  (RTC will keep this time until NTP sync)");
-          } else {
-              Serial.println("System time reset (no RTC detected)");
-              Serial.println("  (Time will be lost on power cycle)");
-          }
-          
-          DisplayUpdate update;
-          update.type = DisplayUpdate::TIME_UPDATE;
-          xQueueSend(displayQueue, &update, 0);
-          
-          xSemaphoreGive(timeMutex);
-      }
-  
-      // CLEAR MEMORY SETTINGS
-      if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
-          wifiConfig.routerSSID = "";
-          wifiConfig.routerPassword = "";
-          wifiConfig.isConnected = false;
-          
-          prayerConfig.imsakTime = "";
-          prayerConfig.subuhTime = "";
-          prayerConfig.terbitTime = "";
-          prayerConfig.zuhurTime = "";
-          prayerConfig.asharTime = "";
-          prayerConfig.maghribTime = "";
-          prayerConfig.isyaTime = "";
-          prayerConfig.selectedCity = "";
-          prayerConfig.selectedCityName = "";
-          prayerConfig.latitude = "";
-          prayerConfig.longitude = "";
-          
-          strcpy(wifiConfig.apSSID, "JWS Indonesia");
-          strcpy(wifiConfig.apPassword, "12345678");
-          
-          Serial.println("Memory settings cleared");
-          
-          xSemaphoreGive(settingsMutex);
-      }
-      
-      // UPDATE DISPLAY
-      updateCityDisplay();
-      
-      // DISCONNECT WIFI
-      WiFi.disconnect(true);
-      Serial.println("WiFi disconnected");
-      
-      Serial.println("\n========================================");
-      Serial.println("FACTORY RESET COMPLETE");
-      Serial.println("System time reset to: 00:00:00 01/01/2000");
-      if (rtcAvailable) {
-          Serial.println("RTC will maintain this time until NTP sync");
-      }
-      Serial.println("Device will restart in 5 seconds...");
-      Serial.println("========================================\n");
-      
-      AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
-      request->send(resp);
-      
-      scheduleRestart(5);
-  });
+        timezoneOffset = 7;
+        Serial.println("✓ Timezone reset to default (+7)");
+    
+        // RESET TIME TO 00:00:00 01/01/2000
+        Serial.println("\nResetting time to default...");
+        
+        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+            setTime(0, 0, 0, 1, 1, 2000);
+            timeConfig.currentTime = now();
+            timeConfig.ntpSynced = false;
+            timeConfig.ntpServer = "";
+            Serial.println("System time reset to: 00:00:00 01/01/2000");
+                    
+            // SAVE TO RTC IF AVAILABLE
+            if (rtcAvailable) {
+                DateTime resetTime(2000, 1, 1, 0, 0, 0);
+                rtc.adjust(resetTime);
+                
+                Serial.println("RTC time reset to: 00:00:00 01/01/2000");
+                Serial.println("  (RTC will keep this time until NTP sync)");
+            } else {
+                Serial.println("System time reset (no RTC detected)");
+                Serial.println("  (Time will be lost on power cycle)");
+            }
+            
+            DisplayUpdate update;
+            update.type = DisplayUpdate::TIME_UPDATE;
+            xQueueSend(displayQueue, &update, 0);
+            
+            xSemaphoreGive(timeMutex);
+        }
+    
+        // CLEAR MEMORY SETTINGS
+        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+            wifiConfig.routerSSID = "";
+            wifiConfig.routerPassword = "";
+            wifiConfig.isConnected = false;
+            
+            prayerConfig.imsakTime = "";
+            prayerConfig.subuhTime = "";
+            prayerConfig.terbitTime = "";
+            prayerConfig.zuhurTime = "";
+            prayerConfig.asharTime = "";
+            prayerConfig.maghribTime = "";
+            prayerConfig.isyaTime = "";
+            prayerConfig.selectedCity = "";
+            prayerConfig.selectedCityName = "";
+            prayerConfig.latitude = "";
+            prayerConfig.longitude = "";
+            
+            strcpy(wifiConfig.apSSID, "JWS Indonesia");
+            strcpy(wifiConfig.apPassword, "12345678");
+            
+            Serial.println("Memory settings cleared");
+            
+            xSemaphoreGive(settingsMutex);
+        }
+        
+        // UPDATE DISPLAY
+        updateCityDisplay();
+        
+        // DISCONNECT WIFI
+        WiFi.disconnect(true);
+        Serial.println("WiFi disconnected");
+        
+        Serial.println("\n========================================");
+        Serial.println("FACTORY RESET COMPLETE");
+        Serial.println("Device will restart in 5 seconds...");
+        Serial.println("========================================\n");
+        
+        AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
+        request->send(resp);
+        
+        scheduleRestart(5);
+    });
+
+    server.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
+        Serial.println("\n========================================");
+        Serial.println("MANUAL RESTART REQUESTED");
+        Serial.println("========================================");
+        Serial.println("Device will restart in 5 seconds...");
+        Serial.println("========================================\n");
+        
+        AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
+        request->send(resp);
+        
+        scheduleRestart(5);
+    });
 
   server.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
     Serial.println("\n========================================");
