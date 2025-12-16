@@ -877,9 +877,112 @@ void loadMethodSelection() {
   }
 }
 
-// Time Functions
+bool initRTC() {
+    Serial.println("\n========================================");
+    Serial.println("INITIALIZING DS3231 RTC");
+    Serial.println("========================================");
+    
+    if (!rtc.begin()) {
+        Serial.println("DS3231 not found!");
+        Serial.println("Wiring:");
+        Serial.println("  SDA -> GPIO21");
+        Serial.println("  SCL -> GPIO22");
+        Serial.println("  VCC -> 3.3V");
+        Serial.println("  GND -> GND");
+        Serial.println("\nRunning without RTC");
+        Serial.println("========================================\n");
+        
+        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+            setTime(0, 0, 0, 1, 1, 2000);
+            timeConfig.currentTime = now();
+            xSemaphoreGive(timeMutex);
+        }
+        return false;
+    }
+    
+    Serial.println("DS3231 detected on I2C");
+    
+    // Test apakah RTC bisa menyimpan waktu
+    Serial.println("Testing RTC functionality...");
+    rtc.adjust(DateTime(2024, 12, 16, 10, 30, 0));
+    delay(2000); // Tunggu 2 detik
+    
+    DateTime test = rtc.now();
+    Serial.printf("Test result: %02d:%02d:%02d %02d/%02d/%04d\n",
+                 test.hour(), test.minute(), test.second(),
+                 test.day(), test.month(), test.year());
+    
+    // Validasi hasil
+    bool isValid = (
+        test.year() >= 2024 && test.year() <= 2025 &&
+        test.month() >= 1 && test.month() <= 12 &&
+        test.day() >= 1 && test.day() <= 31 &&
+        test.hour() >= 0 && test.hour() <= 23 &&
+        test.minute() >= 0 && test.minute() <= 59 &&
+        test.second() >= 0 && test.second() <= 59
+    );
+    
+    if (!isValid) {
+        Serial.println("\n*** RTC HARDWARE FAILURE ***");
+        Serial.println("DS3231 chip is defective!");
+        Serial.println("Time registers return garbage data");
+        Serial.println("Temperature sensor works: " + String(rtc.getTemperature()) + "°C");
+        Serial.println("\nPossible causes:");
+        Serial.println("  1. Counterfeit/clone DS3231 chip");
+        Serial.println("  2. Crystal oscillator failure");
+        Serial.println("  3. Internal SRAM corruption");
+        Serial.println("\n>>> SOLUTION: BUY NEW DS3231 MODULE <<<");
+        Serial.println("\nSystem will run without RTC");
+        Serial.println("Time will reset to 01/01/2000 on every restart");
+        Serial.println("NTP sync will fix time when WiFi connects");
+        Serial.println("========================================\n");
+        
+        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+            setTime(0, 0, 0, 1, 1, 2000);
+            timeConfig.currentTime = now();
+            xSemaphoreGive(timeMutex);
+        }
+        
+        return false;
+    }
+    
+    Serial.println("RTC hardware test PASSED");
+    Serial.println("RTC is working correctly");
+    
+    // ========================================
+    // CHECK BATTERY STATUS
+    // ========================================
+    if (rtc.lostPower()) {
+        Serial.println("\nWARNING: RTC lost power!");
+        Serial.println("Battery may be dead or disconnected");
+        Serial.println("Time will be set from NTP sync");
+        
+        rtc.adjust(DateTime(2000, 1, 1, 0, 0, 0));
+    } else {
+        Serial.println("\nRTC battery backup is good");
+    }
+    
+    if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+        setTime(test.hour(), test.minute(), test.second(),
+               test.day(), test.month(), test.year());
+        timeConfig.currentTime = now();
+        xSemaphoreGive(timeMutex);
+        
+        if (displayQueue != NULL) {
+            DisplayUpdate update;
+            update.type = DisplayUpdate::TIME_UPDATE;
+            xQueueSend(displayQueue, &update, 0);
+        }
+    }
+    
+    Serial.println("========================================\n");
+    return true;
+}
+
 void saveTimeToRTC() {
-    if (!rtcAvailable) return;
+    if (!rtcAvailable) {
+        return;
+    }
     
     if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         DateTime dt(year(timeConfig.currentTime),
@@ -891,121 +994,30 @@ void saveTimeToRTC() {
         
         rtc.adjust(dt);
         
-        Serial.println("Time saved to RTC:");
-        Serial.printf("   %02d:%02d:%02d %02d/%02d/%04d\n",
-                     dt.hour(), dt.minute(), dt.second(),
-                     dt.day(), dt.month(), dt.year());
-        
         xSemaphoreGive(timeMutex);
-    }
-}
-
-bool initRTC() {
-    Serial.println("\n========================================");
-    Serial.println("INITIALIZING DS3231 RTC");
-    Serial.println("========================================");
-    
-    Wire.begin(/*RTC_SDA, RTC_SCL*/);
-    delay(500);
-
-    Wire.beginTransmission(0x68);
-    Wire.endTransmission();
-    
-    if (!rtc.begin(&Wire)) {
-        Serial.println("DS3231 not found!");
-        Serial.println("   - SDA -> GPIO21");
-        Serial.println("   - SCL -> GPIO22");
-        Serial.println("   - VCC -> 3.3V");
-        Serial.println("   - GND -> GND");
-        Serial.println("   - BATTERY -> CR2032 (optional)");
-        Serial.println("\nRunning without RTC");
-        Serial.println("   Time will reset to 00:00:00 01/01/2000 on power loss");
-        Serial.println("========================================\n");
         
-        // SET DEFAULT TIME: 00:00:00 01/01/2000
-        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            setTime(0, 0, 0, 1, 1, 2000);
-            timeConfig.currentTime = now();
-            
-            Serial.println("System time initialized:");
-            Serial.println("   00:00:00 01/01/2000");
-            Serial.printf("   Timestamp: %ld\n", timeConfig.currentTime);
-            
-            xSemaphoreGive(timeMutex);
-        }
+        delay(500);
+        DateTime verify = rtc.now();
         
-        return false;
-    }
-    
-    Serial.println("DS3231 detected!");
-    
-    if (rtc.lostPower()) {
-        Serial.println("RTC lost power - battery may be dead or missing");
-        Serial.println("   Install CR2032 battery for time persistence");
-    } else {
-        Serial.println("RTC has battery backup - time will persist");
-    }
-    
-    DateTime rtcNow = rtc.now();
-    
-    Serial.printf("\nRTC Current Time: %02d:%02d:%02d %02d/%02d/%04d\n",
-                 rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
-                 rtcNow.day(), rtcNow.month(), rtcNow.year());
-    
-    // ================================
-    // CHECK IF RTC TIME IS VALID
-    // ================================
-    if (rtcNow.year() >= 2000 && rtcNow.year() <= 2100) {
-        Serial.println("\nRTC time is valid - using RTC time");
+        bool saved = (
+            verify.year() >= 2000 && verify.year() <= 2100 &&
+            verify.month() >= 1 && verify.month() <= 12 &&
+            verify.day() >= 1 && verify.day() <= 31 &&
+            verify.hour() >= 0 && verify.hour() <= 23
+        );
         
-        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            time_t rtcUnix = rtcNow.unixtime();
+        if (saved) {
+            Serial.println("Time saved to RTC successfully");
+        } else {
+            Serial.println("WARNING: RTC save failed (hardware issue)");
+            Serial.println("RTC returned: " + String(verify.hour()) + ":" + 
+                          String(verify.minute()) + " " + 
+                          String(verify.day()) + "/" + String(verify.month()));
             
-            setTime(rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
-                   rtcNow.day(), rtcNow.month(), rtcNow.year());
-            
-            timeConfig.currentTime = rtcUnix;
-            
-            Serial.printf("System time set from RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
-                         rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
-                         rtcNow.day(), rtcNow.month(), rtcNow.year());
-            Serial.printf("   Timestamp: %ld\n", timeConfig.currentTime);
-            
-            xSemaphoreGive(timeMutex);
-            
-            if (displayQueue != NULL) {
-                DisplayUpdate update;
-                update.type = DisplayUpdate::TIME_UPDATE;
-                xQueueSend(displayQueue, &update, 0);
-            }
-        }
-    } else {
-        Serial.println("\nRTC time invalid (year out of range)");
-        Serial.println("   Resetting to default time: 00:00:00 01/01/2000");
-        
-        DateTime defaultTime(2000, 1, 1, 0, 0, 0);
-        rtc.adjust(defaultTime);
-        
-        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            setTime(0, 0, 0, 1, 1, 2000);
-            timeConfig.currentTime = now();
-            
-            Serial.println("System time set to 00:00:00 01/01/2000");
-            Serial.printf("   Timestamp: %ld\n", timeConfig.currentTime);
-            Serial.println("   RTC will maintain this until NTP sync");
-            
-            xSemaphoreGive(timeMutex);
-            
-            if (displayQueue != NULL) {
-                DisplayUpdate update;
-                update.type = DisplayUpdate::TIME_UPDATE;
-                xQueueSend(displayQueue, &update, 0);
-            }
+            rtcAvailable = false;
+            Serial.println("RTC disabled due to hardware failure");
         }
     }
-    
-    Serial.println("========================================\n");
-    return true;
 }
 
 // Server Functions
@@ -1597,7 +1609,7 @@ void setupServerRoutes() {
 
             unsigned long uploadDuration = millis() - uploadStartTime;
 
-            Serial.println("\n✓ Upload complete!");
+            Serial.println("\nUpload complete!");
             Serial.printf("Total size: %d bytes (%.2f KB)\n",
                           totalSize, totalSize / 1024.0);
             Serial.printf("Duration: %lu ms\n", uploadDuration);
@@ -1901,39 +1913,49 @@ void setupServerRoutes() {
     });
 
     server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (request->hasParam("y", true) && request->hasParam("m", true) && request->hasParam("d", true) && request->hasParam("h", true) && request->hasParam("i", true) && request->hasParam("s", true)) {
+        if (request->hasParam("y", true) && 
+            request->hasParam("m", true) && 
+            request->hasParam("d", true) && 
+            request->hasParam("h", true) && 
+            request->hasParam("i", true) && 
+            request->hasParam("s", true)) {
 
-        int y = request->getParam("y", true)->value().toInt();
-        int m = request->getParam("m", true)->value().toInt();
-        int d = request->getParam("d", true)->value().toInt();
-        int h = request->getParam("h", true)->value().toInt();
-        int i = request->getParam("i", true)->value().toInt();
-        int s = request->getParam("s", true)->value().toInt();
+            int y = request->getParam("y", true)->value().toInt();
+            int m = request->getParam("m", true)->value().toInt();
+            int d = request->getParam("d", true)->value().toInt();
+            int h = request->getParam("h", true)->value().toInt();
+            int i = request->getParam("i", true)->value().toInt();
+            int s = request->getParam("s", true)->value().toInt();
 
-        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            setTime(h, i, s, d, m, y);
-            timeConfig.currentTime = now();
-            timeConfig.ntpSynced = true;
+            Serial.println("\n========================================");
+            Serial.println("BROWSER TIME SYNC");
+            Serial.println("========================================");
+            Serial.printf("Received: %02d:%02d:%02d %02d/%02d/%04d\n", h, i, s, d, m, y);
 
-            if (rtcAvailable) {
-            saveTimeToRTC();
-            Serial.println("Browser time saved to RTC");
+            // UPDATE SYSTEM TIME
+            if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+                setTime(h, i, s, d, m, y);
+                timeConfig.currentTime = now();
+                timeConfig.ntpSynced = true;
+
+                DisplayUpdate update;
+                update.type = DisplayUpdate::TIME_UPDATE;
+                xQueueSend(displayQueue, &update, 0);
+
+                xSemaphoreGive(timeMutex);
             }
 
-            DisplayUpdate update;
-            update.type = DisplayUpdate::TIME_UPDATE;
-            xQueueSend(displayQueue, &update, 0);
+            // SAVE TO RTC
+            saveTimeToRTC();
+            delay(500);
+            
+            Serial.println("========================================\n");
 
-            xSemaphoreGive(timeMutex);
-
-            Serial.printf("Time synced from browser: %02d:%02d:%02d %02d/%02d/%04d\n", h, i, s, d, m, y);
-        }
-
-        AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "Waktu berhasil di-sync!");
-
-        request->send(resp);
+            AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "Waktu berhasil di-sync!");
+            request->send(resp);
+            
         } else {
-        request->send(400, "text/plain", "Data waktu tidak lengkap");
+            request->send(400, "text/plain", "Data waktu tidak lengkap");
         }
     });
 
@@ -2045,6 +2067,7 @@ void setupServerRoutes() {
             LittleFS.remove("/wifi_creds.txt");
             Serial.println("WiFi creds deleted");
         }
+        
         if (LittleFS.exists("/prayer_times.txt")) {
             LittleFS.remove("/prayer_times.txt");
             Serial.println("Prayer times deleted");
@@ -2065,55 +2088,44 @@ void setupServerRoutes() {
             Serial.println("Method selection deleted");
         }
 
-        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
-            methodConfig.methodId = 5;
-            methodConfig.methodName = "Egyptian General Authority of Survey";
-            Serial.println("Method reset to default (Egyptian)");
-            xSemaphoreGive(settingsMutex);
-        }
-
         if (LittleFS.exists("/timezone.txt")) {
             LittleFS.remove("/timezone.txt");
             Serial.println("Timezone config deleted");
         }
 
-        timezoneOffset = 7;
-        Serial.println("Timezone reset to default (+7)");
+        // RESET CONFIGS
+        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+            methodConfig.methodId = 5;
+            methodConfig.methodName = "Egyptian General Authority of Survey";
+            xSemaphoreGive(settingsMutex);
+        }
 
-        // RESET TIME TO 00:00:00 01/01/2000
-        Serial.println("\nResetting time to default...");
+        timezoneOffset = 7;
+        Serial.println("Settings reset to default");
+
+        // RESET TIME
+        Serial.println("\nResetting time to 00:00:00 01/01/2000...");
         
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            // SET DEFAULT TIME
             setTime(0, 0, 0, 1, 1, 2000);
             timeConfig.currentTime = now();
             timeConfig.ntpSynced = false;
             timeConfig.ntpServer = "";
             
-            Serial.println("System time reset to: 00:00:00 01/01/2000");
-            Serial.printf("   Timestamp: %ld\n", timeConfig.currentTime);
-            
-            // SAVE TO RTC IF AVAILABLE
-            if (rtcAvailable) {
-                DateTime resetTime(2000, 1, 1, 0, 0, 0);
-                rtc.adjust(resetTime);
-                
-                Serial.println("RTC time reset to: 00:00:00 01/01/2000");
-                Serial.println("   (RTC will keep this time until NTP sync)");
-            } else {
-                Serial.println("System time reset (no RTC detected)");
-                Serial.println("   (Time will be lost on power cycle)");
-            }
-            
-            // UPDATE DISPLAY
             DisplayUpdate update;
             update.type = DisplayUpdate::TIME_UPDATE;
             xQueueSend(displayQueue, &update, 0);
             
             xSemaphoreGive(timeMutex);
         }
+        
+        // SAVE TO RTC
+        saveTimeToRTC();
+        delay(500);
+        
+        Serial.println("Time reset complete");
 
-        // CLEAR MEMORY SETTINGS
+        // CLEAR MEMORY
         if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
             wifiConfig.routerSSID = "";
             wifiConfig.routerPassword = "";
@@ -2134,17 +2146,11 @@ void setupServerRoutes() {
             strcpy(wifiConfig.apSSID, "JWS Indonesia");
             strcpy(wifiConfig.apPassword, "12345678");
             
-            Serial.println("Memory settings cleared");
-            
             xSemaphoreGive(settingsMutex);
         }
         
-        // UPDATE DISPLAY
         updateCityDisplay();
-        
-        // DISCONNECT WIFI
         WiFi.disconnect(true);
-        Serial.println("WiFi disconnected");
         
         Serial.println("\n========================================");
         Serial.println("FACTORY RESET COMPLETE");
@@ -2936,7 +2942,7 @@ void ntpTask(void *parameter) {
                     esp_task_wdt_reset();
                     vTaskDelay(pdMS_TO_TICKS(100));
                 }
-                
+                                
                 if (updateResult) {
                     time_t ntpTime = timeClient.getEpochTime();
                     
@@ -2947,29 +2953,58 @@ void ntpTask(void *parameter) {
                     timeConfig.ntpServer = String(ntpServers[serverIndex]);
                     
                     Serial.println("NTP Sync successful!");
-                    Serial.printf("   Server: %s\n", ntpServers[serverIndex]);
                     Serial.printf("   Time: %02d:%02d:%02d %02d/%02d/%04d\n",
-                                 hour(ntpTime), minute(ntpTime), second(ntpTime),
-                                 day(ntpTime), month(ntpTime), year(ntpTime));
+                                hour(ntpTime), minute(ntpTime), second(ntpTime),
+                                day(ntpTime), month(ntpTime), year(ntpTime));
                     
-                    if (rtcAvailable) {
-                        DateTime dt(year(ntpTime),
-                                   month(ntpTime),
-                                   day(ntpTime),
-                                   hour(ntpTime),
-                                   minute(ntpTime),
-                                   second(ntpTime));
-                        
-                        rtc.adjust(dt);
-                        
-                        Serial.println("NTP time saved to RTC");
-                        Serial.println("   (RTC overwritten from NTP)");
-                    }
-                    
+                    // ========================================
+                    // UPDATE DISPLAY
+                    // ========================================
                     DisplayUpdate update;
                     update.type = DisplayUpdate::TIME_UPDATE;
                     xQueueSend(displayQueue, &update, 0);
                     
+                    xSemaphoreGive(timeMutex);
+                    
+                    // ========================================
+                    // CRITICAL: SAVE TO RTC HARDWARE
+                    // ========================================
+                    if (rtcAvailable) {
+                        Serial.println("\nSaving time to RTC hardware...");
+                        
+                        saveTimeToRTC();
+                        
+                        delay(500);
+                        
+                        DateTime rtcNow = rtc.now();
+                        Serial.println("RTC Verification:");
+                        Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+                                     rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
+                                     rtcNow.day(), rtcNow.month(), rtcNow.year());
+                        
+                        // Validasi RTC tersimpan dengan benar
+                        bool rtcValid = (
+                            rtcNow.year() >= 2000 && rtcNow.year() <= 2100 &&
+                            rtcNow.month() >= 1 && rtcNow.month() <= 12 &&
+                            rtcNow.day() >= 1 && rtcNow.day() <= 31
+                        );
+                        
+                        if (rtcValid) {
+                            Serial.println("RTC saved successfully");
+                            Serial.println("Time will persist across restarts");
+                        } else {
+                            Serial.println("RTC save FAILED - time is invalid");
+                            Serial.println("Check RTC battery or I2C connection");
+                        }
+                    } else {
+                        Serial.println("\nRTC not available - time will reset on restart");
+                    }
+                    
+                    xSemaphoreTake(timeMutex, portMAX_DELAY);
+                    
+                    // ========================================
+                    // UPDATE PRAYER TIMES
+                    // ========================================
                     Serial.println("\nPost-NTP: Checking prayer times...");
                     
                     if (prayerConfig.latitude.length() > 0 && 
@@ -3207,22 +3242,61 @@ void rtcSyncTask(void *parameter) {
                 time_t systemTime = timeConfig.currentTime;
                 time_t rtcUnix = rtcTime.unixtime();
                 
-                if (abs(systemTime - rtcUnix) > 2 && rtcTime.year() >= 2000) {
-                    timeConfig.currentTime = rtcUnix;
-                    setTime(rtcUnix);
-                    
-                    Serial.println("System time synced from RTC");
-                    Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+                // ================================
+                // VALIDASI RTC TIME LEBIH KETAT
+                // ================================
+                bool rtcValid = (
+                    rtcTime.year() >= 2000 && 
+                    rtcTime.year() <= 2100 &&
+                    rtcTime.month() >= 1 && 
+                    rtcTime.month() <= 12 &&
+                    rtcTime.day() >= 1 && 
+                    rtcTime.day() <= 31 &&
+                    rtcUnix >= 946684800
+                );
+                
+                if (!rtcValid) {
+                    Serial.println("\nRTC SYNC WARNING:");
+                    Serial.printf("   RTC Time: %02d:%02d:%02d %02d/%02d/%04d\n",
                                  rtcTime.hour(), rtcTime.minute(), rtcTime.second(),
                                  rtcTime.day(), rtcTime.month(), rtcTime.year());
+                    Serial.printf("   RTC Unix: %ld\n", rtcUnix);
+                    Serial.println("   Status: INVALID - keeping system time");
+                    Serial.println("   RTC will be overwritten on next NTP sync\n");
                     
-                    DisplayUpdate update;
-                    update.type = DisplayUpdate::TIME_UPDATE;
-                    xQueueSend(displayQueue, &update, 0);
-                } else if (rtcTime.year() < 2000) {
-                    Serial.println("RTC time invalid (year < 2000), keeping system time");
-                        DateTime resetTime(2000, 1, 1, 0, 0, 0);
-                        rtc.adjust(resetTime);
+                    xSemaphoreGive(timeMutex);
+                    vTaskDelayUntil(&xLastWakeTime, xFrequency);
+                    continue;
+                }
+                
+                // ================================
+                // SYNC HANYA JIKA RTC LEBIH AKURAT
+                // ================================
+                if (abs(systemTime - rtcUnix) > 2) {
+                    if (timeConfig.ntpSynced && systemTime > rtcUnix) {
+                        Serial.println("\nRTC SYNC SKIPPED:");
+                        Serial.println("   System time is newer (from NTP)");
+                        Serial.printf("   System: %02d:%02d:%02d %02d/%02d/%04d\n",
+                                     hour(systemTime), minute(systemTime), second(systemTime),
+                                     day(systemTime), month(systemTime), year(systemTime));
+                        Serial.printf("   RTC:    %02d:%02d:%02d %02d/%02d/%04d\n",
+                                     rtcTime.hour(), rtcTime.minute(), rtcTime.second(),
+                                     rtcTime.day(), rtcTime.month(), rtcTime.year());
+                        Serial.println("   RTC will be updated on next NTP sync\n");
+                    } else {
+                        timeConfig.currentTime = rtcUnix;
+                        setTime(rtcUnix);
+                        
+                        Serial.println("\nSystem time synced from RTC");
+                        Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+                                     rtcTime.hour(), rtcTime.minute(), rtcTime.second(),
+                                     rtcTime.day(), rtcTime.month(), rtcTime.year());
+                        Serial.println();
+                        
+                        DisplayUpdate update;
+                        update.type = DisplayUpdate::TIME_UPDATE;
+                        xQueueSend(displayQueue, &update, 0);
+                    }
                 }
                 
                 xSemaphoreGive(timeMutex);
@@ -3256,7 +3330,6 @@ void clockTickTask(void *parameter) {
                 setTime(0, 0, 0, 1, 1, 2000);
                 timeConfig.currentTime = now();
                 
-                // DOUBLE CHECK
                 if (timeConfig.currentTime < EPOCH_2000) {
                     Serial.println("TimeLib.h issue - using hardcoded timestamp");
                     timeConfig.currentTime = EPOCH_2000; // 946684800
@@ -3349,21 +3422,21 @@ void setup() {
   loadMethodSelection();
   loadTimezoneConfig();
 
-  setTime(0, 0, 0, 1, 1, 2000);
-  timeConfig.currentTime = now();
+  Wire.begin(/*RTC_SDA, RTC_SCL*/);
+  delay(500);
 
-  Serial.printf("System time initialized: %ld\n", timeConfig.currentTime);
-  Serial.println("This will be overwritten if RTC is detected");
-  Serial.println("========================================\n");
+  Wire.beginTransmission(0x68);
+  Wire.endTransmission();
 
   // ================================
   // RTC DS3231 INIT
   // ================================
   rtcAvailable = initRTC();
+
   if (rtcAvailable) {
-    Serial.println("RTC DS3231 module ready");
+      Serial.println("RTC DS3231 module ready");
   } else {
-    Serial.println("Running without RTC (time will reset on power loss)");
+      Serial.println("Running without RTC (time will reset on power loss)");
   }
 
   // ================================
