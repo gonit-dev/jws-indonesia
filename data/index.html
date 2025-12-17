@@ -41,12 +41,6 @@
         .loader-icon {
             font-size: 60px;
             margin-bottom: 20px;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.1); opacity: 0.8; }
         }
 
         .loader-title {
@@ -74,12 +68,11 @@
 
         .progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, #1779ba 0%, #14679e 100%);
+            background: #1779ba; /* Warna solid, no gradient */
             border-radius: 10px;
             width: 0%;
-            transition: width 0.3s ease;
-            position: relative;
-            overflow: hidden;
+            transition: width 0.2s ease; /* Transisi lebih cepat */
+            color: #1779ba;
         }
 
         .progress-bar::before {
@@ -93,13 +86,8 @@
                 transparent 0%, 
                 rgba(255,255,255,0.3) 50%, 
                 transparent 100%);
-            animation: shimmer 1.5s infinite;
         }
 
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
 
         .loader-status {
             font-size: 13px;
