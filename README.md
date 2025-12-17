@@ -9,9 +9,13 @@
 ![License](https://img.shields.io/badge/license-MIT-yellow)
 
 ## 📸 Preview
-
-<img width="1366" height="1686" alt="FireShot Capture 094 - Islamic Prayer Clock Settings - 192 168 4 1" src="https://github.com/user-attachments/assets/3ae0b778-6e82-49fc-9834-0ee9a1704c75" />
-<img alt="DISPLAY" src="https://github.com/user-attachments/assets/4a1ee20d-c013-42f2-b564-745606634ea7" />
+![Screenshot_20251218-044957_Firefox](https://github.com/user-attachments/assets/d0e64d2a-2a00-4a62-b92b-9aa36d95f4b8)
+![Screenshot_20251218-044946_Firefox](https://github.com/user-attachments/assets/55d84d62-d986-460a-b2b2-3ac4d2b4aaf1)
+![Screenshot_20251218-044923_Firefox](https://github.com/user-attachments/assets/b9f1db1c-83f2-4492-aef8-7b62997da9a9)
+![Screenshot_20251218-044910_Firefox](https://github.com/user-attachments/assets/84408e8e-ef1b-4ee5-aa42-9c0f965bb031)
+![Screenshot_20251218-044826_Firefox](https://github.com/user-attachments/assets/6479dfd9-99b9-4034-a0d2-29453d6c46d9)
+![Screenshot_20251218-044814_Firefox](https://github.com/user-attachments/assets/57c8726d-adf2-4ce2-bd92-2c5e05f66533)
+![Screenshot_20251218-044754_Firefox](https://github.com/user-attachments/assets/1f105d28-80a6-490c-a4a9-d7f8174a3c3e)
 
 ---
 
