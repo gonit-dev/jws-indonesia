@@ -1030,7 +1030,7 @@ void setupServerRoutes() {
       request->send(response);
     });
 
-    server.on("/assets/css/foundation.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+    server.on("/assets/css/milligram.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
       AsyncWebServerResponse *response = request->beginResponse(
         LittleFS, "/assets/css/foundation.css", "text/css");
 
