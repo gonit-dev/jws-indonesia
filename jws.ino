@@ -1038,9 +1038,9 @@ void setupServerRoutes() {
     // ========================================
     // milligram.min CSS - CACHE 1 JAM
     // ========================================
-    server.on("/assets/css/milligram.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+    server.on("/assets/css/foundation.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
       AsyncWebServerResponse *response = request->beginResponse(
-        LittleFS, "/assets/css/milligram.min.css", "text/css");
+        LittleFS, "/assets/css/foundation.min.css", "text/css");
 
       response->addHeader("Cache-Control", "public, max-age=3600");
       request->send(response);

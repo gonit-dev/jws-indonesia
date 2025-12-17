@@ -1,0 +1,2855 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Islamic Prayer Clock Settings</title>
+    
+    <!-- Foundation CSS dari CDN -->
+    <link rel="stylesheet" href="assets/css/foundation.min.css">
+    
+    <style>
+        /* Timezone inline edit styling */
+        #timezoneInput {
+            font-family: monospace;
+            border: 2px solid #1779ba;
+            border-radius: 4px;
+        }
+
+        #timezoneInput:focus {
+            outline: none;
+            border-color: #14679e;
+            box-shadow: 0 0 5px rgba(23, 121, 186, 0.5);
+        }
+
+        #timezoneDisplayText {
+            font-weight: bold;
+            color: #1779ba;
+            padding: 0 5px;
+        }
+        @keyframes spinner {
+            to {transform: rotate(360deg);}
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,.1);
+            border-radius: 50%;
+            border-top-color: #1779ba;
+            animation: spinner 1s ease-in-out infinite;
+        }
+        
+        .toast {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            min-width: 300px;
+            text-align: center;
+            transition: top 0.5s ease-in-out;
+        }
+        
+        .toast.show {
+            top: 30px;
+        }
+        
+        /* ← TAMBAHKAN CSS LOADING DI SINI (LOKASI 1) */
+        /* Loading Screen Styles */
+        #pageLoader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        #pageLoader.loaded {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loader-content {
+            text-align: center;
+            max-width: 400px;
+            padding: 0 20px;
+        }
+        
+        .loader-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        .loader-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1779ba;
+            margin-bottom: 10px;
+        }
+        
+        .loader-subtitle {
+            font-size: 14px;
+            color: #8a8a8a;
+            margin-bottom: 30px;
+        }
+        
+        .progress-container {
+            width: 100%;
+            height: 6px;
+            background: #e6e6e6;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #1779ba 0%, #14679e 100%);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255,255,255,0.3) 50%, 
+                transparent 100%);
+            animation: shimmer 1.5s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .loader-status {
+            font-size: 13px;
+            color: #1779ba;
+            font-weight: 500;
+            min-height: 20px;
+        }
+        
+        .loader-percentage {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1779ba;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Page Loading Screen -->
+    <div id="pageLoader">
+        <div class="loader-content">
+            <div class="loader-icon">🕌</div>
+            <div class="loader-title">Islamic Prayer Clock</div>
+            <div class="loader-subtitle">Memuat pengaturan...</div>
+            <div class="progress-container">
+                <div class="progress-bar" id="loadingProgress"></div>
+            </div>
+            <div class="loader-percentage" id="loadingPercentage">0%</div>
+            <div class="loader-status" id="loadingStatus">Memulai...</div>
+        </div>
+    </div>
+    <!-- Toast Notification menggunakan Foundation Callout -->
+    <div id="toast" class="toast callout success"></div>
+
+    <div class="grid-container">
+        <div class="grid-x grid-padding-x">
+            <div class="large-12 cell">
+                
+                <!-- Header -->
+                <div class="grid-x grid-padding-y">
+                    <div class="large-12 text-center cell">
+                        <h3>🕌 Islamic Prayer Clock Settings</h3>
+                        <p class="subheader">Semua pengaturan otomatis - tinggal sambungkan WiFi!</p>
+                    </div>
+                </div>
+
+                <!-- WiFi & Device Status Section -->
+                <div class="grid-x grid-padding-x">
+                    <div class="large-12 text-center cell">
+                        <div class="callout">
+                            
+                            <!-- WiFi Settings -->
+                            <div class="grid-x grid-margin-x align-middle">
+                                <div class="large-6 medium-6 cell">
+                                    <div class="grid-x grid-padding-x">
+                                        <div class="large-12 medium-12 small-12 cell">
+                                            <h5><strong>📡 WiFi Settings</strong></h5>
+                                            <div class="grid-x grid-margin-x">
+                                                <div class="large-12 medium-12 small-12 cell">
+                                                    <input type="text" id="wifiSSID" placeholder="WiFi SSID">
+                                                </div>
+                                                <div class="large-12 medium-12 small-12 cell">
+                                                    <input type="password" id="wifiPassword" placeholder="WiFi Password">
+                                                </div>
+                                                <div class="large-6 medium-6 small-6 cell">
+                                                    <button class="button secondary expanded" onclick="setWiFi()">
+                                                        Simpan
+                                                    </button>
+                                                </div>
+                                                <div class="large-6 medium-6 small-6 cell">
+                                                    <button class="button secondary expanded" onclick="clearWiFiForm()">
+                                                        Batal
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Access Point Settings -->
+                                <div class="large-6 medium-6 cell">
+                                    <h5><strong>📶 Access Point Settings</strong></h5>
+                                    <div class="grid-x grid-margin-x">
+                                        <div class="large-12 medium-12 small-12 cell">
+                                            <input type="text" id="apSSID" placeholder="AP SSID">
+                                        </div>
+                                        <div class="large-12 medium-12 small-12 cell">
+                                            <input type="password" id="apPassword" placeholder="AP Password">
+                                        </div>
+                                        <div class="large-6 medium-6 small-6 cell">
+                                            <button class="button secondary expanded" onclick="setAP()">
+                                                Simpan
+                                            </button>
+                                        </div>
+                                        <div class="large-6 medium-6 small-6 cell">
+                                            <button class="button secondary expanded" onclick="clearAPForm()">
+                                                Batal
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Device Status -->
+                            <div class="grid-x grid-padding-y">
+                                <div class="large-12 medium-12 small-12 cell">
+                                    <div class="callout secondary">
+                                        <div class="grid-x grid-padding-y">
+                                            <div class="large-12 cell">
+                                                <h5><strong>📊 Device Status</strong></h5></h4>
+                                            </div>
+                                        </div>
+                                        <div class="grid-x grid-margin-x">
+                                            <div class="large-6 medium-6 small-12 cell text-left">
+                                                <p><strong>WiFi Network:</strong> <span id="wifiName">-</span></p>
+                                                <p><strong>IP Address:</strong> <span id="ipAddress">-</span></p>
+                                                <p><strong>Internet:</strong> <span id="internetStatus" class="label warning">Checking...</span></p>
+                                            </div>
+                                            <div class="large-6 medium-6 small-12 cell text-left">
+                                                <p><strong>NTP Status:</strong> <span id="ntpStatus">-</span></p>
+                                                <p><strong>NTP Server:</strong> <span id="ntpServerUsed">-</span></p>
+                                                <p><strong>Current Time:</strong> <span id="currentTime">-</span></p>
+                                                <p><strong>Current Date:</strong> <span id="currentDate">-</span></p>
+                                                <p><strong>Uptime:</strong> <span id="uptime">--:--:--</span></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Manual Restart Button -->
+                                    <div class="large-12 cell">
+                                        <div class="callout secondary">
+                                            <button class="button secondary expanded" onclick="restartDevice()">
+                                                Restart Device Now
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Time Sync Section -->
+                <div class="grid-x grid-padding-x">
+                    <div class="large-12 text-center cell">
+                        <div class="callout">                     
+                            <div class="grid-x grid-padding-y">
+                                <div class="large-12 cell">
+                                    <h5><strong>⏰ Time Synchronization</strong></h5></h4>
+                                </div>
+                            </div>
+
+                            <div class="grid-x grid-margin-x align-middle">
+                                
+                                <!-- Manual Sync -->
+                                <div class="large-6 medium-6 cell">
+                                    <div class="callout secondary">
+                                        <div class="large-12 medium-12 cell">
+                                            <h6><strong>📱 Manual Sync from Browser</strong></h6>
+                                            <p class="help-text">Sinkronkan waktu dari perangkat Anda</p>
+                                        </div>
+                                        <div class="large-12 medium-12 cell">
+                                            <button class="button secondary expanded" onclick="syncTime()">
+                                                Sync Time Now
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Auto NTP Info -->
+                                <div class="large-6 medium-6 cell">
+                                    <div class="callout secondary">
+                                        <div class="large-12 medium-12 cell">
+                                            <h6><strong>🌐 Auto NTP Sync <span class="label success">AUTO</span></strong></h6>
+                                            <p class="help-text">Waktu otomatis sync saat WiFi terhubung</p>
+                                        </div>
+                                        <div class="large-12 medium-12 cell">
+                                            <p class="help-text">
+                                                    🔄 Auto-sync setiap 1 jam<br>
+                                                    🗄️ Multi-server fallback<br>
+                                                    🌐 Timezone: UTC<span id="timezoneDisplayText">+7</span>
+                                                <input type="text" 
+                                                    id="timezoneInput" 
+                                                    value="+7" 
+                                                    style="display: none; width: 60px; height: 25px; padding: 2px 5px; margin: 0 5px; text-align: center; font-weight: bold;" 
+                                                    pattern="^[+-]?\d+$" 
+                                                    maxlength="3">
+                                                <button id="timezoneBtn" 
+                                                        onclick="toggleTimezoneEdit()"  
+                                                        style="margin-left: -5px; padding: 5px 10px; line-height: 1;" 
+                                                        title="Edit Timezone"> 🕐
+                                                </button>
+                                                <button id="timezoneCancelBtn" 
+                                                        onclick="cancelTimezoneEdit()" 
+                                                        style="display: none; margin-left: -5px; padding: 5px 10px; line-height: 1;"  
+                                                        title="Batal Edit"> ✖
+                                                </button>
+                                            </p>
+                                            <p class="help-text" style="margin-top: 5px; font-size: 11px; color: #666;">
+                                                🇮🇩 WIB = +7 | WITA = +8 | WIT = +9<br>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- City Selection -->
+                <div class="grid-x grid-padding-x">
+                    <div class="large-12 text-center cell">
+                        <div class="callout">
+                            <div class="grid-x grid-padding-y">
+                                <div class="large-12 cell">
+                                    <h5><strong>🕌 Pilih Lokasi & Metode Kalkulasi</strong></h5>
+                                </div>
+                            </div>
+                            
+                            <div class="callout secondary text-center">
+                                <p><strong>Lokasi Terpilih:</strong></p>
+                                <h4 id="currentCity" class="text-primary">Belum dipilih</h4>
+                                <p id="currentCityType" class="help-text" style="margin-top: -10px; font-size: 13px; color: #666;">
+                                    <span id="cityTypeLabel"></span>
+                                </p>
+                                <p>
+                                    <strong>Metode:</strong> <span id="currentMethodTop">Egyptian General Authority of Survey</span>
+                                </p>
+                            </div>
+
+                            <div class="grid-x grid-margin-x">
+                                <!-- Dropdown Lokasi -->
+                                <div class="large-9 medium-8 small-12 cell">
+                                    <label>Pilih Lokasi</label>
+                                    <select id="cityDropdown" onchange="handleCityChange()">
+                                        <option value="">-- Pilih Lokasi --</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Tombol Simpan Lokasi -->
+                                <div class="large-3 medium-4 small-12 cell">
+                                    <label class="show-for-medium">&nbsp;</label>
+                                    <button class="button secondary expanded" onclick="saveCity()">
+                                        Simpan
+                                    </button>
+                                </div>
+                                
+                                <!-- Form Edit Koordinat (Hidden by default) -->
+                                <div id="coordinatesForm" class="large-12 cell hide" style="margin-top: 20px;">
+                                    <div class="callout secondary">
+                                        <h6><strong>📍 Edit Koordinat</strong></h6>
+                                        <p class="help-text">Sesuaikan koordinat jika diperlukan</p>
+                                        
+                                        <div class="grid-x grid-margin-x">
+                                            <!-- Latitude -->
+                                            <div class="large-6 medium-6 small-12 cell">
+                                                <label>Latitude (Lintang)</label>
+                                                <input type="text" id="latInput" placeholder="-6.2088" pattern="^-?\d+\.?\d*$">
+                                                <p class="help-text">Contoh: -6.2088</p>
+                                            </div>
+                                            
+                                            <!-- Longitude -->
+                                            <div class="large-6 medium-6 small-12 cell">
+                                                <label>Longitude (Bujur)</label>
+                                                <input type="text" id="lonInput" placeholder="106.8456" pattern="^-?\d+\.?\d*$">
+                                                <p class="help-text">Contoh: 106.8456</p>
+                                            </div>
+                                            
+                                            <!-- Tombol Reset ke Default -->
+                                            <div class="large-6 medium-6 small-6 cell">
+                                                <button class="button secondary expanded" onclick="resetToDefaultCoordinates()" title="Reset ke koordinat default dari JSON">
+                                                    Reset
+                                                </button>
+                                            </div>
+                                            <div class="large-6 medium-6 small-6 cell">
+                                                <button class="button secondary expanded" onclick="cancelCoordinatesEdit()" title="Batalkan perubahan koordinat">
+                                                    Batal
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="callout secondary">
+                                            <p class="help-text">
+                                                📍 Koordinat bawaan <span id="defaultCoords">-</span><br>
+                                                🧮 Pastikan format benar (angka dengan titik desimal)<br>
+                                                🌐 Latitude: -90 hingga 90 | Longitude: -180 hingga 180
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Dropdown Metode -->
+                                <div class="large-9 medium-8 small-12 cell">
+                                    <label>Metode Kalkulasi Jadwal Shalat</label>
+                                    <select id="methodDropdown">
+                                        <option value="20">Kementerian Agama Indonesia (Kemenag)</option>
+                                        <option value="3">Muslim World League (MWL)</option>
+                                        <option value="5" selected>Egyptian General Authority of Survey</option>
+                                        <option value="2">Islamic Society of North America (ISNA)</option>
+                                        <option value="0">Shia Ithna-Ashari</option>
+                                        <option value="1">University of Islamic Sciences, Karachi</option>
+                                        <option value="4">Umm Al-Qura University, Makkah</option>
+                                        <option value="7">Institute of Geophysics, University of Tehran</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Tombol Simpan Metode -->
+                                <div class="large-3 medium-4 small-12 cell">
+                                    <label class="show-for-medium">&nbsp;</label>
+                                    <button class="button secondary expanded" onclick="saveMethod()">
+                                        Simpan
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="callout secondary">
+                                <p class="help-text">
+                                    📍 Pilih lokasi untuk mendapatkan jadwal shalat yang akurat<br>
+                                    📐 Pilih metode untuk mengganti perhitungan<br>
+                                    🔄 Jadwal akan otomatis update setelah lokasi dipilih
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cities.json Upload Section -->
+                <div class="grid-x grid-padding-x">
+                    <div class="large-12 text-center cell">
+                        <div class="callout">
+                            <div class="grid-x grid-padding-y">
+                                <div class="large-12 cell">
+                                    <h5><strong>📤 Upload Cities.json</strong></h5></h4>
+                                </div>
+                            </div>
+                            
+                            <div class="callout secondary">
+                                <p>
+                                    <strong>Kapan perlu upload cities.json?</strong><br>
+                                </p>
+                                <p>
+                                    <div class="help-text">
+                                        ➕ Ada lokasi baru yang ditambahkan<br>
+                                        📍 Data koordinat lokasi ada yang diperbarui<br>
+                                        ⚠️ File <code>cities.json</code> rusak atau terhapus
+                                    </div>
+                                </p>
+                            </div>
+
+                            <div class="large-8 medium-8 small-12 cell">
+                                <label for="citiesFileInput" class="button hollow expanded">
+                                    📁 Pilih File cities.json
+                                    <input type="file" id="citiesFileInput" accept=".json" class="show-for-sr" onchange="handleCitiesFileSelect(event)">
+                                </label>
+                                <p id="selectedFileName" class="help-text text-center">
+                                    Belum ada file dipilih
+                                </p>
+                            </div>
+                            <div class="large-4 medium-4 small-12 cell">
+                                <button id="uploadBtn" class="button primary expanded" onclick="uploadCitiesFile()" disabled>
+                                    📤 Upload File
+                                </button>
+                                <button id="clearFileBtn" class="button primary expanded" onclick="clearSelectedFile()" style="display: none; margin-top: 10px;">
+                                    ✖ Hapus File
+                                </button>
+                            </div>
+
+                            <div id="uploadProgress" class="hide">
+                                <div class="progress" role="progressbar">
+                                    <div id="uploadProgressBar" class="progress-meter" style="width: 0%">
+                                        <p class="progress-meter-text">0%</p>
+                                    </div>
+                                </div>
+                                <p id="uploadStatus" class="help-text text-center">
+                                    Memulai upload...
+                                </p>
+                            </div>
+
+                            <div class="callout secondary">
+                                <p>
+                                    <strong>⚠️ Penting</strong>
+                                </p>
+                                <p class="help-text">
+                                    📄 File harus bernama <code>cities.json</code><br>
+                                    🧾 Format harus valid JSON array<br>
+                                    📦 Ukuran maksimal: 1 MB<br>
+                                    🔄 Dropdown lokasi akan otomatis refresh setelah upload berhasil
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prayer Times Section -->
+                <div class="grid-x grid-padding-x">
+                    <div class="large-12 text-center cell">
+                        <div class="callout">
+                            <div class="grid-x grid-padding-y">
+                                <div class="large-12 cell">
+                                    <h5><strong>🕌 Jadwal Shalat</strong></h5></h4>
+                                </div>
+                            </div>
+
+                            <!-- Prayer Times Display -->
+                            <div class="callout secondary" id="prayerTimesBox">
+                                <table class="unstriped hover">
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-left"><strong>🌙 Imsak</strong></td>
+                                            <td class="text-right"><h5 id="imsakTime">--:--</h5></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-left"><strong>🌅 Subuh</strong></td>
+                                            <td class="text-right"><h5 id="subuhTime">--:--</h5></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-left"><strong>🌄 Terbit</strong></td>
+                                            <td class="text-right"><h5 id="terbitTime">--:--</h5></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-left"><strong>☀️ Zuhur</strong></td>
+                                            <td class="text-right"><h5 id="zuhurTime">--:--</h5></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-left"><strong>🌤️ Ashar</strong></td>
+                                            <td class="text-right"><h5 id="asharTime">--:--</h5></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-left"><strong>🌆 Maghrib</strong></td>
+                                            <td class="text-right"><h5 id="maghribTime">--:--</h5></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-left"><strong>🌙 Isya</strong></td>
+                                            <td class="text-right"><h5 id="isyaTime">--:--</h5></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="callout secondary">
+                                <p class="help-text">
+                                    🕌 Jadwal shalat berdasarkan lokasi yang dipilih<br>
+                                    🔄 Auto-refresh setiap tengah malam (00:00 WIB)<br>
+                                    📐 <span id="currentMethodBottom">Egyptian General Authority of Survey</span><br>
+                                    ⚡ Update otomatis saat device online tanpa restart
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Factory Reset Section -->
+                <div class="grid-x grid-padding-x">
+                    <div class="large-12 text-center cell">
+                        <div class="callout">
+                            <div class="grid-x grid-padding-y">
+                                <div class="large-12 cell">
+                                    <h5><strong>⚠️ Factory Reset</strong></h5></h4>
+                                    <p>Reset semua pengaturan (WiFi, waktu, jadwal shalat) ke default. Device akan restart.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="callout secondary">
+                                <p>
+                                    <strong>Peringatan</strong> Ini akan menghapus semua data disimpan
+                                </p>
+                                <p class="help-text">
+                                    📶 WiFi credentials</br>
+                                    🕌 Jadwal shalat disimpan</br>
+                                    📡 AP settings</br>
+                                    📍 Pilihan lokasi</br>
+                                    ⏰ Waktu dan tanggal</br>
+                                </p>
+                            </div>
+                            
+                            <button class="button secondary expanded" onclick="resetSettings()">
+                                Reset Pabrik
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================================
+        // LOADING MANAGER
+        // ================================
+        const LoadingManager = {
+            totalSteps: 6,
+            currentStep: 0,
+            steps: [
+                { name: 'Foundation CSS', progress: 0 },
+                { name: 'DOM Ready', progress: 16 },
+                { name: 'Device Status', progress: 33 },
+                { name: 'Cities Data', progress: 50 },
+                { name: 'Prayer Times', progress: 66 },
+                { name: 'Method Config', progress: 83 }
+            ],
+            
+            updateProgress(stepIndex, statusText) {
+                const progress = this.steps[stepIndex].progress;
+                const progressBar = document.getElementById('loadingProgress');
+                const percentage = document.getElementById('loadingPercentage');
+                const status = document.getElementById('loadingStatus');
+                
+                if (progressBar) progressBar.style.width = progress + '%';
+                if (percentage) percentage.textContent = progress + '%';
+                if (status) status.textContent = statusText || this.steps[stepIndex].name;
+            },
+            
+            completeLoading() {
+                const loader = document.getElementById('pageLoader');
+                const progressBar = document.getElementById('loadingProgress');
+                const percentage = document.getElementById('loadingPercentage');
+                const status = document.getElementById('loadingStatus');
+                
+                if (progressBar) progressBar.style.width = '100%';
+                if (percentage) percentage.textContent = '100%';
+                if (status) status.textContent = 'Siap';
+                                
+                setTimeout(() => {
+                    if (loader) {
+                        loader.classList.add('loaded');
+                        setTimeout(() => {
+                            loader.style.display = 'none';
+                        }, 500);
+                    }
+                }, 300);
+            }
+        };
+
+        const cssLoaded = new Promise((resolve) => {
+            const checkCSS = setInterval(() => {
+                const testDiv = document.createElement('div');
+                testDiv.className = 'grid-container';
+                document.body.appendChild(testDiv);
+                const hasCSS = getComputedStyle(testDiv).width !== '100%';
+                document.body.removeChild(testDiv);
+                
+                if (hasCSS) {
+                    clearInterval(checkCSS);
+                    LoadingManager.updateProgress(0, 'Foundation CSS loaded');
+                    resolve();
+                }
+            }, 50);
+            
+            setTimeout(() => {
+                clearInterval(checkCSS);
+                LoadingManager.updateProgress(0, 'CSS timeout (proceeding)');
+                resolve();
+            }, 5000);
+        });
+
+        // ================================
+        // VARIABEL GLOBAL
+        // ================================
+        let isOnline = false;
+        let cityList = [];
+        let loadAttempts = 0;
+        const MAX_LOAD_ATTEMPTS = 3;
+
+        let isLoadingDeviceStatus = false;
+        let isLoadingPrayerTimes = false;
+        let isLoadingMethod = false;
+        
+        let serverTimestamp = 0;
+        let localStartTime = 0;
+        let serverUptimeStart = 0;
+        let lastSyncTime = 0;
+
+        let prayerConfig = {
+            imsakTime: '--:--',
+            subuhTime: '--:--',
+            terbitTime: '--:--',
+            zuhurTime: '--:--',
+            asharTime: '--:--',
+            maghribTime: '--:--',
+            isyaTime: '--:--'
+        };
+
+        let methodConfig = {
+            methodId: 5,
+            methodName: 'Egyptian General Authority of Survey'
+        };
+
+        let defaultCoordinates = {
+            lat: '',
+            lon: ''
+        };
+
+        let timezoneConfig = {
+            offset: 7
+        };
+
+        // ================================
+        // HELPER: EXTRACT TYPE FROM DISPLAY NAME
+        // ================================
+        function extractLocationType(displayName) {
+            if (!displayName) return null;
+            
+            const match = displayName.match(/\(([^)]+)\)$/);
+            if (!match) return null;
+            
+            const typeInBracket = match[1].toLowerCase().trim();
+            
+            const typeMap = {
+                'kota': { emoji: '🏙️', label: 'City' },
+                'city': { emoji: '🏙️', label: 'City' },
+                'kabupaten': { emoji: '🏞️', label: 'District' },
+                'district': { emoji: '🏘️', label: 'District' },
+                'kecamatan': { emoji: '🏘️', label: 'Sub-District' },
+                'kelurahan': { emoji: '🏡', label: 'Village' },
+                'desa': { emoji: '🏡', label: 'Village' }
+            };
+            
+            return typeMap[typeInBracket] || { emoji: '📍', label: typeInBracket };
+        }
+
+        // ================================
+        // FUNGSI JAM REAL-TIME
+        // ================================
+        function getCurrentTime() {
+            if (serverTimestamp === 0 || localStartTime === 0) {
+                return null;
+            }
+            
+            const elapsedMs = Date.now() - localStartTime;
+            const currentTimestamp = serverTimestamp + Math.floor(elapsedMs / 1000);
+            
+            return new Date(currentTimestamp * 1000);
+        }
+
+        function getCurrentUptime() {
+            if (serverUptimeStart === 0 || localStartTime === 0) {
+                return 0;
+            }
+            
+            const elapsedMs = Date.now() - localStartTime;
+            return serverUptimeStart + Math.floor(elapsedMs / 1000);
+        }
+
+        function formatTime(date) {
+            if (!date) return '--:--:--';
+            
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            
+            return `${hours}:${minutes}:${seconds}`;
+        }
+
+        function formatUptime(seconds) {
+            if (seconds === 0) return '--:--:--';
+            
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            if (days > 0) {
+                return `${days}h ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            } else {
+                return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            }
+        }
+
+        function updateRealtimeDisplay() {
+            const currentTime = getCurrentTime();
+            const uptime = getCurrentUptime();
+            
+            const timeElement = document.getElementById('currentTime');
+            const dateElement = document.getElementById('currentDate');
+            const uptimeElement = document.getElementById('uptime');
+            
+            if (timeElement && currentTime) {
+                const hours = String(currentTime.getHours()).padStart(2, '0');
+                const minutes = String(currentTime.getMinutes()).padStart(2, '0');
+                const seconds = String(currentTime.getSeconds()).padStart(2, '0');
+                timeElement.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+            
+            if (dateElement && currentTime) {
+                const day = String(currentTime.getDate()).padStart(2, '0');
+                const month = String(currentTime.getMonth() + 1).padStart(2, '0');
+                const year = currentTime.getFullYear();
+                dateElement.textContent = `${day}/${month}/${year}`;
+            }
+            
+            if (uptimeElement) {
+                uptimeElement.textContent = formatUptime(uptime);
+            }
+        }
+
+        // ================================
+        // NOTIFIKASI TOAST
+        // ================================
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            
+            toast.className = 'toast callout';
+            
+            if (type === 'error') {
+                toast.classList.add('alert');
+            } else if (type === 'warning') {
+                toast.classList.add('warning');
+            } else {
+                toast.classList.add('success');
+            }
+            
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // ================================
+        // PEMBARUAN STATUS PERANGKAT
+        // ================================
+        async function updateDeviceStatus() {
+            if (isLoadingDeviceStatus) {
+                return;
+            }
+            
+            isLoadingDeviceStatus = true;
+            
+            try {
+                const response = await fetch('/devicestatus');
+                const data = await response.json();
+                
+                isOnline = data.connected === true;
+                
+                document.getElementById('wifiName').textContent = data.ssid || 'Tidak Terhubung';
+                document.getElementById('ipAddress').textContent = data.ip || '-';
+                document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Tersinkron' : '❌ Belum Tersinkron';
+                
+                if (document.getElementById('ntpServerUsed')) {
+                    document.getElementById('ntpServerUsed').textContent = data.ntpServer || '-';
+                }
+                
+                const statusBadge = document.getElementById('internetStatus');
+                if (isOnline) {
+                    statusBadge.textContent = '✅ Terhubung';
+                    statusBadge.className = 'label success';
+                } else {
+                    statusBadge.textContent = '❌ Tidak Terhubung';
+                    statusBadge.className = 'label alert';
+                }
+                
+                // ================================
+                // SINKRONISASI WAKTU & TANGGAL DARI SERVER
+                // ================================
+                if (data.currentTime && data.currentDate) {
+                    const timeParts = data.currentTime.split(':');
+                    const dateParts = data.currentDate.split('/');
+                    
+                    if (timeParts.length === 3 && dateParts.length === 3) {
+                        const now = new Date(
+                            parseInt(dateParts[2]),
+                            parseInt(dateParts[1]) - 1,
+                            parseInt(dateParts[0]),
+                            parseInt(timeParts[0]),
+                            parseInt(timeParts[1]),
+                            parseInt(timeParts[2])
+                        );
+                        
+                        serverTimestamp = Math.floor(now.getTime() / 1000);
+                        localStartTime = Date.now();
+                        lastSyncTime = Date.now();
+                    }
+                }
+                
+                if (data.uptime !== undefined) {
+                    serverUptimeStart = data.uptime;
+                }
+                
+            } catch (error) {
+                isOnline = false;
+                document.getElementById('internetStatus').textContent = '❌ Kesalahan';
+                document.getElementById('internetStatus').className = 'label alert';
+            } finally {
+                isLoadingDeviceStatus = false;
+            }
+        }
+
+        // ================================
+        // FUNGSI MEMUAT LOKASI
+        // ================================
+        async function loadCities() {            
+            const dropdown = document.getElementById('cityDropdown');
+            dropdown.innerHTML = '<option value="">Memuat lokasi...</option>';
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+                
+                const response = await fetch('/getcities', {
+                    method: 'GET',
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!Array.isArray(data) || data.length === 0) {
+                    throw new Error('Daftar lokasi tidak valid atau kosong');
+                }
+                
+                cityList = data;
+                dropdown.innerHTML = '<option value="">-- Pilih lokasi --</option>';
+                
+                let currentProvince = '';
+                data.forEach(city => {
+                    if (city.province !== currentProvince) {
+                        currentProvince = city.province;
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = '┌─ ' + currentProvince + ' ─┐';
+                        dropdown.appendChild(optgroup);
+                    }
+                    
+                    const option = document.createElement('option');
+                    option.value = city.api;
+
+                    let displayText = city.display;
+                    if (city.lat && city.lon) {
+                        displayText += ` (${parseFloat(city.lat).toFixed(2)}°, ${parseFloat(city.lon).toFixed(2)}°)`;
+                    }
+                    option.textContent = displayText;
+
+                    option.setAttribute('data-lat', city.lat);
+                    option.setAttribute('data-lon', city.lon);
+
+                    const typeInfo = extractLocationType(city.display);
+                    if (typeInfo) {
+                        option.setAttribute('data-type', typeInfo.label);
+                        option.setAttribute('data-type-emoji', typeInfo.emoji);
+                    }
+
+                    const lastOptgroup = dropdown.querySelector('optgroup:last-of-type');
+                    if (lastOptgroup && lastOptgroup.label.includes(currentProvince)) {
+                        lastOptgroup.appendChild(option);
+                    } else {
+                        dropdown.appendChild(option);
+                    }
+                });
+                
+                loadAttempts = 0;
+                
+                setTimeout(() => {
+                    loadCurrentCity();
+                }, 100);
+                
+                return true;
+                
+            } catch (error) {                
+                loadAttempts++;
+                
+                if (loadAttempts < MAX_LOAD_ATTEMPTS) {
+                    const retryDelay = Math.min(2000 * Math.pow(2, loadAttempts), 10000);                    
+                    dropdown.innerHTML = `<option value="">Mencoba lagi (${loadAttempts}/${MAX_LOAD_ATTEMPTS})...</option>`;
+                    
+                    setTimeout(() => {
+                        loadCities();
+                    }, retryDelay);
+                } else {
+                    dropdown.innerHTML = '<option value="">Gagal memuat lokasi - Muat ulang halaman</option>';
+                    showToast('Gagal memuat daftar lokasi. Muat ulang halaman untuk mencoba lagi.', 'error');
+                    loadAttempts = 0;
+                }
+                
+                return false;
+            }
+        }
+
+        // ================================
+        // FUNGSI HANDLE CITY CHANGE
+        // ================================
+        function handleCityChange() {
+            const dropdown = document.getElementById('cityDropdown');
+            const selectedCity = dropdown.value;
+            const coordinatesForm = document.getElementById('coordinatesForm');
+            const latInput = document.getElementById('latInput');
+            const lonInput = document.getElementById('lonInput');
+            const defaultCoordsSpan = document.getElementById('defaultCoords');
+            const cityTypeLabel = document.getElementById('cityTypeLabel');
+            
+            if (!selectedCity || selectedCity === '') {
+                coordinatesForm.classList.add('hide');
+                latInput.value = '';
+                lonInput.value = '';
+                defaultCoordinates.lat = '';
+                defaultCoordinates.lon = '';
+                defaultCoordsSpan.textContent = '-';
+                if (cityTypeLabel) cityTypeLabel.textContent = '';
+                return;
+            }
+            
+            const selectedOption = dropdown.options[dropdown.selectedIndex];
+            const lat = selectedOption.getAttribute('data-lat');
+            const lon = selectedOption.getAttribute('data-lon');
+            const typeLabel = selectedOption.getAttribute('data-type');
+            const typeEmoji = selectedOption.getAttribute('data-type-emoji');
+            
+            if (cityTypeLabel && typeLabel && typeEmoji) {
+                cityTypeLabel.textContent = `${typeEmoji} ${typeLabel}`;
+            } else if (cityTypeLabel) {
+                cityTypeLabel.textContent = '';
+            }
+            
+            if (lat && lon) {
+                defaultCoordinates.lat = lat;
+                defaultCoordinates.lon = lon;
+                
+                coordinatesForm.classList.remove('hide');
+                
+                latInput.value = lat;
+                lonInput.value = lon;
+                
+                defaultCoordsSpan.textContent = `${parseFloat(lat).toFixed(4)}°, ${parseFloat(lon).toFixed(4)}°`;
+            } else {
+                coordinatesForm.classList.add('hide');
+            }
+        }
+
+        // ================================
+        // FUNGSI RESET KE KOORDINAT BAWAAN
+        // ================================
+        function resetToDefaultCoordinates() {
+            const latInput = document.getElementById('latInput');
+            const lonInput = document.getElementById('lonInput');
+            
+            if (!defaultCoordinates.lat || !defaultCoordinates.lon) {
+                showToast('Tidak ada koordinat bawaan tersedia', 'warning');
+                return;
+            }
+            
+            latInput.value = defaultCoordinates.lat;
+            lonInput.value = defaultCoordinates.lon;
+        }
+
+        function cancelCoordinatesEdit() {
+            const dropdown = document.getElementById('cityDropdown');
+            const latInput = document.getElementById('latInput');
+            const lonInput = document.getElementById('lonInput');
+            const coordinatesForm = document.getElementById('coordinatesForm');
+            const defaultCoordsSpan = document.getElementById('defaultCoords');
+            const cityTypeLabel = document.getElementById('cityTypeLabel');
+            
+            const selectedCity = dropdown.value;
+            
+            if (!selectedCity || selectedCity === '') {
+                coordinatesForm.classList.add('hide');
+                latInput.value = '';
+                lonInput.value = '';
+                defaultCoordinates.lat = '';
+                defaultCoordinates.lon = '';
+                defaultCoordsSpan.textContent = '-';
+                if (cityTypeLabel) cityTypeLabel.textContent = '';
+                
+                return;
+            }
+            
+            const selectedOption = dropdown.options[dropdown.selectedIndex];
+            const defaultLat = selectedOption.getAttribute('data-lat');
+            const defaultLon = selectedOption.getAttribute('data-lon');
+            
+            fetch('/getcityinfo', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.hasSelection && 
+                    data.selectedCityApi === selectedCity && 
+                    data.latitude && 
+                    data.longitude) {
+                    
+                    latInput.value = data.latitude;
+                    lonInput.value = data.longitude;
+                } else {
+                    if (defaultLat && defaultLon) {
+                        latInput.value = defaultLat;
+                        lonInput.value = defaultLon;
+                    } else {
+                        showToast('Tidak ada koordinat bawaan tersedia', 'warning');
+                    }
+                }
+            })
+            .catch(error => {                
+                if (defaultLat && defaultLon) {
+                    latInput.value = defaultLat;
+                    lonInput.value = defaultLon;
+                } else {
+                    showToast('Tidak ada koordinat bawaan tersedia', 'warning');
+                }
+            });
+        }
+
+        async function loadCurrentCity() {            
+            try {
+                const response = await fetch('/getcityinfo', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                
+                const data = await response.json();
+                
+                const currentCitySpan = document.getElementById('currentCity');
+                const dropdown = document.getElementById('cityDropdown');
+                const coordinatesForm = document.getElementById('coordinatesForm');
+                const latInput = document.getElementById('latInput');
+                const lonInput = document.getElementById('lonInput');
+                const defaultCoordsSpan = document.getElementById('defaultCoords');
+                
+                if (data.hasSelection && data.selectedCityApi) {
+                    let displayText = data.selectedCity;
+                    
+                    if (data.latitude && data.longitude) {
+                        displayText += ` (${parseFloat(data.latitude).toFixed(4)}°, ${parseFloat(data.longitude).toFixed(4)}°)`;
+                    }
+                    
+                    currentCitySpan.textContent = displayText;
+                    currentCitySpan.className = 'text-primary';
+                    
+                    dropdown.value = data.selectedCityApi;
+
+                    const cityTypeLabel = document.getElementById('cityTypeLabel');
+                    if (cityTypeLabel && dropdown.value) {
+                        const selectedOption = dropdown.options[dropdown.selectedIndex];
+                        if (selectedOption) {
+                            const typeLabel = selectedOption.getAttribute('data-type');
+                            const typeEmoji = selectedOption.getAttribute('data-type-emoji');
+                            
+                            if (typeLabel && typeEmoji) {
+                                cityTypeLabel.textContent = `${typeEmoji} ${typeLabel}`;
+                            } else {
+                                cityTypeLabel.textContent = '';
+                            }
+                        }
+                    }
+                                        
+                    if (data.latitude && data.longitude) {
+                        const selectedOption = dropdown.options[dropdown.selectedIndex];
+                        if (selectedOption) {
+                            const defaultLat = selectedOption.getAttribute('data-lat');
+                            const defaultLon = selectedOption.getAttribute('data-lon');
+                            
+                            if (defaultLat && defaultLon) {
+                                defaultCoordinates.lat = defaultLat;
+                                defaultCoordinates.lon = defaultLon;
+                                defaultCoordsSpan.textContent = `${parseFloat(defaultLat).toFixed(4)}°, ${parseFloat(defaultLon).toFixed(4)}°`;
+                            }
+                        }
+                        
+                        latInput.value = data.latitude;
+                        lonInput.value = data.longitude;
+                        
+                        coordinatesForm.classList.remove('hide');
+                    }
+                    
+                } else {
+                    currentCitySpan.textContent = 'Belum dipilih';
+                    currentCitySpan.className = 'subheader';
+                    dropdown.selectedIndex = 0;
+                    
+                    if (coordinatesForm) {
+                        coordinatesForm.classList.add('hide');
+                    }
+                }
+                
+            } catch (error) {
+                document.getElementById('currentCity').textContent = 'Kesalahan memuat';
+            }
+        }
+
+        async function saveCity() {
+            const dropdown = document.getElementById('cityDropdown');
+            const selectedCity = dropdown.value;
+            
+            if (!selectedCity) {
+                showToast('lih lokasi terlebih dahulu', 'error');
+                return;
+            }
+            
+            const selectedOption = dropdown.options[dropdown.selectedIndex];
+            
+            const latInput = document.getElementById('latInput');
+            const lonInput = document.getElementById('lonInput');
+
+            const typeLabel = selectedOption.getAttribute('data-type');
+            const typeEmoji = selectedOption.getAttribute('data-type-emoji');
+            
+            let lat = latInput.value.trim();
+            let lon = lonInput.value.trim();
+            
+            if (!lat || !lon) {
+                showToast('Koordinat latitude dan longitude harus diisi', 'error');
+                return;
+            }
+            
+            const latNum = parseFloat(lat);
+            const lonNum = parseFloat(lon);
+            
+            if (isNaN(latNum) || isNaN(lonNum)) {
+                showToast('Format koordinat tidak valid. Gunakan angka dengan titik desimal', 'error');
+                return;
+            }
+            
+            if (latNum < -90 || latNum > 90) {
+                showToast('Latitude harus antara -90 hingga 90', 'error');
+                return;
+            }
+            
+            if (lonNum < -180 || lonNum > 180) {
+                showToast('Longitude harus antara -180 hingga 180', 'error');
+                return;
+            }
+            
+            const cityData = cityList.find(c => c.api === selectedCity);
+            const displayName = cityData ? cityData.display : selectedCity;
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Menyimpan...';
+            
+            try {
+                const formData = new URLSearchParams();
+                formData.append('city', selectedCity);
+                formData.append('cityName', displayName);
+                formData.append('lat', lat);
+                formData.append('lon', lon);
+                
+                if (typeLabel) {
+                    formData.append('type', typeLabel);
+                }
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch('/setcity', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json'
+                    },
+                    body: formData.toString(),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    showToast('Lokasi berhasil disimpan', 'success');
+                    
+                    setTimeout(() => {
+                        loadCurrentCity();
+                    }, 1000);
+                    
+                    setTimeout(() => {
+                        loadSavedPrayerTimes();
+                    }, 3000);
+                    
+                } else {
+                    throw new Error('Gagal menyimpan lokasi');
+                }
+                
+            } catch (error) {
+                showToast('Gagal menyimpan lokasi', 'error');
+                
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        // ================================
+        // JADWAL SALAT
+        // ================================
+        async function loadSavedPrayerTimes() {
+            if (isLoadingPrayerTimes) {
+                return false;
+            }
+            
+            isLoadingPrayerTimes = true;
+            
+            try {
+                const response = await fetch('/getprayertimes');
+                const data = await response.json();
+                
+                prayerConfig.imsakTime = data.imsak || '--:--';    
+                prayerConfig.subuhTime = data.subuh || '--:--';
+                prayerConfig.terbitTime = data.terbit || '--:--';
+                prayerConfig.zuhurTime = data.zuhur || '--:--';
+                prayerConfig.asharTime = data.ashar || '--:--';
+                prayerConfig.maghribTime = data.maghrib || '--:--';
+                prayerConfig.isyaTime = data.isya || '--:--';
+                
+                document.getElementById('imsakTime').textContent = prayerConfig.imsakTime;  
+                document.getElementById('subuhTime').textContent = prayerConfig.subuhTime;
+                document.getElementById('terbitTime').textContent = prayerConfig.terbitTime;
+                document.getElementById('zuhurTime').textContent = prayerConfig.zuhurTime;
+                document.getElementById('asharTime').textContent = prayerConfig.asharTime;
+                document.getElementById('maghribTime').textContent = prayerConfig.maghribTime;
+                document.getElementById('isyaTime').textContent = prayerConfig.isyaTime;
+                return true;
+            } catch (error) {
+                return false;
+            } finally {
+                isLoadingPrayerTimes = false;
+            }
+        }
+
+        // ================================
+        // PENGATURAN WIFI & AP
+        // ================================
+        let savedWiFiConfig = {
+            routerSSID: '',
+            apSSID: ''
+        };
+
+        async function loadWiFiConfig() {            
+            try {
+                const response = await fetch('/getwificonfig', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                
+                const data = await response.json();
+                
+                // Simpan ke variabel global untuk restore nanti
+                savedWiFiConfig.routerSSID = data.routerSSID || '';
+                savedWiFiConfig.apSSID = data.apSSID || '';
+                
+                // Set WiFi SSID ke form (jika ada)
+                const wifiSSIDInput = document.getElementById('wifiSSID');
+                if (wifiSSIDInput) {
+                    wifiSSIDInput.value = savedWiFiConfig.routerSSID;
+                    wifiSSIDInput.placeholder = savedWiFiConfig.routerSSID || 'WiFi SSID';
+                }
+                
+                // Set AP SSID ke form (jika ada)
+                const apSSIDInput = document.getElementById('apSSID');
+                if (apSSIDInput) {
+                    apSSIDInput.value = savedWiFiConfig.apSSID;
+                    apSSIDInput.placeholder = savedWiFiConfig.apSSID || 'AP SSID';
+                }
+                
+                return true;
+                
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function setWiFi() {
+            const ssid = document.getElementById('wifiSSID').value.trim();
+            const password = document.getElementById('wifiPassword').value;
+
+            if (!ssid) {
+                showToast('SSID tidak boleh kosong', 'error');
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Menyimpan...';
+
+            fetch('/setwifi', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `ssid=${encodeURIComponent(ssid)}&password=${encodeURIComponent(password)}`
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Update saved config setelah berhasil simpan
+                    savedWiFiConfig.routerSSID = ssid;
+                    
+                    showToast('WiFi berhasil disimpan', 'success');
+                    
+                    // Kosongkan password setelah simpan
+                    document.getElementById('wifiPassword').value = '';
+                    
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }, 6000);
+
+                } else {
+                    throw new Error('Penyimpanan gagal');
+                }
+            })
+            .catch(error => {
+                showToast('Gagal menyimpan WiFi', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            });
+        }
+
+        function clearWiFiForm() {
+            // Restore ke data tersimpan
+            const wifiSSIDInput = document.getElementById('wifiSSID');
+            const wifiPasswordInput = document.getElementById('wifiPassword');
+            
+            if (wifiSSIDInput) {
+                wifiSSIDInput.value = savedWiFiConfig.routerSSID;
+            }
+            if (wifiPasswordInput) {
+                wifiPasswordInput.value = '';
+            }
+        }
+
+        function setAP() {
+            const ssid = document.getElementById('apSSID').value.trim();
+            const password = document.getElementById('apPassword').value;
+
+            if (!ssid) {
+                showToast('SSID AP tidak boleh kosong', 'error');
+                return;
+            }
+
+            if (password.length > 0 && password.length < 8) {
+                showToast('Kata sandi minimal 8 karakter', 'error');
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Menyimpan...';
+
+            fetch('/setap', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `ssid=${encodeURIComponent(ssid)}&password=${encodeURIComponent(password)}`
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Update saved config setelah berhasil simpan
+                    savedWiFiConfig.apSSID = ssid;
+                    
+                    showToast('Pengaturan AP berhasil disimpan', 'success');
+                    
+                    // Kosongkan password setelah simpan
+                    document.getElementById('apPassword').value = '';
+                    
+                    setTimeout(() => {
+                        showToast('Sambungkan ke AP: ' + ssid, 'warning');
+                    }, 3500);
+                    
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }, 6000);
+                    
+                    setTimeout(() => {
+                        showToast('Memuat ulang halaman otomatis...', 'warning');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    }, 18000);
+                    
+                } else {
+                    return response.text().then(text => {
+                        throw new Error(text);
+                    });
+                }
+            })
+            .catch(error => {
+                showToast('' + error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            });
+        }
+
+        function clearAPForm() {
+            // Restore ke data tersimpan
+            const apSSIDInput = document.getElementById('apSSID');
+            const apPasswordInput = document.getElementById('apPassword');
+            
+            if (apSSIDInput) {
+                apSSIDInput.value = savedWiFiConfig.apSSID;
+            }
+            if (apPasswordInput) {
+                apPasswordInput.value = '';
+            }
+        }
+        // ================================
+        // SINKRONISASI WAKTU
+        // ================================
+        function syncTime() {
+            const d = new Date();
+            
+            const year = d.getFullYear();
+            const month = d.getMonth() + 1;
+            const day = d.getDate();
+            const hour = d.getHours();
+            const minute = d.getMinutes();
+            const second = d.getSeconds();
+
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Menyinkronkan...';
+
+            fetch('/synctime', { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `y=${year}&m=${month}&d=${day}&h=${hour}&i=${minute}&s=${second}`
+            })
+            .then(response => response.text())
+            .then(data => {
+                showToast('Waktu berhasil disinkronkan', 'success');
+                updateDeviceStatus();
+                btn.disabled = false;
+                btn.textContent = 'Sync Time Now';
+            })
+            .catch(error => {
+                showToast('Gagal menyinkronkan waktu', 'error');
+                btn.disabled = false;
+                btn.textContent = ' Sync Time Now';
+            });
+        }
+
+        // ================================
+        // RESET PABRIK
+        // ================================
+        function resetSettings() {
+            if (!confirm('⚠️ Yakin ingin mengatur ulang semua pengaturan? Perangkat akan dimulai ulang dan kembali ke pengaturan awal.')) {
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Mengatur ulang...';
+
+            fetch('/reset', { method: 'POST' })
+            .then(response => {
+                if (response.ok) {
+                    showToast('Pengaturan ulang berhasil', 'success');
+                    
+                    setTimeout(() => {
+                        showToast('Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
+                    }, 1500);
+                    
+                    setTimeout(() => {
+                        showToast('Sambungkan kembali ke AP: JWS Indonesia', 'warning');
+                    }, 3500);
+                    
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }, 6000);
+                    
+                    setTimeout(() => {
+                        showToast('Memuat ulang halaman otomatis...', 'warning');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    }, 18000);
+                    
+                } else {
+                    throw new Error('Pengaturan ulang gagal');
+                }
+            })
+            .catch(error => {
+                showToast('Gagal mengatur ulang perangkat', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            });
+        }
+
+        // ================================
+        // FUNGSI UNGGAH CITIES.JSON
+        // ================================
+        let selectedCitiesFile = null;
+
+        function calculateArduinoJsonSize(json) {
+            let totalSize = 0;
+            totalSize += 24;
+            
+            if (Array.isArray(json)) {
+                totalSize += 16;
+                totalSize += json.length * 8;
+                
+                json.forEach(item => {
+                    if (typeof item === 'object' && item !== null) {
+                        totalSize += 16;
+                        
+                        const keys = Object.keys(item);
+                        totalSize += keys.length * 24;
+                        
+                        keys.forEach(key => {
+                            totalSize += key.length + 1;
+                            totalSize += Math.ceil((key.length + 1) / 4) * 4;
+                            
+                            const value = item[key];
+                            if (typeof value === 'string') {
+                                totalSize += value.length + 1;
+                                totalSize += Math.ceil((value.length + 1) / 4) * 4;
+                            } else if (typeof value === 'number') {
+                                totalSize += 8;
+                            } else if (typeof value === 'boolean') {
+                                totalSize += 1;
+                            }
+                        });
+                    }
+                });
+            }
+            
+            totalSize = Math.ceil(totalSize * 1.2);
+            return totalSize;
+        }
+
+        function handleCitiesFileSelect(event) {
+            const file = event.target.files[0];
+            const fileNameDisplay = document.getElementById('selectedFileName');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const clearBtn = document.getElementById('clearFileBtn');
+            
+            if (!file) {
+                selectedCitiesFile = null;
+                fileNameDisplay.textContent = 'Belum ada berkas dipilih';
+                fileNameDisplay.className = 'help-text text-center';
+                uploadBtn.disabled = true;
+                clearBtn.style.display = 'none';
+                return;
+            }
+            
+            if (file.name !== 'cities.json') {
+                showToast('Nama berkas harus cities.json', 'error');
+                selectedCitiesFile = null;
+                fileNameDisplay.innerHTML = '<span class="label alert">❌ Nama berkas tidak valid</span>';
+                uploadBtn.disabled = true;
+                clearBtn.style.display = 'none';
+                event.target.value = '';
+                return;
+            }
+            
+            const maxSize = 1 * 1024 * 1024;
+            if (file.size > maxSize) {
+                showToast('Berkas terlalu besar (maks 1MB)', 'error');
+                selectedCitiesFile = null;
+                fileNameDisplay.innerHTML = '<span class="label alert">❌ Berkas terlalu besar</span>';
+                uploadBtn.disabled = true;
+                clearBtn.style.display = 'none';
+                event.target.value = '';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    
+                    if (!Array.isArray(json)) {
+                        throw new Error('JSON harus berupa array');
+                    }
+                    
+                    if (json.length === 0) {
+                        throw new Error('Array JSON tidak boleh kosong');
+                    }
+                    
+                    const requiredFields = ['api', 'display', 'province'];
+                    
+                    for (let i = 0; i < json.length; i++) {
+                        const item = json[i];
+                        
+                        for (const field of requiredFields) {
+                            if (!item.hasOwnProperty(field) || !item[field]) {
+                                throw new Error(`Item ${i}: kolom '${field}' tidak ada atau kosong`);
+                            }
+                            
+                            if (typeof item[field] !== 'string') {
+                                throw new Error(`Item ${i}: kolom '${field}' harus berupa teks`);
+                            }
+                        }
+                        
+                        if (item.lat) {
+                            const lat = parseFloat(item.lat);
+                            if (isNaN(lat) || lat < -90 || lat > 90) {
+                                throw new Error(`Item ${i}: lintang tidak valid (${item.lat})`);
+                            }
+                        }
+                        
+                        if (item.lon) {
+                            const lon = parseFloat(item.lon);
+                            if (isNaN(lon) || lon < -180 || lon > 180) {
+                                throw new Error(`Item ${i}: bujur tidak valid (${item.lon})`);
+                            }
+                        }
+                    }
+                    
+                    const jsonSize = calculateArduinoJsonSize(json);
+                    const ESP32_MAX_HEAP = 320000;
+                    
+                    if (jsonSize > ESP32_MAX_HEAP) {
+                        const sizeKB = (jsonSize / 1024).toFixed(2);
+                        const maxKB = (ESP32_MAX_HEAP / 1024).toFixed(2);
+                        
+                        showToast(`Berkas terlalu berat untuk ESP32 ${sizeKB} KB > ${maxKB} KB`, 'error');
+                        
+                        selectedCitiesFile = null;
+                        fileNameDisplay.innerHTML = `<span class="label alert">❌ Terlalu berat (${sizeKB} KB)</span>`;
+                        uploadBtn.disabled = true;
+                        clearBtn.style.display = 'none';
+                        event.target.value = '';
+                        return;
+                    }
+                    
+                    selectedCitiesFile = file;
+                    selectedCitiesFile.jsonMetadata = {
+                        citiesCount: json.length,
+                        jsonSize: jsonSize,
+                        fileSize: file.size
+                    };
+                    
+                    const sizeKB = (file.size / 1024).toFixed(2);
+                    const jsonSizeKB = (jsonSize / 1024).toFixed(2);
+                    
+                    fileNameDisplay.innerHTML = 
+                        `<span class="label success">✅ ${file.name} (${sizeKB} KB)</span><br>` +
+                        `<small>📊 ${json.length} lokasi | DynamicJsonDocument: ${jsonSizeKB} KB</small>`;
+                    uploadBtn.disabled = false;
+                    clearBtn.style.display = 'block';
+                    
+                } catch (error) {
+                    showToast('Validasi gagal: ' + error.message, 'error');
+                    selectedCitiesFile = null;
+                    fileNameDisplay.innerHTML = `<span class="label alert">❌ ${error.message}</span>`;
+                    uploadBtn.disabled = true;
+                    clearBtn.style.display = 'none';
+                    event.target.value = '';
+                }
+            };
+            
+            reader.onerror = function() {
+                showToast('Gagal membaca berkas', 'error');
+                selectedCitiesFile = null;
+                fileNameDisplay.innerHTML = '<span class="label alert">❌ Gagal membaca berkas</span>';
+                uploadBtn.disabled = true;
+                clearBtn.style.display = 'none';
+                event.target.value = '';
+            };
+            
+            reader.readAsText(file);
+        }
+
+        async function uploadCitiesFile() {
+            if (!selectedCitiesFile) {
+                showToast('Pilih berkas terlebih dahulu', 'error');
+                return;
+            }
+            
+            const uploadBtn = document.getElementById('uploadBtn');
+            const progressDiv = document.getElementById('uploadProgress');
+            const progressBar = document.getElementById('uploadProgressBar');
+            const statusText = document.getElementById('uploadStatus');
+            
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Mengunggah...';
+            progressDiv.classList.remove('hide');
+            progressBar.style.width = '0%';
+            progressBar.querySelector('.progress-meter-text').textContent = '0%';
+            statusText.textContent = 'Memulai pengunggahan...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedCitiesFile);
+                
+                if (selectedCitiesFile.jsonMetadata) {
+                    formData.append('jsonSize', selectedCitiesFile.jsonMetadata.jsonSize);
+                    formData.append('citiesCount', selectedCitiesFile.jsonMetadata.citiesCount);
+                }
+                
+                const xhr = new XMLHttpRequest();
+                
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.width = percentComplete + '%';
+                        progressBar.querySelector('.progress-meter-text').textContent = percentComplete + '%';
+                        statusText.textContent = `Mengunggah: ${(e.loaded / 1024).toFixed(1)} KB / ${(e.total / 1024).toFixed(1)} KB`;
+                    }
+                });
+                
+                xhr.addEventListener('load', async () => {
+                    if (xhr.status === 200) {
+                        progressBar.style.width = '100%';
+                        progressBar.querySelector('.progress-meter-text').textContent = '100%';
+                        statusText.innerHTML = '<span class="label success">✅ Pengunggahan berhasil</span>';
+                        
+                        if (selectedCitiesFile.jsonMetadata) {
+                            const jsonSizeKB = (selectedCitiesFile.jsonMetadata.jsonSize / 1024).toFixed(2);
+                            showToast(`cities.json berhasil diunggah ${selectedCitiesFile.jsonMetadata.citiesCount} lokasi`, 'success');
+                        } else {
+                            showToast('cities.json berhasil diunggah', 'success');
+                        }
+                        
+                        document.getElementById('citiesFileInput').value = '';
+                        document.getElementById('selectedFileName').textContent = 'Belum ada berkas dipilih';
+                        selectedCitiesFile = null;
+                        
+                        setTimeout(() => {
+                            showToast('Memuat ulang daftar lokasi...', 'warning');
+                            loadAttempts = 0;
+                            loadCities();
+                        }, 2000);
+                        
+                        setTimeout(() => {
+                            progressDiv.classList.add('hide');
+                            uploadBtn.disabled = false;
+                            uploadBtn.textContent = 'Upload File';
+                        }, 5000);
+                        
+                    } else {
+                        throw new Error('Pengunggahan gagal');
+                    }
+                });
+                
+                xhr.addEventListener('error', () => {
+                    throw new Error('Kesalahan jaringan - koneksi terputus');
+                });
+                
+                xhr.addEventListener('timeout', () => {
+                    throw new Error('Waktu pengunggahan habis - berkas terlalu lama');
+                });
+                
+                xhr.open('POST', '/uploadcities', true);
+                xhr.timeout = 30000;
+                xhr.send(formData);
+                
+            } catch (error) {                
+                progressBar.classList.add('alert');
+                progressBar.style.width = '100%';
+                statusText.innerHTML = `<span class="label alert">❌ ${error.message}</span>`;
+                
+                showToast('Pengunggahan gagal: ' + error.message, 'error');
+                
+                setTimeout(() => {
+                    progressDiv.classList.add('hide');
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = '📤 Unggah Berkas';
+                }, 3000);
+            }
+        }
+
+        function clearSelectedFile() {
+            const fileInput = document.getElementById('citiesFileInput');
+            const fileNameDisplay = document.getElementById('selectedFileName');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const clearBtn = document.getElementById('clearFileBtn');
+            
+            fileInput.value = '';
+            selectedCitiesFile = null;
+            
+            fileNameDisplay.textContent = 'Belum ada file dipilih';
+            fileNameDisplay.className = 'help-text text-center';
+            
+            uploadBtn.disabled = true;
+            clearBtn.style.display = 'none';
+            
+            showToast('File dihapus', 'warning');
+        }
+
+        // ================================
+        // FUNGSI PEMILIHAN METODE
+        // ================================
+        async function loadCurrentMethod() {
+            if (isLoadingMethod) {
+                return false;
+            }
+            
+            isLoadingMethod = true;
+                    
+            try {
+                const response = await fetch('/getmethod', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                
+                const data = await response.json();
+                
+                if (data.methodId !== undefined) {
+                    methodConfig.methodId = data.methodId;
+                    methodConfig.methodName = data.methodName;
+                } else {
+                    methodConfig.methodId = 5;
+                    methodConfig.methodName = 'Egyptian General Authority of Survey';
+                }
+                
+                const currentMethodTop = document.getElementById('currentMethodTop');
+                const currentMethodBottom = document.getElementById('currentMethodBottom');
+                const methodDropdown = document.getElementById('methodDropdown');
+                
+                if (currentMethodTop) {
+                    currentMethodTop.textContent = methodConfig.methodName;
+                }
+                if (currentMethodBottom) {
+                    currentMethodBottom.textContent = methodConfig.methodName;
+                }
+                if (methodDropdown) {
+                    methodDropdown.value = methodConfig.methodId;
+                }
+                
+                return true;
+                
+            } catch (error) {                
+                methodConfig.methodId = 5;
+                methodConfig.methodName = 'Egyptian General Authority of Survey';
+                
+                const currentMethodTop = document.getElementById('currentMethodTop');
+                const currentMethodBottom = document.getElementById('currentMethodBottom');
+                if (currentMethodTop) currentMethodTop.textContent = methodConfig.methodName;
+                if (currentMethodBottom) currentMethodBottom.textContent = methodConfig.methodName;
+                
+                return false;
+            } finally {
+                isLoadingMethod = false;
+            }
+        }
+
+        async function saveMethod() {
+            const dropdown = document.getElementById('methodDropdown');
+            const methodId = dropdown.value;
+            const methodName = dropdown.options[dropdown.selectedIndex].text;
+            
+            if (!methodId) {
+                showToast('Pilih metode terlebih dahulu', 'error');
+                return;
+            }
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Menyimpan...';
+            
+            try {
+                const formData = new URLSearchParams();
+                formData.append('methodId', methodId);
+                formData.append('methodName', methodName);
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch('/setmethod', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json'
+                    },
+                    body: formData.toString(),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    showToast('Metode kalkulasi berhasil disimpan', 'success');
+                    
+                    const currentMethodTop = document.getElementById('currentMethodTop');
+                    const currentMethodBottom = document.getElementById('currentMethodBottom');
+                    
+                    if (currentMethodTop) {
+                        currentMethodTop.textContent = methodName;
+                    }
+                    if (currentMethodBottom) {
+                        currentMethodBottom.textContent = methodName;
+                    }
+                    
+                    if (result.prayerTimesUpdating) {
+                        setTimeout(() => {
+                            showToast('Jadwal salat sedang diperbarui dengan metode baru...', 'warning');
+                        }, 1500);
+                        
+                        setTimeout(() => {
+                            loadSavedPrayerTimes();
+                        }, 4000);
+                    } else {
+                        setTimeout(() => {
+                            showToast('Metode disimpan. Pilih lokasi untuk menghitung jadwal salat.', 'warning');
+                        }, 1500);
+                    }
+                    
+                } else {
+                    throw new Error('Gagal menyimpan metode');
+                }
+                
+            } catch (error) {
+                showToast('Gagal menyimpan metode', 'error');
+                
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+        
+        async function restartDevice() {
+            if (!confirm('🔄 Yakin ingin memulai ulang perangkat? Perangkat akan tidak terhubung ~15 detik.')) {
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Memulai ulang...';
+
+            try {
+                const response = await fetch('/restart', { 
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                });
+                
+                if (response.ok) {
+                    showToast('Perintah mulai ulang terkirim', 'success');
+                    
+                    setTimeout(() => {
+                        showToast('Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
+                    }, 1500);
+                    
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }, 6000);
+                    
+                    setTimeout(() => {
+                        showToast('Memuat ulang halaman otomatis...', 'warning');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    }, 18000);
+                    
+                } else {
+                    throw new Error('Perintah mulai ulang gagal');
+                }
+            } catch (error) {
+                showToast('Gagal memulai ulang perangkat', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        // ================================
+        // FUNGSI TIMEZONE - INLINE EDITING
+        // ================================
+        let isEditingTimezone = false;
+
+        function toggleTimezoneEdit() {
+            const displayText = document.getElementById('timezoneDisplayText');
+            const input = document.getElementById('timezoneInput');
+            const btn = document.getElementById('timezoneBtn');
+            const cancelBtn = document.getElementById('timezoneCancelBtn');
+            
+            if (!isEditingTimezone) {
+                displayText.style.display = 'none';
+                input.style.display = 'inline-block';
+                input.value = timezoneConfig.offset >= 0 ? '+' + timezoneConfig.offset : timezoneConfig.offset;
+                input.focus();
+                input.select();
+                btn.textContent = '💾';
+                btn.title = 'Simpan Timezone';
+                cancelBtn.style.display = 'inline-block';
+                isEditingTimezone = true;
+            } else {
+                saveTimezone();
+            }
+        }
+
+        function cancelTimezoneEdit() {
+            const displayText = document.getElementById('timezoneDisplayText');
+            const input = document.getElementById('timezoneInput');
+            const btn = document.getElementById('timezoneBtn');
+            const cancelBtn = document.getElementById('timezoneCancelBtn');
+            
+            displayText.style.display = 'inline';
+            input.style.display = 'none';
+            btn.textContent = '🕐';
+            btn.title = 'Edit Timezone';
+            cancelBtn.style.display = 'none';
+            isEditingTimezone = false;
+            
+            input.value = timezoneConfig.offset >= 0 ? '+' + timezoneConfig.offset : timezoneConfig.offset;
+        }
+        
+        async function loadTimezoneConfig() {            
+            try {
+                const response = await fetch('/gettimezone', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                
+                const data = await response.json();
+                
+                if (data.offset !== undefined) {
+                    timezoneConfig.offset = data.offset;
+                } else {
+                    timezoneConfig.offset = 7;
+                }
+                
+                updateTimezoneDisplay();
+                
+                return true;
+                
+            } catch (error) {
+                timezoneConfig.offset = 7;
+                updateTimezoneDisplay();
+                return false;
+            }
+        }
+
+        function updateTimezoneDisplay() {
+            const displayText = document.getElementById('timezoneDisplayText');
+            const input = document.getElementById('timezoneInput');
+            
+            const displayValue = (timezoneConfig.offset >= 0 ? '+' : '') + timezoneConfig.offset;
+            
+            if (displayText) {
+                displayText.textContent = displayValue;
+            }
+            if (input) {
+                input.value = displayValue;
+            }
+        }
+
+        async function saveTimezone() {
+            const input = document.getElementById('timezoneInput');
+            const displayText = document.getElementById('timezoneDisplayText');
+            const btn = document.getElementById('timezoneBtn');
+            const cancelBtn = document.getElementById('timezoneCancelBtn');
+            
+            let offsetStr = input.value.trim();
+            
+            if (!offsetStr) {
+                showToast('Offset timezone tidak boleh kosong', 'error');
+                input.focus();
+                return;
+            }
+            
+            let offset = parseInt(offsetStr);
+            
+            if (isNaN(offset)) {
+                showToast('Format offset tidak valid (contoh: +7, -5)', 'error');
+                input.focus();
+                return;
+            }
+            
+            if (offset < -12 || offset > 14) {
+                showToast('Offset harus antara -12 hingga +14', 'error');
+                input.focus();
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = '...';
+            
+            try {
+                const formData = new URLSearchParams();
+                formData.append('offset', offset);
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch('/settimezone', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json'
+                    },
+                    body: formData.toString(),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    timezoneConfig.offset = offset;
+                    
+                    const displayValue = (offset >= 0 ? '+' : '') + offset;
+                    displayText.textContent = displayValue;
+                    input.value = displayValue;
+                    
+                    displayText.style.display = 'inline';
+                    input.style.display = 'none';
+                    btn.textContent = '🕐';
+                    btn.title = 'Edit Timezone';
+                    btn.disabled = false;
+                    isEditingTimezone = false;
+                    cancelBtn.style.display = 'none';
+                    
+                    showToast('Timezone berhasil disimpan', 'success');
+                    
+                    setTimeout(() => {
+                        showToast('NTP akan re-sync dengan timezone baru...', 'warning');
+                    }, 1500);
+                    
+                } else {
+                    throw new Error('Gagal menyimpan timezone');
+                }
+                
+            } catch (error) {
+                showToast('Gagal menyimpan timezone', 'error');
+                
+                btn.textContent = '💾';
+                btn.disabled = false;
+                input.focus();
+            }
+        }
+
+        // ================================
+        // INISIALISASI
+        // ================================
+        async function initializeApp() {
+            const progressBar = document.getElementById('loadingProgress');
+            const percentage = document.getElementById('loadingPercentage');
+            const status = document.getElementById('loadingStatus');
+            
+            let currentProgress = 0;
+            
+            function updateProgress(targetProgress, message) {
+                return new Promise((resolve) => {
+                    const interval = setInterval(() => {
+                        if (currentProgress < targetProgress) {
+                            currentProgress += 1;
+                            if (progressBar) progressBar.style.width = currentProgress + '%';
+                            if (percentage) percentage.textContent = currentProgress + '%';
+                            if (status) status.textContent = message;
+                        } else {
+                            clearInterval(interval);
+                            resolve();
+                        }
+                    }, 20);
+                });
+            }
+            
+            const LOADING_TIMEOUT = 10000;
+            let timeoutReached = false;
+            
+            const timeoutTimer = setTimeout(() => {
+                timeoutReached = true;
+                if (status) status.textContent = 'Timeout - melanjutkan...';
+                setTimeout(() => {
+                    LoadingManager.completeLoading();
+                }, 500);
+            }, LOADING_TIMEOUT);
+            
+            try {
+                // ================================
+                // CSS Check (0-15%)
+                // ================================
+                if (status) status.textContent = 'Memuat Foundation CSS...';
+                await updateProgress(5, 'Memuat Foundation CSS...');
+                
+                await cssLoaded;
+                await updateProgress(15, 'Foundation CSS loaded');
+                await new Promise(r => setTimeout(r, 150));
+                
+                if (timeoutReached) return;
+                
+                // ================================
+                // Device Status (15-35%)
+                // ================================
+                if (status) status.textContent = 'Menghubungkan ke perangkat...';
+                await updateProgress(20, 'Menghubungkan ke perangkat...');
+                
+                try {
+                    await updateDeviceStatus();
+                    await updateProgress(35, 'Status perangkat terhubung');
+                } catch (err) {
+                    await updateProgress(35, 'Status perangkat gagal (lanjut)');
+                }
+                await new Promise(r => setTimeout(r, 150));
+                
+                if (timeoutReached) return;
+                
+                // ================================
+                // Cities Data (35-60%) + RETRY
+                // ================================
+                if (status) status.textContent = 'Memuat data lokasi...';
+                await updateProgress(40, 'Memuat data lokasi...');
+                
+                let citiesLoaded = false;
+                let citiesRetryCount = 0;
+                const MAX_CITIES_RETRY = 3;
+                
+                while (!citiesLoaded && citiesRetryCount < MAX_CITIES_RETRY && !timeoutReached) {
+                    try {
+                        if (citiesRetryCount > 0) {
+                            if (status) status.textContent = `Mencoba lagi (${citiesRetryCount}/${MAX_CITIES_RETRY})...`;
+                        }
+                        
+                        citiesLoaded = await loadCities();
+                        
+                        if (citiesLoaded && cityList.length > 0) {
+                            await updateProgress(60, `${cityList.length} lokasi dimuat`);
+                            break;
+                        } else {
+                            citiesRetryCount++;
+                            
+                            if (citiesRetryCount < MAX_CITIES_RETRY) {
+                                await updateProgress(45 + (citiesRetryCount * 5), `Mencoba ulang ${citiesRetryCount}...`);
+                                await new Promise(r => setTimeout(r, 1000));
+                            }
+                        }
+                    } catch (err) {
+                        citiesRetryCount++;
+                        
+                        if (citiesRetryCount < MAX_CITIES_RETRY) {
+                            await updateProgress(45 + (citiesRetryCount * 5), `Gagal, coba lagi...`);
+                            await new Promise(r => setTimeout(r, 1000));
+                        }
+                    }
+                }
+                
+                if (!citiesLoaded) {
+                    await updateProgress(60, 'Data lokasi gagal dimuat');
+                } else {
+                }
+                
+                await new Promise(r => setTimeout(r, 150));
+                
+                if (timeoutReached) return;
+                
+                // ================================
+                // Prayer Times (60-80%)
+                // ================================
+                if (status) status.textContent = 'Memuat jadwal shalat...';
+                await updateProgress(65, 'Memuat jadwal shalat...');
+                
+                try {
+                    const prayerSuccess = await loadSavedPrayerTimes();
+                    
+                    if (prayerSuccess && prayerConfig.subuhTime && prayerConfig.subuhTime !== '--:--') {
+                        await updateProgress(80, 'Jadwal shalat dimuat');
+                    } else {
+                        await updateProgress(80, 'Jadwal belum diatur');
+                    }
+                } catch (err) {
+                    await updateProgress(80, 'Jadwal gagal dimuat');
+                }
+                await new Promise(r => setTimeout(r, 150));
+                
+                if (timeoutReached) return;
+                
+                // ================================
+                // Method Config (80-95%)
+                // ================================
+                if (status) status.textContent = 'Memuat konfigurasi metode...';
+                await updateProgress(85, 'Memuat metode kalkulasi...');
+                
+                try {
+                    const methodSuccess = await loadCurrentMethod();
+                    
+                    if (methodSuccess && methodConfig.methodName) {
+                        const displayName = methodConfig.methodName.length > 30 
+                            ? methodConfig.methodName.substring(0, 27) + '...' 
+                            : methodConfig.methodName;
+                        await updateProgress(95, 'Metode: ' + displayName);
+                    } else {
+                        await updateProgress(95, 'Metode bawaan digunakan');
+                    }
+                } catch (err) {
+                    await updateProgress(95, 'Metode bawaan digunakan');
+                }
+                await new Promise(r => setTimeout(r, 150));
+                
+                if (timeoutReached) return;
+
+                // ================================
+                // Timezone Config (95-97%)
+                // ================================
+                if (status) status.textContent = 'Memuat konfigurasi timezone...';
+                await updateProgress(95, 'Memuat timezone...');
+
+                try {
+                    const timezoneSuccess = await loadTimezoneConfig();
+                    
+                    if (timezoneSuccess) {
+                        await updateProgress(97, 'Timezone: UTC' + (timezoneConfig.offset >= 0 ? '+' : '') + timezoneConfig.offset);
+                    } else {
+                        await updateProgress(97, 'Timezone bawaan (+7)');
+                    }
+                } catch (err) {
+                    await updateProgress(97, 'Timezone bawaan (+7)');
+                }
+                await new Promise(r => setTimeout(r, 150));
+
+                if (timeoutReached) return;
+
+                // ================================
+                // WiFi & AP Config (97-98%)
+                // ================================
+                if (status) status.textContent = 'Memuat konfigurasi WiFi & AP...';
+                await updateProgress(97, 'Memuat WiFi & AP...');
+
+                try {
+                    const wifiConfigSuccess = await loadWiFiConfig();
+                    
+                    if (wifiConfigSuccess) {
+                        await updateProgress(98, 'WiFi & AP config dimuat');
+                    } else {
+                        await updateProgress(98, 'WiFi & AP belum dikonfigurasi');
+                    }
+                } catch (err) {
+                    await updateProgress(98, 'WiFi & AP load error');
+                }
+                await new Promise(r => setTimeout(r, 150));
+
+                if (timeoutReached) return;
+                
+                // ================================
+                // Finalize (95-100%)
+                // ================================
+                if (status) status.textContent = 'Finalisasi...';
+                await updateProgress(98, 'Menyiapkan antarmuka...');
+                
+                setInterval(updateRealtimeDisplay, 1000);
+                setInterval(updateDeviceStatus, 5000);
+                setInterval(loadSavedPrayerTimes, 30000);
+                setInterval(loadCurrentMethod, 30000);
+                
+                
+                await updateProgress(100, 'Siap digunakan');
+                await new Promise(r => setTimeout(r, 300));
+                
+                clearTimeout(timeoutTimer);
+                                
+                LoadingManager.completeLoading();
+                
+            } catch (error) {                
+                clearTimeout(timeoutTimer);
+                
+                if (status) status.textContent = 'Error: ' + error.message;
+                await updateProgress(100, 'Selesai dengan error');
+                
+                setTimeout(() => {
+                    LoadingManager.completeLoading();
+                }, 1500);
+                
+                setInterval(updateRealtimeDisplay, 1000);
+                setInterval(updateDeviceStatus, 5000);
+                setInterval(loadSavedPrayerTimes, 30000);
+                setInterval(loadCurrentMethod, 30000);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            LoadingManager.updateProgress(1, 'DOM Ready');
+            initializeApp();
+            
+            // ================================
+            // ESC KEY HANDLER
+            // ================================
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    if (isEditingTimezone) {
+                        cancelTimezoneEdit();
+                    }
+                    
+                    const clearBtn = document.getElementById('clearFileBtn');
+                    if (clearBtn && clearBtn.style.display === 'block') {
+                        clearSelectedFile();
+                    }
+                }
+            });
+            
+            // ================================
+            // TIMEZONE INPUT - ENTER KEY TO SAVE
+            // ================================
+            const timezoneInput = document.getElementById('timezoneInput');
+            if (timezoneInput) {
+                timezoneInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && isEditingTimezone) {
+                        e.preventDefault();
+                        saveTimezone();
+                    }
+                    
+                    if (e.key === 'Escape' && isEditingTimezone) {
+                        e.preventDefault();
+                        cancelTimezoneEdit();
+                    }
+                });
+                
+                timezoneInput.addEventListener('keypress', function(e) {
+                    const char = String.fromCharCode(e.which);
+                    const currentValue = this.value;
+                    
+                    if (!/[\d\+\-]/.test(char)) {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    if ((char === '+' || char === '-') && currentValue.length > 0) {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    if ((char === '+' || char === '-') && /[\+\-]/.test(currentValue)) {
+                        e.preventDefault();
+                        return;
+                    }
+                });
+            }
+            
+            // ================================
+            // KOORDINAT INPUT - VALIDATION
+            // ================================
+            const latInput = document.getElementById('latInput');
+            if (latInput) {
+                latInput.addEventListener('keypress', function(e) {
+                    const char = String.fromCharCode(e.which);
+                    const currentValue = this.value;
+                    
+                    if (!/[\d\.\-]/.test(char)) {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    if (char === '-' && currentValue.length > 0) {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    if (char === '.' && currentValue.includes('.')) {
+                        e.preventDefault();
+                        return;
+                    }
+                });
+                
+                latInput.addEventListener('blur', function() {
+                    const val = parseFloat(this.value);
+                    if (!isNaN(val) && (val < -90 || val > 90)) {
+                        showToast('Latitude harus antara -90 hingga 90', 'warning');
+                        this.style.borderColor = '#cc4b37';
+                    } else {
+                        this.style.borderColor = '';
+                    }
+                });
+            }
+            
+            const lonInput = document.getElementById('lonInput');
+            if (lonInput) {
+                lonInput.addEventListener('keypress', function(e) {
+                    const char = String.fromCharCode(e.which);
+                    const currentValue = this.value;
+                    
+                    if (!/[\d\.\-]/.test(char)) {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    if (char === '-' && currentValue.length > 0) {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    if (char === '.' && currentValue.includes('.')) {
+                        e.preventDefault();
+                        return;
+                    }
+                });
+                
+                lonInput.addEventListener('blur', function() {
+                    const val = parseFloat(this.value);
+                    if (!isNaN(val) && (val < -180 || val > 180)) {
+                        showToast('Longitude harus antara -180 hingga 180', 'warning');
+                        this.style.borderColor = '#cc4b37';
+                    } else {
+                        this.style.borderColor = '';
+                    }
+                });
+            }
+            
+            // ================================
+            // WIFI SSID INPUT - PREVENT SPACES
+            // ================================
+            const wifiSSID = document.getElementById('wifiSSID');
+            if (wifiSSID) {
+                wifiSSID.addEventListener('keypress', function(e) {
+                    if (e.which === 32 && this.value.length === 0) {
+                        e.preventDefault();
+                    }
+                });
+                
+                wifiSSID.addEventListener('paste', function(e) {
+                    setTimeout(() => {
+                        this.value = this.value.trim();
+                    }, 0);
+                });
+            }
+            
+            const apSSID = document.getElementById('apSSID');
+            if (apSSID) {
+                apSSID.addEventListener('keypress', function(e) {
+                    if (e.which === 32 && this.value.length === 0) {
+                        e.preventDefault();
+                    }
+                });
+                
+                apSSID.addEventListener('paste', function(e) {
+                    setTimeout(() => {
+                        this.value = this.value.trim();
+                    }, 0);
+                });
+            }
+            
+            // ================================
+            // FILE INPUT - DRAG & DROP SUPPORT
+            // ================================
+            const citiesFileInput = document.getElementById('citiesFileInput');
+            const fileLabel = citiesFileInput ? citiesFileInput.closest('label') : null;
+            
+            if (fileLabel) {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    fileLabel.addEventListener(eventName, preventDefaults, false);
+                    document.body.addEventListener(eventName, preventDefaults, false);
+                });
+                
+                function preventDefaults(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    fileLabel.addEventListener(eventName, function() {
+                        this.style.borderColor = '#1779ba';
+                        this.style.backgroundColor = '#e7f4ff';
+                    }, false);
+                });
+                
+                ['dragleave', 'drop'].forEach(eventName => {
+                    fileLabel.addEventListener(eventName, function() {
+                        this.style.borderColor = '';
+                        this.style.backgroundColor = '';
+                    }, false);
+                });
+                
+                fileLabel.addEventListener('drop', function(e) {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    
+                    if (files.length > 0) {
+                        citiesFileInput.files = files;
+                        
+                        const event = new Event('change', { bubbles: true });
+                        citiesFileInput.dispatchEvent(event);
+                    }
+                }, false);
+            }
+            
+            // ================================
+            // CITY DROPDOWN - SEARCH FUNCTIONALITY
+            // ================================
+            const cityDropdown = document.getElementById('cityDropdown');
+            if (cityDropdown) {
+                cityDropdown.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        handleCityChange();
+                    }
+                });
+                
+                cityDropdown.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    if (selectedOption && selectedOption.value) {
+                        const lat = selectedOption.getAttribute('data-lat');
+                        const lon = selectedOption.getAttribute('data-lon');
+                        
+                        if (lat && lon) {
+                        }
+                    }
+                });
+            }
+            
+            // ================================
+            // METHOD DROPDOWN - LOG SELECTION
+            // ================================
+            const methodDropdown = document.getElementById('methodDropdown');
+            if (methodDropdown) {
+                methodDropdown.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                });
+            }
+            
+            // ================================
+            // FORM INPUTS - CLEAR ERROR ON FOCUS
+            // ================================
+            const allInputs = document.querySelectorAll('input[type="text"], input[type="password"]');
+            allInputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.style.borderColor = '';
+                    this.style.backgroundColor = '';
+                });
+            });
+            
+            // ================================
+            // PREVENT ACCIDENTAL FORM SUBMISSION
+            // ================================
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'BUTTON') {
+                    if (e.target.id !== 'timezoneInput') {
+                        const form = e.target.closest('form');
+                        if (!form) {
+                            e.preventDefault();
+                        }
+                    }
+                }
+            });
+            
+            // ================================
+            // VISIBILITY CHANGE - PAUSE/RESUME UPDATES
+            // ================================
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                } else {
+                    updateDeviceStatus();
+                    loadSavedPrayerTimes();
+                }
+            });
+            
+            // ================================
+            // WINDOW BEFOREUNLOAD - WARN IF EDITING
+            // ================================
+            window.addEventListener('beforeunload', function(e) {
+                if (isEditingTimezone) {
+                    e.preventDefault();
+                    e.returnValue = 'Anda sedang mengedit timezone. Yakin ingin meninggalkan halaman?';
+                    return e.returnValue;
+                }
+                
+                const clearBtn = document.getElementById('clearFileBtn');
+                if (clearBtn && clearBtn.style.display === 'block') {
+                    e.preventDefault();
+                    e.returnValue = 'File belum diupload. Yakin ingin meninggalkan halaman?';
+                    return e.returnValue;
+                }
+            });
+            
+            // ================================
+            // ONLINE/OFFLINE DETECTION
+            // ================================
+            window.addEventListener('online', function() {
+                showToast('Koneksi internet tersambung', 'success');
+                
+                setTimeout(() => {
+                    updateDeviceStatus();
+                }, 1000);
+            });
+            
+            window.addEventListener('offline', function() {
+                showToast('Tidak ada koneksi internet', 'warning');
+            });
+        });
+    </script>
+</body>
+</html>
