@@ -661,17 +661,18 @@
         // LOADING MANAGER
         // ================================
         const LoadingManager = {
-            totalSteps: 8, // UBAH DARI 7 KE 8
+            totalSteps: 9,
             currentStep: 0,
             steps: [
                 { name: 'Foundation CSS', progress: 0 },
-                { name: 'JS Libraries', progress: 10 },   // TAMBAHAN BARU
-                { name: 'JavaScript Core', progress: 20 },
-                { name: 'DOM Ready', progress: 30 },
-                { name: 'Device Status', progress: 45 },
-                { name: 'Cities Data', progress: 60 },
-                { name: 'Prayer Times', progress: 75 },
-                { name: 'Method Config', progress: 90 }
+                { name: 'jQuery Library', progress: 11 },
+                { name: 'Foundation JS', progress: 22 },
+                { name: 'DOM Ready', progress: 33 },
+                { name: 'Device Status', progress: 44 },
+                { name: 'Cities Data', progress: 55 },
+                { name: 'Prayer Times', progress: 66 },
+                { name: 'Method Config', progress: 77 },
+                { name: 'WiFi & Timezone', progress: 88 }
             ],
                     
             updateProgress(stepIndex, statusText) {
@@ -728,30 +729,35 @@
             }, 5000);
         });
 
-        const jsLibsLoaded = new Promise((resolve) => {
-            const checkJS = setInterval(() => {
-                if (window.jQuery && window.Foundation) {
-                    clearInterval(checkJS);
-                    LoadingManager.updateProgress(1, 'JS Libraries loaded');
-                    
-                    $(document).foundation();
-                    
-                    resolve(true);
+        const jQueryLoaded = new Promise((resolve) => {
+            const checkjQuery = setInterval(() => {
+                if (typeof jQuery !== 'undefined' && typeof $ !== 'undefined') {
+                    clearInterval(checkjQuery);
+                    LoadingManager.updateProgress(1, 'jQuery loaded');
+                    resolve();
                 }
             }, 50);
             
             setTimeout(() => {
-                clearInterval(checkJS);
-                let missing = [];
-                if (!window.jQuery) missing.push('jQuery');
-                if (!window.Foundation) missing.push('Foundation');
-                
-                if (missing.length > 0) {
-                    LoadingManager.updateProgress(1, `Gagal memuat: ${missing.join(', ')}`);
-                    resolve(false); 
-                } else {
-                    resolve(true);
+                clearInterval(checkjQuery);
+                LoadingManager.updateProgress(1, 'jQuery timeout (proceeding)');
+                resolve();
+            }, 5000);
+        });
+
+        const foundationLoaded = new Promise((resolve) => {
+            const checkFoundation = setInterval(() => {
+                if (typeof Foundation !== 'undefined') {
+                    clearInterval(checkFoundation);
+                    LoadingManager.updateProgress(2, 'Foundation JS loaded');
+                    resolve();
                 }
+            }, 50);
+            
+            setTimeout(() => {
+                clearInterval(checkFoundation);
+                LoadingManager.updateProgress(2, 'Foundation timeout (proceeding)');
+                resolve();
             }, 5000);
         });
 
@@ -2362,132 +2368,282 @@
         // ================================
         // INISIALISASI
         // ================================
-async function initializeApp() {
+        async function initializeApp() {
+            const progressBar = document.getElementById('loadingProgress');
+            const percentage = document.getElementById('loadingPercentage');
             const status = document.getElementById('loadingStatus');
-            const LOADING_TIMEOUT = 15000; // Naikkan timeout sedikit untuk keamanan
+            
+            let currentProgress = 0;
+            
+            function updateProgress(targetProgress, message) {
+                return new Promise((resolve) => {
+                    const interval = setInterval(() => {
+                        if (currentProgress < targetProgress) {
+                            currentProgress += 1;
+                            if (progressBar) progressBar.style.width = currentProgress + '%';
+                            if (percentage) percentage.textContent = currentProgress + '%';
+                            if (status) status.textContent = message;
+                        } else {
+                            clearInterval(interval);
+                            resolve();
+                        }
+                    }, 20);
+                });
+            }
+            
+            const LOADING_TIMEOUT = 10000;
             let timeoutReached = false;
             
-            // Timer pengaman jika loading macet
             const timeoutTimer = setTimeout(() => {
                 timeoutReached = true;
-                if (status) status.textContent = 'Timeout - memaksa masuk...';
-                LoadingManager.completeLoading();
+                if (status) status.textContent = 'Timeout - melanjutkan...';
+                setTimeout(() => {
+                    LoadingManager.completeLoading();
+                }, 500);
             }, LOADING_TIMEOUT);
-
-            // Helper untuk animasi progress bar yang halus
-            async function updateProgress(stepIndex, message) {
-                if (status) status.textContent = message;
-                LoadingManager.updateProgress(stepIndex, message);
-                await new Promise(r => setTimeout(r, 100)); // Delay kecil untuk animasi
-            }
-
+            
             try {
-                // ------------------------------------------------
-                // TAHAP 1: CSS CHECK
-                // ------------------------------------------------
-                await updateProgress(0, 'Memuat Foundation CSS...');
-                await cssLoaded; 
-
-                if (timeoutReached) return;
-
-                // ------------------------------------------------
-                // TAHAP 2: JS LIBRARIES CHECK (NEW)
-                // ------------------------------------------------
-                await updateProgress(1, 'Memeriksa Library JavaScript...');
+                // ================================
+                // CSS Check (0-11%)
+                // ================================
+                if (status) status.textContent = 'Memuat Foundation CSS...';
+                await updateProgress(5, 'Memuat CSS...');
                 
-                // Karena script sudah dipindah ke atas, kita cek langsung
-                if (window.jQuery && window.Foundation) {
-                    // Inisialisasi Foundation JS sekarang
-                    $(document).foundation(); 
-                    await updateProgress(1, 'Library JS Siap');
-                } else {
-                    // Fallback jika gagal (sangat jarang terjadi jika urutan HTML benar)
-                    await updateProgress(1, 'Menunggu Library JS...');
-                    await new Promise(resolve => {
-                        const checkJS = setInterval(() => {
-                            if (window.jQuery && window.Foundation) {
-                                clearInterval(checkJS);
-                                $(document).foundation();
-                                resolve();
-                            }
-                        }, 100);
-                        // Timeout khusus untuk JS check (3 detik)
-                        setTimeout(() => { clearInterval(checkJS); resolve(); }, 3000);
-                    });
-                }
-
-                if (timeoutReached) return;
-
-                // ------------------------------------------------
-                // TAHAP 3: DOM READY & UI SETUP
-                // ------------------------------------------------
-                await updateProgress(2, 'Menyiapkan Antarmuka...');
-                // Setup tab event listener (menggunakan jQuery yang sudah pasti ada)
-                $('#example-tabs').on('change.zf.tabs', function(event, tab) {
-                    // Logika tab change jika diperlukan
-                });
+                await cssLoaded;
+                await updateProgress(11, 'Foundation CSS loaded');
+                await new Promise(r => setTimeout(r, 150));
                 
-                // ------------------------------------------------
-                // TAHAP 4: DEVICE STATUS
-                // ------------------------------------------------
-                await updateProgress(4, 'Menghubungkan ke perangkat...');
+                if (timeoutReached) return;
+                
+                // ================================
+                // jQuery Check (11-22%)
+                // ================================
+                if (status) status.textContent = 'Memuat jQuery library...';
+                await updateProgress(15, 'Memuat jQuery library...');
+                
+                await jQueryLoaded;
+                await updateProgress(22, 'jQuery loaded');
+                await new Promise(r => setTimeout(r, 150));
+                
+                if (timeoutReached) return;
+                
+                // ================================
+                // Foundation JS Check (22-33%)
+                // ================================
+                if (status) status.textContent = 'Memuat Foundation JS...';
+                await updateProgress(27, 'Memuat Foundation JS...');
+                
+                await foundationLoaded;
+                await updateProgress(33, 'Foundation JS loaded');
+                await new Promise(r => setTimeout(r, 150));
+                
+                if (timeoutReached) return;
+                
+                // ================================
+                // Device Status (33-44%)
+                // ================================
+                if (status) status.textContent = 'Menghubungkan ke perangkat...';
+                await updateProgress(37, 'Menghubungkan ke perangkat...');
+                
                 try {
                     await updateDeviceStatus();
+                    await updateProgress(44, 'Status perangkat terhubung');
+                } catch (err) {
+                    await updateProgress(44, 'Status perangkat gagal (lanjut)');
                 }
-
+                await new Promise(r => setTimeout(r, 150));
+                
+                // ================================
+                // Device Status (15-35%)
+                // ================================
+                if (status) status.textContent = 'Menghubungkan ke perangkat...';
+                await updateProgress(20, 'Menghubungkan ke perangkat...');
+                
+                try {
+                    await updateDeviceStatus();
+                    await updateProgress(35, 'Status perangkat terhubung');
+                } catch (err) {
+                    await updateProgress(35, 'Status perangkat gagal (lanjut)');
+                }
+                await new Promise(r => setTimeout(r, 150));
+                
                 if (timeoutReached) return;
-
-                // ------------------------------------------------
-                // TAHAP 5: CITIES DATA
-                // ------------------------------------------------
-                await updateProgress(5, 'Memuat database lokasi...');
-                let citiesLoaded = await loadCities();
+                
+                // ================================
+                // Cities Data (35-60%) + RETRY
+                // ================================
+                if (status) status.textContent = 'Memuat data lokasi...';
+                await updateProgress(40, 'Memuat data lokasi...');
+                
+                let citiesLoaded = false;
+                let citiesRetryCount = 0;
+                const MAX_CITIES_RETRY = 3;
+                
+                while (!citiesLoaded && citiesRetryCount < MAX_CITIES_RETRY && !timeoutReached) {
+                    try {
+                        if (citiesRetryCount > 0) {
+                            if (status) status.textContent = `Mencoba lagi (${citiesRetryCount}/${MAX_CITIES_RETRY})...`;
+                        }
+                        
+                        citiesLoaded = await loadCities();
+                        
+                        if (citiesLoaded && cityList.length > 0) {
+                            await updateProgress(60, `${cityList.length} lokasi dimuat`);
+                            break;
+                        } else {
+                            citiesRetryCount++;
+                            
+                            if (citiesRetryCount < MAX_CITIES_RETRY) {
+                                await updateProgress(45 + (citiesRetryCount * 5), `Mencoba ulang ${citiesRetryCount}...`);
+                                await new Promise(r => setTimeout(r, 1000));
+                            }
+                        }
+                    } catch (err) {
+                        citiesRetryCount++;
+                        
+                        if (citiesRetryCount < MAX_CITIES_RETRY) {
+                            await updateProgress(45 + (citiesRetryCount * 5), `Gagal, coba lagi...`);
+                            await new Promise(r => setTimeout(r, 1000));
+                        }
+                    }
+                }
                 
                 if (!citiesLoaded) {
-                    await updateProgress(5, 'Gagal memuat lokasi (Mode Offline)');
+                    await updateProgress(60, 'Data lokasi gagal dimuat');
+                } else {
                 }
+                
+                await new Promise(r => setTimeout(r, 150));
+                
+                if (timeoutReached) return;
+                
+                // ================================
+                // Prayer Times (60-80%)
+                // ================================
+                if (status) status.textContent = 'Memuat jadwal shalat...';
+                await updateProgress(65, 'Memuat jadwal shalat...');
+                
+                try {
+                    const prayerSuccess = await loadSavedPrayerTimes();
+                    
+                    if (prayerSuccess && prayerConfig.subuhTime && prayerConfig.subuhTime !== '--:--') {
+                        await updateProgress(80, 'Jadwal shalat dimuat');
+                    } else {
+                        await updateProgress(80, 'Jadwal belum diatur');
+                    }
+                } catch (err) {
+                    await updateProgress(80, 'Jadwal gagal dimuat');
+                }
+                await new Promise(r => setTimeout(r, 150));
+                
+                if (timeoutReached) return;
+                
+                // ================================
+                // Method Config (80-95%)
+                // ================================
+                if (status) status.textContent = 'Memuat konfigurasi metode...';
+                await updateProgress(85, 'Memuat metode kalkulasi...');
+                
+                try {
+                    const methodSuccess = await loadCurrentMethod();
+                    
+                    if (methodSuccess && methodConfig.methodName) {
+                        const displayName = methodConfig.methodName.length > 30 
+                            ? methodConfig.methodName.substring(0, 27) + '...' 
+                            : methodConfig.methodName;
+                        await updateProgress(95, 'Metode: ' + displayName);
+                    } else {
+                        await updateProgress(95, 'Metode bawaan digunakan');
+                    }
+                } catch (err) {
+                    await updateProgress(95, 'Metode bawaan digunakan');
+                }
+                await new Promise(r => setTimeout(r, 150));
+                
+                if (timeoutReached) return;
+
+                // ================================
+                // Timezone Config (95-97%)
+                // ================================
+                if (status) status.textContent = 'Memuat konfigurasi timezone...';
+                await updateProgress(95, 'Memuat timezone...');
+
+                try {
+                    const timezoneSuccess = await loadTimezoneConfig();
+                    
+                    if (timezoneSuccess) {
+                        await updateProgress(97, 'Timezone: UTC' + (timezoneConfig.offset >= 0 ? '+' : '') + timezoneConfig.offset);
+                    } else {
+                        await updateProgress(97, 'Timezone bawaan (+7)');
+                    }
+                } catch (err) {
+                    await updateProgress(97, 'Timezone bawaan (+7)');
+                }
+                await new Promise(r => setTimeout(r, 150));
 
                 if (timeoutReached) return;
 
-                // ------------------------------------------------
-                // TAHAP 6: PRAYER TIMES
-                // ------------------------------------------------
-                await updateProgress(6, 'Sinkronisasi jadwal shalat...');
-                await loadSavedPrayerTimes();
+                // ================================
+                // WiFi & AP Config (97-98%)
+                // ================================
+                if (status) status.textContent = 'Memuat konfigurasi WiFi & AP...';
+                await updateProgress(97, 'Memuat WiFi & AP...');
 
-                // ------------------------------------------------
-                // TAHAP 7: FINAL CONFIGS (Method, Timezone, WiFi)
-                // ------------------------------------------------
-                await updateProgress(7, 'Memuat konfigurasi akhir...');
-                
-                // Jalankan paralel agar lebih cepat
-                await Promise.all([
-                    loadCurrentMethod().catch(e => {}),
-                    loadTimezoneConfig().catch(e => {}),
-                    loadWiFiConfig().catch(e => {})
-                ]);
+                try {
+                    const wifiConfigSuccess = await loadWiFiConfig();
+                    
+                    if (wifiConfigSuccess) {
+                        await updateProgress(98, 'WiFi & AP config dimuat');
+                    } else {
+                        await updateProgress(98, 'WiFi & AP belum dikonfigurasi');
+                    }
+                } catch (err) {
+                    await updateProgress(98, 'WiFi & AP load error');
+                }
+                await new Promise(r => setTimeout(r, 150));
 
-                // ------------------------------------------------
-                // SELESAI
-                // ------------------------------------------------
-                clearTimeout(timeoutTimer);
-                await updateProgress(7, 'Menyiapkan tampilan...');
+                if (timeoutReached) return;
                 
-                // Mulai interval update rutin
+                // ================================
+                // Finalize (95-100%)
+                // ================================
+                if (status) status.textContent = 'Finalisasi...';
+                await updateProgress(98, 'Menyiapkan antarmuka...');
+                
                 setInterval(updateRealtimeDisplay, 1000);
                 setInterval(updateDeviceStatus, 5000);
-                setInterval(loadSavedPrayerTimes, 60000);
+                setInterval(loadSavedPrayerTimes, 5000);
+                setInterval(loadCurrentMethod, 30000);
                 
+                
+                await updateProgress(100, 'Siap digunakan');
+                await new Promise(r => setTimeout(r, 300));
+                
+                clearTimeout(timeoutTimer);
+                                
                 LoadingManager.completeLoading();
-
-            } catch (error) {
-                if (status) status.textContent = 'Error inisialisasi';
-                setTimeout(() => LoadingManager.completeLoading(), 1000);
+                
+            } catch (error) {                
+                clearTimeout(timeoutTimer);
+                
+                if (status) status.textContent = 'Error: ' + error.message;
+                await updateProgress(100, 'Selesai dengan error');
+                
+                setTimeout(() => {
+                    LoadingManager.completeLoading();
+                }, 1500);
+                
+                setInterval(updateRealtimeDisplay, 1000);
+                setInterval(updateDeviceStatus, 5000);
+                setInterval(loadSavedPrayerTimes, 5000);
+                setInterval(loadCurrentMethod, 30000);
             }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
             LoadingManager.updateProgress(1, 'DOM Ready');
+            $(document).foundation();
+            
             initializeApp();
             
             // ================================
