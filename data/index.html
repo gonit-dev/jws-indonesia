@@ -730,12 +730,10 @@
 
         const jsLibsLoaded = new Promise((resolve) => {
             const checkJS = setInterval(() => {
-                // Cek apakah jQuery dan Foundation sudah terdefinisi di window
                 if (window.jQuery && window.Foundation) {
                     clearInterval(checkJS);
                     LoadingManager.updateProgress(1, 'JS Libraries loaded');
                     
-                    // Inisialisasi Foundation secara manual untuk memastikan
                     $(document).foundation();
                     
                     resolve(true);
@@ -744,20 +742,17 @@
             
             setTimeout(() => {
                 clearInterval(checkJS);
-                // Jika timeout, cek apa yang kurang
                 let missing = [];
                 if (!window.jQuery) missing.push('jQuery');
                 if (!window.Foundation) missing.push('Foundation');
                 
                 if (missing.length > 0) {
                     LoadingManager.updateProgress(1, `Gagal memuat: ${missing.join(', ')}`);
-                    console.error('JS Libs Missing:', missing);
-                    // Kita resolve false, tapi tetap lanjut agar tidak stuck selamanya
                     resolve(false); 
                 } else {
                     resolve(true);
                 }
-            }, 5000); // Tunggu maksimal 5 detik
+            }, 5000);
         });
 
         // ================================
@@ -2438,7 +2433,7 @@ async function initializeApp() {
                 await updateProgress(4, 'Menghubungkan ke perangkat...');
                 try {
                     await updateDeviceStatus();
-                } catch (e) { console.log('Device status skip'); }
+                }
 
                 if (timeoutReached) return;
 
@@ -2486,7 +2481,6 @@ async function initializeApp() {
                 LoadingManager.completeLoading();
 
             } catch (error) {
-                console.error(error);
                 if (status) status.textContent = 'Error inisialisasi';
                 setTimeout(() => LoadingManager.completeLoading(), 1000);
             }
