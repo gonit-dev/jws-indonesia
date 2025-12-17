@@ -1036,11 +1036,25 @@ void setupServerRoutes() {
     });
 
     // ========================================
-    // milligram.min CSS - CACHE 1 JAM
+    // FOUNDATION - CACHE 1 JAM
     // ========================================
     server.on("/assets/css/foundation.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
       AsyncWebServerResponse *response = request->beginResponse(
         LittleFS, "/assets/css/foundation.min.css", "text/css");
+
+      response->addHeader("Cache-Control", "public, max-age=3600");
+      request->send(response);
+    });
+    server.on("/assets/js/foundation.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+      AsyncWebServerResponse *response = request->beginResponse(
+        LittleFS, "/assets/js/foundation.min.js", "application/javascript");
+
+      response->addHeader("Cache-Control", "public, max-age=3600");
+      request->send(response);
+    });
+    server.on("/assets/js/jquery.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+      AsyncWebServerResponse *response = request->beginResponse(
+        LittleFS, "/assets/js/jquery.js", "application/javascript");
 
       response->addHeader("Cache-Control", "public, max-age=3600");
       request->send(response);
