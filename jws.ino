@@ -1032,7 +1032,7 @@ void setupServerRoutes() {
 
     server.on("/assets/css/milligram.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
       AsyncWebServerResponse *response = request->beginResponse(
-        LittleFS, "/assets/css/foundation.css", "text/css");
+        LittleFS, "/assets/css/milligram.min.css", "text/css");
 
       response->addHeader("Cache-Control", "public, max-age=3600");
       request->send(response);
