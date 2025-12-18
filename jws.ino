@@ -428,7 +428,7 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
   if (httpResponseCode == 200) {
     String payload = http.getString();
 
-    StaticJsonDocument<2048> doc;
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, payload);
 
     if (!error) {
