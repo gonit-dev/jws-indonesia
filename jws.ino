@@ -1045,16 +1045,9 @@ void setupServerRoutes() {
       response->addHeader("Cache-Control", "public, max-age=3600");
       request->send(response);
     });
-    server.on("/assets/js/foundation.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+    server.on("/assets/js/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
       AsyncWebServerResponse *response = request->beginResponse(
-        LittleFS, "/assets/js/foundation.min.js", "application/javascript");
-
-      response->addHeader("Cache-Control", "public, max-age=3600");
-      request->send(response);
-    });
-    server.on("/assets/js/jquery.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-      AsyncWebServerResponse *response = request->beginResponse(
-        LittleFS, "/assets/js/jquery.js", "application/javascript");
+        LittleFS, "/assets/js/jquery.min.js", "application/javascript");
 
       response->addHeader("Cache-Control", "public, max-age=3600");
       request->send(response);
