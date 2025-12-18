@@ -54,6 +54,11 @@
 - **WiFi**: 802.11 b/g/n (2.4GHz)
 - **Power**: 5V USB (min 2A)
 
+⚠️ **CRITICAL NOTES:**
+- Power supply HARUS 5V 2A minimum (jangan gunakan USB laptop yang lemah)
+- Kabel USB harus berkualitas baik (banyak kabel murah hanya untuk charging, bukan data)
+- Jika upload gagal terus, coba kabel USB lain atau port USB lain
+
 ### Modul Tambahan (Optional)
 
 #### RTC DS3231 (Sangat Direkomendasikan!)
@@ -69,6 +74,29 @@ SCL    ─────── GPIO 22
 - ✅ Jam tetap akurat saat mati lampu (dengan baterai CR2032)
 - ✅ Auto-load time saat boot (jika valid tahun 2000-2100)
 - ✅ Auto-save time setiap NTP sync berhasil
+
+**Status Detection:**
+- ✅ Hardware terdeteksi: "DS3231 detected on I2C"
+- ❌ Hardware TIDAK terdeteksi: "DS3231 not found! Running without RTC"
+- ⚠️ Hardware rusak/palsu: "*** RTC HARDWARE FAILURE *** DS3231 chip is defective!"
+
+**Validasi RTC:**
+- Waktu valid: Tahun 2000-2100, bulan 1-12, hari 1-31
+- Jika RTC invalid: System reset ke 01/01/2000 00:00:00
+- Auto-load time saat boot (jika valid)
+- Auto-save time setiap NTP sync berhasil
+
+**Battery Backup:**
+- Gunakan baterai CR2032 (3V)
+- Tanpa baterai: Waktu hilang saat mati lampu
+- Dengan baterai: Waktu tersimpan bertahun-tahun
+- Indikator battery dead: Serial → "WARNING: RTC lost power!"
+
+**Troubleshooting RTC:**
+- Jika return garbage data → Chip palsu/rusak, beli yang baru
+- Jika tidak terdeteksi → Cek wiring SDA/SCL
+- Temperature sensor: Harus berfungsi (tampil di serial)
+- Test hasil: Waktu harus valid setelah 2 detik delay
 
 ---
 
@@ -109,7 +137,8 @@ board_build.filesystem = littlefs
 
 | Library | Versi | Install via | Keterangan |
 |---------|-------|-------------|------------|
-| **LVGL** | **9.2.0** ⚠️ | Library Manager | HARUS versi 9.2.0! |
+| **LVGL** | **9.2.0** | Library Manager | **🔴 WAJIB 9.2.0!** |
+| **ESP32 Board** | **3.0.7** | Boards Manager | **🔴 WAJIB 3.0.7!** |
 | TFT_eSPI | 2.5.0+ | Library Manager | Display driver |
 | XPT2046_Touchscreen | 1.4+ | Library Manager | Touch driver |
 | ArduinoJson | 6.21.0+ | Library Manager | JSON parser |
@@ -149,6 +178,27 @@ cd jws-indonesia
 2. Tools → ESP32 Sketch Data Upload
 3. Tunggu sampai selesai (upload data/ ke ESP32)
 ```
+
+**Validasi Upload Berhasil:**
+```bash
+# Serial Monitor harus tampilkan:
+LittleFS Mounted
+File system info:
+  Total: 1024KB
+  Used: 250KB
+  Free: 774KB
+
+# File yang HARUS ada:
+✓ /index.html (15KB)
+✓ /assets/css/foundation.min.css (150KB)
+✓ /assets/js/jquery.min.js (85KB)
+✓ /cities.json (80KB)
+
+# Jika ada yang hilang:
+❌ Re-upload folder data/
+```
+
+**Note:** Pastikan tidak upload berkali-kali esp bisa corrupt data penyimpanan, harus di bersihkan dengan foldet data kosong
 
 **PlatformIO:**
 ```bash
@@ -429,12 +479,44 @@ displayQueue    // UI update requests (10 items)
 
 ### 🕐 Time Management
 
-**Default Time Behavior:**
-- Jika **RTC tersedia & valid** (tahun 2000-2100) → Gunakan waktu dari RTC
-- Jika **RTC tidak ada/rusak/invalid** → Reset ke 01/01/2000 00:00:00
-- Waktu akan auto-update saat **NTP sync berhasil**
-- NTP sync otomatis **menyimpan waktu ke RTC** untuk persistensi
-- Ini mencegah timestamp invalid (bug epoch 1970)
+**Boot Time Priority (Urutan):**
+```
+1️⃣ **RTC Available & Valid** (tahun 2000-2100)
+   → Load time dari RTC
+   → Serial: "RTC hardware test PASSED"
+   → Display langsung tampil waktu akurat
+
+2️⃣ **RTC Not Available / Invalid**
+   → Reset ke: 01/01/2000 00:00:00
+   → Serial: "Running without RTC" atau "RTC HARDWARE FAILURE"
+   → Display tampil 00:00:00 01/01/2000
+
+3️⃣ **After WiFi Connected**
+   → Auto NTP sync (max 60 detik)
+   → Serial: "✅ NTP Sync successful!"
+   → Waktu update ke current time
+   → **Save ke RTC** (jika tersedia)
+```
+
+**Prevent Invalid Timestamp:**
+```cpp
+// System memblokir timestamp < 01/01/2000 00:00:00
+if (timeConfig.currentTime < 946684800) {
+    Serial.println("Invalid timestamp detected!");
+    setTime(0, 0, 0, 1, 1, 2000); // Force reset
+}
+```
+
+**Time Update Flow:**
+```
+RTC Time (boot) → System Time
+                     ↓
+                 NTP Sync (hourly)
+                     ↓
+                 System Time → RTC (save)
+                     ↓
+                 Display Update
+```
 
 **Time Sync Priority:**
 1. RTC time (saat boot, jika valid tahun 2000-2100)
