@@ -105,7 +105,7 @@ SCL           →    GPIO 22
 Via **Library Manager** (Sketch → Include Library → Manage Libraries):
 
 ```
-LVGL                    9.2.0   🔴 WAJIB VERSI INI
+LVGL                   9.2.0   🔴 WAJIB VERSI INI
 TFT_eSPI               2.5.0+
 XPT2046_Touchscreen    1.4+
 ArduinoJson            6.21.0+
