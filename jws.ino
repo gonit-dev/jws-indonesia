@@ -67,7 +67,7 @@
 #define WIFI_TASK_STACK_SIZE 6144      // WiFi connection management
 #define NTP_TASK_STACK_SIZE 6144       // NTP sync operations
 #define WEB_TASK_STACK_SIZE 6144       // AsyncWebServer + file handling
-#define PRAYER_TASK_STACK_SIZE 1536    // HTTP requests + JSON parsing
+#define PRAYER_TASK_STACK_SIZE 6144    // HTTP requests + JSON parsing
 #define RTC_TASK_STACK_SIZE 3072       // RTC I2C read/write
 #define CLOCK_TASK_STACK_SIZE 2048     // Simple time increment
 
@@ -428,7 +428,7 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
   if (httpResponseCode == 200) {
     String payload = http.getString();
 
-    DynamicJsonDocument doc(8192);
+    StaticJsonDocument<2048> doc;
     DeserializationError error = deserializeJson(doc, payload);
 
     if (!error) {
