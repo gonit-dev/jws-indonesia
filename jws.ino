@@ -66,8 +66,8 @@
 #define UI_TASK_STACK_SIZE 12288       // LVGL + EEZ rendering
 #define WIFI_TASK_STACK_SIZE 6144      // WiFi connection management
 #define NTP_TASK_STACK_SIZE 6144       // NTP sync operations
-#define WEB_TASK_STACK_SIZE 8192       // AsyncWebServer + file handling
-#define PRAYER_TASK_STACK_SIZE 2048    // HTTP requests + JSON parsing
+#define WEB_TASK_STACK_SIZE 6144       // AsyncWebServer + file handling
+#define PRAYER_TASK_STACK_SIZE 1536    // HTTP requests + JSON parsing
 #define RTC_TASK_STACK_SIZE 3072       // RTC I2C read/write
 #define CLOCK_TASK_STACK_SIZE 2048     // Simple time increment
 
@@ -3200,7 +3200,7 @@ void printStackReport() {
   uint32_t totalUsed = 0;
   uint32_t totalFree = 0;
 
-  for (int i = 0; i < 6; i++) {  // Still 6 tasks (Clock tidak dimonitor)
+  for (int i = 0; i < 6; i++) { 
     if (tasks[i].handle) {
       UBaseType_t hwm = uxTaskGetStackHighWaterMark(tasks[i].handle);
       
