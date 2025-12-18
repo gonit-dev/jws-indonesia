@@ -58,20 +58,27 @@
 // ================================
 // RTOS CONFIGURATION
 // ================================
-#define UI_TASK_STACK_SIZE 16384
-#define WIFI_TASK_STACK_SIZE 8192
-#define NTP_TASK_STACK_SIZE 8192
-#define WEB_TASK_STACK_SIZE 20480
-#define PRAYER_TASK_STACK_SIZE 8192
-#define WEB_SERVER_MAX_CLIENTS 5
-#define WEB_SERVER_STACK_SIZE 8192
+// Line 48-68: RTOS CONFIGURATION
+// ================================
+// RTOS CONFIGURATION
+// ================================
+// Task Stack Sizes (in bytes)
+#define UI_TASK_STACK_SIZE 12288       // LVGL + EEZ rendering
+#define WIFI_TASK_STACK_SIZE 6144      // WiFi connection management
+#define NTP_TASK_STACK_SIZE 6144       // NTP sync operations
+#define WEB_TASK_STACK_SIZE 8192       // AsyncWebServer + file handling
+#define PRAYER_TASK_STACK_SIZE 2048    // HTTP requests + JSON parsing
+#define RTC_TASK_STACK_SIZE 3072       // RTC I2C read/write
+#define CLOCK_TASK_STACK_SIZE 2048     // Simple time increment
 
-
-#define UI_TASK_PRIORITY 3
-#define WIFI_TASK_PRIORITY 2
-#define NTP_TASK_PRIORITY 2
-#define WEB_TASK_PRIORITY 1
-#define PRAYER_TASK_PRIORITY 1
+// Task Priorities (0 = lowest, higher number = higher priority)
+#define UI_TASK_PRIORITY 3             // Highest (display responsiveness)
+#define WIFI_TASK_PRIORITY 2           // High (network stability)
+#define NTP_TASK_PRIORITY 2            // High (time sync)
+#define WEB_TASK_PRIORITY 1            // Low (background web server)
+#define PRAYER_TASK_PRIORITY 1         // Low (daily update)
+#define RTC_TASK_PRIORITY 1            // Low (backup sync)
+#define CLOCK_TASK_PRIORITY 2          // High (time accuracy)
 
 // Task Handles
 TaskHandle_t rtcTaskHandle = NULL;
@@ -80,6 +87,7 @@ TaskHandle_t wifiTaskHandle = NULL;
 TaskHandle_t ntpTaskHandle = NULL;
 TaskHandle_t webTaskHandle = NULL;
 TaskHandle_t prayerTaskHandle = NULL;
+TaskHandle_t clockTaskHandle = NULL;
 
 // ================================
 // SEMAPHORES & MUTEXES
@@ -1730,9 +1738,6 @@ void setupServerRoutes() {
 
         json += "}";
 
-        Serial.println("GET /getmethod: " + json);
-
-
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
         resp->addHeader("Cache-Control", "no-cache");
         request->send(resp);
@@ -3096,7 +3101,7 @@ void ntpTask(void *parameter) {
                 setTime(timeConfig.currentTime);
                 timeConfig.ntpSynced = true;
                 timeConfig.ntpServer = usedServer;
-                xSemaphoreGive(timeMutex);  // ✅ Release cepat!
+                xSemaphoreGive(timeMutex);  // Release cepat!
                 
                 // Update display
                 DisplayUpdate update;
@@ -3172,7 +3177,8 @@ void ntpTask(void *parameter) {
 }
 
 void printStackReport() {
-  Serial.println("\nSTACK USAGE ANALYSIS");
+  Serial.println("\n========================================");
+  Serial.println("STACK USAGE ANALYSIS");
   Serial.println("========================================");
 
   struct TaskInfo {
@@ -3182,35 +3188,42 @@ void printStackReport() {
   };
 
   TaskInfo tasks[] = {
-    { uiTaskHandle, "UI", 16384 },
-    { webTaskHandle, "Web", 16384 },
-    { wifiTaskHandle, "WiFi", 8192 },
-    { ntpTaskHandle, "NTP", 8192 },
-    { prayerTaskHandle, "Prayer", 8192 },
-    { rtcTaskHandle, "RTC", 4096 }
+    { uiTaskHandle, "UI", UI_TASK_STACK_SIZE },
+    { webTaskHandle, "Web", WEB_TASK_STACK_SIZE },
+    { wifiTaskHandle, "WiFi", WIFI_TASK_STACK_SIZE },
+    { ntpTaskHandle, "NTP", NTP_TASK_STACK_SIZE },
+    { prayerTaskHandle, "Prayer", PRAYER_TASK_STACK_SIZE },
+    { rtcTaskHandle, "RTC", RTC_TASK_STACK_SIZE }
   };
 
   uint32_t totalAllocated = 0;
   uint32_t totalUsed = 0;
+  uint32_t totalFree = 0;
 
-  for (int i = 0; i < 6; i++) {
+  for (int i = 0; i < 6; i++) {  // Still 6 tasks (Clock tidak dimonitor)
     if (tasks[i].handle) {
       UBaseType_t hwm = uxTaskGetStackHighWaterMark(tasks[i].handle);
-      uint32_t free = hwm;
+      
+      uint32_t free = hwm * sizeof(StackType_t);
       uint32_t used = tasks[i].size - free;
       float percent = (used * 100.0) / tasks[i].size;
 
       totalAllocated += tasks[i].size;
       totalUsed += used;
+      totalFree += free;
 
-      Serial.printf("%-10s: %5d/%5d (%5.1f%%) ",
-                    tasks[i].name, used, tasks[i].size, percent);
+      Serial.printf("%-10s: %5d/%5d (%5.1f%%) [Free: %5d] ",
+                    tasks[i].name, used, tasks[i].size, percent, free);
 
-      if (percent < 50) Serial.println("BOROS - bisa dikurangi");
-      else if (percent < 70) Serial.println("OPTIMAL");
-      else if (percent < 85) Serial.println("PAS");
+      // Status interpretation
+      if (percent < 40) Serial.println("BOROS - bisa dikurangi");
+      else if (percent < 60) Serial.println("OPTIMAL");
+      else if (percent < 75) Serial.println("PAS");
+      else if (percent < 90) Serial.println("TINGGI - monitor terus");
       else if (percent < 95) Serial.println("BAHAYA - harus dinaikkan!");
       else Serial.println("KRITIS - segera naikkan!");
+    } else {
+      Serial.printf("%-10s: TASK NOT RUNNING\n", tasks[i].name);
     }
   }
 
@@ -3219,8 +3232,36 @@ void printStackReport() {
                 totalAllocated, totalAllocated / 1024.0);
   Serial.printf("Total Used:      %d bytes (%.1f KB)\n",
                 totalUsed, totalUsed / 1024.0);
+  Serial.printf("Total Free:      %d bytes (%.1f KB)\n",
+                totalFree, totalFree / 1024.0);
   Serial.printf("Efficiency:      %.1f%%\n",
                 (totalUsed * 100.0) / totalAllocated);
+  
+  // Critical warning
+  bool hasCritical = false;
+  for (int i = 0; i < 6; i++) {
+    if (tasks[i].handle) {
+      UBaseType_t hwm = uxTaskGetStackHighWaterMark(tasks[i].handle);
+      uint32_t free = hwm * sizeof(StackType_t);
+      uint32_t used = tasks[i].size - free;
+      float percent = (used * 100.0) / tasks[i].size;
+      
+      if (percent >= 90) {
+        if (!hasCritical) {
+          Serial.println("========================================");
+          Serial.println("CRITICAL TASKS:");
+          hasCritical = true;
+        }
+        Serial.printf("   %s: %.1f%% (free: %d bytes)\n", 
+                      tasks[i].name, percent, free);
+      }
+    }
+  }
+  
+  if (hasCritical) {
+    Serial.println("   ACTION: Increase stack size ASAP!");
+  }
+  
   Serial.println("========================================\n");
 }
 
@@ -3798,9 +3839,9 @@ void setup() {
   xTaskCreatePinnedToCore(
     clockTickTask,
     "Clock",
-    4096,
+    CLOCK_TASK_STACK_SIZE,
     NULL,
-    2,
+    CLOCK_TASK_PRIORITY,
     NULL,
     0  // Core 0
   );
@@ -3813,7 +3854,7 @@ void setup() {
     xTaskCreatePinnedToCore(
       rtcSyncTask,
       "RTC Sync",
-      4096,
+      RTC_TASK_PRIORITY, 
       NULL,
       1,
       &rtcTaskHandle,
