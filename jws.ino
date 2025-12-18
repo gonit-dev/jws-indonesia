@@ -1047,38 +1047,60 @@ void saveTimeToRTC() {
 // Server Functions
 void setupServerRoutes() {
     // ========================================
-    // HTML - NO CACHE (Always Fresh)
+    // HTML
     // ========================================
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        AsyncWebServerResponse *response = request->beginResponse(
-            LittleFS, "/index.html", "text/html");
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+      if (!LittleFS.exists("/index.html")) {
+          request->send(404, "text/plain", "index.html not found");
+          return;
+      }
+      
+      AsyncWebServerResponse *response = request->beginResponse(
+          LittleFS, "/index.html", "text/html");
+      
+      response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      response->addHeader("Pragma", "no-cache");
+      response->addHeader("Expires", "0");
+      response->addHeader("Content-Type", "text/html; charset=utf-8");
+      
+      request->send(response);
+  });
 
-        response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        response->addHeader("Pragma", "no-cache");
-        response->addHeader("Expires", "0");
+    // ========================================
+    // FOUNDATION
+    // ========================================
+    server.on("/assets/css/foundation.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (!LittleFS.exists("/assets/css/foundation.min.css")) {
+            request->send(404, "text/plain", "CSS not found");
+            return;
+        }
+        
+        AsyncWebServerResponse *response = request->beginResponse(
+            LittleFS, "/assets/css/foundation.min.css", "text/css");
+        
+        response->addHeader("Cache-Control", "public, max-age=3600");
+        response->addHeader("Content-Type", "text/css; charset=utf-8");
+        
+        request->send(response);
+    });
+
+    server.on("/assets/js/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (!LittleFS.exists("/assets/js/jquery.min.js")) {
+            request->send(404, "text/plain", "jQuery not found");
+            return;
+        }
+        
+        AsyncWebServerResponse *response = request->beginResponse(
+            LittleFS, "/assets/js/jquery.min.js", "application/javascript");
+        
+        response->addHeader("Cache-Control", "public, max-age=3600");
+        response->addHeader("Content-Type", "application/javascript; charset=utf-8");
+        
         request->send(response);
     });
 
     // ========================================
-    // FOUNDATION - CACHE 1 JAM
-    // ========================================
-    server.on("/assets/css/foundation.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-      AsyncWebServerResponse *response = request->beginResponse(
-        LittleFS, "/assets/css/foundation.min.css", "text/css");
-
-      response->addHeader("Cache-Control", "public, max-age=3600");
-      request->send(response);
-    });
-    server.on("/assets/js/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-      AsyncWebServerResponse *response = request->beginResponse(
-        LittleFS, "/assets/js/jquery.min.js", "application/javascript");
-
-      response->addHeader("Cache-Control", "public, max-age=3600");
-      request->send(response);
-    });
-
-    // ========================================
-    // DEVICE STATUS - NO CACHE
+    // DEVICE STATUS
     // ========================================
     server.on("/devicestatus", HTTP_GET, [](AsyncWebServerRequest *request) {
         char timeStr[20];
@@ -1122,7 +1144,7 @@ void setupServerRoutes() {
     });
 
     // ========================================
-    // TIMEZONE - GET & SET
+    // TIMEZONE
     // ========================================
     server.on("/gettimezone", HTTP_GET, [](AsyncWebServerRequest *request) {
         String json = "{";
@@ -1135,8 +1157,6 @@ void setupServerRoutes() {
         }
 
         json += "}";
-
-        Serial.println("GET /gettimezone: " + json);
 
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
         resp->addHeader("Cache-Control", "no-cache");
@@ -1249,12 +1269,11 @@ void setupServerRoutes() {
         response += "\"prayerTimesUpdated\":" + String(prayerTimesUpdated ? "true" : "false");
         response += "}";
 
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
-        request->send(resp);
+        request->send(200, "application/json", response);
     });
 
     // ========================================
-    // PRAYER TIMES - GET
+    // PRAYER TIMES
     // ========================================
     server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest *request) {
         String json = "{";
@@ -1273,7 +1292,7 @@ void setupServerRoutes() {
     });
 
     // ========================================
-    // CITIES.JSON - GET & UPLOAD (CACHE 1 JAM)
+    // CITIES.JSON
     // ========================================
     server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request) {
         Serial.println("GET /getcities");
@@ -1290,18 +1309,13 @@ void setupServerRoutes() {
             "application/json");
 
         response->addHeader("Access-Control-Allow-Origin", "*");
-        response->addHeader("Cache-Control", "public, max-age=3600"); // 1 jam
-
+        response->addHeader("Cache-Control", "public, max-age=3600");
         response->setContentLength(LittleFS.open("/cities.json", "r").size());
-
         request->send(response);
-
-
-        Serial.println("cities.json sent");
     });
 
     // ========================================
-    // CITY SELECTION - GET & SET
+    // CITY SELECTION
     // ========================================
     server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request) {
         Serial.println("\n========================================");
@@ -1546,9 +1560,8 @@ void setupServerRoutes() {
 
         response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
         response += "}";
-
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
-        request->send(resp);
+        
+        request->send(200, "application/json", response);
     });
 
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -1573,8 +1586,6 @@ void setupServerRoutes() {
         }
 
         json += "}";
-
-        Serial.println("GET /getcityinfo: " + json);
 
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
         resp->addHeader("Cache-Control", "no-cache");
@@ -1608,8 +1619,7 @@ void setupServerRoutes() {
                 }
             }
 
-            AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", "{\"success\":true}");
-            request->send(resp);
+            request->send(200, "application/json", "{\"success\":true}");
         },
         [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
             static fs::File uploadFile;
@@ -1722,6 +1732,7 @@ void setupServerRoutes() {
 
         Serial.println("GET /getmethod: " + json);
 
+
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
         resp->addHeader("Cache-Control", "no-cache");
         request->send(resp);
@@ -1830,8 +1841,7 @@ void setupServerRoutes() {
         response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
         response += "}";
 
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
-        request->send(resp);
+        request->send(200, "application/json", response);
     });
 
     // ========================================
@@ -1886,8 +1896,7 @@ void setupServerRoutes() {
             Serial.println("WiFi task will auto-reconnect");
             Serial.println("========================================\n");
 
-            AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
-            request->send(resp);
+            request->send(200, "text/plain", "OK");
 
         } else {
             request->send(400, "text/plain", "Missing parameters");
@@ -1916,11 +1925,7 @@ void setupServerRoutes() {
         json += "\"apSSID\":\"" + currentAPSSID + "\"";
         json += "}";
 
-        Serial.println("GET /getwificonfig: " + json);
-
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Cache-Control", "no-cache");
-        request->send(resp);
+        request->send(200, "application/json", json);
     });
 
     server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -1961,8 +1966,7 @@ void setupServerRoutes() {
             Serial.println("New IP: " + newAPIP.toString());
             Serial.println("========================================\n");
 
-            AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
-            request->send(resp);
+            request->send(200, "text/plain", "OK");
 
         } else {
             request->send(400, "text/plain", "Missing parameters");
@@ -2036,8 +2040,7 @@ void setupServerRoutes() {
             
             Serial.println("========================================\n");
 
-            AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "Waktu berhasil di-sync!");
-            request->send(resp);
+            request->send(200, "text/plain", "OK");
             
         } else {
             request->send(400, "text/plain", "Data waktu tidak lengkap");
@@ -2108,8 +2111,6 @@ void setupServerRoutes() {
 
         json += "}";
 
-        Serial.println("API /api/data requested");
-
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
         resp->addHeader("Cache-Control", "no-cache");
         request->send(resp);
@@ -2141,8 +2142,7 @@ void setupServerRoutes() {
         html += "<a href='/' class='btn'>← Back to Home</a>";
         html += "</div></body></html>";
 
-        AsyncWebServerResponse *resp = request->beginResponse(404, "text/html", html);
-        request->send(resp);
+        request->send(404, "text/html", html);
     });
 
     // ========================================
@@ -2268,8 +2268,7 @@ void setupServerRoutes() {
         Serial.println("Device will restart in 5 seconds...");
         Serial.println("========================================\n");
         
-        AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
-        request->send(resp);
+        request->send(200, "text/plain", "OK");
         
         scheduleRestart(5);
     });
@@ -2284,8 +2283,7 @@ void setupServerRoutes() {
         Serial.println("Device will restart in 5 seconds...");
         Serial.println("========================================\n");
 
-        AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "OK");
-        request->send(resp);
+        request->send(200, "text/plain", "OK");
 
         scheduleRestart(5);
     });
@@ -2305,7 +2303,6 @@ void setupServerRoutes() {
             url.endsWith(".gif") || url.endsWith(".ico") || url.endsWith(".svg") || 
             url.endsWith(".woff") || url.endsWith(".woff2") || url.endsWith(".ttf")) {
 
-            Serial.println("Static asset not found (returning 404)");
             request->send(404, "text/plain", "File not found");
             return;
         }
