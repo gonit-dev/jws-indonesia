@@ -173,6 +173,10 @@ PrayerConfig prayerConfig;
 MethodConfig methodConfig = { 5, "Egyptian General Authority of Survey" };
 int timezoneOffset = 7;
 
+volatile bool needPrayerUpdate = false;
+String pendingPrayerLat = "";
+String pendingPrayerLon = "";
+
 unsigned long lastWiFiCheck = 0;
 const unsigned long WIFI_CHECK_INTERVAL = 5000;  // Check every 5 seconds
 int reconnectAttempts = 0;
@@ -1126,28 +1130,37 @@ void setupServerRoutes() {
 
         bool isWiFiConnected = (WiFi.status() == WL_CONNECTED && wifiConfig.isConnected && wifiConfig.localIP.toString() != "0.0.0.0");
 
-        String ssid = "";
-        String ip = "-";
+        String ssid = isWiFiConnected ? WiFi.SSID() : "";
+        String ip = isWiFiConnected ? wifiConfig.localIP.toString() : "-";
 
-        if (isWiFiConnected) {
-            ssid = WiFi.SSID();
-            ip = wifiConfig.localIP.toString();
-        }
+        // Pre-allocate buffer
+        char jsonBuffer[512];
+        snprintf(jsonBuffer, sizeof(jsonBuffer),
+            "{"
+            "\"connected\":%s,"
+            "\"ssid\":\"%s\","
+            "\"ip\":\"%s\","
+            "\"ntpSynced\":%s,"
+            "\"ntpServer\":\"%s\","
+            "\"currentTime\":\"%s\","
+            "\"currentDate\":\"%s\","
+            "\"uptime\":%lu,"
+            "\"freeHeap\":\"%d\""
+            "}",
+            isWiFiConnected ? "true" : "false",
+            ssid.c_str(),
+            ip.c_str(),
+            timeConfig.ntpSynced ? "true" : "false",
+            timeConfig.ntpServer.c_str(),
+            timeStr,
+            dateStr,
+            millis() / 1000,
+            ESP.getFreeHeap()
+        );
 
-        String response = "{";
-        response += "\"connected\":" + String(isWiFiConnected ? "true" : "false") + ",";
-        response += "\"ssid\":\"" + ssid + "\",";
-        response += "\"ip\":\"" + ip + "\",";
-        response += "\"ntpSynced\":" + String(timeConfig.ntpSynced ? "true" : "false") + ",";
-        response += "\"ntpServer\":\"" + timeConfig.ntpServer + "\",";
-        response += "\"currentTime\":\"" + String(timeStr) + "\",";
-        response += "\"currentDate\":\"" + String(dateStr) + "\",";
-        response += "\"uptime\":" + String(millis() / 1000) + ",";
-        response += "\"freeHeap\":\"" + String(ESP.getFreeHeap()) + "\"";
-        response += "}";
-
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", jsonBuffer);
         resp->addHeader("Cache-Control", "no-cache");
+        resp->addHeader("Content-Length", String(strlen(jsonBuffer)));
         request->send(resp);
     });
 
@@ -1303,8 +1316,6 @@ void setupServerRoutes() {
     // CITIES.JSON
     // ========================================
     server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request) {
-        Serial.println("GET /getcities");
-
         if (!LittleFS.exists("/cities.json")) {
             Serial.println("cities.json not found");
             request->send(404, "application/json", "[]");
@@ -1328,248 +1339,60 @@ void setupServerRoutes() {
     server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request) {
         Serial.println("\n========================================");
         Serial.println("POST /setcity received");
-        Serial.print("Client IP: ");
-        Serial.println(request->client()->remoteIP().toString());
         Serial.println("========================================");
 
         if (!request->hasParam("city", true)) {
-            Serial.println("ERROR: Missing 'city' parameter");
-
-            int params = request->params();
-            Serial.printf("Received parameters (%d):\n", params);
-            for (int i = 0; i < params; i++) {
-                const AsyncWebParameter *p = request->getParam(i);
-                Serial.printf("  %s = %s\n", p->name().c_str(), p->value().c_str());
-            }
-
-            request->send(400, "application/json",
-                          "{\"error\":\"Missing city parameter\"}");
+            request->send(400, "application/json", "{\"error\":\"Missing city parameter\"}");
             return;
         }
 
         String cityApi = request->getParam("city", true)->value();
+        String cityName = request->hasParam("cityName", true) ? request->getParam("cityName", true)->value() : cityApi;
+        String lat = request->hasParam("lat", true) ? request->getParam("lat", true)->value() : "";
+        String lon = request->hasParam("lon", true) ? request->getParam("lon", true)->value() : "";
+
         cityApi.trim();
+        cityName.trim();
+        lat.trim();
+        lon.trim();
 
-        String cityName = "";
-        if (request->hasParam("cityName", true)) {
-            cityName = request->getParam("cityName", true)->value();
-            cityName.trim();
-        }
+        Serial.println("City: " + cityApi);
+        Serial.println("Lat: " + lat + ", Lon: " + lon);
 
-        String lat = "";
-        if (request->hasParam("lat", true)) {
-            lat = request->getParam("lat", true)->value();
-            lat.trim();
-        }
-
-        String lon = "";
-        if (request->hasParam("lon", true)) {
-            lon = request->getParam("lon", true)->value();
-            lon.trim();
-        }
-
-        Serial.println("Received data:");
-        Serial.println("City API: " + cityApi);
-        Serial.println("City Name: " + cityName);
-        Serial.println("Latitude: " + lat);
-        Serial.println("Longitude: " + lon);
-
-        if (cityApi.length() == 0) {
-            Serial.println("ERROR: Empty city API name");
-            request->send(400, "application/json",
-                          "{\"error\":\"City name cannot be empty\"}");
-            return;
-        }
-
-        if (cityApi.length() > 100) {
-            Serial.println("ERROR: City API name too long");
-            request->send(400, "application/json",
-                          "{\"error\":\"City name too long (max 100 chars)\"}");
-            return;
-        }
-
-        if (lat.length() > 0 && lon.length() > 0) {
-            float latVal = lat.toFloat();
-            float lonVal = lon.toFloat();
-
-            if (latVal < -90.0 || latVal > 90.0) {
-                Serial.println("ERROR: Invalid latitude range");
-                request->send(400, "application/json",
-                              "{\"error\":\"Invalid latitude value\"}");
-                return;
-            }
-
-            if (lonVal < -180.0 || lonVal > 180.0) {
-                Serial.println("ERROR: Invalid longitude range");
-                request->send(400, "application/json",
-                              "{\"error\":\"Invalid longitude value\"}");
-                return;
-            }
-        } else {
-            Serial.println("WARNING: Coordinates not provided");
-        }
-
-        Serial.println("Saving to memory...");
-
-        bool memorySuccess = false;
-        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(5000)) == pdTRUE) {
+        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
             prayerConfig.selectedCity = cityApi;
-            prayerConfig.selectedCityName = (cityName.length() > 0) ? cityName : cityApi;
+            prayerConfig.selectedCityName = cityName;
             prayerConfig.latitude = lat;
             prayerConfig.longitude = lon;
-
             xSemaphoreGive(settingsMutex);
-            Serial.println("Memory updated");
-            Serial.println("selectedCity (API): " + prayerConfig.selectedCity);
-            Serial.println("selectedCityName (Display): " + prayerConfig.selectedCityName);
-            memorySuccess = true;
-        } else {
-            Serial.println("ERROR: Cannot acquire settings mutex (timeout)");
-            request->send(500, "application/json",
-                          "{\"error\":\"System busy, please retry in a moment\"}");
-            return;
         }
 
-        if (!memorySuccess) {
-            Serial.println("ERROR: Memory update failed");
-            request->send(500, "application/json",
-                          "{\"error\":\"Failed to update memory\"}");
-            return;
-        }
-
-        Serial.println("Writing to LittleFS...");
-
-        bool fileSuccess = false;
-        int retryCount = 0;
-        const int maxRetries = 3;
-
-        while (!fileSuccess && retryCount < maxRetries) {
-            if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(5000)) == pdTRUE) {
-                fs::File file = LittleFS.open("/city_selection.txt", "w");
-                if (file) {
-                    file.println(prayerConfig.selectedCity);
-                    file.println(prayerConfig.selectedCityName);
-                    file.println(prayerConfig.latitude);
-                    file.println(prayerConfig.longitude);
-                    file.flush();
-
-                    size_t bytesWritten = file.size();
-                    file.close();
-
-                    if (bytesWritten > 0) {
-                        fileSuccess = true;
-                        Serial.printf("File saved (%d bytes)\n", bytesWritten);
-                        Serial.println("Line 1 (API): " + prayerConfig.selectedCity);
-                        Serial.println("Line 2 (Display): " + prayerConfig.selectedCityName);
-                        Serial.println("Line 3 (Lat): " + prayerConfig.latitude);
-                        Serial.println("Line 4 (Lon): " + prayerConfig.longitude);
-                    } else {
-                        Serial.println("WARNING: File is empty after write");
-                    }
-                } else {
-                    Serial.printf("ERROR: Cannot open file (attempt %d/%d)\n",
-                                  retryCount + 1, maxRetries);
-                }
-                xSemaphoreGive(settingsMutex);
-            } else {
-                Serial.println("ERROR: Cannot acquire mutex for file write");
-            }
-
-            if (!fileSuccess) {
-                retryCount++;
-                if (retryCount < maxRetries) {
-                    Serial.printf("Retrying file write (%d/%d)...\n", retryCount + 1, maxRetries);
-                    vTaskDelay(pdMS_TO_TICKS(100));
-                }
-            }
-        }
-
-        if (!fileSuccess) {
-            Serial.println("ERROR: Failed to save to file after retries");
-            request->send(500, "application/json",
-                          "{\"error\":\"Failed to save city selection to storage\"}");
-            return;
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(100));
-
-        if (LittleFS.exists("/city_selection.txt")) {
-            fs::File verifyFile = LittleFS.open("/city_selection.txt", "r");
-            if (verifyFile) {
-                size_t fileSize = verifyFile.size();
-
-                Serial.println("File content verification:");
-                String line1 = verifyFile.readStringUntil('\n');
-                line1.trim();
-                String line2 = verifyFile.readStringUntil('\n');
-                line2.trim();
-                String line3 = verifyFile.readStringUntil('\n');
-                line3.trim();
-                String line4 = verifyFile.readStringUntil('\n');
-                line4.trim();
-
-                Serial.println("Line 1: " + line1);
-                Serial.println("Line 2: " + line2);
-                Serial.println("Line 3: " + line3);
-                Serial.println("Line 4: " + line4);
-
-                verifyFile.close();
-                Serial.printf("File verified (size: %d bytes)\n", fileSize);
-            }
-        } else {
-            Serial.println("WARNING: File verification failed - file not found");
-        }
-
-        Serial.println("Updating display...");
+        saveCitySelection();
         updateCityDisplay();
-        Serial.println("Display updated");
 
-        bool willFetchPrayerTimes = false;
-
-        if (WiFi.status() == WL_CONNECTED) {
-            if (lat.length() > 0 && lon.length() > 0) {
-                Serial.println("Fetching prayer times with coordinates...");
-                Serial.println("City: " + prayerConfig.selectedCity);
-                Serial.println("Lat: " + lat);
-                Serial.println("Lon: " + lon);
-
-                getPrayerTimesByCoordinates(lat, lon);
-
-                Serial.println("Prayer times update initiated");
-                willFetchPrayerTimes = true;
-            } else {
-                Serial.println("No coordinates provided - cannot fetch prayer times");
-            }
-        } else {
-            Serial.println("WiFi not connected - prayer times will update when online");
-        }
-
-        Serial.println("========================================");
-        Serial.println("SUCCESS: City saved successfully");
-        Serial.println("API Name: " + prayerConfig.selectedCity);
-        Serial.println("Display Name: " + prayerConfig.selectedCityName);
-        if (willFetchPrayerTimes) {
-            Serial.println("Prayer times will update shortly...");
-        }
-        Serial.println("========================================\n");
-
-        String response = "{";
-        response += "\"success\":true,";
-        response += "\"city\":\"" + prayerConfig.selectedCityName + "\",";
-        response += "\"cityApi\":\"" + prayerConfig.selectedCity + "\",";
-
-        if (lat.length() > 0) {
-            response += "\"lat\":\"" + lat + "\",";
-        }
-
-        if (lon.length() > 0) {
-            response += "\"lon\":\"" + lon + "\",";
-        }
-
-        response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
-        response += "}";
+        bool willUpdate = (WiFi.status() == WL_CONNECTED && lat.length() > 0 && lon.length() > 0);
         
-        request->send(200, "application/json", response);
+        char responseBuffer[256];
+        snprintf(responseBuffer, sizeof(responseBuffer),
+            "{\"success\":true,\"city\":\"%s\",\"updating\":%s}",
+            cityName.c_str(),
+            willUpdate ? "true" : "false"
+        );
+
+        request->send(200, "application/json", responseBuffer);
+
+        if (willUpdate) {
+            Serial.println("Triggering background prayer times update...");
+            pendingPrayerLat = lat;
+            pendingPrayerLon = lon;
+            needPrayerUpdate = true;
+            
+            if (prayerTaskHandle != NULL) {
+                xTaskNotifyGive(prayerTaskHandle);
+            }
+        }
+
+        Serial.println("========================================\n");
     });
 
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -2056,11 +1879,9 @@ void setupServerRoutes() {
     // API DATA ENDPOINT - NO CACHE
     // ========================================
     server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = "{";
-
+        char timeStr[20], dateStr[20], dayStr[15];
+        
         if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            char timeStr[10], dateStr[12], dayStr[15];
-
             sprintf(timeStr, "%02d:%02d:%02d",
                     hour(timeConfig.currentTime),
                     minute(timeConfig.currentTime),
@@ -2074,50 +1895,68 @@ void setupServerRoutes() {
             const char *dayNames[] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
             int dayOfWeek = weekday(timeConfig.currentTime) - 1;
             strcpy(dayStr, dayNames[dayOfWeek]);
-
-            json += "\"time\":\"" + String(timeStr) + "\",";
-            json += "\"date\":\"" + String(dateStr) + "\",";
-            json += "\"day\":\"" + String(dayStr) + "\",";
-            json += "\"timestamp\":" + String(timeConfig.currentTime) + ",";
-
+            
             xSemaphoreGive(timeMutex);
         }
 
-        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            json += "\"prayerTimes\":{";
-            json += "\"imsak\":\"" + prayerConfig.imsakTime + "\",";
-            json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
-            json += "\"terbit\":\"" + prayerConfig.terbitTime + "\",";
-            json += "\"zuhur\":\"" + prayerConfig.zuhurTime + "\",";
-            json += "\"ashar\":\"" + prayerConfig.asharTime + "\",";
-            json += "\"maghrib\":\"" + prayerConfig.maghribTime + "\",";
-            json += "\"isya\":\"" + prayerConfig.isyaTime + "\"";
-            json += "},";
+        bool isWiFiConnected = (WiFi.status() == WL_CONNECTED && wifiConfig.isConnected);
+        
+        char jsonBuffer[1024];
+        snprintf(jsonBuffer, sizeof(jsonBuffer),
+            "{"
+            "\"time\":\"%s\","
+            "\"date\":\"%s\","
+            "\"day\":\"%s\","
+            "\"timestamp\":%lu,"
+            "\"prayerTimes\":{"
+                "\"imsak\":\"%s\","
+                "\"subuh\":\"%s\","
+                "\"terbit\":\"%s\","
+                "\"zuhur\":\"%s\","
+                "\"ashar\":\"%s\","
+                "\"maghrib\":\"%s\","
+                "\"isya\":\"%s\""
+            "},"
+            "\"location\":{"
+                "\"city\":\"%s\","
+                "\"cityId\":\"%s\","
+                "\"displayName\":\"%s\","
+                "\"latitude\":\"%s\","
+                "\"longitude\":\"%s\""
+            "},"
+            "\"device\":{"
+                "\"wifiConnected\":%s,"
+                "\"apIP\":\"%s\","
+                "\"ntpSynced\":%s,"
+                "\"ntpServer\":\"%s\","
+                "\"freeHeap\":%d,"
+                "\"uptime\":%lu"
+            "}"
+            "}",
+            timeStr, dateStr, dayStr, (unsigned long)timeConfig.currentTime,
+            prayerConfig.imsakTime.c_str(),
+            prayerConfig.subuhTime.c_str(),
+            prayerConfig.terbitTime.c_str(),
+            prayerConfig.zuhurTime.c_str(),
+            prayerConfig.asharTime.c_str(),
+            prayerConfig.maghribTime.c_str(),
+            prayerConfig.isyaTime.c_str(),
+            prayerConfig.selectedCity.c_str(),
+            prayerConfig.selectedCity.c_str(),
+            prayerConfig.selectedCityName.c_str(),
+            prayerConfig.latitude.c_str(),
+            prayerConfig.longitude.c_str(),
+            isWiFiConnected ? "true" : "false",
+            WiFi.softAPIP().toString().c_str(),
+            timeConfig.ntpSynced ? "true" : "false",
+            timeConfig.ntpServer.c_str(),
+            ESP.getFreeHeap(),
+            millis() / 1000
+        );
 
-            json += "\"location\":{";
-            json += "\"city\":\"" + prayerConfig.selectedCity + "\",";
-            json += "\"cityId\":\"" + prayerConfig.selectedCity + "\",";
-            json += "\"displayName\":\"" + prayerConfig.selectedCityName + "\",";
-            json += "\"latitude\":\"" + prayerConfig.latitude + "\",";
-            json += "\"longitude\":\"" + prayerConfig.longitude + "\"";
-            json += "},";
-
-            xSemaphoreGive(settingsMutex);
-        }
-
-        json += "\"device\":{";
-        json += "\"wifiConnected\":" + String((WiFi.status() == WL_CONNECTED && wifiConfig.isConnected) ? "true" : "false") + ",";
-        json += "\"apIP\":\"" + WiFi.softAPIP().toString() + "\",";
-        json += "\"ntpSynced\":" + String(timeConfig.ntpSynced ? "true" : "false") + ",";
-        json += "\"ntpServer\":\"" + timeConfig.ntpServer + "\",";
-        json += "\"freeHeap\":" + String(ESP.getFreeHeap()) + ",";
-        json += "\"uptime\":" + String(millis() / 1000);
-        json += "}";
-
-        json += "}";
-
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", jsonBuffer);
         resp->addHeader("Cache-Control", "no-cache");
+        resp->addHeader("Content-Length", String(strlen(jsonBuffer)));
         request->send(resp);
     });
 
@@ -3355,33 +3194,45 @@ void webTask(void *parameter) {
 }
 
 void prayerTask(void *parameter) {
-  static bool hasUpdatedToday = false;
-  static int lastDay = -1;
+    static bool hasUpdatedToday = false;
+    static int lastDay = -1;
 
-  while (true) {
-    vTaskDelay(pdMS_TO_TICKS(10000));
+    while (true) {
+        // Check background update trigger
+        if (needPrayerUpdate && pendingPrayerLat.length() > 0 && pendingPrayerLon.length() > 0) {
+            Serial.println("Processing background prayer times update...");
+            getPrayerTimesByCoordinates(pendingPrayerLat, pendingPrayerLon);
+            
+            needPrayerUpdate = false;
+            pendingPrayerLat = "";
+            pendingPrayerLon = "";
+            
+            Serial.println("Background update complete\n");
+        }
 
-    if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-      int currentHour = hour(timeConfig.currentTime);
-      int currentMinute = minute(timeConfig.currentTime);
-      int currentDay = day(timeConfig.currentTime);
+        vTaskDelay(pdMS_TO_TICKS(10000));
 
-      if (currentDay != lastDay) {
-        hasUpdatedToday = false;
-        lastDay = currentDay;
-      }
+        if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            int currentHour = hour(timeConfig.currentTime);
+            int currentMinute = minute(timeConfig.currentTime);
+            int currentDay = day(timeConfig.currentTime);
 
-      bool shouldUpdate = (currentHour == 0 && currentMinute < 5 && !hasUpdatedToday && wifiConfig.isConnected && prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0);
+            if (currentDay != lastDay) {
+                hasUpdatedToday = false;
+                lastDay = currentDay;
+            }
 
-      xSemaphoreGive(timeMutex);
+            bool shouldUpdate = (currentHour == 0 && currentMinute < 5 && !hasUpdatedToday && wifiConfig.isConnected && prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0);
 
-      if (shouldUpdate) {
-        Serial.println("Midnight prayer times update for: " + prayerConfig.selectedCity);
-        getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
-        hasUpdatedToday = true;
-      }
+            xSemaphoreGive(timeMutex);
+
+            if (shouldUpdate) {
+                Serial.println("Midnight prayer times update...");
+                getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
+                hasUpdatedToday = true;
+            }
+        }
     }
-  }
 }
 
 void rtcSyncTask(void *parameter) {
