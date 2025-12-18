@@ -8097,10 +8097,6 @@ table.hover:not(.unstriped) tr:nth-of-type(even):hover {
 	margin: 0;
 	border: 1px solid #e6e6e6;
 	background: #fefefe;
-	box-shadow: 0 -1px 1px -1px #969696;
-	-webkit-box-shadow: 0 -1px 1px 1px #969696;
-	-moz-box-shadow: 0 -1px 1px -1px #969696;
-
 	list-style-type: none
 }
 
@@ -8147,7 +8143,7 @@ table.hover:not(.unstriped) tr:nth-of-type(even):hover {
 }
 
 .tabs-title {
-	float: left;
+	float: left
 }
 
 .tabs-title>a {
@@ -8178,12 +8174,6 @@ table.hover:not(.unstriped) tr:nth-of-type(even):hover {
 	border-top: 0;
 	background: #fefefe;
 	color: #0a0a0a;
-	border-radius: 0 0 10px 10px;
-	box-shadow: 0 1px 1px 1px #969696;
-	-webkit-box-shadow: 0 1px 1px 1px #969696;
-	-moz-box-shadow: 0 1px 1px 1px #969696;
-
-	background-color: white;
 	-webkit-transition: all .5s ease;
 	transition: all .5s ease
 }
