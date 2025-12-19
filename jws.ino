@@ -1233,6 +1233,9 @@ void setupServerRoutes() {
         request->send(resp);
     });
 
+    // ========================================
+    // TIMEZONE
+    // ========================================
     server.on("/settimezone", HTTP_POST, [](AsyncWebServerRequest *request) {
         Serial.println("\n========================================");
         Serial.println("POST /settimezone received");
@@ -1274,53 +1277,45 @@ void setupServerRoutes() {
         Serial.println("Offset: UTC" + String(offset >= 0 ? "+" : "") + String(offset));
         Serial.println("========================================\n");
 
-        bool prayerTimesUpdated = false;
-
-        if (wifiConfig.isConnected && prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-            Serial.println("\n========================================");
-            Serial.println("AUTO-UPDATING PRAYER TIMES");
-            Serial.println("========================================");
-            Serial.println("Reason: Timezone changed to UTC" + String(offset >= 0 ? "+" : "") + String(offset));
-            Serial.println("City: " + prayerConfig.selectedCity);
-            Serial.println("Coordinates: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
-            Serial.println("");
-
-            getPrayerTimesByCoordinates(
-                prayerConfig.latitude,
-                prayerConfig.longitude);
-
-            Serial.println("Prayer times updated with new timezone");
-            Serial.println("========================================\n");
-
-            prayerTimesUpdated = true;
-        } else {
-            Serial.println("\nPrayer times auto-update skipped:");
-            if (!wifiConfig.isConnected) {
-                Serial.println("WiFi not connected");
-            }
-            if (prayerConfig.latitude.length() == 0 || prayerConfig.longitude.length() == 0) {
-                Serial.println("No city coordinates available");
-            }
-            Serial.println("");
-        }
+        // ========================================
+        // TRIGGER NTP SYNC (akan update prayer times otomatis)
+        // ========================================
+        bool ntpTriggered = false;
+        bool prayerWillUpdate = false;
 
         if (wifiConfig.isConnected && ntpTaskHandle != NULL) {
             Serial.println("\n========================================");
             Serial.println("AUTO-TRIGGERING NTP RE-SYNC");
             Serial.println("========================================");
-            Serial.println("Reason: Timezone changed");
-            Serial.println("New timezone: UTC" + String(offset >= 0 ? "+" : "") + String(offset));
-            Serial.println("Will apply to system time immediately...");
-            Serial.println("========================================\n");
-
+            Serial.println("Reason: Timezone changed to UTC" + String(offset >= 0 ? "+" : "") + String(offset));
+            
+            // Check if prayer times will be updated
+            if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
+                Serial.println("City: " + prayerConfig.selectedCity);
+                Serial.println("Coordinates: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
+                Serial.println("");
+                Serial.println("NTP Task will automatically:");
+                Serial.println("  1. Sync time with new timezone");
+                Serial.println("  2. Update prayer times with correct date");
+                prayerWillUpdate = true;
+            } else {
+                Serial.println("Note: No city coordinates available");
+                Serial.println("Only time will be synced (no prayer times update)");
+            }
+            
+            // Reset NTP status
             if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                 timeConfig.ntpSynced = false;
                 xSemaphoreGive(timeMutex);
             }
 
+            // Trigger NTP sync
             xTaskNotifyGive(ntpTaskHandle);
-
+            ntpTriggered = true;
+            
             Serial.println("NTP re-sync triggered successfully");
+            Serial.println("========================================\n");
+            
         } else {
             Serial.println("\nCannot trigger NTP sync:");
             if (!wifiConfig.isConnected) {
@@ -1332,11 +1327,14 @@ void setupServerRoutes() {
             Serial.println("Timezone will apply on next connection\n");
         }
 
+        // ========================================
+        // SEND RESPONSE
+        // ========================================
         String response = "{";
         response += "\"success\":true,";
         response += "\"offset\":" + String(offset) + ",";
-        response += "\"ntpTriggered\":" + String((wifiConfig.isConnected && ntpTaskHandle != NULL) ? "true" : "false") + ",";
-        response += "\"prayerTimesUpdated\":" + String(prayerTimesUpdated ? "true" : "false");
+        response += "\"ntpTriggered\":" + String(ntpTriggered ? "true" : "false") + ",";
+        response += "\"prayerTimesWillUpdate\":" + String(prayerWillUpdate ? "true" : "false");
         response += "}";
 
         request->send(200, "application/json", response);
