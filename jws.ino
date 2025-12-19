@@ -2936,7 +2936,7 @@ void prayerTask(void *parameter) {
         // HANDLE BACKGROUND PRAYER UPDATE (dari web)
         // ============================================
         if (needPrayerUpdate && pendingPrayerLat.length() > 0 && pendingPrayerLon.length() > 0) {
-            Serial.println("📍 Memproses update waktu sholat dari web interface...");
+            Serial.println("Memproses update waktu sholat dari web interface...");
             esp_task_wdt_reset();
             getPrayerTimesByCoordinates(pendingPrayerLat, pendingPrayerLon);
             esp_task_wdt_reset();
