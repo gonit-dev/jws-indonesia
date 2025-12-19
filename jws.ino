@@ -16,6 +16,7 @@
 #include "ArduinoJson.h"
 #include "WiFi.h"
 #include "ESPAsyncWebServer.h"
+#include "TimeLib.h"
 #include <time.h>
 #include <sys/time.h>
 #include "HTTPClient.h"
@@ -604,7 +605,6 @@ void loadPrayerTimes() {
 }
 
 // WiFi Functions
-// WiFi Functions
 void saveWiFiCredentials() {
   if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
     fs::File file = LittleFS.open("/wifi_creds.txt", "w");
@@ -1100,22 +1100,22 @@ void setupServerRoutes() {
     // ========================================
     // HTML
     // ========================================
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-      if (!LittleFS.exists("/index.html")) {
-          request->send(404, "text/plain", "index.html not found");
-          return;
-      }
-      
-      AsyncWebServerResponse *response = request->beginResponse(
-          LittleFS, "/index.html", "text/html");
-      
-      response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-      response->addHeader("Pragma", "no-cache");
-      response->addHeader("Expires", "0");
-      response->addHeader("Content-Type", "text/html; charset=utf-8");
-      
-      request->send(response);
-  });
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (!LittleFS.exists("/index.html")) {
+            request->send(404, "text/plain", "index.html not found");
+            return;
+        }
+        
+        AsyncWebServerResponse *response = request->beginResponse(
+            LittleFS, "/index.html", "text/html");
+        
+        response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response->addHeader("Pragma", "no-cache");
+        response->addHeader("Expires", "0");
+        response->addHeader("Content-Type", "text/html; charset=utf-8");
+        
+        request->send(response);
+    });
 
     // ========================================
     // FOUNDATION
@@ -2619,10 +2619,9 @@ void ntpTask(void *parameter) {
         time_t now = 0;
         struct tm timeinfo = {0};
         int retry = 0;
-        const int retry_count = 40; // Naikkan max retry
+        const int retry_count = 40;
         
         while (timeinfo.tm_year < (2024 - 1900) && ++retry < retry_count) {
-            // ⚡ OPTIMASI: Delay lebih singkat
             vTaskDelay(pdMS_TO_TICKS(250));
             
             time(&now);
@@ -2696,7 +2695,6 @@ void ntpTask(void *parameter) {
 
         Serial.println("========================================\n");
         
-        // ⚡ SET FLAG SELESAI SEGERA
         ntpSyncInProgress = false;
         ntpSyncCompleted = syncSuccess;
         
@@ -2950,11 +2948,9 @@ void prayerTask(void *parameter) {
                 Serial.println("Alasan: Memastikan waktu akurat sebelum update");
                 
                 if (ntpTaskHandle != NULL) {
-                    // Reset flag NTP
                     ntpSyncInProgress = false;
                     ntpSyncCompleted = false;
                     
-                    // Trigger NTP task
                     xTaskNotifyGive(ntpTaskHandle);
                     
                     waitingForMidnightNTP = true;
@@ -2978,14 +2974,11 @@ void prayerTask(void *parameter) {
                 unsigned long waitTime = millis() - midnightNTPStartTime;
                 const unsigned long MAX_WAIT_TIME = 30000;
                 
-                // Cek status NTP sync
                 if (ntpSyncCompleted) {
-                    // NTP SYNC BERHASIL
                     Serial.println("\n========================================");
                     Serial.println("NTP SYNC COMPLETED");
                     Serial.println("========================================");
                     
-                    // Verifikasi waktu sekarang
                     if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                         currentTimestamp = timeConfig.currentTime;
                         currentYear = year(timeConfig.currentTime);
@@ -3003,12 +2996,11 @@ void prayerTask(void *parameter) {
                     }
                     
                     // ================================
-                    // TAHAP 3: UPDATE PRAYER TIMES
+                    // UPDATE PRAYER TIMES
                     // ================================
                     if (prayerConfig.latitude.length() > 0 && 
                         prayerConfig.longitude.length() > 0) {
                         
-                        // Validasi waktu valid
                         if (currentYear >= 2024 && currentTimestamp >= 946684800) {
                             Serial.println("STEP 2: Updating Prayer Times...");
                             Serial.println("Status Waktu: VALID");
@@ -3053,7 +3045,6 @@ void prayerTask(void *parameter) {
                     Serial.println("Tidak melakukan update (waktu mungkin tidak akurat)");
                     Serial.println("========================================\n");
                     
-                    // Reset flags - skip update hari ini
                     waitingForMidnightNTP = false;
                     hasUpdatedToday = true;
                     
@@ -3164,7 +3155,6 @@ void clockTickTask(void *parameter) {
         Serial.println("CLOCK TASK: Waiting for first NTP sync...");
         Serial.println("========================================");
         
-        // Wait until NTP sync completes OR timeout (60 seconds)
         int waitCounter = 0;
         while (!timeConfig.ntpSynced && waitCounter < 60) {
             vTaskDelay(pdMS_TO_TICKS(1000));
