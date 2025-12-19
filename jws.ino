@@ -2611,7 +2611,9 @@ void ntpTask(void *parameter) {
         configTzTime(tzString, 
                      ntpServers[0], 
                      ntpServers[1], 
-                     ntpServers[2]);
+                     ntpServers[2],
+                     ntpServers[3],
+                     ntpServers[4]);
         
         // ============================================
         // Tunggu NTP sync LEBIH CEPAT
