@@ -606,7 +606,7 @@
                                             🕌 Jadwal shalat berdasarkan lokasi yang dipilih<br>
                                             🔄 Auto-refresh setiap tengah malam (00:00 WIB)<br>
                                             📐 <span id="currentMethodBottom">Egyptian General Authority of Survey</span><br>
-                                            ⚡ Update otomatis saat device online tanpa restart
+                                            ⚡ Update otomatis saat device online
                                         </p>
                                     </div>
 
@@ -2605,53 +2605,33 @@
                         e.preventDefault();
                         cancelTimezoneEdit();
                     }
-                });
-                
-                timezoneInput.addEventListener('keypress', function(e) {
-                    const char = String.fromCharCode(e.which);
-                    const currentValue = this.value;
                     
-                    if (!/[\d\+\-]/.test(char)) {
-                        e.preventDefault();
+                    // Validasi ketik hanya + - dan angka, tapi izinkan keyboard shortcuts
+                    if ([8, 9, 27, 13, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1 ||
+                        (e.keyCode === 65 && e.ctrlKey === true) ||
+                        (e.keyCode === 67 && e.ctrlKey === true) ||
+                        (e.keyCode === 86 && e.ctrlKey === true) ||
+                        (e.keyCode === 88 && e.ctrlKey === true) ||
+                        (e.keyCode === 65 && e.metaKey === true) ||
+                        (e.keyCode === 67 && e.metaKey === true) ||
+                        (e.keyCode === 86 && e.metaKey === true) ||
+                        (e.keyCode === 88 && e.metaKey === true)) {
                         return;
                     }
                     
-                    if ((char === '+' || char === '-') && currentValue.length > 0) {
+                    const char = e.key;
+                    if (!/^[\d\+\-]$/.test(char)) {
                         e.preventDefault();
-                        return;
-                    }
-                    
-                    if ((char === '+' || char === '-') && /[\+\-]/.test(currentValue)) {
-                        e.preventDefault();
-                        return;
                     }
                 });
             }
             
             // ================================
-            // KOORDINAT INPUT - VALIDATION
+            // KOORDINAT INPUT - BEBAS KETIK & PASTE
             // ================================
             const latInput = document.getElementById('latInput');
             if (latInput) {
-                latInput.addEventListener('keypress', function(e) {
-                    const char = String.fromCharCode(e.which);
-                    const currentValue = this.value;
-                    
-                    if (!/[\d\.\-]/.test(char)) {
-                        e.preventDefault();
-                        return;
-                    }
-                    
-                    if (char === '-' && currentValue.length > 0) {
-                        e.preventDefault();
-                        return;
-                    }
-                    
-                    if (char === '.' && currentValue.includes('.')) {
-                        e.preventDefault();
-                        return;
-                    }
-                });
+                // HAPUS addEventListener('keypress') - biarkan bebas ketik
                 
                 latInput.addEventListener('blur', function() {
                     const val = parseFloat(this.value);
@@ -2666,25 +2646,7 @@
             
             const lonInput = document.getElementById('lonInput');
             if (lonInput) {
-                lonInput.addEventListener('keypress', function(e) {
-                    const char = String.fromCharCode(e.which);
-                    const currentValue = this.value;
-                    
-                    if (!/[\d\.\-]/.test(char)) {
-                        e.preventDefault();
-                        return;
-                    }
-                    
-                    if (char === '-' && currentValue.length > 0) {
-                        e.preventDefault();
-                        return;
-                    }
-                    
-                    if (char === '.' && currentValue.includes('.')) {
-                        e.preventDefault();
-                        return;
-                    }
-                });
+                // HAPUS addEventListener('keypress') - biarkan bebas ketik
                 
                 lonInput.addEventListener('blur', function() {
                     const val = parseFloat(this.value);
@@ -2698,37 +2660,9 @@
             }
             
             // ================================
-            // WIFI SSID INPUT - PREVENT SPACES
+            // WIFI SSID INPUT - BEBAS KETIK & PASTE
             // ================================
-            const wifiSSID = document.getElementById('wifiSSID');
-            if (wifiSSID) {
-                wifiSSID.addEventListener('keypress', function(e) {
-                    if (e.which === 32 && this.value.length === 0) {
-                        e.preventDefault();
-                    }
-                });
-                
-                wifiSSID.addEventListener('paste', function(e) {
-                    setTimeout(() => {
-                        this.value = this.value.trim();
-                    }, 0);
-                });
-            }
-            
-            const apSSID = document.getElementById('apSSID');
-            if (apSSID) {
-                apSSID.addEventListener('keypress', function(e) {
-                    if (e.which === 32 && this.value.length === 0) {
-                        e.preventDefault();
-                    }
-                });
-                
-                apSSID.addEventListener('paste', function(e) {
-                    setTimeout(() => {
-                        this.value = this.value.trim();
-                    }, 0);
-                });
-            }
+            // HAPUS SEMUA VALIDASI - biarkan user ketik bebas
             
             // ================================
             // FILE INPUT - DRAG & DROP SUPPORT
@@ -2790,9 +2724,6 @@
                     if (selectedOption && selectedOption.value) {
                         const lat = selectedOption.getAttribute('data-lat');
                         const lon = selectedOption.getAttribute('data-lon');
-                        
-                        if (lat && lon) {
-                        }
                     }
                 });
             }
@@ -2870,7 +2801,7 @@
                 setTimeout(() => {
                     updateDeviceStatus();
                 }, 1000);
-            });
+            }, 1000);
             
             window.addEventListener('offline', function() {
                 showToast('Tidak ada koneksi internet', 'warning');
