@@ -2692,6 +2692,47 @@ void ntpTask(void *parameter) {
             }
         }
 
+        // ============================================
+        // AUTO PRAYER TIMES UPDATE SETELAH NTP SYNC
+        // ============================================
+        if (syncSuccess && wifiConfig.isConnected) {
+            Serial.println("\n========================================");
+            Serial.println("AUTO PRAYER TIMES UPDATE (FROM NTP TASK)");
+            Serial.println("========================================");
+            Serial.println("Reason: NTP sync completed successfully");
+            
+            if (prayerConfig.latitude.length() > 0 && 
+                prayerConfig.longitude.length() > 0) {
+                
+                Serial.println("City: " + prayerConfig.selectedCity);
+                Serial.println("Coordinates: " + prayerConfig.latitude + 
+                              ", " + prayerConfig.longitude);
+                Serial.println("");
+                
+                esp_task_wdt_reset();
+                
+                // Panggil getPrayerTimesByCoordinates
+                getPrayerTimesByCoordinates(
+                    prayerConfig.latitude,
+                    prayerConfig.longitude
+                );
+                
+                esp_task_wdt_reset();
+                
+                Serial.println("Prayer times updated successfully");
+                Serial.println("========================================\n");
+                
+            } else {
+                Serial.println("Skipped: No city coordinates available");
+                if (prayerConfig.latitude.length() == 0) {
+                    Serial.println("   Latitude is empty");
+                }
+                if (prayerConfig.longitude.length() == 0) {
+                    Serial.println("   Longitude is empty");
+                }
+                Serial.println("========================================\n");
+            }
+        }
 
         Serial.println("========================================\n");
         
