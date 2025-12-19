@@ -128,9 +128,7 @@ EventGroupHandle_t wifiEventGroup;
 // ================================
 const char *ntpServers[] = {
   "pool.ntp.org",
-  "id.pool.ntp.org",
   "time.google.com",
-  "time.cloudflare.com",
   "time.windows.com"
 };
 const int NTP_SERVER_COUNT = 5;
@@ -2611,9 +2609,7 @@ void ntpTask(void *parameter) {
         configTzTime(tzString, 
                      ntpServers[0], 
                      ntpServers[1], 
-                     ntpServers[2],
-                     ntpServers[3],
-                     ntpServers[4]);
+                     ntpServers[2]);
         
         // ============================================
         // Tunggu NTP sync LEBIH CEPAT
