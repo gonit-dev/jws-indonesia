@@ -1278,7 +1278,7 @@ void setupServerRoutes() {
         Serial.println("========================================\n");
 
         // ========================================
-        // TRIGGER NTP SYNC (akan update prayer times otomatis)
+        // TRIGGER NTP SYNC
         // ========================================
         bool ntpTriggered = false;
         bool prayerWillUpdate = false;
