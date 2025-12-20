@@ -1167,7 +1167,6 @@ void setupServerRoutes() {
         String ssid = isWiFiConnected ? WiFi.SSID() : "";
         String ip = isWiFiConnected ? wifiConfig.localIP.toString() : "-";
 
-        // Pre-allocate buffer
         char jsonBuffer[512];
         snprintf(jsonBuffer, sizeof(jsonBuffer),
             "{"
@@ -1202,18 +1201,17 @@ void setupServerRoutes() {
     // TIMEZONE
     // ========================================
     server.on("/gettimezone", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = "{";
-
+        char jsonBuffer[64];
+        
+        int offset = 7;
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            json += "\"offset\":" + String(timezoneOffset);
+            offset = timezoneOffset;
             xSemaphoreGive(settingsMutex);
-        } else {
-            json += "\"offset\":7";
         }
-
-        json += "}";
-
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        
+        snprintf(jsonBuffer, sizeof(jsonBuffer), "{\"offset\":%d}", offset);
+        
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", jsonBuffer);
         resp->addHeader("Cache-Control", "no-cache");
         request->send(resp);
     });
@@ -1315,31 +1313,46 @@ void setupServerRoutes() {
         // ========================================
         // SEND RESPONSE
         // ========================================
-        String response = "{";
-        response += "\"success\":true,";
-        response += "\"offset\":" + String(offset) + ",";
-        response += "\"ntpTriggered\":" + String(ntpTriggered ? "true" : "false") + ",";
-        response += "\"prayerTimesWillUpdate\":" + String(prayerWillUpdate ? "true" : "false");
-        response += "}";
-
-        request->send(200, "application/json", response);
+        char responseBuffer[256];
+        snprintf(responseBuffer, sizeof(responseBuffer),
+            "{"
+            "\"success\":true,"
+            "\"offset\":%d,"
+            "\"ntpTriggered\":%s,"
+            "\"prayerTimesWillUpdate\":%s"
+            "}",
+            offset,
+            ntpTriggered ? "true" : "false",
+            prayerWillUpdate ? "true" : "false"
+        );
+        request->send(200, "application/json", responseBuffer);
     });
 
     // ========================================
     // PRAYER TIMES
     // ========================================
     server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = "{";
-        json += "\"imsak\":\"" + prayerConfig.imsakTime + "\",";
-        json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
-        json += "\"terbit\":\"" + prayerConfig.terbitTime + "\",";
-        json += "\"zuhur\":\"" + prayerConfig.zuhurTime + "\",";
-        json += "\"ashar\":\"" + prayerConfig.asharTime + "\",";
-        json += "\"maghrib\":\"" + prayerConfig.maghribTime + "\",";
-        json += "\"isya\":\"" + prayerConfig.isyaTime + "\"";
-        json += "}";
+        char jsonBuffer[256];
+        snprintf(jsonBuffer, sizeof(jsonBuffer),
+            "{"
+            "\"imsak\":\"%s\","
+            "\"subuh\":\"%s\","
+            "\"terbit\":\"%s\","
+            "\"zuhur\":\"%s\","
+            "\"ashar\":\"%s\","
+            "\"maghrib\":\"%s\","
+            "\"isya\":\"%s\""
+            "}",
+            prayerConfig.imsakTime.c_str(),
+            prayerConfig.subuhTime.c_str(),
+            prayerConfig.terbitTime.c_str(),
+            prayerConfig.zuhurTime.c_str(),
+            prayerConfig.asharTime.c_str(),
+            prayerConfig.maghribTime.c_str(),
+            prayerConfig.isyaTime.c_str()
+        );
 
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", jsonBuffer);
         resp->addHeader("Cache-Control", "no-cache");
         request->send(resp);
     });
@@ -1410,7 +1423,6 @@ void setupServerRoutes() {
             cityName.c_str(),
             willUpdate ? "true" : "false"
         );
-
         request->send(200, "application/json", responseBuffer);
 
         if (willUpdate) {
@@ -1428,29 +1440,37 @@ void setupServerRoutes() {
     });
 
     server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = "{";
+        char jsonBuffer[512];
+        bool hasSelection = false;
+        char city[128] = "";
+        char cityApi[128] = "";
+        char lat[32] = "";
+        char lon[32] = "";
 
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            bool hasSelection = (prayerConfig.selectedCity.length() > 0);
-
-            json += "\"selectedCity\":\"" + prayerConfig.selectedCity + "\",";
-            json += "\"selectedCityApi\":\"" + prayerConfig.selectedCity + "\",";
-            json += "\"latitude\":\"" + prayerConfig.latitude + "\",";
-            json += "\"longitude\":\"" + prayerConfig.longitude + "\",";
-            json += "\"hasSelection\":" + String(hasSelection ? "true" : "false");
-
+            hasSelection = (prayerConfig.selectedCity.length() > 0);
+            
+            strncpy(city, prayerConfig.selectedCity.c_str(), sizeof(city) - 1);
+            strncpy(cityApi, prayerConfig.selectedCity.c_str(), sizeof(cityApi) - 1);
+            strncpy(lat, prayerConfig.latitude.c_str(), sizeof(lat) - 1);
+            strncpy(lon, prayerConfig.longitude.c_str(), sizeof(lon) - 1);
+            
             xSemaphoreGive(settingsMutex);
-        } else {
-            json += "\"selectedCity\":\"\",";
-            json += "\"selectedCityApi\":\"\",";
-            json += "\"latitude\":\"\",";
-            json += "\"longitude\":\"\",";
-            json += "\"hasSelection\":false";
         }
 
-        json += "}";
+        snprintf(jsonBuffer, sizeof(jsonBuffer),
+            "{"
+            "\"selectedCity\":\"%s\","
+            "\"selectedCityApi\":\"%s\","
+            "\"latitude\":\"%s\","
+            "\"longitude\":\"%s\","
+            "\"hasSelection\":%s"
+            "}",
+            city, cityApi, lat, lon,
+            hasSelection ? "true" : "false"
+        );
 
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", jsonBuffer);
         resp->addHeader("Cache-Control", "no-cache");
         request->send(resp);
     });
@@ -1580,20 +1600,22 @@ void setupServerRoutes() {
     // METHOD SELECTION - GET & SET
     // ========================================
     server.on("/getmethod", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = "{";
+        char jsonBuffer[256];
+        int methodId = 5;
+        char methodName[128] = "Egyptian General Authority of Survey";
 
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            json += "\"methodId\":" + String(methodConfig.methodId) + ",";
-            json += "\"methodName\":\"" + methodConfig.methodName + "\"";
+            methodId = methodConfig.methodId;
+            strncpy(methodName, methodConfig.methodName.c_str(), sizeof(methodName) - 1);
             xSemaphoreGive(settingsMutex);
-        } else {
-            json += "\"methodId\":5,";
-            json += "\"methodName\":\"Egyptian General Authority of Survey\"";
         }
 
-        json += "}";
+        snprintf(jsonBuffer, sizeof(jsonBuffer),
+            "{\"methodId\":%d,\"methodName\":\"%s\"}",
+            methodId, methodName
+        );
 
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", jsonBuffer);
         resp->addHeader("Cache-Control", "no-cache");
         request->send(resp);
     });
@@ -1694,14 +1716,19 @@ void setupServerRoutes() {
         }
         Serial.println("========================================\n");
 
-        String response = "{";
-        response += "\"success\":true,";
-        response += "\"methodId\":" + String(methodId) + ",";
-        response += "\"methodName\":\"" + methodName + "\",";
-        response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
-        response += "}";
-
-        request->send(200, "application/json", response);
+        char responseBuffer[512];
+        snprintf(responseBuffer, sizeof(responseBuffer),
+            "{"
+            "\"success\":true,"
+            "\"methodId\":%d,"
+            "\"methodName\":\"%s\","
+            "\"prayerTimesUpdating\":%s"
+            "}",
+            methodId,
+            methodName.c_str(),
+            willFetchPrayerTimes ? "true" : "false"
+        );
+        request->send(200, "application/json", responseBuffer);
     });
 
     // ========================================
@@ -1764,28 +1791,31 @@ void setupServerRoutes() {
     });
 
     server.on("/getwificonfig", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = "{";
+        char jsonBuffer[256];
+        char routerSSID[64] = "";
+        char apSSID[64] = "";
 
         if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            json += "\"routerSSID\":\"" + wifiConfig.routerSSID + "\",";
+            strncpy(routerSSID, wifiConfig.routerSSID.c_str(), sizeof(routerSSID) - 1);
             xSemaphoreGive(wifiMutex);
-        } else {
-            json += "\"routerSSID\":\"\",";
         }
 
         String currentAPSSID = WiFi.softAPSSID();
         if (currentAPSSID.length() == 0 || currentAPSSID == "null") {
             currentAPSSID = String(wifiConfig.apSSID);
         }
-
         if (currentAPSSID.length() == 0) {
             currentAPSSID = "JWS Indonesia";
         }
+        
+        strncpy(apSSID, currentAPSSID.c_str(), sizeof(apSSID) - 1);
 
-        json += "\"apSSID\":\"" + currentAPSSID + "\"";
-        json += "}";
+        snprintf(jsonBuffer, sizeof(jsonBuffer),
+            "{\"routerSSID\":\"%s\",\"apSSID\":\"%s\"}",
+            routerSSID, apSSID
+        );
 
-        request->send(200, "application/json", json);
+        request->send(200, "application/json", jsonBuffer);
     });
 
     server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
