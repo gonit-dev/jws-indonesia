@@ -189,7 +189,7 @@
                 <!-- Header -->
                 <div class="grid-x grid-padding-y">
                     <div class="large-12 text-center cell">
-                        <h3>🕌 Jadwal Shalat</h3>
+                        <h3>🕌 Islamic Prayer Clock</h3>
                         <p class="subheader">Semua pengaturan otomatis - tinggal sambungkan WiFi</p>
                     </div>
                 </div>
@@ -200,7 +200,7 @@
                         <li class="tabs-title"><a href="#wifi">WIRELESS</a></li>
                         <li class="tabs-title"><a href="#time">WAKTU</a></li>
                         <li class="tabs-title"><a href="#location">LOKASI</a></li>
-                        <li class="tabs-title"><a href="#prayer">JADDWAL</a></li>
+                        <li class="tabs-title"><a href="#prayer">JADWAL</a></li>
                         <li class="tabs-title"><a href="#factory">PABRIK</a></li>
                     </ul>
                 </div>
@@ -315,7 +315,7 @@
 
                                     <div class="grid-x grid-padding-y">
                                         <div class="large-12 cell">
-                                            <h5><strong>⏰ Time Synchronization</strong></h5></h4>
+                                            <h5><strong>⏰ Sinkronisasi Waktu</strong></h5></h4>
                                         </div>
                                     </div>
 
@@ -492,13 +492,13 @@
 
                                     <div class="grid-x grid-padding-y">
                                         <div class="large-12 cell">
-                                            <h5><strong>📤 Upload Cities.json</strong></h5></h4>
+                                            <h5><strong>📤 Mengunggah Cities.json</strong></h5></h4>
                                         </div>
                                     </div>
                                     
                                     <div class="callout secondary">
                                         <p>
-                                            <strong>Kapan perlu upload cities.json?</strong><br>
+                                            <strong>Kapan perlu mengunggah cities.json?</strong><br>
                                         </p>
                                         <p>
                                             <div class="help-text">
@@ -520,7 +520,7 @@
                                     </div>
                                     <div class="large-4 medium-4 small-12 cell">
                                         <button id="uploadBtn" class="button primary expanded" onclick="uploadCitiesFile()" disabled>
-                                            📤 Upload File
+                                            📤 Mengunggah File
                                         </button>
                                         <button id="clearFileBtn" class="button primary expanded" onclick="clearSelectedFile()" style="display: none; margin-top: 10px;">
                                             ✖ Hapus File
@@ -1965,7 +1965,7 @@
             progressDiv.classList.remove('hide');
             progressBar.style.width = '0%';
             progressBar.querySelector('.progress-meter-text').textContent = '0%';
-            statusText.textContent = 'Memulai Mengunggah...';
+            statusText.textContent = 'Memulai mengunggah...';
             
             try {
                 const formData = new FormData();
