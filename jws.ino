@@ -233,6 +233,28 @@ volatile bool ntpSyncInProgress = false;
 volatile bool ntpSyncCompleted = false;
 
 // ================================
+// PRAYER TIME BLINK STATE
+// ================================
+struct BlinkState {
+  bool isBlinking;
+  unsigned long blinkStartTime;
+  unsigned long lastBlinkToggle;
+  bool currentVisible;
+  String activePrayer;
+};
+
+BlinkState blinkState = {
+  .isBlinking = false,
+  .blinkStartTime = 0,
+  .lastBlinkToggle = 0,
+  .currentVisible = true,
+  .activePrayer = ""
+};
+
+const unsigned long BLINK_DURATION = 60000; // 1 menit
+const unsigned long BLINK_INTERVAL = 500;   // Kedip setiap 500ms
+
+// ================================
 // FORWARD DECLARATIONS
 // ================================
 
@@ -242,6 +264,12 @@ void updateTimeDisplay();
 void updatePrayerDisplay();
 void hideAllUIElements();
 void showAllUIElements();
+
+// Prayer Blink Functions
+void checkPrayerTime();
+void startBlinking(String prayerName);
+void stopBlinking();
+void handleBlinking();
 
 // Prayer Times Functions
 void getPrayerTimesByCoordinates(String lat, String lon);
@@ -340,6 +368,118 @@ void updateTimeDisplay() {
     xSemaphoreGive(timeMutex);
   }
 }
+
+void checkPrayerTime() {
+  if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+    time_t now_t = timeConfig.currentTime;
+    struct tm timeinfo;
+    localtime_r(&now_t, &timeinfo);
+    
+    char currentTime[6];
+    sprintf(currentTime, "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
+    
+    xSemaphoreGive(timeMutex);
+    
+    if (timeinfo.tm_sec == 0) {
+      String current = String(currentTime);
+      
+      if (!blinkState.isBlinking) {
+        if (current == prayerConfig.imsakTime) {
+          startBlinking("imsak");
+        } else if (current == prayerConfig.subuhTime) {
+          startBlinking("subuh");
+        } else if (current == prayerConfig.terbitTime) {
+          startBlinking("terbit");
+        } else if (current == prayerConfig.zuhurTime) {
+          startBlinking("zuhur");
+        } else if (current == prayerConfig.asharTime) {
+          startBlinking("ashar");
+        } else if (current == prayerConfig.maghribTime) {
+          startBlinking("maghrib");
+        } else if (current == prayerConfig.isyaTime) {
+          startBlinking("isya");
+        }
+      }
+    }
+  }
+}
+
+void startBlinking(String prayerName) {
+  blinkState.isBlinking = true;
+  blinkState.blinkStartTime = millis();
+  blinkState.lastBlinkToggle = millis();
+  blinkState.currentVisible = true;
+  blinkState.activePrayer = prayerName;
+  
+  String upperName = prayerName;
+  upperName.toUpperCase();
+  
+  Serial.println("\n========================================");
+  Serial.print("WAKTU SHALAT MASUK: ");
+  Serial.println(upperName);
+  Serial.println("========================================");
+  Serial.println("Memulai kedip selama 1 menit...");
+  Serial.println("========================================\n");
+}
+
+void stopBlinking() {
+  if (blinkState.isBlinking) {
+    blinkState.isBlinking = false;
+    blinkState.activePrayer = "";
+    
+    if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+      if (objects.imsak_time) lv_obj_clear_flag(objects.imsak_time, LV_OBJ_FLAG_HIDDEN);
+      if (objects.subuh_time) lv_obj_clear_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
+      if (objects.terbit_time) lv_obj_clear_flag(objects.terbit_time, LV_OBJ_FLAG_HIDDEN);
+      if (objects.zuhur_time) lv_obj_clear_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
+      if (objects.ashar_time) lv_obj_clear_flag(objects.ashar_time, LV_OBJ_FLAG_HIDDEN);
+      if (objects.maghrib_time) lv_obj_clear_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
+      if (objects.isya_time) lv_obj_clear_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
+      xSemaphoreGive(displayMutex);
+    }
+    
+    Serial.println("Kedip selesai - semua waktu shalat terlihat normal");
+  }
+}
+
+void handleBlinking() {
+  if (!blinkState.isBlinking) return;
+  
+  unsigned long currentMillis = millis();
+  
+  if (currentMillis - blinkState.blinkStartTime >= BLINK_DURATION) {
+    stopBlinking();
+    return;
+  }
+  
+  if (currentMillis - blinkState.lastBlinkToggle >= BLINK_INTERVAL) {
+    blinkState.lastBlinkToggle = currentMillis;
+    blinkState.currentVisible = !blinkState.currentVisible;
+    
+    if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+      lv_obj_t *targetLabel = NULL;
+      
+      if (blinkState.activePrayer == "imsak") targetLabel = objects.imsak_time;
+      else if (blinkState.activePrayer == "subuh") targetLabel = objects.subuh_time;
+      else if (blinkState.activePrayer == "terbit") targetLabel = objects.terbit_time;
+      else if (blinkState.activePrayer == "zuhur") targetLabel = objects.zuhur_time;
+      else if (blinkState.activePrayer == "ashar") targetLabel = objects.ashar_time;
+      else if (blinkState.activePrayer == "maghrib") targetLabel = objects.maghrib_time;
+      else if (blinkState.activePrayer == "isya") targetLabel = objects.isya_time;
+      
+      if (targetLabel) {
+        if (blinkState.currentVisible) {
+          lv_obj_clear_flag(targetLabel, LV_OBJ_FLAG_HIDDEN);
+        } else {
+          lv_obj_add_flag(targetLabel, LV_OBJ_FLAG_HIDDEN);
+        }
+      }
+      
+      xSemaphoreGive(displayMutex);
+    }
+  }
+}
+
 void updatePrayerDisplay() {
   if (objects.imsak_time) lv_label_set_text(objects.imsak_time, prayerConfig.imsakTime.c_str());
   if (objects.subuh_time) lv_label_set_text(objects.subuh_time, prayerConfig.subuhTime.c_str());
@@ -2372,6 +2512,7 @@ void uiTask(void *parameter) {
         switch (update.type) {
           case DisplayUpdate::TIME_UPDATE:
             updateTimeDisplay();
+            checkPrayerTime(); // Cek apakah waktu shalat masuk
             break;
           case DisplayUpdate::PRAYER_UPDATE:
             updatePrayerDisplay();
@@ -2383,6 +2524,10 @@ void uiTask(void *parameter) {
         xSemaphoreGive(displayMutex);
       }
     }
+    
+    // Handle blinking effect
+    handleBlinking();
+    
     vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
 }
