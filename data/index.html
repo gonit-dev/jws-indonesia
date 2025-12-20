@@ -315,7 +315,7 @@
 
                                     <div class="grid-x grid-padding-y">
                                         <div class="large-12 cell">
-                                            <h5><strong>⏰ Sinkronisasi Waktu</strong></h5></h4>
+                                            <h5><strong>⏰ Update Waktu</strong></h5></h4>
                                         </div>
                                     </div>
 
@@ -323,12 +323,12 @@
                                         <div class="large-6 medium-6 cell">
                                             <div class="callout secondary">
                                                 <div class="large-12 medium-12 cell">
-                                                    <h6><strong>📱 Sinkronkan Manual dari Browser</strong></h6>
-                                                    <p class="help-text">Sinkronkan waktu dari perangkat Anda</p>
+                                                    <h6><strong>📱 Update Manual dari Browser</strong></h6>
+                                                    <p class="help-text">Update waktu dari perangkat Anda</p>
                                                 </div>
                                                 <div class="large-12 medium-12 cell">
                                                     <button class="button secondary expanded" onclick="syncTime()">
-                                                        Sinkronkan Waktu Sekarang
+                                                        Update Waktu Sekarang
                                                     </button>
                                                 </div>
                                             </div>
@@ -337,12 +337,12 @@
                                         <div class="large-6 medium-6 cell">
                                             <div class="callout secondary">
                                                 <div class="large-12 medium-12 cell">
-                                                    <h6><strong>🌐 Sinkronisasi NTP Otomatis <span class="label success">AUTO</span></strong></h6>
-                                                    <p class="help-text">Waktu tersinkronkan otomatis saat WiFi terhubung</p>
+                                                    <h6><strong>🌐 Update NTP Otomatis <span class="label success">AUTO</span></strong></h6>
+                                                    <p class="help-text">Waktu update otomatis saat WiFi terhubung</p>
                                                 </div>
                                                 <div class="large-12 medium-12 cell">
                                                     <p class="help-text">
-                                                            🔄 Sinkronkan otomatis setiap 1 jam<br>
+                                                            🔄 Update otomatis setiap 1 jam<br>
                                                             🗄️ Beberapa server cadangan<br>
                                                             🌐 Timezone: UTC<span id="timezoneDisplayText">+7</span>
                                                         <input type="text" 
@@ -1005,7 +1005,7 @@
                 
                 document.getElementById('wifiName').textContent = data.ssid || 'Tidak Terhubung';
                 document.getElementById('ipAddress').textContent = data.ip || '-';
-                document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Tersinkronisasi' : '❌ Belum Tersinkronisasi';
+                document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Update' : '❌ Belum Update';
                 
                 if (document.getElementById('ntpServerUsed')) {
                     document.getElementById('ntpServerUsed').textContent = data.ntpServer || '-';
@@ -1021,7 +1021,7 @@
                 }
                 
                 // ================================
-                // SINKRONISASI WAKTU & TANGGAL DARI SERVER
+                // UPDATE WAKTU & TANGGAL DARI SERVER
                 // ================================
                 if (data.currentTime && data.currentDate) {
                     const timeParts = data.currentTime.split(':');
@@ -1687,7 +1687,7 @@
             }
         }
         // ================================
-        // SINKRONISASI WAKTU
+        // UPDATE WAKTU
         // ================================
         function syncTime() {
             const d = new Date();
@@ -1701,7 +1701,7 @@
 
             const btn = event.target;
             btn.disabled = true;
-            btn.textContent = 'Sinkronkan...';
+            btn.textContent = 'Update...';
 
             fetch('/synctime', { 
                 method: 'POST',
@@ -1712,15 +1712,15 @@
             })
             .then(response => response.text())
             .then(data => {
-                showToast('Waktu berhasil tersinkronisasi', 'success');
+                showToast('Waktu berhasil update', 'success');
                 updateDeviceStatus();
                 btn.disabled = false;
-                btn.textContent = 'Sinkronkan Waktu Sekarang';
+                btn.textContent = 'Update Waktu Sekarang';
             })
             .catch(error => {
-                showToast('Gagal menyinkronkan waktu', 'error');
+                showToast('Gagal update waktu', 'error');
                 btn.disabled = false;
-                btn.textContent = ' Sinkronkan Waktu Sekarang';
+                btn.textContent = ' Update Waktu Sekarang';
             });
         }
 
@@ -2411,7 +2411,7 @@
                     showToast('Timezone berhasil disimpan', 'success');
                     
                     setTimeout(() => {
-                        showToast('NTP akan melakukan sinkronisasi ulang dengan zona waktu baru...', 'warning');
+                        showToast('NTP akan melakukan update ulang dengan zona waktu baru...', 'warning');
                     }, 1500);
                     
                 } else {
