@@ -250,8 +250,7 @@ jws-indonesia/
 ├── data/                      # LittleFS (upload ke ESP32)
 │   ├── index.html             # Web interface
 │   ├── assets/
-│   │   ├── css/foundation.min.css
-│   │   └── js/jquery.min.js
+│   │   └── css/foundation.min.css
 │   └── cities.json            # 500+ cities database
 └── README.md
 ```
