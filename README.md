@@ -413,7 +413,7 @@ curl http://192.168.4.1/api/data
    ```cpp
    response->addHeader("Cache-Control", "public, max-age=3600");
    ```
-   - Load CSS/JS once → instant reload
+   - Load CSS once → instant reload
 
 **Result:** Page load **200-500ms** (was 2-5 seconds!)
 
