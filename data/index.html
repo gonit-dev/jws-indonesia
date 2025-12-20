@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Islamic Prayer Clock Settings</title>
+    <title>Jadwal Shalat</title>
     
     <link rel="stylesheet" href="assets/css/foundation.min.css">
     
@@ -189,19 +189,19 @@
                 <!-- Header -->
                 <div class="grid-x grid-padding-y">
                     <div class="large-12 text-center cell">
-                        <h3>🕌 Islamic Prayer Clock Settings</h3>
-                        <p class="subheader">Semua pengaturan otomatis - tinggal sambungkan WiFi!</p>
+                        <h3>🕌 Jadwal Shalat</h3>
+                        <p class="subheader">Semua pengaturan otomatis - tinggal sambungkan WiFi</p>
                     </div>
                 </div>
                 
                 <div class="large-12 text-center cell">
                     <ul class="tabs" data-tabs id="example-tabs">
-                        <li class="tabs-title is-active"><a href="#home" aria-selected="true">HOME</a></li>
+                        <li class="tabs-title is-active"><a href="#home" aria-selected="true">BERANDA</a></li>
                         <li class="tabs-title"><a href="#wifi">WIRELESS</a></li>
-                        <li class="tabs-title"><a href="#time">TIME SYNC</a></li>
-                        <li class="tabs-title"><a href="#city">CITY</a></li>
-                        <li class="tabs-title"><a href="#prayer">PRAYER</a></li>
-                        <li class="tabs-title"><a href="#factory">FACTORY</a></li>
+                        <li class="tabs-title"><a href="#time">WAKTU</a></li>
+                        <li class="tabs-title"><a href="#location">LOKASI</a></li>
+                        <li class="tabs-title"><a href="#prayer">JADDWAL</a></li>
+                        <li class="tabs-title"><a href="#factory">PABRIK</a></li>
                     </ul>
                 </div>
 
@@ -216,28 +216,28 @@
                                             <div class="callout secondary">
                                                 <div class="grid-x grid-padding-y">
                                                     <div class="large-12 cell">
-                                                        <h5><strong>📊 Device Status</strong></h5></h4>
+                                                        <h5><strong>📊 Status Perangkat</strong></h5></h4>
                                                     </div>
                                                 </div>
                                                 <div class="grid-x grid-margin-x">
                                                     <div class="large-6 medium-6 small-12 cell text-left">
-                                                        <p><strong>WiFi Network:</strong> <span id="wifiName">-</span></p>
-                                                        <p><strong>IP Address:</strong> <span id="ipAddress">-</span></p>
-                                                        <p><strong>Internet:</strong> <span id="internetStatus" class="label warning">Checking...</span></p>
+                                                        <p><strong>Jaringan WiFi:</strong> <span id="wifiName">-</span></p>
+                                                        <p><strong>Alamat IP:</strong> <span id="ipAddress">-</span></p>
+                                                        <p><strong>Internet:</strong> <span id="internetStatus" class="label warning">Memeriksa...</span></p>
                                                     </div>
                                                     <div class="large-6 medium-6 small-12 cell text-left">
-                                                        <p><strong>NTP Status:</strong> <span id="ntpStatus">-</span></p>
-                                                        <p><strong>NTP Server:</strong> <span id="ntpServerUsed">-</span></p>
-                                                        <p><strong>Current Time:</strong> <span id="currentTime">-</span></p>
-                                                        <p><strong>Current Date:</strong> <span id="currentDate">-</span></p>
-                                                        <p><strong>Uptime:</strong> <span id="uptime">--:--:--</span></p>
+                                                        <p><strong>Status NTP:</strong> <span id="ntpStatus">-</span></p>
+                                                        <p><strong>Server NTP:</strong> <span id="ntpServerUsed">-</span></p>
+                                                        <p><strong>Waktu Saat Ini:</strong> <span id="currentTime">-</span></p>
+                                                        <p><strong>Tanggal Saat Ini:</strong> <span id="currentDate">-</span></p>
+                                                        <p><strong>Waktu Aktif:</strong> <span id="uptime">--:--:--</span></p>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div class="large-12 cell">
                                                 <div class="callout secondary">
                                                     <button class="button secondary expanded" onclick="restartDevice()">
-                                                        Restart Device Now
+                                                        Mulai Ulang
                                                     </button>
                                                 </div>
                                             </div>
@@ -258,7 +258,7 @@
                                         <div class="large-6 medium-6 cell">
                                             <div class="grid-x grid-padding-x">
                                                 <div class="large-12 medium-12 small-12 cell">
-                                                    <h5><strong>📡 WiFi Settings</strong></h5>
+                                                    <h5><strong>📡 WiFi</strong></h5>
                                                     <div class="grid-x grid-margin-x">
                                                         <div class="large-12 medium-12 small-12 cell">
                                                             <input type="text" id="wifiSSID" placeholder="WiFi SSID">
@@ -281,7 +281,7 @@
                                             </div>
                                         </div>
                                         <div class="large-6 medium-6 cell">
-                                            <h5><strong>📶 Access Point Settings</strong></h5>
+                                            <h5><strong>📶 Access Point</strong></h5>
                                             <div class="grid-x grid-margin-x">
                                                 <div class="large-12 medium-12 small-12 cell">
                                                     <input type="text" id="apSSID" placeholder="AP SSID">
@@ -323,12 +323,12 @@
                                         <div class="large-6 medium-6 cell">
                                             <div class="callout secondary">
                                                 <div class="large-12 medium-12 cell">
-                                                    <h6><strong>📱 Manual Sync from Browser</strong></h6>
-                                                    <p class="help-text">Sinkronkan waktu dari perangkat Anda</p>
+                                                    <h6><strong>📱 Sinkronisasi Manual dari Browser</strong></h6>
+                                                    <p class="help-text">Sinkronisasi waktu dari perangkat Anda</p>
                                                 </div>
                                                 <div class="large-12 medium-12 cell">
                                                     <button class="button secondary expanded" onclick="syncTime()">
-                                                        Sync Time Now
+                                                        Sinkronisasi Waktu Sekarang
                                                     </button>
                                                 </div>
                                             </div>
@@ -337,13 +337,13 @@
                                         <div class="large-6 medium-6 cell">
                                             <div class="callout secondary">
                                                 <div class="large-12 medium-12 cell">
-                                                    <h6><strong>🌐 Auto NTP Sync <span class="label success">AUTO</span></strong></h6>
-                                                    <p class="help-text">Waktu otomatis sync saat WiFi terhubung</p>
+                                                    <h6><strong>🌐 Sinkronisasi NTP Otomatis <span class="label success">AUTO</span></strong></h6>
+                                                    <p class="help-text">Waktu otomatis sinkronisasi saat WiFi terhubung</p>
                                                 </div>
                                                 <div class="large-12 medium-12 cell">
                                                     <p class="help-text">
-                                                            🔄 Auto-sync setiap 1 jam<br>
-                                                            🗄️ Multi-server fallback<br>
+                                                            🔄 Sinkronisasi otomatis setiap 1 jam<br>
+                                                            🗄️ Cadangan multi-server<br>
                                                             🌐 Timezone: UTC<span id="timezoneDisplayText">+7</span>
                                                         <input type="text" 
                                                             id="timezoneInput" 
@@ -375,7 +375,7 @@
                         </div>
                     </div>
 
-                    <div class="tabs-panel" id="city">
+                    <div class="tabs-panel" id="location">
                         <div class="grid-x grid-padding-x">
                             <div class="large-12 text-center cell">
                                 <div class="callout">
@@ -606,7 +606,7 @@
                                             🕌 Jadwal shalat berdasarkan lokasi yang dipilih<br>
                                             🔄 Auto-refresh setiap tengah malam (00:00 WIB)<br>
                                             📐 <span id="currentMethodBottom">Egyptian General Authority of Survey</span><br>
-                                            ⚡ Update otomatis saat device online
+                                            ⚡ Pembaruan otomatis saat perangkat terhubung ke internet
                                         </p>
                                     </div>
 
@@ -621,8 +621,8 @@
 
                                     <div class="grid-x grid-padding-y">
                                         <div class="large-12 cell">
-                                            <h5><strong>⚠️ Factory Reset</strong></h5></h4>
-                                            <p>Reset semua pengaturan (WiFi, waktu, jadwal shalat) ke default. Device akan restart.</p>
+                                            <h5><strong>⚠️ Reset Pabrik</strong></h5></h4>
+                                            <p>Atur ulang semua pengaturan (WiFi, waktu, waktu sholat) ke pengaturan bawaan</p>
                                         </div>
                                     </div>
                                     
@@ -631,9 +631,9 @@
                                             <strong>Peringatan</strong> Ini akan menghapus semua data disimpan
                                         </p>
                                         <p class="help-text">
-                                            📶 WiFi credentials</br>
+                                            📶 kredensial WiFi</br>
                                             🕌 Jadwal shalat disimpan</br>
-                                            📡 AP settings</br>
+                                            📡 Pengaturan AP</br>
                                             📍 Pilihan lokasi</br>
                                             ⏰ Waktu dan tanggal</br>
                                         </p>
@@ -768,36 +768,36 @@
             
             switch(tabName) {
                 case 'home':
-                    console.log('Loading HOME tab data...');
+                    console.log('Memuat data tab BERANDA...');
                     loadHomeTab();
                     break;
                     
                 case 'wifi':
-                    console.log('Loading WIFI tab data...');
+                    console.log('Memuat data tab WIFI...');
                     loadWiFiTab();
                     break;
                     
                 case 'time':
-                    console.log('Loading TIME tab data...');
+                    console.log('Memuat data tab WAKTU...');
                     loadTimeTab();
                     break;
                     
                 case 'city':
-                    console.log('Loading CITY tab data...');
+                    console.log('Memuat data tab LOKASI...');
                     loadCityTab();
                     break;
                     
                 case 'prayer':
-                    console.log('Loading PRAYER tab data...');
+                    console.log('Memuat data tab JADWAL...');
                     loadPrayerTab();
                     break;
                     
                 case 'factory':
-                    console.log('FACTORY tab - no data to load');
+                    console.log('Tab PABRIK - tidak ada data untuk dimuat');
                     break;
                     
                 default:
-                    console.log(`Unknown tab: ${tabName}`);
+                    console.log(`Tab tidak dikenal: ${tabName}`);
             }
         }
 
@@ -807,9 +807,9 @@
         async function loadHomeTab() {
             try {
                 await updateDeviceStatus();
-                console.log('✓ HOME tab loaded');
+                console.log('Tab BERANDA dimuat');
             } catch (error) {
-                console.error('✗ Error loading HOME tab:', error);
+                console.error('Terjadi kesalahan saat memuat tab BERANDA:', error);
             }
         }
 
@@ -819,9 +819,9 @@
         async function loadWiFiTab() {
             try {
                 await loadWiFiConfig();
-                console.log('✓ WIFI tab loaded');
+                console.log('Tab WIFI dimuat');
             } catch (error) {
-                console.error('✗ Error loading WIFI tab:', error);
+                console.error('Terjadi kesalahan saat memuat tab WIFI.:', error);
             }
         }
 
@@ -831,9 +831,9 @@
         async function loadTimeTab() {
             try {
                 await loadTimezoneConfig();
-                console.log('✓ TIME tab loaded');
+                console.log('Tab WAKTU dimuat');
             } catch (error) {
-                console.error('✗ Error loading TIME tab:', error);
+                console.error('Terjadi kesalahan saat memuat tab WAKTU:', error);
             }
         }
 
@@ -845,9 +845,9 @@
                 await loadCities();
                 await loadCurrentCity();
                 await loadCurrentMethod();
-                console.log('✓ CITY tab loaded');
+                console.log('Tab LOCATION dimuat');
             } catch (error) {
-                console.error('✗ Error loading CITY tab:', error);
+                console.error('Terjadi kesalahan saat memuat tab LOKASI:', error);
             }
         }
 
@@ -858,9 +858,9 @@
             try {
                 await loadSavedPrayerTimes();
                 await loadCurrentMethod();
-                console.log('✓ PRAYER tab loaded');
+                console.log('Tab JADWAL dimuat');
             } catch (error) {
-                console.error('✗ Error loading PRAYER tab:', error);
+                console.error('Terjadi kesalahan saat memuat tab JADWAL:', error);
             }
         }
 
@@ -1005,7 +1005,7 @@
                 
                 document.getElementById('wifiName').textContent = data.ssid || 'Tidak Terhubung';
                 document.getElementById('ipAddress').textContent = data.ip || '-';
-                document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Tersinkron' : '❌ Belum Tersinkron';
+                document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Tersinkronisasi' : '❌ Belum Tersinkronisasi';
                 
                 if (document.getElementById('ntpServerUsed')) {
                     document.getElementById('ntpServerUsed').textContent = data.ntpServer || '-';
@@ -1049,7 +1049,7 @@
                 
             } catch (error) {
                 isOnline = false;
-                document.getElementById('internetStatus').textContent = '❌ Kesalahan';
+                document.getElementById('internetStatus').textContent = 'Kesalahan';
                 document.getElementById('internetStatus').className = 'label alert';
             } finally {
                 isLoadingDeviceStatus = false;
@@ -1146,7 +1146,7 @@
                     }, retryDelay);
                 } else {
                     dropdown.innerHTML = '<option value="">Gagal memuat lokasi - Muat ulang halaman</option>';
-                    showToast('Gagal memuat daftar lokasi. Muat ulang halaman untuk mencoba lagi.', 'error');
+                    showToast('Gagal memuat daftar lokasi. Muat ulang halaman untuk mencoba lagi', 'error');
                     loadAttempts = 0;
                 }
                 
@@ -1368,7 +1368,7 @@
             const selectedCity = dropdown.value;
             
             if (!selectedCity) {
-                showToast('lih lokasi terlebih dahulu', 'error');
+                showToast('Pilih lokasi terlebih dahulu', 'error');
                 return;
             }
             
@@ -1701,7 +1701,7 @@
 
             const btn = event.target;
             btn.disabled = true;
-            btn.textContent = 'Menyinkronkan...';
+            btn.textContent = 'Sinkronisasi...';
 
             fetch('/synctime', { 
                 method: 'POST',
@@ -1712,15 +1712,15 @@
             })
             .then(response => response.text())
             .then(data => {
-                showToast('Waktu berhasil disinkronkan', 'success');
+                showToast('Waktu berhasil sinkronisasi', 'success');
                 updateDeviceStatus();
                 btn.disabled = false;
-                btn.textContent = 'Sync Time Now';
+                btn.textContent = 'Sinkronkan Waktu Sekarang';
             })
             .catch(error => {
-                showToast('Gagal menyinkronkan waktu', 'error');
+                showToast('Gagal sinkronisasi waktu', 'error');
                 btn.disabled = false;
-                btn.textContent = ' Sync Time Now';
+                btn.textContent = ' Sinkronkan Waktu Sekarang';
             });
         }
 
@@ -1922,8 +1922,8 @@
                     const jsonSizeKB = (jsonSize / 1024).toFixed(2);
                     
                     fileNameDisplay.innerHTML = 
-                        `<span class="label success">✅ ${file.name} (${sizeKB} KB)</span><br>` +
-                        `<small>📊 ${json.length} lokasi | DynamicJsonDocument: ${jsonSizeKB} KB</small>`;
+                        `<span class="label success">${file.name} (${sizeKB} KB)</span><br>` +
+                        `<small>${json.length} lokasi | DynamicJsonDocument: ${jsonSizeKB} KB</small>`;
                     uploadBtn.disabled = false;
                     clearBtn.style.display = 'block';
                     
@@ -1965,7 +1965,7 @@
             progressDiv.classList.remove('hide');
             progressBar.style.width = '0%';
             progressBar.querySelector('.progress-meter-text').textContent = '0%';
-            statusText.textContent = 'Memulai pengunggahan...';
+            statusText.textContent = 'Memulai Mengunggah...';
             
             try {
                 const formData = new FormData();
@@ -1991,7 +1991,7 @@
                     if (xhr.status === 200) {
                         progressBar.style.width = '100%';
                         progressBar.querySelector('.progress-meter-text').textContent = '100%';
-                        statusText.innerHTML = '<span class="label success">✅ Pengunggahan berhasil</span>';
+                        statusText.innerHTML = '<span class="label success">Mengunggah berhasil</span>';
                         
                         if (selectedCitiesFile.jsonMetadata) {
                             const jsonSizeKB = (selectedCitiesFile.jsonMetadata.jsonSize / 1024).toFixed(2);
@@ -2017,7 +2017,7 @@
                         }, 5000);
                         
                     } else {
-                        throw new Error('Pengunggahan gagal');
+                        throw new Error('Mengunggah gagal');
                     }
                 });
                 
@@ -2026,7 +2026,7 @@
                 });
                 
                 xhr.addEventListener('timeout', () => {
-                    throw new Error('Waktu pengunggahan habis - berkas terlalu lama');
+                    throw new Error('Waktu Mengunggah habis - berkas terlalu lama');
                 });
                 
                 xhr.open('POST', '/uploadcities', true);
@@ -2038,12 +2038,12 @@
                 progressBar.style.width = '100%';
                 statusText.innerHTML = `<span class="label alert">❌ ${error.message}</span>`;
                 
-                showToast('Pengunggahan gagal: ' + error.message, 'error');
+                showToast('Mengunggah gagal: ' + error.message, 'error');
                 
                 setTimeout(() => {
                     progressDiv.classList.add('hide');
                     uploadBtn.disabled = false;
-                    uploadBtn.textContent = '📤 Unggah Berkas';
+                    uploadBtn.textContent = '📤 Mengunggah Berkas';
                 }, 3000);
             }
         }
@@ -2189,7 +2189,7 @@
                         }, 4000);
                     } else {
                         setTimeout(() => {
-                            showToast('Metode disimpan. Pilih lokasi untuk menghitung jadwal salat.', 'warning');
+                            showToast('Metode disimpan. Pilih lokasi untuk menghitung jadwal salat jika belum diatur', 'warning');
                         }, 1500);
                     }
                     
@@ -2207,7 +2207,7 @@
         }
         
         async function restartDevice() {
-            if (!confirm('🔄 Yakin ingin memulai ulang perangkat? Perangkat akan tidak terhubung ~15 detik.')) {
+            if (!confirm('🔄 Yakin ingin memulai ulang perangkat?')) {
                 return;
             }
 
@@ -2228,7 +2228,7 @@
                     showToast('Perintah mulai ulang terkirim', 'success');
                     
                     setTimeout(() => {
-                        showToast('Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
+                        showToast('Perangkat akan dimulai ulang', 'warning');
                     }, 1500);
                     
                     setTimeout(() => {
@@ -2411,7 +2411,7 @@
                     showToast('Timezone berhasil disimpan', 'success');
                     
                     setTimeout(() => {
-                        showToast('NTP akan re-sync dengan timezone baru...', 'warning');
+                        showToast('NTP akan melakukan sinkronisasi ulang dengan zona waktu baru....', 'warning');
                     }, 1500);
                     
                 } else {
@@ -2496,11 +2496,11 @@
                 // ================================
                 // CSS Check (0-50%)
                 // ================================
-                if (status) status.textContent = 'Memuat Tampilan...';
-                await updateProgress(10, 'Memuat Tampilan...');
+                if (status) status.textContent = 'Memuat Halaman...';
+                await updateProgress(10, 'Memuat Halaman...');
 
                 await cssLoaded;
-                await updateProgress(50, 'Tampilan menunggu');
+                await updateProgress(50, 'Halaman menunggu');
                 await new Promise(r => setTimeout(r, 150));
 
                 if (timeoutReached) return;
@@ -2508,8 +2508,8 @@
                 // ================================
                 // Finalize (50-100%)
                 // ================================
-                if (status) status.textContent = 'Menyiapkan tampilan...';
-                await updateProgress(90, 'Menyiapkan tampilan...');
+                if (status) status.textContent = 'Menyiapkan halaman...';
+                await updateProgress(90, 'Menyiapkan halaman...');
 
                 initTabs();
 
@@ -2564,7 +2564,7 @@
             initializeApp();
             
             setTimeout(() => {
-                console.log('Auto-loading HOME tab...');
+                console.log('Tab BERANDA sedang dimuat secara otomatis...');
                 handleTabClick('home');
             }, 500);
             
