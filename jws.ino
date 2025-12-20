@@ -1133,21 +1133,6 @@ void setupServerRoutes() {
         request->send(response);
     });
 
-    server.on("/assets/js/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (!LittleFS.exists("/assets/js/jquery.min.js")) {
-            request->send(404, "text/plain", "jQuery not found");
-            return;
-        }
-        
-        AsyncWebServerResponse *response = request->beginResponse(
-            LittleFS, "/assets/js/jquery.min.js", "application/javascript");
-        
-        response->addHeader("Cache-Control", "public, max-age=3600");
-        response->addHeader("Content-Type", "application/javascript; charset=utf-8");
-        
-        request->send(response);
-    });
-
     // ========================================
     // DEVICE STATUS
     // ========================================
@@ -1238,7 +1223,7 @@ void setupServerRoutes() {
     // ========================================
     server.on("/settimezone", HTTP_POST, [](AsyncWebServerRequest *request) {
         Serial.println("\n========================================");
-        Serial.println("POST /settimezone received");
+        Serial.println("Simpan Timezone");
         Serial.println("========================================");
 
         if (!request->hasParam("offset", true)) {
@@ -1385,7 +1370,7 @@ void setupServerRoutes() {
     // ========================================
     server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request) {
         Serial.println("\n========================================");
-        Serial.println("POST /setcity received");
+        Serial.println("Simpan City/Distric");
         Serial.println("========================================");
 
         if (!request->hasParam("city", true)) {
@@ -1615,7 +1600,7 @@ void setupServerRoutes() {
 
     server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest *request) {
         Serial.println("\n========================================");
-        Serial.println("POST /setmethod received");
+        Serial.println("Simpan Metode");
         Serial.print("Client IP: ");
         Serial.println(request->client()->remoteIP().toString());
         Serial.println("========================================");
@@ -1728,7 +1713,7 @@ void setupServerRoutes() {
             String newPassword = request->getParam("password", true)->value();
 
             Serial.println("\n========================================");
-            Serial.println("POST /setwifi");
+            Serial.println("Simpan WiFi");
             Serial.println("========================================");
             Serial.println("New SSID: " + newSSID);
 
@@ -1814,7 +1799,7 @@ void setupServerRoutes() {
             }
 
             Serial.println("\n========================================");
-            Serial.println("POST /setap");
+            Serial.println("Simpan AP");
             Serial.println("========================================");
             Serial.println("New AP SSID: " + ssid);
 
