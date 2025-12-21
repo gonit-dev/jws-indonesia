@@ -61,10 +61,10 @@
 // ================================
 // Task Stack Sizes (in bytes)
 #define UI_TASK_STACK_SIZE 12288       // LVGL + EEZ rendering
-#define WIFI_TASK_STACK_SIZE 4096      // Event-driven
+#define WIFI_TASK_STACK_SIZE 4608      // Event-driven
 #define NTP_TASK_STACK_SIZE 6144       // Built-in NTP
-#define WEB_TASK_STACK_SIZE 6144       // AsyncWebServer + file handling
-#define PRAYER_TASK_STACK_SIZE 6144    // HTTP + JSON
+#define WEB_TASK_STACK_SIZE 4096       // AsyncWebServer + file handling
+#define PRAYER_TASK_STACK_SIZE 4096    // HTTP + JSON
 #define RTC_TASK_STACK_SIZE 2048       // Simple I2C
 #define CLOCK_TASK_STACK_SIZE 2048     // Simple time increment
 
@@ -1993,7 +1993,7 @@ void setupServerRoutes() {
     });
 
     // ========================================
-    // AP HIDDEN TOGGLE - SET
+    // AP HIDDEN TOGGLE
     // ========================================
     server.on("/sethideap", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (!request->hasParam("hidden", true)) {
@@ -2005,38 +2005,42 @@ void setupServerRoutes() {
         bool hidden = (hiddenStr == "true" || hiddenStr == "1");
 
         Serial.println("\n========================================");
-        Serial.println("SET AP HIDDEN STATUS");
+        Serial.println("AP HIDDEN STATUS");
         Serial.println("========================================");
         Serial.printf("New status: %s\n", hidden ? "HIDDEN" : "VISIBLE");
 
+        // Simpan config
         if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
             wifiConfig.apHidden = hidden;
             xSemaphoreGive(settingsMutex);
         }
-
         saveAPCredentials();
 
-        Serial.println("Restarting AP with new visibility...");
-        WiFi.softAPdisconnect(false);
-        delay(200);
-
-        Serial.println("Forcing AP_STA mode...");
-        WiFi.mode(WIFI_AP_STA);
-        delay(100);
-
-        Serial.println("Starting AP with new visibility setting...");
-        WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword, 1, wifiConfig.apHidden);
-        delay(200);
-
-        IPAddress newAPIP = WiFi.softAPIP();
-        Serial.println("========================================");
-        Serial.println("AP visibility updated successfully");
-        Serial.printf("Hidden: %s\n", wifiConfig.apHidden ? "YES (tidak terlihat di scan)" : "NO (terlihat normal)");
-        Serial.println("AP SSID: " + String(wifiConfig.apSSID));
-        Serial.println("AP IP: " + newAPIP.toString());
-        Serial.println("========================================\n");
-
-        request->send(200, "text/plain", "OK");
+        // ========================================
+        // ESP-IDF NATIVE - TIDAK RESTART AP!
+        // ========================================
+        wifi_config_t wifi_config;
+        esp_err_t err;
+        
+        err = esp_wifi_get_config(WIFI_IF_AP, &wifi_config);
+        if (err == ESP_OK) {
+            wifi_config.ap.ssid_hidden = hidden ? 1 : 0;
+            
+            err = esp_wifi_set_config(WIFI_IF_AP, &wifi_config);
+            if (err == ESP_OK) {
+                Serial.println("AP config updated (no restart needed)");
+                Serial.printf("Hidden: %s\n", hidden ? "YES" : "NO");
+                Serial.println("========================================\n");
+                
+                request->send(200, "text/plain", "OK");
+            } else {
+                Serial.printf("ERROR: esp_wifi_set_config failed: %d\n", err);
+                request->send(500, "text/plain", "Config failed");
+            }
+        } else {
+            Serial.printf("ERROR: esp_wifi_get_config failed: %d\n", err);
+            request->send(500, "text/plain", "Config failed");
+        }
     });
 
     // ========================================
