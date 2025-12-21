@@ -1615,15 +1615,7 @@
         }
 
         function clearWiFiForm() {
-            const wifiSSIDInput = document.getElementById('wifiSSID');
-            const wifiPasswordInput = document.getElementById('wifiPassword');
-            
-            if (wifiSSIDInput) {
-                wifiSSIDInput.value = savedWiFiConfig.routerSSID;
-            }
-            if (wifiPasswordInput) {
-                wifiPasswordInput.value = savedWiFiConfig.routerPassword;
-            }
+            loadWiFiConfig();
         }
 
         function setAP() {
@@ -1675,14 +1667,6 @@
                         btn.disabled = false;
                         btn.textContent = originalText;
                     }, 6000);
-                    
-                    setTimeout(() => {
-                        showToast('Halaman akan di-refresh otomatis...', 'warning');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                    }, 18000);
-                    
                 } else {
                     return response.text().then(text => {
                         throw new Error(text);
@@ -1697,15 +1681,7 @@
         }
 
         function clearAPForm() {
-            const apSSIDInput = document.getElementById('apSSID');
-            const apPasswordInput = document.getElementById('apPassword');
-            
-            if (apSSIDInput) {
-                apSSIDInput.value = savedWiFiConfig.apSSID;
-            }
-            if (apPasswordInput) {
-                apPasswordInput.value = savedWiFiConfig.apPassword;
-            }
+            loadWiFiConfig();
         }
 
         // ================================

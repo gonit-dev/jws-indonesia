@@ -316,6 +316,7 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data);
 
 // RTOS Tasks
 void uiTask(void *parameter);
+void restartAPTask(void *parameter);
 void wifiTask(void *parameter);
 void ntpTask(void *parameter);
 void webTask(void *parameter);
@@ -1953,33 +1954,31 @@ void setupServerRoutes() {
             }
 
             Serial.println("\n========================================");
-            Serial.println("Simpan AP");
+            Serial.println("Simpan AP Credentials");
             Serial.println("========================================");
-            Serial.println("New AP SSID: " + ssid);
+            Serial.println("New SSID: " + ssid);
 
+            // Simpan ke memory dan file
             ssid.toCharArray(wifiConfig.apSSID, 33);
             pass.toCharArray(wifiConfig.apPassword, 65);
             saveAPCredentials();
 
-            Serial.println("Stopping old AP...");
-            WiFi.softAPdisconnect(false);
-            delay(200);
-
-            Serial.println("Forcing AP_STA mode...");
-            WiFi.mode(WIFI_AP_STA);
-            delay(100);
-
-            WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
-            delay(200);
-
-            IPAddress newAPIP = WiFi.softAPIP();
-            Serial.println("========================================");
-            Serial.println("AP Settings updated");
-            Serial.println("New SSID: " + String(wifiConfig.apSSID));
-            Serial.println("New IP: " + newAPIP.toString());
+            Serial.println("Credentials saved to LittleFS");
+            Serial.println("AP will restart in 3 seconds...");
             Serial.println("========================================\n");
 
+            // Kirim response DULU
             request->send(200, "text/plain", "OK");
+
+            // Buat task untuk restart AP (delayed)
+            xTaskCreate(
+                restartAPTask,      // Function
+                "APRestart",        // Name
+                4096,               // Stack size
+                NULL,               // Parameter
+                1,                  // Priority (low)
+                NULL                // Handle
+            );
 
         } else {
             request->send(400, "text/plain", "Missing parameters");
@@ -2513,6 +2512,63 @@ void uiTask(void *parameter) {
     
     vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
+}
+
+// ================================
+// AP RESTART TASK
+// ================================
+void restartAPTask(void *parameter) {
+    vTaskDelay(pdMS_TO_TICKS(3000));
+    
+    Serial.println("\n========================================");
+    Serial.println("RESTARTING ACCESS POINT");
+    Serial.println("========================================");
+    
+    Serial.println("Step 1: Disconnecting clients...");
+    WiFi.softAPdisconnect(true);
+    vTaskDelay(pdMS_TO_TICKS(500));
+    
+    Serial.println("Step 2: Resetting WiFi mode...");
+    WiFi.mode(WIFI_OFF);
+    vTaskDelay(pdMS_TO_TICKS(300));
+    
+    WiFi.mode(WIFI_AP_STA);
+    vTaskDelay(pdMS_TO_TICKS(300));
+    
+    Serial.println("Step 3: Starting new AP...");
+    Serial.println("SSID: " + String(wifiConfig.apSSID));
+    
+    bool apStarted = WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+    
+    if (apStarted) {
+        vTaskDelay(pdMS_TO_TICKS(500));
+        IPAddress newAPIP = WiFi.softAPIP();
+        
+        Serial.println("\n========================================");
+        Serial.println("AP RESTART SUCCESS");
+        Serial.println("========================================");
+        Serial.println("New SSID: " + String(wifiConfig.apSSID));
+        Serial.println("New IP: " + newAPIP.toString());
+        Serial.println("Clients can now reconnect");
+        Serial.println("========================================\n");
+    } else {
+        Serial.println("\n========================================");
+        Serial.println("AP RESTART FAILED!");
+        Serial.println("========================================");
+        Serial.println("Rolling back to default AP...");
+        
+        strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
+        strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
+        
+        WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        
+        Serial.println("Default AP restored: " + String(wifiConfig.apSSID));
+        Serial.println("IP: " + WiFi.softAPIP().toString());
+        Serial.println("========================================\n");
+    }
+    
+    vTaskDelete(NULL);
 }
 
 void wifiTask(void *parameter) {
