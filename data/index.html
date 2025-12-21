@@ -304,17 +304,6 @@
                                                         Batal
                                                     </button>
                                                 </div>
-                                                <div class="large-12 medium-12 small-12 text-right cell">
-                                                    SEMBUNYIKAN
-                                                    <div class="switch medium">
-                                                        <input class="switch-input" id="apHiddenSwitch" type="checkbox" onchange="toggleAPHidden()">
-                                                        <label class="switch-paddle" for="apHiddenSwitch">
-                                                            <span class="show-for-sr">Sembunyikan Access Point</span>
-                                                            <span class="switch-active" aria-hidden="true">Yes</span>
-                                                            <span class="switch-inactive" aria-hidden="true">No</span>
-                                                        </label>
-                                                    </div>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -835,7 +824,6 @@
         async function loadWiFiTab() {
             try {
                 await loadWiFiConfig();
-                await loadAPHiddenStatus();
                 console.log('Tab WIFI dimuat');
             } catch (error) {
                 console.error('Terjadi kesalahan saat memuat tab WIFI.:', error);
@@ -1717,106 +1705,6 @@
             }
             if (apPasswordInput) {
                 apPasswordInput.value = savedWiFiConfig.apPassword;
-            }
-        }
-
-        // ================================
-        // FUNGSI HIDDEN AP - BARU
-        // ================================
-        async function loadAPHiddenStatus() {
-            try {
-                const response = await fetch('/gethideap', {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error('HTTP ' + response.status);
-                }
-                
-                const data = await response.json();
-                
-                const checkbox = document.getElementById('apHiddenSwitch');
-                if (checkbox) {
-                    checkbox.checked = data.hidden === true;
-                    console.log('AP Hidden Status loaded:', data.hidden ? 'HIDDEN' : 'VISIBLE');
-                }
-                
-                return true;
-                
-            } catch (error) {
-                console.error('Error loading Acess Point hidden status:', error);
-                return false;
-            }
-        }
-
-        async function toggleAPHidden() {
-            const checkbox = document.getElementById('apHiddenSwitch');
-            const hidden = checkbox.checked;
-            
-            const originalState = checkbox.checked;
-            checkbox.disabled = true;
-            
-            console.log('Toggling Acess Point visibility to:', hidden ? 'HIDDEN' : 'VISIBLE');
-            
-            try {
-                const formData = new URLSearchParams();
-                formData.append('hidden', hidden ? 'true' : 'false');
-                
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000);
-                
-                const response = await fetch('/sethideap', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Accept': 'text/plain'
-                    },
-                    body: formData.toString(),
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                if (response.ok) {
-                    console.log('Acess Point visibility changed successfully');
-                    
-                    showToast(
-                        hidden ? 'Acess Point berhasil disembunyikan' : 'Acess Point sekarang terlihat', 
-                        'success'
-                    );
-                    
-                    if (hidden) {
-                        setTimeout(() => {
-                            showToast('Acess Point sedang restart - koneksi mungkin terputus sebentar', 'warning');
-                        }, 1500);
-                        
-                        setTimeout(() => {
-                            showToast('Untuk terhubung: ketik manual SSID "' + savedWiFiConfig.apSSID + '"', 'warning');
-                        }, 3500);
-                    } else {
-                        setTimeout(() => {
-                            showToast('Acess Point sedang restart - koneksi mungkin terputus sebentar', 'warning');
-                        }, 1500);
-                        
-                        setTimeout(() => {
-                            showToast('Acess Point sekarang muncul di daftar WiFi', 'success');
-                        }, 3500);
-                    }
-                    
-                } else {
-                    throw new Error('Gagal mengubah status Acess Point');
-                }
-                
-            } catch (error) {
-                console.error('Toggle Acess Point Hidden error:', error);
-                showToast('Gagal mengubah visibilitas Acess Point', 'error');
-                checkbox.checked = originalState;
-                
-            } finally {
-                checkbox.disabled = false;
             }
         }
 
