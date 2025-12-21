@@ -114,6 +114,12 @@ RTC_DS3231 rtc;
 bool rtcAvailable = false;
 
 // ================================
+// DEFAULT AP CONFIGURATION
+// ================================
+#define DEFAULT_AP_SSID "JWS Indonesia"
+#define DEFAULT_AP_PASSWORD "12345678"
+
+// ================================
 // WIFI EVENT GROUP - Event-Driven
 // ================================
 EventGroupHandle_t wifiEventGroup;
@@ -143,6 +149,7 @@ struct WiFiConfig {
   String routerPassword;
   bool isConnected;
   IPAddress localIP;
+  bool apHidden;
 };
 
 struct TimeConfig {
@@ -782,15 +789,18 @@ void loadWiFiCredentials() {
       if (file) {
         String ssid = file.readStringUntil('\n');
         String pass = file.readStringUntil('\n');
+        String hiddenStr = file.readStringUntil('\n');
         ssid.trim();
         pass.trim();
         ssid.toCharArray(wifiConfig.apSSID, 33);
         pass.toCharArray(wifiConfig.apPassword, 65);
+        wifiConfig.apHidden = (hiddenStr == "1");
         file.close();
       }
     } else {
-      strcpy(wifiConfig.apSSID, "JWS Indonesia");
-      strcpy(wifiConfig.apPassword, "12345678");
+      strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
+      strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
+      wifiConfig.apHidden = false;
     }
     xSemaphoreGive(settingsMutex);
   }
@@ -802,6 +812,7 @@ void saveAPCredentials() {
     if (file) {
       file.println(wifiConfig.apSSID);
       file.println(wifiConfig.apPassword);
+      file.println(wifiConfig.apHidden ? "1" : "0");
       file.flush();
       file.close();
       Serial.println("AP credentials saved");
@@ -1876,7 +1887,7 @@ void setupServerRoutes() {
             IPAddress apIP = WiFi.softAPIP();
             if (apIP == IPAddress(0, 0, 0, 0)) {
                 Serial.println("AP died, restarting...");
-                WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+                WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword, 1, wifiConfig.apHidden);
                 delay(200);
                 Serial.println("AP restored: " + WiFi.softAPIP().toString());
             } else {
@@ -1908,9 +1919,11 @@ void setupServerRoutes() {
 
         if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
             json += "\"routerSSID\":\"" + wifiConfig.routerSSID + "\",";
+            json += "\"routerPassword\":\"" + wifiConfig.routerPassword + "\",";
             xSemaphoreGive(wifiMutex);
         } else {
             json += "\"routerSSID\":\"\",";
+            json += "\"routerPassword\":\"\",";
         }
 
         String currentAPSSID = WiFi.softAPSSID();
@@ -1919,10 +1932,16 @@ void setupServerRoutes() {
         }
 
         if (currentAPSSID.length() == 0) {
-            currentAPSSID = "JWS Indonesia";
+            currentAPSSID = DEFAULT_AP_SSID;
         }
 
-        json += "\"apSSID\":\"" + currentAPSSID + "\"";
+        String apPassword = String(wifiConfig.apPassword);
+        if (apPassword.length() == 0) {
+            apPassword = DEFAULT_AP_PASSWORD;
+        }
+
+        json += "\"apSSID\":\"" + currentAPSSID + "\",";
+        json += "\"apPassword\":\"" + apPassword + "\"";
         json += "}";
 
         request->send(200, "application/json", json);
@@ -1956,7 +1975,7 @@ void setupServerRoutes() {
             delay(100);
 
             Serial.println("Starting new AP...");
-            WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+            WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword, 1, wifiConfig.apHidden);
             delay(200);
 
             IPAddress newAPIP = WiFi.softAPIP();
@@ -1971,6 +1990,73 @@ void setupServerRoutes() {
         } else {
             request->send(400, "text/plain", "Missing parameters");
         }
+    });
+
+    // ========================================
+    // AP HIDDEN TOGGLE - SET
+    // ========================================
+    server.on("/sethideap", HTTP_POST, [](AsyncWebServerRequest *request) {
+        if (!request->hasParam("hidden", true)) {
+            request->send(400, "text/plain", "Missing parameters");
+            return;
+        }
+
+        String hiddenStr = request->getParam("hidden", true)->value();
+        bool hidden = (hiddenStr == "true" || hiddenStr == "1");
+
+        Serial.println("\n========================================");
+        Serial.println("SET AP HIDDEN STATUS");
+        Serial.println("========================================");
+        Serial.printf("New status: %s\n", hidden ? "HIDDEN" : "VISIBLE");
+
+        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+            wifiConfig.apHidden = hidden;
+            xSemaphoreGive(settingsMutex);
+        }
+
+        saveAPCredentials();
+
+        Serial.println("Restarting AP with new visibility...");
+        WiFi.softAPdisconnect(false);
+        delay(200);
+
+        Serial.println("Forcing AP_STA mode...");
+        WiFi.mode(WIFI_AP_STA);
+        delay(100);
+
+        Serial.println("Starting AP with new visibility setting...");
+        WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword, 1, wifiConfig.apHidden);
+        delay(200);
+
+        IPAddress newAPIP = WiFi.softAPIP();
+        Serial.println("========================================");
+        Serial.println("AP visibility updated successfully");
+        Serial.printf("Hidden: %s\n", wifiConfig.apHidden ? "YES (tidak terlihat di scan)" : "NO (terlihat normal)");
+        Serial.println("AP SSID: " + String(wifiConfig.apSSID));
+        Serial.println("AP IP: " + newAPIP.toString());
+        Serial.println("========================================\n");
+
+        request->send(200, "text/plain", "OK");
+    });
+
+    // ========================================
+    // AP HIDDEN TOGGLE - GET
+    // ========================================
+    server.on("/gethideap", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String json = "{";
+        
+        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            json += "\"hidden\":" + String(wifiConfig.apHidden ? "true" : "false");
+            xSemaphoreGive(settingsMutex);
+        } else {
+            json += "\"hidden\":false";
+        }
+        
+        json += "}";
+
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        resp->addHeader("Cache-Control", "no-cache");
+        request->send(resp);
     });
 
     // ========================================
@@ -2277,8 +2363,8 @@ void setupServerRoutes() {
             prayerConfig.latitude = "";
             prayerConfig.longitude = "";
             
-            strcpy(wifiConfig.apSSID, "JWS Indonesia");
-            strcpy(wifiConfig.apPassword, "12345678");
+            strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
+            strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
             
             xSemaphoreGive(settingsMutex);
         }
@@ -2539,7 +2625,7 @@ void wifiTask(void *parameter) {
                 Serial.print("AP died during disconnect! Restarting...");
                 WiFi.mode(WIFI_AP_STA);
                 delay(100);
-                WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+                WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword, 1, wifiConfig.apHidden);
                 delay(200);
                 Serial.print("AP restored: " + WiFi.softAPIP().toString());
             }
@@ -3036,7 +3122,7 @@ void webTask(void *parameter) {
         WiFi.mode(WIFI_AP_STA);
         delay(100);
 
-        WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+        WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword, 1, wifiConfig.apHidden);
         delay(100);
 
         Serial.println("AP restored: " + String(wifiConfig.apSSID));
@@ -3571,7 +3657,7 @@ void setup() {
   Serial.println("Persistent: Disabled");
   Serial.println("========================================\n");
 
-  WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+  WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword, 1, wifiConfig.apHidden);
   delay(100);
 
   Serial.printf("AP Started: %s\n", wifiConfig.apSSID);

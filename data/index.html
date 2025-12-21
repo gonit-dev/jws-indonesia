@@ -254,17 +254,31 @@
                             <div class="large-12 text-center cell">
                                 <div class="callout">
 
-                                    <div class="grid-x grid-margin-x align-middle">
+                                    <div class="grid-x grid-margin-x">
                                         <div class="large-6 medium-6 cell">
                                             <div class="grid-x grid-padding-x">
                                                 <div class="large-12 medium-12 small-12 cell">
-                                                    <h5><strong>📡 WiFi</strong></h5>
+                                                    <h5><strong>📡 WiFi Router</strong></h5>
+                                                    
+                                                    <!-- PASSWORD TERSIMPAN WIFI -->
+                                                    <div class="callout secondary" id="wifiPasswordDisplay" style="display: none; margin-bottom: 15px;">
+                                                        <p style="margin: 0;">
+                                                            <strong>🔑 Password Tersimpan:</strong><br>
+                                                            <code id="wifiPasswordText" style="font-size: 14px; color: #1779ba; word-break: break-all;">••••••••</code>
+                                                        </p>
+                                                    </div>
+                                                    
                                                     <div class="grid-x grid-margin-x">
                                                         <div class="large-12 medium-12 small-12 cell">
+                                                            <label>SSID WiFi Router</label>
                                                             <input type="text" id="wifiSSID" placeholder="Masukkan SSID WiFi">
                                                         </div>
                                                         <div class="large-12 medium-12 small-12 cell">
+                                                            <label>Password WiFi</label>
                                                             <input type="password" id="wifiPassword" placeholder="Masukkan password WiFi">
+                                                            <p class="help-text" style="margin-top: 5px; font-size: 12px;">
+                                                                💡 Kosongkan jika tidak ingin mengubah password
+                                                            </p>
                                                         </div>
                                                         <div class="large-6 medium-6 small-6 cell">
                                                             <button class="button secondary expanded" onclick="setWiFi()">
@@ -280,14 +294,28 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        
                                         <div class="large-6 medium-6 cell">
                                             <h5><strong>📶 Access Point</strong></h5>
+                                            
+                                            <div class="callout secondary" id="apPasswordDisplay" style="display: none; margin-bottom: 15px;">
+                                                <p style="margin: 0;">
+                                                    <strong>🔑 Password Tersimpan:</strong><br>
+                                                    <code id="apPasswordText" style="font-size: 14px; color: #1779ba; word-break: break-all;">••••••••</code>
+                                                </p>
+                                            </div>
+                                            
                                             <div class="grid-x grid-margin-x">
                                                 <div class="large-12 medium-12 small-12 cell">
+                                                    <label>SSID Access Point</label>
                                                     <input type="text" id="apSSID" placeholder="Masukkan SSID AP">
                                                 </div>
                                                 <div class="large-12 medium-12 small-12 cell">
-                                                    <input type="password" id="apPassword" placeholder="Masukkan password AP">
+                                                    <label>Password Access Point</label>
+                                                    <input type="password" id="apPassword" placeholder="Masukkan password AP (minimal 8 karakter)">
+                                                    <p class="help-text" style="margin-top: 5px; font-size: 12px;">
+                                                        💡 Kosongkan jika tidak ingin mengubah password
+                                                    </p>
                                                 </div>
                                                 <div class="large-6 medium-6 small-6 cell">
                                                     <button class="button secondary expanded" onclick="setAP()">
@@ -298,6 +326,17 @@
                                                     <button class="button secondary expanded" onclick="clearAPForm()">
                                                         Batal
                                                     </button>
+                                                </div>
+                                                <div class="large-12 medium-12 small-12 text-right cell">
+                                                    SEMBUNYIKAN
+                                                    <div class="switch medium">
+                                                        <input class="switch-input" id="apHiddenSwitch" type="checkbox" onchange="toggleAPHidden()">
+                                                        <label class="switch-paddle" for="apHiddenSwitch">
+                                                            <span class="show-for-sr">Sembunyikan Access Point</span>
+                                                            <span class="switch-active" aria-hidden="true">Yes</span>
+                                                            <span class="switch-inactive" aria-hidden="true">No</span>
+                                                        </label>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -386,7 +425,7 @@
                                         </div>
                                     </div>
                                     
-                                    <div class="callout secondary text-center">
+                                    <div class="callout secondary">
                                         <p><strong>Lokasi Terpilih:</strong></p>
                                         <h4 id="currentCity" class="text-primary">Pilih lokasi</h4>
                                         <p id="currentCityType" class="help-text" style="margin-top: -10px; font-size: 13px; color: #666;">
@@ -514,7 +553,7 @@
                                             📁 Pilih file cities.json
                                             <input type="file" id="citiesFileInput" accept=".json" class="show-for-sr" onchange="handleCitiesFileSelect(event)">
                                         </label>
-                                        <p id="selectedFileName" class="help-text text-center">
+                                        <p id="selectedFileName" class="help-text">
                                             Belum ada file yang dipilih
                                         </p>
                                     </div>
@@ -533,7 +572,7 @@
                                                 <p class="progress-meter-text">0%</p>
                                             </div>
                                         </div>
-                                        <p id="uploadStatus" class="help-text text-center">
+                                        <p id="uploadStatus" class="help-text">
                                             Memulai unggah...
                                         </p>
                                     </div>
@@ -819,6 +858,7 @@
         async function loadWiFiTab() {
             try {
                 await loadWiFiConfig();
+                await loadAPHiddenStatus();
                 console.log('Tab WIFI dimuat');
             } catch (error) {
                 console.error('Terjadi kesalahan saat memuat tab WIFI.:', error);
@@ -1506,7 +1546,9 @@
         // ================================
         let savedWiFiConfig = {
             routerSSID: '',
-            apSSID: ''
+            routerPassword: '',
+            apSSID: '',
+            apPassword: ''
         };
 
         async function loadWiFiConfig() {            
@@ -1524,27 +1566,45 @@
                 
                 const data = await response.json();
                 
-                // Simpan ke variabel global untuk restore nanti
                 savedWiFiConfig.routerSSID = data.routerSSID || '';
+                savedWiFiConfig.routerPassword = data.routerPassword || '';
                 savedWiFiConfig.apSSID = data.apSSID || '';
+                savedWiFiConfig.apPassword = data.apPassword || '';
                 
-                // Set WiFi SSID ke form (jika ada)
                 const wifiSSIDInput = document.getElementById('wifiSSID');
                 if (wifiSSIDInput) {
                     wifiSSIDInput.value = savedWiFiConfig.routerSSID;
                     wifiSSIDInput.placeholder = savedWiFiConfig.routerSSID || 'Masukkan SSID WiFi';
                 }
                 
-                // Set AP SSID ke form (jika ada)
                 const apSSIDInput = document.getElementById('apSSID');
                 if (apSSIDInput) {
                     apSSIDInput.value = savedWiFiConfig.apSSID;
                     apSSIDInput.placeholder = savedWiFiConfig.apSSID || 'Masukkan SSID AP';
                 }
                 
+                const wifiPasswordDisplay = document.getElementById('wifiPasswordDisplay');
+                const wifiPasswordText = document.getElementById('wifiPasswordText');
+                if (savedWiFiConfig.routerPassword && savedWiFiConfig.routerPassword.length > 0) {
+                    if (wifiPasswordDisplay) wifiPasswordDisplay.style.display = 'block';
+                    if (wifiPasswordText) wifiPasswordText.textContent = savedWiFiConfig.routerPassword;
+                } else {
+                    if (wifiPasswordDisplay) wifiPasswordDisplay.style.display = 'none';
+                }
+                
+                const apPasswordDisplay = document.getElementById('apPasswordDisplay');
+                const apPasswordText = document.getElementById('apPasswordText');
+                if (savedWiFiConfig.apPassword && savedWiFiConfig.apPassword.length > 0) {
+                    if (apPasswordDisplay) apPasswordDisplay.style.display = 'block';
+                    if (apPasswordText) apPasswordText.textContent = savedWiFiConfig.apPassword;
+                } else {
+                    if (apPasswordDisplay) apPasswordDisplay.style.display = 'none';
+                }
+                
                 return true;
                 
             } catch (error) {
+                console.error('Error loading WiFi config:', error);
                 return false;
             }
         }
@@ -1572,13 +1632,18 @@
             })
             .then(response => {
                 if (response.ok) {
-                    // Update saved config setelah berhasil simpan
                     savedWiFiConfig.routerSSID = ssid;
+                    if (password) {
+                        savedWiFiConfig.routerPassword = password;
+                    }
                     
                     showToast('Pengaturan WiFi berhasil disimpan', 'success');
                     
-                    // Kosongkan password setelah simpan
                     document.getElementById('wifiPassword').value = '';
+                    
+                    setTimeout(() => {
+                        loadWiFiConfig();
+                    }, 1000);
                     
                     setTimeout(() => {
                         btn.disabled = false;
@@ -1597,7 +1662,6 @@
         }
 
         function clearWiFiForm() {
-            // Restore ke data tersimpan
             const wifiSSIDInput = document.getElementById('wifiSSID');
             const wifiPasswordInput = document.getElementById('wifiPassword');
             
@@ -1637,13 +1701,18 @@
             })
             .then(response => {
                 if (response.ok) {
-                    // Update saved config setelah berhasil simpan
                     savedWiFiConfig.apSSID = ssid;
+                    if (password) {
+                        savedWiFiConfig.apPassword = password;
+                    }
                     
                     showToast('Pengaturan Access Point berhasil disimpan', 'success');
                     
-                    // Kosongkan password setelah simpan
                     document.getElementById('apPassword').value = '';
+                    
+                    setTimeout(() => {
+                        loadWiFiConfig();
+                    }, 1000);
                     
                     setTimeout(() => {
                         showToast('Sambungkan ke AP: ' + ssid, 'warning');
@@ -1668,7 +1737,7 @@
                 }
             })
             .catch(error => {
-                showToast('' + error.message, 'error');
+                showToast('Gagal menyimpan AP: ' + error.message, 'error');
                 btn.disabled = false;
                 btn.textContent = originalText;
             });
@@ -1686,6 +1755,107 @@
                 apPasswordInput.value = '';
             }
         }
+
+        // ================================
+        // FUNGSI HIDDEN AP - BARU
+        // ================================
+        async function loadAPHiddenStatus() {
+            try {
+                const response = await fetch('/gethideap', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                
+                const data = await response.json();
+                
+                const checkbox = document.getElementById('apHiddenSwitch');
+                if (checkbox) {
+                    checkbox.checked = data.hidden === true;
+                    console.log('AP Hidden Status loaded:', data.hidden ? 'HIDDEN' : 'VISIBLE');
+                }
+                
+                return true;
+                
+            } catch (error) {
+                console.error('Error loading Acess Point hidden status:', error);
+                return false;
+            }
+        }
+
+        async function toggleAPHidden() {
+            const checkbox = document.getElementById('apHiddenSwitch');
+            const hidden = checkbox.checked;
+            
+            const originalState = checkbox.checked;
+            checkbox.disabled = true;
+            
+            console.log('Toggling Acess Point visibility to:', hidden ? 'HIDDEN' : 'VISIBLE');
+            
+            try {
+                const formData = new URLSearchParams();
+                formData.append('hidden', hidden ? 'true' : 'false');
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+                
+                const response = await fetch('/sethideap', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'text/plain'
+                    },
+                    body: formData.toString(),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    console.log('Acess Point visibility changed successfully');
+                    
+                    showToast(
+                        hidden ? 'Acess Point berhasil disembunyikan' : 'Acess Point sekarang terlihat', 
+                        'success'
+                    );
+                    
+                    if (hidden) {
+                        setTimeout(() => {
+                            showToast('Acess Point sedang restart - koneksi mungkin terputus sebentar', 'warning');
+                        }, 1500);
+                        
+                        setTimeout(() => {
+                            showToast('Untuk terhubung: ketik manual SSID "' + savedWiFiConfig.apSSID + '"', 'warning');
+                        }, 3500);
+                    } else {
+                        setTimeout(() => {
+                            showToast('Acess Point sedang restart - koneksi mungkin terputus sebentar', 'warning');
+                        }, 1500);
+                        
+                        setTimeout(() => {
+                            showToast('Acess Point sekarang muncul di daftar WiFi', 'success');
+                        }, 3500);
+                    }
+                    
+                } else {
+                    throw new Error('Gagal mengubah status Acess Point');
+                }
+                
+            } catch (error) {
+                console.error('Toggle Acess Point Hidden error:', error);
+                showToast('Gagal mengubah visibilitas Acess Point', 'error');
+                checkbox.checked = originalState;
+                
+            } finally {
+                checkbox.disabled = false;
+            }
+        }
+
         // ================================
         // UPDATE WAKTU
         // ================================
@@ -1747,7 +1917,7 @@
                     }, 1500);
                     
                     setTimeout(() => {
-                        showToast('Sambungkan kembali ke AP: JWS Indonesia', 'warning');
+                        showToast('Sambungkan kembali ke Acess Point: JWS Indonesia', 'warning');
                     }, 3500);
                     
                     setTimeout(() => {
@@ -1824,7 +1994,7 @@
             if (!file) {
                 selectedCitiesFile = null;
                 fileNameDisplay.textContent = 'Belum ada berkas dipilih';
-                fileNameDisplay.className = 'help-text text-center';
+                fileNameDisplay.className = 'help-text';
                 uploadBtn.disabled = true;
                 clearBtn.style.display = 'none';
                 return;
@@ -2058,7 +2228,7 @@
             selectedCitiesFile = null;
             
             fileNameDisplay.textContent = 'Belum ada file yang dipilih';
-            fileNameDisplay.className = 'help-text text-center';
+            fileNameDisplay.className = 'help-text';
             
             uploadBtn.disabled = true;
             clearBtn.style.display = 'none';
