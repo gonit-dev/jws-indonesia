@@ -258,16 +258,7 @@
                                         <div class="large-6 medium-6 cell">
                                             <div class="grid-x grid-padding-x">
                                                 <div class="large-12 medium-12 small-12 cell">
-                                                    <h5><strong>📡 WiFi Router</strong></h5>
-                                                    
-                                                    <!-- PASSWORD TERSIMPAN WIFI -->
-                                                    <div class="callout secondary" id="wifiPasswordDisplay" style="display: none; margin-bottom: 15px;">
-                                                        <p style="margin: 0;">
-                                                            <strong>🔑 Password Tersimpan:</strong><br>
-                                                            <code id="wifiPasswordText" style="font-size: 14px; color: #1779ba; word-break: break-all;">••••••••</code>
-                                                        </p>
-                                                    </div>
-                                                    
+                                                    <h5><strong>📡 WiFi Router</strong></h5>                                                    
                                                     <div class="grid-x grid-margin-x">
                                                         <div class="large-12 medium-12 small-12 cell">
                                                             <label>SSID WiFi Router</label>
@@ -296,15 +287,7 @@
                                         </div>
                                         
                                         <div class="large-6 medium-6 cell">
-                                            <h5><strong>📶 Access Point</strong></h5>
-                                            
-                                            <div class="callout secondary" id="apPasswordDisplay" style="display: none; margin-bottom: 15px;">
-                                                <p style="margin: 0;">
-                                                    <strong>🔑 Password Tersimpan:</strong><br>
-                                                    <code id="apPasswordText" style="font-size: 14px; color: #1779ba; word-break: break-all;">••••••••</code>
-                                                </p>
-                                            </div>
-                                            
+                                            <h5><strong>📶 Access Point</strong></h5>                                            
                                             <div class="grid-x grid-margin-x">
                                                 <div class="large-12 medium-12 small-12 cell">
                                                     <label>SSID Access Point</label>
@@ -1572,33 +1555,21 @@
                 savedWiFiConfig.apPassword = data.apPassword || '';
                 
                 const wifiSSIDInput = document.getElementById('wifiSSID');
+                const wifiPasswordInput = document.getElementById('wifiPassword');
                 if (wifiSSIDInput) {
                     wifiSSIDInput.value = savedWiFiConfig.routerSSID;
-                    wifiSSIDInput.placeholder = savedWiFiConfig.routerSSID || 'Masukkan SSID WiFi';
+                }
+                if (wifiPasswordInput) {
+                    wifiPasswordInput.value = savedWiFiConfig.routerPassword;
                 }
                 
                 const apSSIDInput = document.getElementById('apSSID');
+                const apPasswordInput = document.getElementById('apPassword');
                 if (apSSIDInput) {
                     apSSIDInput.value = savedWiFiConfig.apSSID;
-                    apSSIDInput.placeholder = savedWiFiConfig.apSSID || 'Masukkan SSID AP';
                 }
-                
-                const wifiPasswordDisplay = document.getElementById('wifiPasswordDisplay');
-                const wifiPasswordText = document.getElementById('wifiPasswordText');
-                if (savedWiFiConfig.routerPassword && savedWiFiConfig.routerPassword.length > 0) {
-                    if (wifiPasswordDisplay) wifiPasswordDisplay.style.display = 'block';
-                    if (wifiPasswordText) wifiPasswordText.textContent = savedWiFiConfig.routerPassword;
-                } else {
-                    if (wifiPasswordDisplay) wifiPasswordDisplay.style.display = 'none';
-                }
-                
-                const apPasswordDisplay = document.getElementById('apPasswordDisplay');
-                const apPasswordText = document.getElementById('apPasswordText');
-                if (savedWiFiConfig.apPassword && savedWiFiConfig.apPassword.length > 0) {
-                    if (apPasswordDisplay) apPasswordDisplay.style.display = 'block';
-                    if (apPasswordText) apPasswordText.textContent = savedWiFiConfig.apPassword;
-                } else {
-                    if (apPasswordDisplay) apPasswordDisplay.style.display = 'none';
+                if (apPasswordInput) {
+                    apPasswordInput.value = savedWiFiConfig.apPassword;
                 }
                 
                 return true;
@@ -1669,7 +1640,7 @@
                 wifiSSIDInput.value = savedWiFiConfig.routerSSID;
             }
             if (wifiPasswordInput) {
-                wifiPasswordInput.value = '';
+                wifiPasswordInput.value = savedWiFiConfig.routerPassword;
             }
         }
 
@@ -1744,7 +1715,6 @@
         }
 
         function clearAPForm() {
-            // Restore ke data tersimpan
             const apSSIDInput = document.getElementById('apSSID');
             const apPasswordInput = document.getElementById('apPassword');
             
@@ -1752,7 +1722,7 @@
                 apSSIDInput.value = savedWiFiConfig.apSSID;
             }
             if (apPasswordInput) {
-                apPasswordInput.value = '';
+                apPasswordInput.value = savedWiFiConfig.apPassword;
             }
         }
 
