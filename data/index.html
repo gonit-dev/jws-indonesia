@@ -24,12 +24,16 @@
             align-items: center;
             justify-content: center;
             transition: opacity 0.5s ease-out;
-            overflow: hidden;
         }
 
         #pageLoader.loaded {
             opacity: 0;
             pointer-events: none;
+        }
+
+        body.loading {
+            overflow: hidden;
+            height: 100vh;
         }
 
         .loader-content {
@@ -166,16 +170,22 @@
 </head>
 <body>
     <!-- Page Loading Screen -->
-    <div id="pageLoader">
-        <div class="loader-content">
-            <div class="loader-icon">🕌</div>
-            <div class="loader-title">Islamic Prayer Clock</div>
-            <div class="loader-subtitle">Memuat halaman...</div>
-            <div class="progress-container">
-                <div class="progress-bar" id="loadingProgress"></div>
+    <div class="grid-container">
+        <div class="grid-x grid-padding-x grid-margin-y align-center">
+            <div class="small-12 medium-12 large-12 cell">
+                <div id="pageLoader">
+                    <div class="loader-content">
+                        <div class="loader-icon">🕌</div>
+                        <div class="loader-title">Islamic Prayer Clock</div>
+                        <div class="loader-subtitle">Memuat halaman...</div>
+                        <div class="progress-container">
+                            <div class="progress-bar" id="loadingProgress"></div>
+                        </div>
+                        <div class="loader-percentage" id="loadingPercentage">0%</div>
+                        <div class="loader-status" id="loadingStatus">Mohon tunggu...</div>
+                    </div>
+                </div>
             </div>
-            <div class="loader-percentage" id="loadingPercentage">0%</div>
-            <div class="loader-status" id="loadingStatus">Mohon tunggu...</div>
         </div>
     </div>
 
@@ -694,6 +704,8 @@
                 setTimeout(() => {
                     if (loader) {
                         loader.classList.add('loaded');
+                        // Enable scroll kembali
+                        document.body.classList.remove('loading');
                         setTimeout(() => {
                             loader.style.display = 'none';
                         }, 500);
@@ -2557,6 +2569,10 @@
         }
         
         document.addEventListener('DOMContentLoaded', function() {
+            document.body.classList.add('loading');
+            
+            LoadingManager.updateProgress(1, 'Action');
+
             LoadingManager.updateProgress(1, 'Action');
             
             initializeApp();
