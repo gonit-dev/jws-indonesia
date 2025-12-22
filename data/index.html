@@ -7,166 +7,172 @@
     
     <link rel="stylesheet" href="assets/css/foundation.min.css">
     
-    <style>
-        /* Loading Screen Styles */
-        #pageLoader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            z-index: 99999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.5s ease-out;
-        }
+<style>
+    /* Loading Screen Styles */
+    #pageLoader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #ffffff;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.5s ease-out;
+    }
 
-        #pageLoader.loaded {
-            opacity: 0;
-            pointer-events: none;
-        }
+    #pageLoader.loaded {
+        opacity: 0;
+        pointer-events: none;
+    }
 
-        body.loading {
-            overflow: hidden;
-            height: 100vh;
-        }
+    body.loading {
+        overflow: hidden;
+        height: 100vh;
+    }
 
-        .loader-content {
-            text-align: center;
-            max-width: 400px;
-            padding: 0 20px;
-        }
+    /* Hide main content during loading */
+    body.loading > .grid-container:not(:first-child),
+    body.loading #toast {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+    }
 
-        .loader-icon {
-            font-size: 60px;
-            margin-bottom: 20px;
-            animation: pulse 2s ease-in-out infinite;
-        }
+    .loader-content {
+        text-align: center;
+        max-width: 400px;
+        padding: 0 20px;
+    }
 
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.1); opacity: 0.8; }
-        }
+    .loader-icon {
+        font-size: 60px;
+        margin-bottom: 20px;
+        animation: pulse 2s ease-in-out infinite;
+    }
 
-        .loader-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #1779ba;
-            margin-bottom: 10px;
-        }
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.1); opacity: 0.8; }
+    }
 
-        .loader-subtitle {
-            font-size: 14px;
-            color: #8a8a8a;
-            margin-bottom: 30px;
-        }
+    .loader-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #1779ba;
+        margin-bottom: 10px;
+    }
 
-        .progress-container {
-            width: 100%;
-            height: 6px;
-            background: #e6e6e6;
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-            margin-bottom: 15px;
-        }
+    .loader-subtitle {
+        font-size: 14px;
+        color: #8a8a8a;
+        margin-bottom: 30px;
+    }
 
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #1779ba 0%, #14679e 100%);
-            border-radius: 10px;
-            width: 0%;
-            transition: width 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
+    .progress-container {
+        width: 100%;
+        height: 6px;
+        background: #e6e6e6;
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+        margin-bottom: 15px;
+    }
 
-        .progress-bar::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
-            background: linear-gradient(90deg, 
-                transparent 0%, 
-                rgba(255,255,255,0.3) 50%, 
-                transparent 100%);
-            animation: shimmer 1.5s infinite;
-        }
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #1779ba 0%, #14679e 100%);
+        border-radius: 10px;
+        width: 0%;
+        transition: width 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
 
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
+    .progress-bar::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        background: linear-gradient(90deg, 
+            transparent 0%, 
+            rgba(255,255,255,0.3) 50%, 
+            transparent 100%);
+        animation: shimmer 1.5s infinite;
+    }
 
-        .loader-status {
-            font-size: 13px;
-            color: #1779ba;
-            font-weight: 500;
-            min-height: 20px;
-        }
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
 
-        .loader-percentage {
-            font-size: 32px;
-            font-weight: bold;
-            color: #1779ba;
-            margin-top: 10px;
-        }
+    .loader-status {
+        font-size: 13px;
+        color: #1779ba;
+        font-weight: 500;
+        min-height: 20px;
+    }
 
-        /* Timezone inline edit styling */
-        #timezoneInput {
-            font-family: monospace;
-            border: 2px solid #1779ba;
-            border-radius: 4px;
-        }
+    .loader-percentage {
+        font-size: 32px;
+        font-weight: bold;
+        color: #1779ba;
+        margin-top: 10px;
+    }
 
-        #timezoneInput:focus {
-            outline: none;
-            border-color: #14679e;
-            box-shadow: 0 0 5px rgba(23, 121, 186, 0.5);
-        }
+    /* Timezone inline edit styling */
+    #timezoneInput {
+        font-family: monospace;
+        border: 2px solid #1779ba;
+        border-radius: 4px;
+    }
 
-        #timezoneDisplayText {
-            font-weight: bold;
-            color: #1779ba;
-            padding: 0 5px;
-        }
-        
-        @keyframes spinner {
-            to {transform: rotate(360deg);}
-        }
-        
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(0,0,0,.1);
-            border-radius: 50%;
-            border-top-color: #1779ba;
-            animation: spinner 1s ease-in-out infinite;
-        }
-        
-        .toast {
-            position: fixed;
-            top: -100px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9999;
-            min-width: 300px;
-            text-align: center;
-            transition: top 0.5s ease-in-out;
-        }
-        
-        .toast.show {
-            top: 30px;
-        }
-    </style>
+    #timezoneInput:focus {
+        outline: none;
+        border-color: #14679e;
+        box-shadow: 0 0 5px rgba(23, 121, 186, 0.5);
+    }
+
+    #timezoneDisplayText {
+        font-weight: bold;
+        color: #1779ba;
+        padding: 0 5px;
+    }
+    
+    @keyframes spinner {
+        to {transform: rotate(360deg);}
+    }
+    
+    .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(0,0,0,.1);
+        border-radius: 50%;
+        border-top-color: #1779ba;
+        animation: spinner 1s ease-in-out infinite;
+    }
+    
+    .toast {
+        position: fixed;
+        top: -100px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        min-width: 300px;
+        text-align: center;
+        transition: top 0.5s ease-in-out;
+    }
+    
+    .toast.show {
+        top: 30px;
+    }
+</style>
 </head>
 <body>
     <!-- Page Loading Screen -->
