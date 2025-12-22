@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prayer Times</title>
+    <title>Jadwal Shalat</title>
     
     <link rel="stylesheet" href="assets/css/foundation.min.css">
     
@@ -182,7 +182,7 @@
                 <div id="pageLoader">
                     <div class="loader-content">
                         <div class="loader-icon">🕌</div>
-                        <div class="loader-title">Prayer Times</div>
+                        <div class="loader-title">Jadwal Shalat</div>
                         <div class="loader-subtitle">Memuat halaman...</div>
                         <div class="progress-container">
                             <div class="progress-bar" id="loadingProgress"></div>
@@ -205,19 +205,19 @@
                 <!-- Header -->
                 <div class="grid-x grid-padding-y">
                     <div class="large-12 text-center cell">
-                        <h3>🕌 Prayer Times</h3>
-                        <p class="subheader">Semua pengaturan otomatis - cukup sambungkan WiFi</p>
+                        <h3>🕌 Jadwal Shalat</h3>
+                        <p class="subheader">Pengaturan otomatis melalui WiFi</p>
                     </div>
                 </div>
                 
                 <div class="large-12 text-center cell">
                     <ul class="tabs" data-tabs id="example-tabs">
                         <li class="tabs-title is-active"><a href="#home" aria-selected="true">BERANDA</a></li>
-                        <li class="tabs-title"><a href="#wifi">WIRELESS</a></li>
+                        <li class="tabs-title"><a href="#wifi">WIFI</a></li>
                         <li class="tabs-title"><a href="#time">WAKTU</a></li>
                         <li class="tabs-title"><a href="#location">LOKASI</a></li>
                         <li class="tabs-title"><a href="#prayer">JADWAL</a></li>
-                        <li class="tabs-title"><a href="#factory">PABRIK</a></li>
+                        <li class="tabs-title"><a href="#factory">RESET</a></li>
                     </ul>
                 </div>
 
@@ -239,7 +239,7 @@
                                                     <div class="large-6 medium-6 small-12 cell text-left">
                                                         <p><strong>Jaringan WiFi:</strong> <span id="wifiName">-</span></p>
                                                         <p><strong>Alamat IP:</strong> <span id="ipAddress">-</span></p>
-                                                        <p><strong>Internet:</strong> <span id="internetStatus" class="label warning">Memeriksa...</span></p>
+                                                        <p><strong>Internet:</strong> <span id="internetStatus" class="label warning">Menghubungkan…</span></p>
                                                     </div>
                                                     <div class="large-6 medium-6 small-12 cell text-left">
                                                         <p><strong>Status NTP:</strong> <span id="ntpStatus">-</span></p>
@@ -253,7 +253,7 @@
                                             <div class="large-12 cell">
                                                 <div class="callout secondary">
                                                     <button class="button secondary expanded" onclick="restartDevice()">
-                                                        Restart Perangkat
+                                                        Mulai Ulang Perangkat
                                                     </button>
                                                 </div>
                                             </div>
@@ -336,7 +336,7 @@
 
                                     <div class="grid-x grid-padding-y">
                                         <div class="large-12 cell">
-                                            <h5><strong>⏰ Update Waktu</strong></h5></h4>
+                                            <h5><strong>⏰ Waktu & Sinkronisasi</strong></h5></h4>
                                         </div>
                                     </div>
 
@@ -344,12 +344,12 @@
                                         <div class="large-6 medium-6 cell">
                                             <div class="callout secondary">
                                                 <div class="large-12 medium-12 cell">
-                                                    <h6><strong>📱 Update Manual dari Browser</strong></h6>
-                                                    <p class="help-text">Update waktu dari perangkat Anda</p>
+                                                    <h6><strong>📱 Pembaruan Manual</strong></h6>
+                                                    <p class="help-text">Perbarui waktu dari perangkat Anda</p>
                                                 </div>
                                                 <div class="large-12 medium-12 cell">
                                                     <button class="button secondary expanded" onclick="syncTime()">
-                                                        Update Waktu Sekarang
+                                                        Perbarui Waktu
                                                     </button>
                                                 </div>
                                             </div>
@@ -358,12 +358,12 @@
                                         <div class="large-6 medium-6 cell">
                                             <div class="callout secondary">
                                                 <div class="large-12 medium-12 cell">
-                                                    <h6><strong>🌐 Update NTP Otomatis <span class="label success">AUTO</span></strong></h6>
-                                                    <p class="help-text">Waktu update otomatis saat WiFi terhubung</p>
+                                                    <h6><strong>🌐 Pembaruan Otomatis (NTP) <span class="label success">AUTO</span></strong></h6>
+                                                    <p class="help-text">Waktu diperbarui otomatis saat terhubung ke internet</p>
                                                 </div>
                                                 <div class="large-12 medium-12 cell">
                                                     <p class="help-text">
-                                                            🔄 Update otomatis setiap 1 jam<br>
+                                                            🔄 Perbarui otomatis setiap 1 jam<br>
                                                             🗄️ Beberapa server cadangan<br>
                                                             🌐 Timezone: UTC<span id="timezoneDisplayText">+7</span>
                                                         <input type="text" 
@@ -435,7 +435,7 @@
                                         
                                         <div id="coordinatesForm" class="large-12 cell hide" style="margin-top: 20px;">
                                             <div class="callout secondary">
-                                                <h6><strong>📍 Edit Koordinat</strong></h6>
+                                                <h6><strong>📍 Ubah Koordinat</strong></h6>
                                                 <p class="help-text">Sesuaikan koordinat jika diperlukan</p>
                                                 
                                                 <div class="grid-x grid-margin-x">
@@ -497,7 +497,7 @@
 
                                     <div class="callout secondary">
                                         <p class="help-text">
-                                            📍 Pilih lokasi untuk jadwal shalat yang akurat<br>
+                                            📍 Pilih lokasi untuk menghitung jadwal shalat<br>
                                             📐 Pilih metode perhitungan yang diinginkan<br>
                                             🔄 Jadwal akan diperbarui otomatis setelah memilih lokasi
                                         </p>
@@ -513,13 +513,13 @@
 
                                     <div class="grid-x grid-padding-y">
                                         <div class="large-12 cell">
-                                            <h5><strong>📤 Upload Cities.json</strong></h5></h4>
+                                            <h5><strong>📤 Unggah cities.json</strong></h5></h4>
                                         </div>
                                     </div>
                                     
                                     <div class="callout secondary">
                                         <p>
-                                            <strong>Kapan perlu upload cities.json?</strong><br>
+                                            <strong>Kapan perlu unggah cities.json?</strong><br>
                                         </p>
                                         <p>
                                             <div class="help-text">
@@ -541,7 +541,7 @@
                                     </div>
                                     <div class="large-4 medium-4 small-12 cell">
                                         <button id="uploadBtn" class="button primary expanded" onclick="uploadCitiesFile()" disabled>
-                                            📤 Upload File
+                                            📤 Unggah Berkas
                                         </button>
                                         <button id="clearFileBtn" class="button primary expanded" onclick="clearSelectedFile()" style="display: none; margin-top: 10px;">
                                             ✖ Batal
@@ -555,7 +555,7 @@
                                             </div>
                                         </div>
                                         <p id="uploadStatus" class="help-text">
-                                            Memulai unggah...
+                                            Memulai pengunggahan…
                                         </p>
                                     </div>
 
@@ -627,7 +627,7 @@
                                             🕌 Jadwal shalat berdasarkan lokasi yang dipilih<br>
                                             🔄 Diperbarui otomatis setiap tengah malam<br>
                                             📐 <span id="currentMethodBottom">Egyptian General Authority of Survey</span><br>
-                                            ⚡ Update otomatis saat terhubung ke internet
+                                            ⚡ Perbarui otomatis saat terhubung ke internet
                                         </p>
                                     </div>
 
@@ -642,14 +642,14 @@
 
                                     <div class="grid-x grid-padding-y">
                                         <div class="large-12 cell">
-                                            <h5><strong>⚠️ Reset Pabrik</strong></h5></h4>
-                                            <p>Kembalikan semua pengaturan ke default pabrik</p>
+                                            <h5><strong>⚠️ Reset ke Setelan Pabrik</strong></h5></h4>
+                                            <p>Kembalikan seluruh pengaturan ke setelan awal</p>
                                         </div>
                                     </div>
                                     
                                     <div class="callout secondary">
                                         <p>
-                                            <strong>Peringatan</strong> Ini akan menghapus semua data tersimpan
+                                            <strong>Peringatan</strong> Tindakan ini akan menghapus seluruh data dan tidak dapat dibatalkan
                                         </p>
                                         <p class="help-text">
                                             📶 kredensial WiFi</br>
@@ -661,7 +661,7 @@
                                     </div>
                                     
                                     <button class="button secondary expanded" onclick="resetSettings()">
-                                        Reset Pabrik
+                                        Reset ke Setelan Pabrik
                                     </button>
                                 </div>
                                 
@@ -854,9 +854,9 @@
         async function loadTimeTab() {
             try {
                 await loadTimezoneConfig();
-                console.log('Tab WAKTU dimuat');
+                console.log('Tab waktu dimuat');
             } catch (error) {
-                console.error('Terjadi kesalahan saat memuat tab WAKTU:', error);
+                console.error('Terjadi kesalahan saat memuat tab waktu:', error);
             }
         }
 
@@ -912,7 +912,7 @@
         }
 
         // ================================
-        // FUNGSI JAM REAL-TIME
+        // FUNGSI WAKTU REAL-TIME
         // ================================
         function getCurrentTime() {
             if (serverTimestamp === 0 || localStartTime === 0) {
@@ -1028,7 +1028,7 @@
                 
                 document.getElementById('wifiName').textContent = data.ssid || 'Tidak Terhubung';
                 document.getElementById('ipAddress').textContent = data.ip || '-';
-                document.getElementById('ntpStatus').textContent = data.ntpSynced ? '✅ Update' : '❌ Belum Update';
+                document.getElementById('ntpStatus').textContent = data.ntpSynced ? 'Tersinkron' : 'Belum tersinkron';
                 
                 if (document.getElementById('ntpServerUsed')) {
                     document.getElementById('ntpServerUsed').textContent = data.ntpServer || '-';
@@ -1036,15 +1036,15 @@
                 
                 const statusBadge = document.getElementById('internetStatus');
                 if (isOnline) {
-                    statusBadge.textContent = '✅ Terhubung';
+                    statusBadge.textContent = 'Terhubung';
                     statusBadge.className = 'label success';
                 } else {
-                    statusBadge.textContent = '❌ Tidak Terhubung';
+                    statusBadge.textContent = 'Tidak terhubung';
                     statusBadge.className = 'label alert';
                 }
                 
                 // ================================
-                // UPDATE WAKTU & TANGGAL DARI SERVER
+                // PERBARUI WAKTU & TANGGAL DARI SERVER
                 // ================================
                 if (data.currentTime && data.currentDate) {
                     const timeParts = data.currentTime.split(':');
@@ -1072,7 +1072,7 @@
                 
             } catch (error) {
                 isOnline = false;
-                document.getElementById('internetStatus').textContent = 'Kesalahan';
+                document.getElementById('internetStatus').textContent = 'Terjadi kesalahan';
                 document.getElementById('internetStatus').className = 'label alert';
             } finally {
                 isLoadingDeviceStatus = false;
@@ -1382,7 +1382,7 @@
                 }
                 
             } catch (error) {
-                document.getElementById('currentCity').textContent = 'Kesalahan memuat';
+                document.getElementById('currentCity').textContent = 'Terjadi kesalahan memuat';
             }
         }
 
@@ -1703,7 +1703,7 @@
         }
 
         // ================================
-        // UPDATE WAKTU
+        // PERBARUI WAKTU
         // ================================
         function syncTime() {
             const d = new Date();
@@ -1717,7 +1717,7 @@
 
             const btn = event.target;
             btn.disabled = true;
-            btn.textContent = 'Update...';
+            btn.textContent = 'Perbarui...';
 
             fetch('/synctime', { 
                 method: 'POST',
@@ -1728,15 +1728,15 @@
             })
             .then(response => response.text())
             .then(data => {
-                showToast('Waktu berhasil update', 'success');
+                showToast('Waktu berhasil diperbarui', 'success');
                 updateDeviceStatus();
                 btn.disabled = false;
-                btn.textContent = 'Update Waktu Sekarang';
+                btn.textContent = 'Perbarui Waktu';
             })
             .catch(error => {
-                showToast('Gagal update waktu', 'error');
+                showToast('Gagal memperbarui waktu', 'error');
                 btn.disabled = false;
-                btn.textContent = ' Update Waktu Sekarang';
+                btn.textContent = ' Perbarui Waktu';
             });
         }
 
@@ -1744,7 +1744,7 @@
         // RESET PABRIK
         // ================================
         function resetSettings() {
-            if (!confirm('⚠️ Yakin ingin mengatur ulang semua pengaturan? Perangkat akan dimulai ulang dan kembali ke pengaturan awal.')) {
+            if (!confirm('⚠️ Yakin ingin mereset seluruh pengaturan ke setelan pabrik? Perangkat akan dimulai ulang dan kembali ke pengaturan awal.')) {
                 return;
             }
 
@@ -1756,14 +1756,14 @@
             fetch('/reset', { method: 'POST' })
             .then(response => {
                 if (response.ok) {
-                    showToast('Pengaturan ulang berhasil', 'success');
+                    showToast('Perangkat berhasil direset', 'success');
                     
                     setTimeout(() => {
                         showToast('Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
                     }, 1500);
                     
                     setTimeout(() => {
-                        showToast('Sambungkan kembali ke Acess Point: JWS Indonesia', 'warning');
+                        showToast('Sambungkan kembali ke Access Point: JWS Indonesia', 'warning');
                     }, 3500);
                     
                     setTimeout(() => {
@@ -2007,7 +2007,7 @@
                     if (xhr.status === 200) {
                         progressBar.style.width = '100%';
                         progressBar.querySelector('.progress-meter-text').textContent = '100%';
-                        statusText.innerHTML = '<span class="label success">Mengunggah berhasil</span>';
+                        statusText.innerHTML = '<span class="label success">Pengunggahan berhasil</span>';
                         
                         if (selectedCitiesFile.jsonMetadata) {
                             const jsonSizeKB = (selectedCitiesFile.jsonMetadata.jsonSize / 1024).toFixed(2);
@@ -2029,7 +2029,7 @@
                         setTimeout(() => {
                             progressDiv.classList.add('hide');
                             uploadBtn.disabled = false;
-                            uploadBtn.textContent = 'Upload File';
+                            uploadBtn.textContent = 'Unggah Berkas';
                         }, 5000);
                         
                     } else {
@@ -2038,7 +2038,7 @@
                 });
                 
                 xhr.addEventListener('error', () => {
-                    throw new Error('Kesalahan jaringan - koneksi terputus');
+                    throw new Error('Terjadi kesalahan jaringan - koneksi terputus');
                 });
                 
                 xhr.addEventListener('timeout', () => {
@@ -2079,7 +2079,7 @@
             uploadBtn.disabled = true;
             clearBtn.style.display = 'none';
             
-            showToast('File dihapus', 'warning');
+            showToast('Berkas dihapus', 'warning');
         }
 
         // ================================
@@ -2427,7 +2427,7 @@
                     showToast('Timezone berhasil disimpan', 'success');
                     
                     setTimeout(() => {
-                        showToast('NTP akan melakukan update ulang dengan zona waktu baru...', 'warning');
+                        showToast('NTP akan melakukan perbarui ulang dengan zona waktu baru...', 'warning');
                     }, 1500);
                     
                 } else {
