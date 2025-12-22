@@ -316,6 +316,7 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data);
 
 // RTOS Tasks
 void uiTask(void *parameter);
+void restartWiFiTask(void *parameter);
 void restartAPTask(void *parameter);
 void wifiTask(void *parameter);
 void ntpTask(void *parameter);
@@ -1852,7 +1853,7 @@ void setupServerRoutes() {
     });
 
     // ========================================
-    // WIFI SETTINGS - GET & SET
+    // WIFI SETTINGS
     // ========================================
     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
@@ -1860,10 +1861,11 @@ void setupServerRoutes() {
             String newPassword = request->getParam("password", true)->value();
 
             Serial.println("\n========================================");
-            Serial.println("Simpan WiFi");
+            Serial.println("Simpan WiFi Credentials");
             Serial.println("========================================");
             Serial.println("New SSID: " + newSSID);
 
+            // Simpan ke memory dan file
             if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
                 wifiConfig.routerSSID = newSSID;
                 wifiConfig.routerPassword = newPassword;
@@ -1872,38 +1874,21 @@ void setupServerRoutes() {
 
             saveWiFiCredentials();
 
-            Serial.println("Disconnecting old WiFi...");
-            WiFi.disconnect(false);
-            delay(200);
-
-            Serial.println("Forcing AP_STA mode...");
-            WiFi.mode(WIFI_AP_STA);
-            delay(100);
-
-            IPAddress apIP = WiFi.softAPIP();
-            if (apIP == IPAddress(0, 0, 0, 0)) {
-                Serial.println("AP died, restarting...");
-                WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
-                delay(200);
-                Serial.println("AP restored: " + WiFi.softAPIP().toString());
-            } else {
-                Serial.println("AP still alive: " + apIP.toString());
-            }
-
-            Serial.println("Triggering WiFi task reconnect...");
-            if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-                wifiConfig.isConnected = false;
-                wifiState = WIFI_IDLE;
-                reconnectAttempts = 0;
-                xSemaphoreGive(wifiMutex);
-            }
-
-            Serial.println("========================================");
-            Serial.println("WiFi config saved, AP secured");
-            Serial.println("WiFi task will auto-reconnect");
+            Serial.println("Credentials saved to LittleFS");
+            Serial.println("WiFi will reconnect in 3 seconds...");
             Serial.println("========================================\n");
 
             request->send(200, "text/plain", "OK");
+
+            // Buat task untuk restart WiFi (delayed)
+            xTaskCreate(
+                restartWiFiTask,    // Function
+                "WiFiRestart",      // Name
+                4096,               // Stack size
+                NULL,               // Parameter
+                1,                  // Priority (low)
+                NULL                // Handle
+            );
 
         } else {
             request->send(400, "text/plain", "Missing parameters");
@@ -1967,10 +1952,8 @@ void setupServerRoutes() {
             Serial.println("AP will restart in 3 seconds...");
             Serial.println("========================================\n");
 
-            // Kirim response DULU
             request->send(200, "text/plain", "OK");
 
-            // Buat task untuk restart AP (delayed)
             xTaskCreate(
                 restartAPTask,      // Function
                 "APRestart",        // Name
@@ -2512,6 +2495,67 @@ void uiTask(void *parameter) {
     
     vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
+}
+
+// ================================
+// WIFI RESTART TASK
+// ================================
+void restartWiFiTask(void *parameter) {
+    vTaskDelay(pdMS_TO_TICKS(3000));
+    
+    Serial.println("\n========================================");
+    Serial.println("RECONNECTING WIFI");
+    Serial.println("========================================");
+    
+    Serial.println("Step 1: Disconnecting old WiFi...");
+    WiFi.disconnect(false);
+    vTaskDelay(pdMS_TO_TICKS(500));
+    
+    Serial.println("Step 2: Verifying AP status...");
+    WiFi.mode(WIFI_AP_STA);
+    vTaskDelay(pdMS_TO_TICKS(300));
+    
+    IPAddress apIP = WiFi.softAPIP();
+    if (apIP == IPAddress(0, 0, 0, 0)) {
+        Serial.println("AP died, restarting...");
+        WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        Serial.println("AP restored: " + WiFi.softAPIP().toString());
+    } else {
+        Serial.println("AP still alive: " + apIP.toString());
+    }
+    
+    Serial.println("Step 3: Connecting to new WiFi...");
+    String ssid, password;
+    
+    if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+        ssid = wifiConfig.routerSSID;
+        password = wifiConfig.routerPassword;
+        wifiConfig.isConnected = false;
+        wifiState = WIFI_IDLE;
+        reconnectAttempts = 0;
+        xSemaphoreGive(wifiMutex);
+    }
+    
+    if (ssid.length() > 0) {
+        Serial.println("SSID: " + ssid);
+        WiFi.begin(ssid.c_str(), password.c_str());
+        
+        Serial.println("\n========================================");
+        Serial.println("WIFI RECONNECT INITIATED");
+        Serial.println("========================================");
+        Serial.println("WiFi Task will handle the connection");
+        Serial.println("Check serial monitor for status");
+        Serial.println("========================================\n");
+    } else {
+        Serial.println("\n========================================");
+        Serial.println("WIFI RECONNECT FAILED");
+        Serial.println("========================================");
+        Serial.println("No SSID configured");
+        Serial.println("========================================\n");
+    }
+    
+    vTaskDelete(NULL);
 }
 
 // ================================
