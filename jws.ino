@@ -1875,6 +1875,39 @@ void setupServerRoutes() {
     // ========================================
     // WIFI SETTINGS
     // ========================================
+    server.on("/getwificonfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String json = "{";
+
+        if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            json += "\"routerSSID\":\"" + wifiConfig.routerSSID + "\",";
+            json += "\"routerPassword\":\"" + wifiConfig.routerPassword + "\",";
+            xSemaphoreGive(wifiMutex);
+        } else {
+            json += "\"routerSSID\":\"\",";
+            json += "\"routerPassword\":\"\",";
+        }
+
+        String currentAPSSID = WiFi.softAPSSID();
+        if (currentAPSSID.length() == 0 || currentAPSSID == "null") {
+            currentAPSSID = String(wifiConfig.apSSID);
+        }
+
+        if (currentAPSSID.length() == 0) {
+            currentAPSSID = DEFAULT_AP_SSID;
+        }
+
+        String apPassword = String(wifiConfig.apPassword);
+        if (apPassword.length() == 0) {
+            apPassword = DEFAULT_AP_PASSWORD;
+        }
+
+        json += "\"apSSID\":\"" + currentAPSSID + "\",";
+        json += "\"apPassword\":\"" + apPassword + "\"";
+        json += "}";
+
+        request->send(200, "application/json", json);
+    });
+
     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
         // ============================================
         // DEBOUNCING CHECK
@@ -1934,39 +1967,6 @@ void setupServerRoutes() {
         } else {
             request->send(400, "text/plain", "Missing parameters");
         }
-    });
-
-    server.on("/getwificonfig", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = "{";
-
-        if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            json += "\"routerSSID\":\"" + wifiConfig.routerSSID + "\",";
-            json += "\"routerPassword\":\"" + wifiConfig.routerPassword + "\",";
-            xSemaphoreGive(wifiMutex);
-        } else {
-            json += "\"routerSSID\":\"\",";
-            json += "\"routerPassword\":\"\",";
-        }
-
-        String currentAPSSID = WiFi.softAPSSID();
-        if (currentAPSSID.length() == 0 || currentAPSSID == "null") {
-            currentAPSSID = String(wifiConfig.apSSID);
-        }
-
-        if (currentAPSSID.length() == 0) {
-            currentAPSSID = DEFAULT_AP_SSID;
-        }
-
-        String apPassword = String(wifiConfig.apPassword);
-        if (apPassword.length() == 0) {
-            apPassword = DEFAULT_AP_PASSWORD;
-        }
-
-        json += "\"apSSID\":\"" + currentAPSSID + "\",";
-        json += "\"apPassword\":\"" + apPassword + "\"";
-        json += "}";
-
-        request->send(200, "application/json", json);
     });
 
     server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -2635,7 +2635,7 @@ void restartWiFiTask(void *parameter) {
     // ============================================
     // SIMPAN KREDENSIAL DULU
     // ============================================
-    Serial.println("Step 1: Preparing for reconnect...");
+    Serial.println("Preparing for reconnect...");
     
     String ssid, password;
     if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -2660,7 +2660,7 @@ void restartWiFiTask(void *parameter) {
     // ============================================
     // DISCONNECT DENGAN AMAN
     // ============================================
-    Serial.println("\nStep 2: Disconnecting old WiFi...");
+    Serial.println("\nDisconnecting old WiFi...");
     WiFi.disconnect(false, false); // Keep config, don't erase
     vTaskDelay(pdMS_TO_TICKS(1000));
     Serial.println("   Disconnected (config preserved)");
@@ -2668,7 +2668,7 @@ void restartWiFiTask(void *parameter) {
     // ============================================
     // CEK & RESTORE AP JIKA MATI
     // ============================================
-    Serial.println("\nStep 3: Verifying AP status...");
+    Serial.println("\nVerifying AP status...");
     
     IPAddress apIP = WiFi.softAPIP();
     if (apIP == IPAddress(0, 0, 0, 0)) {
@@ -2695,7 +2695,7 @@ void restartWiFiTask(void *parameter) {
     // RECONNECT WiFi
     // ============================================
     if (ssid.length() > 0) {
-        Serial.println("\nStep 4: Reconnecting to WiFi...");
+        Serial.println("\nReconnecting to WiFi...");
         Serial.println("   Target SSID: " + ssid);
         Serial.println("   Initiating connection...");
         
@@ -2810,7 +2810,7 @@ void restartAPTask(void *parameter) {
     // ============================================
     // DISCONNECT AP CLIENTS
     // ============================================
-    Serial.println("Step 1: Disconnecting AP clients...");
+    Serial.println("Disconnecting AP clients...");
     int clientsBefore = WiFi.softAPgetStationNum();
     Serial.printf("   Clients connected: %d\n", clientsBefore);
     
@@ -2823,7 +2823,7 @@ void restartAPTask(void *parameter) {
     // ============================================
     // RESTART AP DENGAN KREDENSIAL BARU
     // ============================================
-    Serial.println("\nStep 2: Starting new AP...");
+    Serial.println("\nStarting new AP...");
     Serial.println("   New SSID: " + String(wifiConfig.apSSID));
     Serial.println("   Password length: " + String(strlen(wifiConfig.apPassword)));
     
@@ -2872,6 +2872,10 @@ void restartAPTask(void *parameter) {
     
     vTaskDelete(NULL);
 }
+
+// ================================
+// WIFI TASK - EVENT DRIVEN
+// ================================
 
 void wifiTask(void *parameter) {
     esp_task_wdt_add(NULL);
@@ -3497,7 +3501,7 @@ void prayerTask(void *parameter) {
                 // ================================
                 // TRIGGER NTP SYNC DULU
                 // ================================
-                Serial.println("STEP 1: Triggering NTP Sync...");
+                Serial.println("Triggering NTP Sync...");
                 Serial.println("Alasan: Memastikan waktu akurat sebelum update");
                 
                 if (ntpTaskHandle != NULL) {
@@ -3555,7 +3559,7 @@ void prayerTask(void *parameter) {
                         prayerConfig.longitude.length() > 0) {
                         
                         if (currentYear >= 2024 && currentTimestamp >= 946684800) {
-                            Serial.println("STEP 2: Updating Prayer Times...");
+                            Serial.println("Updating Prayer Times...");
                             Serial.println("Status Waktu: VALID");
                             Serial.println("Kota: " + prayerConfig.selectedCity);
                             Serial.println("Koordinat: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
