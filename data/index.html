@@ -452,7 +452,7 @@
                                                     </div>
                                                     
                                                     <div class="large-6 medium-6 small-6 cell">
-                                                        <button class="button secondary expanded" onclick="resetToDefaultCoordinates()" title="Reset ke koordinat default dari JSON">
+                                                        <button class="button secondary expanded" onclick="resetToDefaultCoordinates()" title="Reset ke koordinat awal dari JSON">
                                                             Reset
                                                         </button>
                                                     </div>
@@ -1207,14 +1207,14 @@
         }
 
         // ================================
-        // FUNGSI RESET KE Koordinat default
+        // FUNGSI RESET KE KOORDINAT AWAL
         // ================================
         function resetToDefaultCoordinates() {
             const latInput = document.getElementById('latInput');
             const lonInput = document.getElementById('lonInput');
             
             if (!defaultCoordinates.lat || !defaultCoordinates.lon) {
-                showToast('Tidak ada koordinat default tersedia', 'warning');
+                showToast('Tidak ada koordinat awal tersedia', 'warning');
                 return;
             }
             
@@ -1268,7 +1268,7 @@
                         latInput.value = defaultLat;
                         lonInput.value = defaultLon;
                     } else {
-                        showToast('Tidak ada koordinat default tersedia', 'warning');
+                        showToast('Tidak ada koordinat awal tersedia', 'warning');
                     }
                 }
             })
@@ -1277,7 +1277,7 @@
                     latInput.value = defaultLat;
                     lonInput.value = defaultLon;
                 } else {
-                    showToast('Tidak ada koordinat default tersedia', 'warning');
+                    showToast('Tidak ada koordinat awal tersedia', 'warning');
                 }
             });
         }
