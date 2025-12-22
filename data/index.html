@@ -525,7 +525,7 @@
                                             <div class="help-text">
                                                 ➕ Ada lokasi baru yang ditambahkan<br>
                                                 📍 Data koordinat lokasi ada yang diperbarui<br>
-                                                ⚠️ File <code>cities.json</code> rusak atau hilang
+                                                ⚠️ Berkas <code>cities.json</code> rusak atau hilang
                                             </div>
                                         </p>
                                     </div>
@@ -536,7 +536,7 @@
                                             <input type="file" id="citiesFileInput" accept=".json" class="show-for-sr" onchange="handleCitiesFileSelect(event)">
                                         </label>
                                         <p id="selectedFileName" class="help-text">
-                                            Belum ada file yang dipilih
+                                            Belum ada berkas yang dipilih
                                         </p>
                                     </div>
                                     <div class="large-4 medium-4 small-12 cell">
@@ -564,7 +564,7 @@
                                             <strong>⚠️ Penting</strong>
                                         </p>
                                         <p class="help-text">
-                                            📄 Nama file harus <code>cities.json</code><br>
+                                            📄 Nama berkas harus <code>cities.json</code><br>
                                             🧾 Format harus valid JSON array<br>
                                             📦 Ukuran maksimal: 1 MB<br>
                                             🔄 Dropdown lokasi akan otomatis refresh setelah upload berhasil
@@ -1825,7 +1825,7 @@
             }
             
             if (file.name !== 'cities.json') {
-                showToast('Nama file harus cities.json', 'error');
+                showToast('Nama berkas harus cities.json', 'error');
                 selectedCitiesFile = null;
                 fileNameDisplay.innerHTML = '<span class="label alert">❌ Nama berkas tidak valid</span>';
                 uploadBtn.disabled = true;
@@ -1836,7 +1836,7 @@
             
             const maxSize = 1 * 1024 * 1024;
             if (file.size > maxSize) {
-                showToast('File terlalu besar (maksimal 1MB)', 'error');
+                showToast('Berkas terlalu besar (maksimal 1MB)', 'error');
                 selectedCitiesFile = null;
                 fileNameDisplay.innerHTML = '<span class="label alert">❌ Berkas terlalu besar</span>';
                 uploadBtn.disabled = true;
@@ -1895,7 +1895,7 @@
                         const sizeKB = (jsonSize / 1024).toFixed(2);
                         const maxKB = (ESP32_MAX_HEAP / 1024).toFixed(2);
                         
-                        showToast(`File terlalu berat untuk perangkat ${sizeKB} KB > ${maxKB} KB`, 'error');
+                        showToast(`Berkas terlalu berat untuk perangkat ${sizeKB} KB > ${maxKB} KB`, 'error');
                         
                         selectedCitiesFile = null;
                         fileNameDisplay.innerHTML = `<span class="label alert">❌ Terlalu berat (${sizeKB} KB)</span>`;
@@ -2051,7 +2051,7 @@
             fileInput.value = '';
             selectedCitiesFile = null;
             
-            fileNameDisplay.textContent = 'Belum ada file yang dipilih';
+            fileNameDisplay.textContent = 'Belum ada berkas yang dipilih';
             fileNameDisplay.className = 'help-text';
             
             uploadBtn.disabled = true;
@@ -2808,7 +2808,7 @@
                 const clearBtn = document.getElementById('clearFileBtn');
                 if (clearBtn && clearBtn.style.display === 'block') {
                     e.preventDefault();
-                    e.returnValue = 'File belum diupload. Yakin ingin meninggalkan halaman?';
+                    e.returnValue = 'Berkas belum diupload. Yakin ingin meninggalkan halaman?';
                     return e.returnValue;
                 }
             });
