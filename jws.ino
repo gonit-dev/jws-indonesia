@@ -261,6 +261,18 @@ const unsigned long BLINK_DURATION = 60000; // 1 menit
 const unsigned long BLINK_INTERVAL = 500;   // Kedip setiap 500ms
 
 // ================================
+// WIFI RESTART PROTECTION - TAMBAHAN BARU
+// ================================
+static SemaphoreHandle_t wifiRestartMutex = NULL;
+static bool wifiRestartInProgress = false;
+static bool apRestartInProgress = false;
+
+// Debouncing timestamps
+static unsigned long lastWiFiRestartRequest = 0;
+static unsigned long lastAPRestartRequest = 0;
+const unsigned long RESTART_DEBOUNCE_MS = 3000; // 3 detik minimum antar restart
+
+// ================================
 // FORWARD DECLARATIONS
 // ================================
 
@@ -829,6 +841,14 @@ void setupWiFiEvents() {
     wifiEventGroup = xEventGroupCreate();
     
     WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
+        // ============================================
+        // SAFETY: SKIP EVENTS DURING RESTART
+        // ============================================
+        if (wifiRestartInProgress || apRestartInProgress) {
+
+            return;
+        }
+        
         Serial.print(String("[WiFi-Event] ") + String(event));
 
         switch (event) {
@@ -934,7 +954,7 @@ void setupWiFiEvents() {
         }
     });
 
-    Serial.print("WiFi Event Handler registered");
+    Serial.print("WiFi Event Handler registered (with restart protection)");
 }
 
 // Settings Functions
@@ -1856,6 +1876,28 @@ void setupServerRoutes() {
     // WIFI SETTINGS
     // ========================================
     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
+        // ============================================
+        // DEBOUNCING CHECK
+        // ============================================
+        unsigned long now = millis();
+        if (now - lastWiFiRestartRequest < RESTART_DEBOUNCE_MS) {
+            unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastWiFiRestartRequest);
+            
+            String msg = "⏳ Please wait " + 
+                        String(waitTime / 1000) + 
+                        " seconds before next WiFi restart";
+            
+            Serial.println("\n========================================");
+            Serial.println("WiFi RESTART REQUEST REJECTED");
+            Serial.println("========================================");
+            Serial.println("Reason: Too fast (debouncing active)");
+            Serial.printf("Wait time: %lu ms\n", waitTime);
+            Serial.println("========================================\n");
+            
+            request->send(429, "text/plain", msg); // 429 = Too Many Requests
+            return;
+        }
+        
         if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
             String newSSID = request->getParam("ssid", true)->value();
             String newPassword = request->getParam("password", true)->value();
@@ -1880,7 +1922,6 @@ void setupServerRoutes() {
 
             request->send(200, "text/plain", "OK");
 
-            // Buat task untuk restart WiFi (delayed)
             xTaskCreate(
                 restartWiFiTask,    // Function
                 "WiFiRestart",      // Name
@@ -1929,6 +1970,28 @@ void setupServerRoutes() {
     });
 
     server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
+        // ============================================
+        // DEBOUNCING CHECK
+        // ============================================
+        unsigned long now = millis();
+        if (now - lastAPRestartRequest < RESTART_DEBOUNCE_MS) {
+            unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastAPRestartRequest);
+            
+            String msg = "⏳ Please wait " + 
+                        String(waitTime / 1000) + 
+                        " seconds before next AP restart";
+            
+            Serial.println("\n========================================");
+            Serial.println("AP RESTART REQUEST REJECTED");
+            Serial.println("========================================");
+            Serial.println("Reason: Too fast (debouncing active)");
+            Serial.printf("Wait time: %lu ms\n", waitTime);
+            Serial.println("========================================\n");
+            
+            request->send(429, "text/plain", msg);
+            return;
+        }
+        
         if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
             String ssid = request->getParam("ssid", true)->value();
             String pass = request->getParam("password", true)->value();
@@ -1943,7 +2006,6 @@ void setupServerRoutes() {
             Serial.println("========================================");
             Serial.println("New SSID: " + ssid);
 
-            // Simpan ke memory dan file
             ssid.toCharArray(wifiConfig.apSSID, 33);
             pass.toCharArray(wifiConfig.apPassword, 65);
             saveAPCredentials();
@@ -2501,33 +2563,81 @@ void uiTask(void *parameter) {
 // WIFI RESTART TASK
 // ================================
 void restartWiFiTask(void *parameter) {
-    vTaskDelay(pdMS_TO_TICKS(3000));
-    
-    Serial.println("\n========================================");
-    Serial.println("RECONNECTING WIFI");
-    Serial.println("========================================");
-    
-    Serial.println("Step 1: Disconnecting old WiFi...");
-    WiFi.disconnect(false);
-    vTaskDelay(pdMS_TO_TICKS(500));
-    
-    Serial.println("Step 2: Verifying AP status...");
-    WiFi.mode(WIFI_AP_STA);
-    vTaskDelay(pdMS_TO_TICKS(300));
-    
-    IPAddress apIP = WiFi.softAPIP();
-    if (apIP == IPAddress(0, 0, 0, 0)) {
-        Serial.println("AP died, restarting...");
-        WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
-        vTaskDelay(pdMS_TO_TICKS(500));
-        Serial.println("AP restored: " + WiFi.softAPIP().toString());
-    } else {
-        Serial.println("AP still alive: " + apIP.toString());
+    // ============================================
+    // DEBOUNCING
+    // ============================================
+    unsigned long now = millis();
+    if (now - lastWiFiRestartRequest < RESTART_DEBOUNCE_MS) {
+        unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastWiFiRestartRequest);
+        
+        Serial.println("\n========================================");
+        Serial.println("WiFi RESTART REJECTED - TOO FAST!");
+        Serial.println("========================================");
+        Serial.printf("Reason: Last restart was %lu ms ago\n", now - lastWiFiRestartRequest);
+        Serial.printf("Minimum interval: %lu ms\n", RESTART_DEBOUNCE_MS);
+        Serial.printf("Please wait: %lu ms (%.1f seconds)\n", waitTime, waitTime / 1000.0);
+        Serial.println("========================================\n");
+        
+        vTaskDelete(NULL);
+        return;
     }
     
-    Serial.println("Step 3: Connecting to new WiFi...");
-    String ssid, password;
+    lastWiFiRestartRequest = now;
     
+    // ============================================
+    // LOCK
+    // ============================================
+    if (wifiRestartMutex == NULL) {
+        wifiRestartMutex = xSemaphoreCreateMutex();
+        if (wifiRestartMutex == NULL) {
+            Serial.println("ERROR: Failed to create wifiRestartMutex");
+            vTaskDelete(NULL);
+            return;
+        }
+    }
+    
+    if (xSemaphoreTake(wifiRestartMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+        Serial.println("\n========================================");
+        Serial.println("WiFi RESTART BLOCKED");
+        Serial.println("========================================");
+        Serial.println("Reason: Another WiFi/AP restart in progress");
+        Serial.println("Action: Request ignored for safety");
+        Serial.println("========================================\n");
+        
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    if (wifiRestartInProgress || apRestartInProgress) {
+        Serial.println("\n========================================");
+        Serial.println("WiFi RESTART ABORTED");
+        Serial.println("========================================");
+        Serial.printf("WiFi restart in progress: %s\n", wifiRestartInProgress ? "YES" : "NO");
+        Serial.printf("AP restart in progress: %s\n", apRestartInProgress ? "YES" : "NO");
+        Serial.println("========================================\n");
+        
+        xSemaphoreGive(wifiRestartMutex);
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    wifiRestartInProgress = true;
+    
+    Serial.println("\n========================================");
+    Serial.println("SAFE WiFi RESTART SEQUENCE STARTED");
+    Serial.println("========================================");
+    Serial.println("Protection: Debouncing + Mutex Lock Active");
+    Serial.println("Mode: Safe reconnect (no mode switching)");
+    Serial.println("========================================\n");
+    
+    vTaskDelay(pdMS_TO_TICKS(3000));
+    
+    // ============================================
+    // SIMPAN KREDENSIAL DULU
+    // ============================================
+    Serial.println("Step 1: Preparing for reconnect...");
+    
+    String ssid, password;
     if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
         ssid = wifiConfig.routerSSID;
         password = wifiConfig.routerPassword;
@@ -2535,25 +2645,89 @@ void restartWiFiTask(void *parameter) {
         wifiState = WIFI_IDLE;
         reconnectAttempts = 0;
         xSemaphoreGive(wifiMutex);
+        
+        Serial.println("   Credentials loaded from memory");
+        Serial.println("   SSID: " + ssid);
+        Serial.println("   Connection state reset");
+    } else {
+        Serial.println("   ERROR: Failed to acquire wifiMutex!");
+        wifiRestartInProgress = false;
+        xSemaphoreGive(wifiRestartMutex);
+        vTaskDelete(NULL);
+        return;
     }
     
+    // ============================================
+    // DISCONNECT DENGAN AMAN
+    // ============================================
+    Serial.println("\nStep 2: Disconnecting old WiFi...");
+    WiFi.disconnect(false, false); // Keep config, don't erase
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    Serial.println("   Disconnected (config preserved)");
+    
+    // ============================================
+    // CEK & RESTORE AP JIKA MATI
+    // ============================================
+    Serial.println("\nStep 3: Verifying AP status...");
+    
+    IPAddress apIP = WiFi.softAPIP();
+    if (apIP == IPAddress(0, 0, 0, 0)) {
+        Serial.println("   WARNING: AP died during disconnect!");
+        Serial.println("   Restoring AP...");
+        
+        WiFi.softAPdisconnect(false);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        
+        bool apStarted = WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        
+        if (apStarted) {
+            Serial.println("   AP restored successfully");
+            Serial.println("   AP IP: " + WiFi.softAPIP().toString());
+        } else {
+            Serial.println("   ERROR: Failed to restore AP!");
+        }
+    } else {
+        Serial.println("   AP still alive: " + apIP.toString());
+    }
+    
+    // ============================================
+    // RECONNECT WiFi
+    // ============================================
     if (ssid.length() > 0) {
-        Serial.println("SSID: " + ssid);
+        Serial.println("\nStep 4: Reconnecting to WiFi...");
+        Serial.println("   Target SSID: " + ssid);
+        Serial.println("   Initiating connection...");
+        
         WiFi.begin(ssid.c_str(), password.c_str());
         
         Serial.println("\n========================================");
-        Serial.println("WIFI RECONNECT INITIATED");
+        Serial.println("WiFi RECONNECT INITIATED");
         Serial.println("========================================");
-        Serial.println("WiFi Task will handle the connection");
-        Serial.println("Check serial monitor for status");
+        Serial.println("Status: Connection request sent");
+        Serial.println("Monitor: WiFi Task will handle connection");
+        Serial.println("Expected: See WiFi events in serial log");
         Serial.println("========================================\n");
     } else {
         Serial.println("\n========================================");
-        Serial.println("WIFI RECONNECT FAILED");
+        Serial.println("WiFi RECONNECT FAILED");
         Serial.println("========================================");
-        Serial.println("No SSID configured");
+        Serial.println("Reason: No SSID configured in memory");
+        Serial.println("Action: Configure WiFi via web interface");
         Serial.println("========================================\n");
     }
+    
+    // Delay sebelum release lock
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    
+    // ============================================
+    // RELEASE LOCK & CLEANUP
+    // ============================================
+    wifiRestartInProgress = false;
+    xSemaphoreGive(wifiRestartMutex);
+    
+    Serial.println("WiFi restart sequence completed");
+    Serial.println("Lock released - system ready for next request\n");
     
     vTaskDelete(NULL);
 }
@@ -2562,30 +2736,101 @@ void restartWiFiTask(void *parameter) {
 // AP RESTART TASK
 // ================================
 void restartAPTask(void *parameter) {
-    vTaskDelay(pdMS_TO_TICKS(3000));
+    // ============================================
+    // DEBOUNCING
+    // ============================================
+    unsigned long now = millis();
+    if (now - lastAPRestartRequest < RESTART_DEBOUNCE_MS) {
+        unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastAPRestartRequest);
+        
+        Serial.println("\n========================================");
+        Serial.println("AP RESTART REJECTED - TOO FAST!");
+        Serial.println("========================================");
+        Serial.printf("Reason: Last restart was %lu ms ago\n", now - lastAPRestartRequest);
+        Serial.printf("Minimum interval: %lu ms\n", RESTART_DEBOUNCE_MS);
+        Serial.printf("Please wait: %lu ms (%.1f seconds)\n", waitTime, waitTime / 1000.0);
+        Serial.println("========================================\n");
+        
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    lastAPRestartRequest = now;
+    
+    // ============================================
+    // LOCK
+    // ============================================
+    if (wifiRestartMutex == NULL) {
+        wifiRestartMutex = xSemaphoreCreateMutex();
+        if (wifiRestartMutex == NULL) {
+            Serial.println("ERROR: Failed to create wifiRestartMutex");
+            vTaskDelete(NULL);
+            return;
+        }
+    }
+    
+    if (xSemaphoreTake(wifiRestartMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+        Serial.println("\n========================================");
+        Serial.println("AP RESTART BLOCKED");
+        Serial.println("========================================");
+        Serial.println("Reason: Another WiFi/AP restart in progress");
+        Serial.println("Action: Request ignored for safety");
+        Serial.println("========================================\n");
+        
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    // Double-check flag dengan mutex held
+    if (apRestartInProgress || wifiRestartInProgress) {
+        Serial.println("\n========================================");
+        Serial.println("AP RESTART ABORTED");
+        Serial.println("========================================");
+        Serial.printf("AP restart in progress: %s\n", apRestartInProgress ? "YES" : "NO");
+        Serial.printf("WiFi restart in progress: %s\n", wifiRestartInProgress ? "YES" : "NO");
+        Serial.println("========================================\n");
+        
+        xSemaphoreGive(wifiRestartMutex);
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    apRestartInProgress = true;
     
     Serial.println("\n========================================");
-    Serial.println("RESTARTING ACCESS POINT");
+    Serial.println("SAFE AP RESTART SEQUENCE STARTED");
     Serial.println("========================================");
+    Serial.println("Protection: Debouncing + Mutex Lock Active");
+    Serial.println("Mode: Safe AP restart (no mode switching)");
+    Serial.println("========================================\n");
     
-    Serial.println("Step 1: Disconnecting clients...");
-    WiFi.softAPdisconnect(true);
-    vTaskDelay(pdMS_TO_TICKS(500));
+    // Delay awal untuk stabilitas
+    vTaskDelay(pdMS_TO_TICKS(3000));
     
-    Serial.println("Step 2: Resetting WiFi mode...");
-    WiFi.mode(WIFI_OFF);
-    vTaskDelay(pdMS_TO_TICKS(300));
+    // ============================================
+    // DISCONNECT AP CLIENTS
+    // ============================================
+    Serial.println("Step 1: Disconnecting AP clients...");
+    int clientsBefore = WiFi.softAPgetStationNum();
+    Serial.printf("   Clients connected: %d\n", clientsBefore);
     
-    WiFi.mode(WIFI_AP_STA);
-    vTaskDelay(pdMS_TO_TICKS(300));
+    WiFi.softAPdisconnect(false);
+    vTaskDelay(pdMS_TO_TICKS(1000));
     
-    Serial.println("Step 3: Starting new AP...");
-    Serial.println("SSID: " + String(wifiConfig.apSSID));
+    int clientsAfter = WiFi.softAPgetStationNum();
+    Serial.printf("   Clients after disconnect: %d\n", clientsAfter);
+    
+    // ============================================
+    // RESTART AP DENGAN KREDENSIAL BARU
+    // ============================================
+    Serial.println("\nStep 2: Starting new AP...");
+    Serial.println("   New SSID: " + String(wifiConfig.apSSID));
+    Serial.println("   Password length: " + String(strlen(wifiConfig.apPassword)));
     
     bool apStarted = WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+    vTaskDelay(pdMS_TO_TICKS(1000));
     
     if (apStarted) {
-        vTaskDelay(pdMS_TO_TICKS(500));
         IPAddress newAPIP = WiFi.softAPIP();
         
         Serial.println("\n========================================");
@@ -2593,24 +2838,37 @@ void restartAPTask(void *parameter) {
         Serial.println("========================================");
         Serial.println("New SSID: " + String(wifiConfig.apSSID));
         Serial.println("New IP: " + newAPIP.toString());
-        Serial.println("Clients can now reconnect");
+        Serial.println("Status: Ready for client connections");
         Serial.println("========================================\n");
+        
     } else {
         Serial.println("\n========================================");
         Serial.println("AP RESTART FAILED!");
         Serial.println("========================================");
-        Serial.println("Rolling back to default AP...");
+        Serial.println("Reason: softAP() returned false");
+        Serial.println("Action: Rolling back to default AP...");
         
+        // Rollback ke default
         strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
         strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
         
         WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(1000));
         
-        Serial.println("Default AP restored: " + String(wifiConfig.apSSID));
-        Serial.println("IP: " + WiFi.softAPIP().toString());
+        Serial.println("\nRollback completed:");
+        Serial.println("   Default SSID: " + String(wifiConfig.apSSID));
+        Serial.println("   Default IP: " + WiFi.softAPIP().toString());
         Serial.println("========================================\n");
     }
+    
+    // ============================================
+    // RELEASE LOCK & CLEANUP
+    // ============================================
+    apRestartInProgress = false;
+    xSemaphoreGive(wifiRestartMutex);
+    
+    Serial.println("AP restart sequence completed");
+    Serial.println("Lock released - system ready for next request\n");
     
     vTaskDelete(NULL);
 }
@@ -2647,14 +2905,29 @@ void wifiTask(void *parameter) {
             
             Serial.print("Handling disconnect event...");
             
+            // ============================================
+            // SAFETY
+            // ============================================
+            if (wifiRestartInProgress || apRestartInProgress) {
+                Serial.println("\nWiFi/AP restart in progress - skipping auto-reconnect");
+                Serial.println("Reason: Avoid conflict with manual restart operation");
+                vTaskDelay(pdMS_TO_TICKS(2000));
+                continue;
+            }
+            
             IPAddress apIP = WiFi.softAPIP();
             if (apIP == IPAddress(0, 0, 0, 0)) {
                 Serial.print("AP died during disconnect! Restarting...");
-                WiFi.mode(WIFI_AP_STA);
-                delay(100);
+                
+                WiFi.softAPdisconnect(false);
+                vTaskDelay(pdMS_TO_TICKS(500));
+                
                 WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
-                delay(200);
+                vTaskDelay(pdMS_TO_TICKS(500));
+                
                 Serial.print("AP restored: " + WiFi.softAPIP().toString());
+            } else {
+                Serial.println("AP still alive: " + apIP.toString());
             }
             
             autoUpdateDone = false;
