@@ -785,42 +785,31 @@
         // TAB CLICK HANDLER - RELOAD SETIAP KALI
         // ================================
         function handleTabClick(tabName) {
-            console.log(`\n========================================`);
-            console.log(`TAB CLICKED: ${tabName.toUpperCase()}`);
-            console.log(`========================================`);
-            
             switch(tabName) {
                 case 'home':
-                    console.log('Memuat data tab BERANDA...');
                     loadHomeTab();
                     break;
                     
                 case 'wifi':
-                    console.log('Memuat data tab WIFI...');
                     loadWiFiTab();
                     break;
                     
                 case 'time':
-                    console.log('Memuat data tab WAKTU...');
                     loadTimeTab();
                     break;
                     
                 case 'location':
-                    console.log('Memuat data tab LOKASI...');
                     loadCityTab();
                     break;
                     
                 case 'prayer':
-                    console.log('Memuat data tab JADWAL...');
                     loadPrayerTab();
                     break;
                     
                 case 'factory':
-                    console.log('Tab PABRIK - tidak ada data untuk dimuat');
                     break;
                     
                 default:
-                    console.log(`Tab tidak dikenal: ${tabName}`);
             }
         }
 
@@ -830,9 +819,7 @@
         async function loadHomeTab() {
             try {
                 await updateDeviceStatus();
-                console.log('Tab BERANDA dimuat');
             } catch (error) {
-                console.error('Terjadi kesalahan saat memuat tab BERANDA:', error);
             }
         }
 
@@ -842,9 +829,7 @@
         async function loadWiFiTab() {
             try {
                 await loadWiFiConfig();
-                console.log('Tab WIFI dimuat');
             } catch (error) {
-                console.error('Terjadi kesalahan saat memuat tab WIFI.:', error);
             }
         }
 
@@ -854,9 +839,7 @@
         async function loadTimeTab() {
             try {
                 await loadTimezoneConfig();
-                console.log('Tab waktu dimuat');
             } catch (error) {
-                console.error('Terjadi kesalahan saat memuat tab waktu:', error);
             }
         }
 
@@ -868,9 +851,7 @@
                 await loadCities();
                 await loadCurrentCity();
                 await loadCurrentMethod();
-                console.log('Tab LOCATION dimuat');
             } catch (error) {
-                console.error('Terjadi kesalahan saat memuat tab LOKASI:', error);
             }
         }
 
@@ -881,9 +862,7 @@
             try {
                 await loadSavedPrayerTimes();
                 await loadCurrentMethod();
-                console.log('Tab JADWAL dimuat');
             } catch (error) {
-                console.error('Terjadi kesalahan saat memuat tab JADWAL:', error);
             }
         }
 
@@ -1575,7 +1554,6 @@
                 return true;
                 
             } catch (error) {
-                console.error('Error loading WiFi config:', error);
                 return false;
             }
         }
@@ -2562,7 +2540,6 @@
                 LoadingManager.completeLoading();
                 
             } catch (error) {
-                console.error('Init error:', error);
                 clearTimeout(timeoutTimer);
                 
                 if (status) status.textContent = 'Error: ' + error.message;
@@ -2584,7 +2561,6 @@
             initializeApp();
             
             setTimeout(() => {
-                console.log('Tab BERANDA sedang dimuat secara otomatis...');
                 handleTabClick('home');
             }, 500);
             
