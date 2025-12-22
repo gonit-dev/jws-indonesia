@@ -1587,9 +1587,7 @@
                     }
                     
                     showToast('Pengaturan WiFi berhasil disimpan', 'success');
-                    
-                    document.getElementById('wifiPassword').value = '';
-                    
+    
                     setTimeout(() => {
                         loadWiFiConfig();
                     }, 1000);
@@ -1648,8 +1646,6 @@
                     }
                     
                     showToast('Pengaturan Access Point berhasil disimpan', 'success');
-                    
-                    document.getElementById('apPassword').value = '';
                     
                     setTimeout(() => {
                         loadWiFiConfig();
