@@ -350,6 +350,8 @@ void loadMethodSelection();
 // RTC Functions
 // ============================================
 bool initRTC();
+bool isRTCValid();
+bool isRTCTimeValid(DateTime dt);
 void saveTimeToRTC();
 
 // ============================================
@@ -1249,7 +1251,6 @@ void loadMethodSelection() {
 // ============================================
 // RTC Functions
 // ============================================
-
 bool initRTC() {
     Serial.println("\n========================================");
     Serial.println("INITIALIZING DS3231 RTC");
@@ -1352,8 +1353,59 @@ bool initRTC() {
     return true;
 }
 
+bool isRTCTimeValid(DateTime dt) {
+    return (
+        dt.year() >= 2024 && dt.year() <= 2100 &&
+        dt.month() >= 1 && dt.month() <= 12 &&
+        dt.day() >= 1 && dt.day() <= 31 &&
+        dt.hour() >= 0 && dt.hour() <= 23 &&
+        dt.minute() >= 0 && dt.minute() <= 59 &&
+        dt.second() >= 0 && dt.second() <= 59
+    );
+}
+
+bool isRTCValid() {
+    if (!rtcAvailable) {
+        return false;
+    }
+    
+    if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+        if (rtc.lostPower()) {
+            xSemaphoreGive(i2cMutex);
+            Serial.println("RTC Check: Battery dead/lost power");
+            return false;
+        }
+        
+        DateTime rtcNow = rtc.now();
+        xSemaphoreGive(i2cMutex);
+        
+        if (!isRTCTimeValid(rtcNow)) {
+            Serial.println("RTC Check: Time invalid");
+            Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+                         rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
+                         rtcNow.day(), rtcNow.month(), rtcNow.year());
+            return false;
+        }
+        
+        return true;
+    }
+    
+    Serial.println("RTC Check: Cannot acquire I2C mutex");
+    return false;
+}
+
 void saveTimeToRTC() {
     if (!rtcAvailable) {
+        return;
+    }
+    
+    if (!isRTCValid()) {
+        Serial.println("\n========================================");
+        Serial.println("RTC SAVE SKIPPED");
+        Serial.println("========================================");
+        Serial.println("Reason: RTC not valid (battery/hardware issue)");
+        Serial.println("Time will NOT persist across restarts");
+        Serial.println("========================================\n");
         return;
     }
     
@@ -1365,30 +1417,29 @@ void saveTimeToRTC() {
                    minute(timeConfig.currentTime),
                    second(timeConfig.currentTime));
         
-        rtc.adjust(dt);
-        
         xSemaphoreGive(timeMutex);
         
-        delay(500);
-        DateTime verify = rtc.now();
-        
-        bool saved = (
-            verify.year() >= 2000 && verify.year() <= 2100 &&
-            verify.month() >= 1 && verify.month() <= 12 &&
-            verify.day() >= 1 && verify.day() <= 31 &&
-            verify.hour() >= 0 && verify.hour() <= 23
-        );
-        
-        if (saved) {
-            Serial.println("Time saved to RTC successfully");
-        } else {
-            Serial.println("WARNING: RTC save failed (hardware issue)");
-            Serial.println("RTC returned: " + String(verify.hour()) + ":" + 
-                          String(verify.minute()) + " " + 
-                          String(verify.day()) + "/" + String(verify.month()));
+        if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+            rtc.adjust(dt);
+            xSemaphoreGive(i2cMutex);
             
-            rtcAvailable = false;
-            Serial.println("RTC disabled due to hardware failure");
+            delay(500);
+            
+            // Verify save
+            if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                DateTime verify = rtc.now();
+                xSemaphoreGive(i2cMutex);
+                
+                if (isRTCTimeValid(verify)) {
+                    Serial.println("Time saved to RTC successfully");
+                    Serial.printf("RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+                                 verify.hour(), verify.minute(), verify.second(),
+                                 verify.day(), verify.month(), verify.year());
+                } else {
+                    Serial.println("WARNING: RTC save failed (verification failed)");
+                    rtcAvailable = false;
+                }
+            }
         }
     }
 }
@@ -2320,7 +2371,6 @@ void setupServerRoutes() {
             Serial.println("========================================");
             Serial.printf("Received: %02d:%02d:%02d %02d/%02d/%04d\n", h, i, s, d, m, y);
 
-            // UPDATE SYSTEM TIME
             if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
                 setTime(h, i, s, d, m, y);
                 timeConfig.currentTime = now();
@@ -2334,39 +2384,29 @@ void setupServerRoutes() {
             }
 
             if (rtcAvailable) {
-                Serial.println("\nSaving time to RTC hardware...");
+                Serial.println("\nChecking RTC status...");
                 
-                saveTimeToRTC();
-                
-                delay(500);
-                
-                DateTime rtcNow = rtc.now();
-                Serial.println("RTC Verification:");
-                Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
-                            rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
-                            rtcNow.day(), rtcNow.month(), rtcNow.year());
-                
-                bool rtcValid = (
-                    rtcNow.year() >= 2000 && rtcNow.year() <= 2100 &&
-                    rtcNow.month() >= 1 && rtcNow.month() <= 12 &&
-                    rtcNow.day() >= 1 && rtcNow.day() <= 31
-                );
-                
-                if (rtcValid) {
-                    Serial.println("RTC saved successfully");
+                if (isRTCValid()) {
+                    Serial.println("RTC Status: OK");
+                    Serial.println("Saving time to RTC...");
+                    saveTimeToRTC();
                     Serial.println("Time will persist across restarts");
                 } else {
-                    Serial.println("RTC save FAILED - time is invalid");
-                    Serial.println("Check RTC battery or I2C connection");
+                    Serial.println("RTC Status: INVALID");
+                    Serial.println("Possible issues:");
+                    Serial.println("  - Battery dead/disconnected");
+                    Serial.println("  - Hardware failure");
+                    Serial.println("  - Time corruption");
+                    Serial.println("Time will NOT persist across restarts");
                 }
             } else {
-                Serial.println("\nRTC not available - time will reset on restart");
+                Serial.println("\nRTC not available");
+                Serial.println("Time will reset to 01/01/2000 on restart");
             }
             
             Serial.println("========================================\n");
 
-            AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "Waktu berhasil di-sync!");
-            request->send(resp);
+            request->send(200, "text/plain", "Waktu berhasil di-sync!");
             
         } else {
             request->send(400, "text/plain", "Data waktu tidak lengkap");
@@ -2586,36 +2626,44 @@ void setupServerRoutes() {
         }
         
         if (rtcAvailable) {
-            Serial.println("\nSaving time to RTC hardware...");
+            Serial.println("\nChecking RTC status...");
             
-            saveTimeToRTC();
-            
-            delay(500);
-            
-            DateTime rtcNow = rtc.now();
-            Serial.println("RTC Verification:");
-            Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
-                        rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
-                        rtcNow.day(), rtcNow.month(), rtcNow.year());
-            
-            bool rtcValid = (
-                rtcNow.year() >= 2000 && rtcNow.year() <= 2100 &&
-                rtcNow.month() >= 1 && rtcNow.month() <= 12 &&
-                rtcNow.day() >= 1 && rtcNow.day() <= 31
-            );
-            
-            if (rtcValid) {
-                Serial.println("RTC saved successfully");
-                Serial.println("Time will persist across restarts");
+            if (isRTCValid()) {
+                Serial.println("RTC Status: OK");
+                Serial.println("Resetting RTC to 01/01/2000 00:00:00...");
+                
+                if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                    rtc.adjust(DateTime(2000, 1, 1, 0, 0, 0));
+                    xSemaphoreGive(i2cMutex);
+                    
+                    delay(500);
+                    
+                    // Verify
+                    if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                        DateTime verify = rtc.now();
+                        xSemaphoreGive(i2cMutex);
+                        
+                        if (isRTCTimeValid(verify) && verify.year() == 2000) {
+                            Serial.println("RTC reset successful");
+                            Serial.printf("RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+                                        verify.hour(), verify.minute(), verify.second(),
+                                        verify.day(), verify.month(), verify.year());
+                        } else {
+                            Serial.println("WARNING: RTC reset failed");
+                        }
+                    }
+                }
             } else {
-                Serial.println("RTC save FAILED - time is invalid");
-                Serial.println("Check RTC battery or I2C connection");
+                Serial.println("RTC Status: INVALID");
+                Serial.println("Possible issues:");
+                Serial.println("  - Battery dead/disconnected");
+                Serial.println("  - Hardware failure");
+                Serial.println("  - Time corruption");
+                Serial.println("RTC will not be reset (already invalid)");
             }
         } else {
-            Serial.println("\nRTC not available - time will reset on restart");
+            Serial.println("\nRTC not available");
         }
-        
-        Serial.println("Time reset complete");
         
         // Disconnect WiFi
         updateCityDisplay();
@@ -3253,29 +3301,39 @@ void ntpTask(void *parameter) {
         }
         
         if (rtcAvailable && syncSuccess) {
-            Serial.println("\nSaving time to RTC hardware...");
-            saveTimeToRTC();
+            Serial.println("\nChecking RTC status...");
             
-            if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-                DateTime rtcNow = rtc.now();
-                xSemaphoreGive(i2cMutex);
+            if (isRTCValid()) {
+                Serial.println("RTC Status: OK");
+                Serial.println("Saving NTP time to RTC...");
+                saveTimeToRTC();
                 
-                Serial.println("RTC Verification:");
-                Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
-                             rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
-                             rtcNow.day(), rtcNow.month(), rtcNow.year());
-                
-                bool rtcValid = (
-                    rtcNow.year() >= 2000 && rtcNow.year() <= 2100 &&
-                    rtcNow.month() >= 1 && rtcNow.month() <= 12 &&
-                    rtcNow.day() >= 1 && rtcNow.day() <= 31
-                );
-                
-                if (rtcValid) {
-                    Serial.println("   RTC saved successfully");
-                } else {
-                    Serial.println("   RTC save FAILED");
+                // Verify dengan lebih detail
+                if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                    DateTime rtcNow = rtc.now();
+                    xSemaphoreGive(i2cMutex);
+                    
+                    Serial.println("RTC Verification:");
+                    Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+                                rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
+                                rtcNow.day(), rtcNow.month(), rtcNow.year());
+                    
+                    if (isRTCTimeValid(rtcNow)) {
+                        Serial.println("   Status: RTC saved successfully");
+                        Serial.println("   Time will persist across restarts");
+                    } else {
+                        Serial.println("   Status: RTC save FAILED");
+                        Serial.println("   RTC hardware may be faulty");
+                    }
                 }
+            } else {
+                Serial.println("RTC Status: INVALID");
+                Serial.println("Possible issues:");
+                Serial.println("  - Battery dead/disconnected");
+                Serial.println("  - Hardware failure");
+                Serial.println("  - Time corruption");
+                Serial.println("NTP time will NOT be saved to RTC");
+                Serial.println("Time will reset on restart");
             }
         }
 
@@ -3607,72 +3665,124 @@ void rtcSyncTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xFrequency = pdMS_TO_TICKS(60000); // Every 1 minute
     
+    Serial.println("\n========================================");
+    Serial.println("RTC SYNC TASK STARTED");
+    Serial.println("========================================");
+    Serial.println("Function: Sync system time FROM RTC");
+    Serial.println("Interval: Every 1 minute");
+    Serial.println("Purpose: Backup time source when WiFi unavailable");
+    Serial.println("========================================\n");
+    
     while (true) {
         if (rtcAvailable) {
-            DateTime rtcTime = rtc.now();
+            // ================================
+            // CEK RTC VALID DULU
+            // ================================
+            if (!isRTCValid()) {
+                Serial.println("\n[RTC Sync] Skipped - RTC invalid");
+                vTaskDelayUntil(&xLastWakeTime, xFrequency);
+                continue;
+            }
+            
+            // ================================
+            // BACA RTC TIME
+            // ================================
+            DateTime rtcTime;
+            if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                rtcTime = rtc.now();
+                xSemaphoreGive(i2cMutex);
+            } else {
+                Serial.println("\n[RTC Sync] Skipped - Cannot acquire I2C mutex");
+                vTaskDelayUntil(&xLastWakeTime, xFrequency);
+                continue;
+            }
+            
+            // ================================
+            // VALIDASI RTC TIME
+            // ================================
+            if (!isRTCTimeValid(rtcTime)) {
+                Serial.println("\n[RTC Sync] Skipped - RTC time invalid");
+                Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+                             rtcTime.hour(), rtcTime.minute(), rtcTime.second(),
+                             rtcTime.day(), rtcTime.month(), rtcTime.year());
+                vTaskDelayUntil(&xLastWakeTime, xFrequency);
+                continue;
+            }
+            
+            // ================================
+            // COMPARE DENGAN SYSTEM TIME
+            // ================================
+            time_t systemTime;
+            bool ntpSynced;
             
             if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-                time_t systemTime = timeConfig.currentTime;
-                time_t rtcUnix = rtcTime.unixtime();
+                systemTime = timeConfig.currentTime;
+                ntpSynced = timeConfig.ntpSynced;
+                xSemaphoreGive(timeMutex);
+            } else {
+                vTaskDelayUntil(&xLastWakeTime, xFrequency);
+                continue;
+            }
+            
+            time_t rtcUnix = rtcTime.unixtime();
+            int timeDiff = abs(systemTime - rtcUnix);
+            
+            // ================================
+            // DECISION LOGIC
+            // ================================
+            bool shouldSync = false;
+            String reason = "";
+            
+            if (timeDiff <= 2) {
+            } else if (!ntpSynced && timeDiff > 2) {
+                shouldSync = true;
+                reason = "NTP not synced, using RTC as primary source";
                 
-                // ================================
-                // VALIDASI RTC TIME LEBIH KETAT
-                // ================================
-                bool rtcValid = (
-                    rtcTime.year() >= 2000 && 
-                    rtcTime.year() <= 2100 &&
-                    rtcTime.month() >= 1 && 
-                    rtcTime.month() <= 12 &&
-                    rtcTime.day() >= 1 && 
-                    rtcTime.day() <= 31 &&
-                    rtcUnix >= 946684800
-                );
+            } else if (ntpSynced && systemTime > rtcUnix) {
+                shouldSync = false;
+                reason = "System time newer (from NTP), skip RTC sync";
                 
-                if (!rtcValid) {
-                    Serial.println("\nRTC SYNC WARNING:");
-                    Serial.printf("   RTC Time: %02d:%02d:%02d %02d/%02d/%04d\n",
+                Serial.println("\n[RTC Sync] Skipped");
+                Serial.println("Reason: " + reason);
+                Serial.printf("   System: %02d:%02d:%02d %02d/%02d/%04d (from NTP)\n",
+                             hour(systemTime), minute(systemTime), second(systemTime),
+                             day(systemTime), month(systemTime), year(systemTime));
+                Serial.printf("   RTC:    %02d:%02d:%02d %02d/%02d/%04d (older)\n",
+                             rtcTime.hour(), rtcTime.minute(), rtcTime.second(),
+                             rtcTime.day(), rtcTime.month(), rtcTime.year());
+                Serial.println("   Action: RTC will be updated on next NTP sync\n");
+                
+            } else {
+                shouldSync = true;
+                reason = "RTC time more accurate, correcting system time";
+            }
+            
+            // ================================
+            // SYNC SYSTEM TIME DARI RTC
+            // ================================
+            if (shouldSync) {
+                if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+                    timeConfig.currentTime = rtcUnix;
+                    setTime(rtcUnix);
+                    xSemaphoreGive(timeMutex);
+                    
+                    DisplayUpdate update;
+                    update.type = DisplayUpdate::TIME_UPDATE;
+                    xQueueSend(displayQueue, &update, 0);
+                    
+                    Serial.println("\n========================================");
+                    Serial.println("SYSTEM TIME SYNCED FROM RTC");
+                    Serial.println("========================================");
+                    Serial.println("Reason: " + reason);
+                    Serial.printf("Old System: %02d:%02d:%02d %02d/%02d/%04d\n",
+                                 hour(systemTime), minute(systemTime), second(systemTime),
+                                 day(systemTime), month(systemTime), year(systemTime));
+                    Serial.printf("New System: %02d:%02d:%02d %02d/%02d/%04d\n",
                                  rtcTime.hour(), rtcTime.minute(), rtcTime.second(),
                                  rtcTime.day(), rtcTime.month(), rtcTime.year());
-                    Serial.printf("   RTC Unix: %ld\n", rtcUnix);
-                    Serial.println("   Status: INVALID - keeping system time");
-                    Serial.println("   RTC will be overwritten on next NTP sync\n");
-                    
-                    xSemaphoreGive(timeMutex);
-                    vTaskDelayUntil(&xLastWakeTime, xFrequency);
-                    continue;
+                    Serial.printf("Time diff: %d seconds\n", timeDiff);
+                    Serial.println("========================================\n");
                 }
-                
-                // ================================
-                // SYNC HANYA JIKA RTC LEBIH AKURAT
-                // ================================
-                if (abs(systemTime - rtcUnix) > 2) {
-                    if (timeConfig.ntpSynced && systemTime > rtcUnix) {
-                        Serial.println("\nRTC SYNC SKIPPED:");
-                        Serial.println("   System time is newer (from NTP)");
-                        Serial.printf("   System: %02d:%02d:%02d %02d/%02d/%04d\n",
-                                     hour(systemTime), minute(systemTime), second(systemTime),
-                                     day(systemTime), month(systemTime), year(systemTime));
-                        Serial.printf("   RTC:    %02d:%02d:%02d %02d/%02d/%04d\n",
-                                     rtcTime.hour(), rtcTime.minute(), rtcTime.second(),
-                                     rtcTime.day(), rtcTime.month(), rtcTime.year());
-                        Serial.println("   RTC will be updated on next NTP sync\n");
-                    } else {
-                        timeConfig.currentTime = rtcUnix;
-                        setTime(rtcUnix);
-                        
-                        Serial.println("\nSystem time synced from RTC");
-                        Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
-                                     rtcTime.hour(), rtcTime.minute(), rtcTime.second(),
-                                     rtcTime.day(), rtcTime.month(), rtcTime.year());
-                        Serial.println();
-                        
-                        DisplayUpdate update;
-                        update.type = DisplayUpdate::TIME_UPDATE;
-                        xQueueSend(displayQueue, &update, 0);
-                    }
-                }
-                
-                xSemaphoreGive(timeMutex);
             }
         }
         
