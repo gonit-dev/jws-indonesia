@@ -1156,8 +1156,8 @@
 							loadCities();
 						}, retryDelay);
 					} else {
-						dropdown.innerHTML = '<option value="">Gagal memuat lokasi - Silakan refresh halaman</option>';
-						showToast('Gagal memuat daftar lokasi. Refresh halaman untuk mencoba lagi', 'error');
+						dropdown.innerHTML = '<option value="">Gagal memuat lokasi - Silakan muat ulang halaman</option>';
+						showToast('Gagal memuat daftar lokasi. Muat ulang halaman untuk mencoba lagi', 'error');
 						loadAttempts = 0;
 					}
 					return false;
@@ -1691,7 +1691,7 @@
                     }, 6000);
                     
                     setTimeout(() => {
-                        showToast('Halaman akan di-refresh otomatis...', 'warning');
+                        showToast('Halaman akan di muat ulang otomatis...', 'warning');
                         setTimeout(() => {
                             window.location.reload();
                         }, 2000);
@@ -2172,7 +2172,7 @@
                     }, 6000);
                     
                     setTimeout(() => {
-                        showToast('Halaman akan di-refresh otomatis...', 'warning');
+                        showToast('Halaman akan di muat ulang otomatis...', 'warning');
                         setTimeout(() => {
                             window.location.reload();
                         }, 2000);
