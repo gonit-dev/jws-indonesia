@@ -667,7 +667,7 @@
 																<strong>⚠️ Penting</strong>
 															</p>
 															<p class="help-text"> 📄 Nama berkas harus <code>cities.json</code>
-																<br> 🧾 Format harus valid JSON array <br> 📦 Ukuran maksimal: 1 MB <br> 🔄 Dropdown lokasi akan otomatis diperbarui setelah berhasil
+																<br> 🧾 Format harus JSON array <br> 📦 Ukuran maksimal: 1 MB <br> 🔄 Dropdown lokasi akan otomatis diperbarui setelah berhasil
 															</p>
 														</div>
 													</div>
@@ -2015,7 +2015,7 @@
 				if (file.name !== 'cities.json') {
 					showToast('Nama berkas harus cities.json', 'error');
 					selectedCitiesFile = null;
-					fileNameDisplay.innerHTML = '<span class="label alert">❌ Nama berkas tidak valid</span>';
+					fileNameDisplay.innerHTML = '<span class="label alert">❌ Nama berkas tidak benar</span>';
 					uploadBtn.disabled = true;
 					clearBtn.style.display = 'none';
 					event.target.value = '';
@@ -2064,14 +2064,14 @@
 							if (item.lat) {
 								const lat = parseFloat(item.lat);
 								if (isNaN(lat) || lat < -90 || lat > 90) {
-									throw new Error(`Item ${i}: lintang tidak valid (${item.lat})`);
+									throw new Error(`Item ${i}: lintang tidak benar (${item.lat})`);
 								}
 							}
 							
 							if (item.lon) {
 								const lon = parseFloat(item.lon);
 								if (isNaN(lon) || lon < -180 || lon > 180) {
-									throw new Error(`Item ${i}: bujur tidak valid (${item.lon})`);
+									throw new Error(`Item ${i}: bujur tidak benar (${item.lon})`);
 								}
 							}
 						}
@@ -2110,7 +2110,7 @@
 						clearBtn.style.display = 'block';
 						
 					} catch (error) {
-						showToast('Validasi gagal: ' + error.message, 'error');
+						showToast(`Gagal memproses data: ' + error.message, 'error');
 						selectedCitiesFile = null;
 						fileNameDisplay.innerHTML = `<span class="label alert">❌ ${error.message}</span>`;
 						uploadBtn.disabled = true;
@@ -2850,7 +2850,7 @@
 						}
 						
 						if (!validateIPAddress(value)) {
-							showToast(`${fieldName} tidak valid. Format: xxx.xxx.xxx.xxx (0-255)`, 'warning');
+							showToast(`${fieldName} tidak benar. Format: xxx.xxx.xxx.xxx (0-255)`, 'warning');
 							this.style.borderColor = '#cc4b37';
 						} else {
 							this.style.borderColor = '#3adb76';
