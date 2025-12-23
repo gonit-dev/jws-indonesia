@@ -1845,6 +1845,13 @@
 							btn.disabled = false;
 							btn.textContent = originalText;
 						}, 6000);
+
+						setTimeout(() => {
+							showToast('Halaman akan di muat ulang otomatis...', 'warning');
+							setTimeout(() => {
+								window.location.href = `http://${networkMsg}`;
+							}, 2000);
+						}, 18000);
 					} else {
 						return response.text().then(text => { throw new Error(text); });
 					}
@@ -1936,10 +1943,9 @@
 						setTimeout(() => {
 							showToast('Halaman akan di muat ulang otomatis...', 'warning');
 							setTimeout(() => {
-								window.location.reload();
+								window.location.href = 'http://192.168.4.1';
 							}, 2000);
 						}, 18000);
-						
 					} else {
 						throw new Error('Pengaturan ulang gagal');
 					}
@@ -2420,7 +2426,6 @@
 								window.location.reload();
 							}, 2000);
 						}, 18000);
-						
 					} else {
 						throw new Error('Perintah mulai ulang gagal');
 					}
