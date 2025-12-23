@@ -362,7 +362,7 @@
 													</div>
 												</div>
 											</div>
-											<div class="large-6 medium-6 small-6 cell">
+											<div class="large-6 medium-6 small-12 cell">
 												<div class="grid-x grid-padding-y">
 													<div class="large-12 text-center cell">
 														<h5>
@@ -384,7 +384,7 @@
 														<input type="text" id="subnetMask" placeholder="255.255.255.0">
 													</div>
 													<div class="large-6 medium-6 small-6 cell">
-														<button class="button secondary expanded" onclick="setAP()">Simpan</button>
+														<button class="button secondary expanded" onclick="setAPNetwork()">Simpan</button>
 													</div>
 													<div class="large-6 medium-6 small-6 cell">
 														<button class="button secondary expanded" onclick="clearDHCPForm()">Batal</button>
@@ -418,7 +418,7 @@
 																</h6>
 																<p class="help-text">Perbarui waktu dari perangkat Anda</p>
 															</div>
-															<div class="large-12 medium-12 cell">
+															<div class="large-12 medium-12 small-12 cell">
 																<button class="button secondary expanded" onclick="syncTime()"> Perbarui Waktu </button>
 															</div>
 														</div>
@@ -1562,16 +1562,6 @@
 				const formData = new URLSearchParams();
 				formData.append('ssid', ssid);
 				formData.append('password', password);
-				
-				const apIP = document.getElementById('apIP').value.trim();
-				const gateway = document.getElementById('gatewayIP').value.trim();
-				const subnet = document.getElementById('subnetMask').value.trim();
-				
-				const hasNetworkChanges = (apIP || gateway || subnet);
-				
-				if (apIP) formData.append('apIP', apIP);
-				if (gateway) formData.append('gateway', gateway);
-				if (subnet) formData.append('subnet', subnet);
 
 				fetch('/setap', {
 					method: 'POST',
@@ -1583,20 +1573,9 @@
 						savedWiFiConfig.apSSID = ssid;
 						if (password) savedWiFiConfig.apPassword = password;
 						
-						if (hasNetworkChanges) {
-							const networkMsg = apIP ? apIP : '192.168.4.1';
-							showToast(`Konfigurasi jaringan Access Point berhasil disimpan di ${networkMsg}`, 'success');
-						} else {
-							showToast(`Pengaturan Access Point "${ssid}" berhasil disimpan`, 'success');
-						}
+						showToast(`Pengaturan Access Point "${ssid}" berhasil disimpan`, 'success');
 						
 						setTimeout(() => loadWiFiConfig(), 1000);
-						
-						setTimeout(() => {
-							const connectIP = apIP || '192.168.4.1';
-							const connectMsg = `Sambungkan ke Access Point: ${ssid} di ${connectIP}`;
-							showToast(connectMsg, 'warning');
-						}, 3500);
 						
 						setTimeout(() => {
 							btn.disabled = false;
@@ -1613,6 +1592,66 @@
 				});
 			}
 
+			// Fungsi BARU untuk menyimpan konfigurasi jaringan (IP, Gateway, Subnet)
+			function setAPNetwork() {
+				const apIP = document.getElementById('apIP').value.trim();
+				const gateway = document.getElementById('gatewayIP').value.trim();
+				const subnet = document.getElementById('subnetMask').value.trim();
+
+				if (!apIP && !gateway && !subnet) {
+					showToast('Isi minimal satu field konfigurasi jaringan', 'error');
+					return;
+				}
+
+				const btn = event.target;
+				const originalText = btn.textContent;
+				btn.disabled = true;
+				btn.textContent = 'Menyimpan...';
+
+				const formData = new URLSearchParams();
+				
+				// Ambil SSID dan password yang sudah tersimpan
+				const ssid = document.getElementById('apSSID').value.trim();
+				const password = document.getElementById('apPassword').value;
+				
+				formData.append('ssid', ssid);
+				formData.append('password', password);
+				
+				if (apIP) formData.append('apIP', apIP);
+				if (gateway) formData.append('gateway', gateway);
+				if (subnet) formData.append('subnet', subnet);
+
+				fetch('/setap', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: formData.toString()
+				})
+				.then(response => {
+					if (response.ok) {
+						const networkMsg = apIP ? apIP : '192.168.4.1';
+						showToast(`Konfigurasi jaringan berhasil disimpan di ${networkMsg}`, 'success');
+						
+						setTimeout(() => loadWiFiConfig(), 1000);
+						
+						setTimeout(() => {
+							showToast(`Sambungkan ke ${networkMsg} untuk mengakses`, 'warning');
+						}, 3500);
+						
+						setTimeout(() => {
+							btn.disabled = false;
+							btn.textContent = originalText;
+						}, 6000);
+					} else {
+						return response.text().then(text => { throw new Error(text); });
+					}
+				})
+				.catch(error => {
+					showToast('Gagal menyimpan konfigurasi: ' + error.message, 'error');
+					btn.disabled = false;
+					btn.textContent = originalText;
+				});
+			}
+
 			function clearAPForm() {
 				loadWiFiConfig();
 			}
@@ -1621,1258 +1660,1258 @@
 				loadWiFiConfig();
 			}
 
-        // ================================
-        // PERBARUI WAKTU
-        // ================================
-        function syncTime() {
-            const d = new Date();
-            
-            const year = d.getFullYear();
-            const month = d.getMonth() + 1;
-            const day = d.getDate();
-            const hour = d.getHours();
-            const minute = d.getMinutes();
-            const second = d.getSeconds();
+			// ================================
+			// PERBARUI WAKTU
+			// ================================
+			function syncTime() {
+				const d = new Date();
+				
+				const year = d.getFullYear();
+				const month = d.getMonth() + 1;
+				const day = d.getDate();
+				const hour = d.getHours();
+				const minute = d.getMinutes();
+				const second = d.getSeconds();
 
-            const btn = event.target;
-            btn.disabled = true;
-            btn.textContent = 'Perbarui...';
+				const btn = event.target;
+				btn.disabled = true;
+				btn.textContent = 'Perbarui...';
 
-            fetch('/synctime', { 
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `y=${year}&m=${month}&d=${day}&h=${hour}&i=${minute}&s=${second}`
-            })
-            .then(response => response.text())
-            .then(data => {
-                showToast('Waktu berhasil diperbarui', 'success');
-                updateDeviceStatus();
-                btn.disabled = false;
-                btn.textContent = 'Perbarui Waktu';
-            })
-            .catch(error => {
-                showToast('Gagal memperbarui waktu', 'error');
-                btn.disabled = false;
-                btn.textContent = ' Perbarui Waktu';
-            });
-        }
-
-        // ================================
-        // RESET PABRIK
-        // ================================
-        function resetSettings() {
-            if (!confirm('⚠️ Yakin ingin mereset seluruh pengaturan ke setelan pabrik? Perangkat akan dimulai ulang dan kembali ke pengaturan awal.')) {
-                return;
-            }
-
-            const btn = event.target;
-            const originalText = btn.textContent;
-            btn.disabled = true;
-            btn.textContent = 'Mengatur ulang...';
-
-            fetch('/reset', { method: 'POST' })
-            .then(response => {
-                if (response.ok) {
-                    showToast('Perangkat berhasil direset', 'success');
-                    
-                    setTimeout(() => {
-                        showToast('Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
-                    }, 1500);
-                    
-                    setTimeout(() => {
-                        showToast('Sambungkan kembali ke Access Point: JWS Indonesia', 'warning');
-                    }, 3500);
-                    
-                    setTimeout(() => {
-                        btn.disabled = false;
-                        btn.textContent = originalText;
-                    }, 6000);
-                    
-                    setTimeout(() => {
-                        showToast('Halaman akan di muat ulang otomatis...', 'warning');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                    }, 18000);
-                    
-                } else {
-                    throw new Error('Pengaturan ulang gagal');
-                }
-            })
-            .catch(error => {
-                showToast('Gagal mengatur ulang perangkat', 'error');
-                btn.disabled = false;
-                btn.textContent = originalText;
-            });
-        }
-
-        // ================================
-        // FUNGSI UNGGAH CITIES.JSON
-        // ================================
-        let selectedCitiesFile = null;
-
-        function calculateArduinoJsonSize(json) {
-            let totalSize = 0;
-            totalSize += 24;
-            
-            if (Array.isArray(json)) {
-                totalSize += 16;
-                totalSize += json.length * 8;
-                
-                json.forEach(item => {
-                    if (typeof item === 'object' && item !== null) {
-                        totalSize += 16;
-                        
-                        const keys = Object.keys(item);
-                        totalSize += keys.length * 24;
-                        
-                        keys.forEach(key => {
-                            totalSize += key.length + 1;
-                            totalSize += Math.ceil((key.length + 1) / 4) * 4;
-                            
-                            const value = item[key];
-                            if (typeof value === 'string') {
-                                totalSize += value.length + 1;
-                                totalSize += Math.ceil((value.length + 1) / 4) * 4;
-                            } else if (typeof value === 'number') {
-                                totalSize += 8;
-                            } else if (typeof value === 'boolean') {
-                                totalSize += 1;
-                            }
-                        });
-                    }
-                });
-            }
-            
-            totalSize = Math.ceil(totalSize * 1.2);
-            return totalSize;
-        }
-
-        function handleCitiesFileSelect(event) {
-            const file = event.target.files[0];
-            const fileNameDisplay = document.getElementById('selectedFileName');
-            const uploadBtn = document.getElementById('uploadBtn');
-            const clearBtn = document.getElementById('clearFileBtn');
-            
-            if (!file) {
-                selectedCitiesFile = null;
-                fileNameDisplay.textContent = 'Belum ada berkas dipilih';
-                fileNameDisplay.className = 'help-text';
-                uploadBtn.disabled = true;
-                clearBtn.style.display = 'none';
-                return;
-            }
-            
-            if (file.name !== 'cities.json') {
-                showToast('Nama berkas harus cities.json', 'error');
-                selectedCitiesFile = null;
-                fileNameDisplay.innerHTML = '<span class="label alert">❌ Nama berkas tidak valid</span>';
-                uploadBtn.disabled = true;
-                clearBtn.style.display = 'none';
-                event.target.value = '';
-                return;
-            }
-            
-            const maxSize = 1 * 1024 * 1024;
-            if (file.size > maxSize) {
-                showToast('Berkas terlalu besar (maksimal 1MB)', 'error');
-                selectedCitiesFile = null;
-                fileNameDisplay.innerHTML = '<span class="label alert">❌ Berkas terlalu besar</span>';
-                uploadBtn.disabled = true;
-                clearBtn.style.display = 'none';
-                event.target.value = '';
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const json = JSON.parse(e.target.result);
-                    
-                    if (!Array.isArray(json)) {
-                        throw new Error('JSON harus berupa array');
-                    }
-                    
-                    if (json.length === 0) {
-                        throw new Error('Array JSON tidak boleh kosong');
-                    }
-                    
-                    const requiredFields = ['api', 'display', 'province'];
-                    
-                    for (let i = 0; i < json.length; i++) {
-                        const item = json[i];
-                        
-                        for (const field of requiredFields) {
-                            if (!item.hasOwnProperty(field) || !item[field]) {
-                                throw new Error(`Item ${i}: kolom '${field}' tidak ada atau kosong`);
-                            }
-                            
-                            if (typeof item[field] !== 'string') {
-                                throw new Error(`Item ${i}: kolom '${field}' harus berupa teks`);
-                            }
-                        }
-                        
-                        if (item.lat) {
-                            const lat = parseFloat(item.lat);
-                            if (isNaN(lat) || lat < -90 || lat > 90) {
-                                throw new Error(`Item ${i}: lintang tidak valid (${item.lat})`);
-                            }
-                        }
-                        
-                        if (item.lon) {
-                            const lon = parseFloat(item.lon);
-                            if (isNaN(lon) || lon < -180 || lon > 180) {
-                                throw new Error(`Item ${i}: bujur tidak valid (${item.lon})`);
-                            }
-                        }
-                    }
-                    
-                    const jsonSize = calculateArduinoJsonSize(json);
-                    const ESP32_MAX_HEAP = 320000;
-                    
-                    if (jsonSize > ESP32_MAX_HEAP) {
-                        const sizeKB = (jsonSize / 1024).toFixed(2);
-                        const maxKB = (ESP32_MAX_HEAP / 1024).toFixed(2);
-                        
-                        showToast(`Berkas terlalu berat untuk perangkat ${sizeKB} KB > ${maxKB} KB`, 'error');
-                        
-                        selectedCitiesFile = null;
-                        fileNameDisplay.innerHTML = `<span class="label alert">❌ Terlalu berat (${sizeKB} KB)</span>`;
-                        uploadBtn.disabled = true;
-                        clearBtn.style.display = 'none';
-                        event.target.value = '';
-                        return;
-                    }
-                    
-                    selectedCitiesFile = file;
-                    selectedCitiesFile.jsonMetadata = {
-                        citiesCount: json.length,
-                        jsonSize: jsonSize,
-                        fileSize: file.size
-                    };
-                    
-                    const sizeKB = (file.size / 1024).toFixed(2);
-                    const jsonSizeKB = (jsonSize / 1024).toFixed(2);
-                    
-                    fileNameDisplay.innerHTML = 
-                        `<span class="label success">${file.name} (${sizeKB} KB)</span><br>` +
-                        `<small>${json.length} lokasi | DynamicJsonDocument: ${jsonSizeKB} KB</small>`;
-                    uploadBtn.disabled = false;
-                    clearBtn.style.display = 'block';
-                    
-                } catch (error) {
-                    showToast('Validasi gagal: ' + error.message, 'error');
-                    selectedCitiesFile = null;
-                    fileNameDisplay.innerHTML = `<span class="label alert">❌ ${error.message}</span>`;
-                    uploadBtn.disabled = true;
-                    clearBtn.style.display = 'none';
-                    event.target.value = '';
-                }
-            };
-            
-            reader.onerror = function() {
-                showToast('Gagal membaca berkas', 'error');
-                selectedCitiesFile = null;
-                fileNameDisplay.innerHTML = '<span class="label alert">❌ Gagal membaca berkas</span>';
-                uploadBtn.disabled = true;
-                clearBtn.style.display = 'none';
-                event.target.value = '';
-            };
-            
-            reader.readAsText(file);
-        }
-
-        async function uploadCitiesFile() {
-            if (!selectedCitiesFile) {
-                showToast('Pilih berkas terlebih dahulu', 'error');
-                return;
-            }
-            
-            const uploadBtn = document.getElementById('uploadBtn');
-            const progressDiv = document.getElementById('uploadProgress');
-            const progressBar = document.getElementById('uploadProgressBar');
-            const statusText = document.getElementById('uploadStatus');
-            
-            uploadBtn.disabled = true;
-            uploadBtn.textContent = 'Mengunggah...';
-            progressDiv.classList.remove('hide');
-            progressBar.style.width = '0%';
-            progressBar.querySelector('.progress-meter-text').textContent = '0%';
-            statusText.textContent = 'Memulai mengunggah...';
-            
-            try {
-                const formData = new FormData();
-                formData.append('file', selectedCitiesFile);
-                
-                if (selectedCitiesFile.jsonMetadata) {
-                    formData.append('jsonSize', selectedCitiesFile.jsonMetadata.jsonSize);
-                    formData.append('citiesCount', selectedCitiesFile.jsonMetadata.citiesCount);
-                }
-                
-                const xhr = new XMLHttpRequest();
-                
-                xhr.upload.addEventListener('progress', (e) => {
-                    if (e.lengthComputable) {
-                        const percentComplete = Math.round((e.loaded / e.total) * 100);
-                        progressBar.style.width = percentComplete + '%';
-                        progressBar.querySelector('.progress-meter-text').textContent = percentComplete + '%';
-                        statusText.textContent = `Mengunggah: ${(e.loaded / 1024).toFixed(1)} KB / ${(e.total / 1024).toFixed(1)} KB`;
-                    }
-                });
-                
-                xhr.addEventListener('load', async () => {
-                    if (xhr.status === 200) {
-                        progressBar.style.width = '100%';
-                        progressBar.querySelector('.progress-meter-text').textContent = '100%';
-                        statusText.innerHTML = '<span class="label success">Pengunggahan berhasil</span>';
-                        
-                        if (selectedCitiesFile.jsonMetadata) {
-                            const jsonSizeKB = (selectedCitiesFile.jsonMetadata.jsonSize / 1024).toFixed(2);
-                            showToast(`cities.json berhasil diunggah ${selectedCitiesFile.jsonMetadata.citiesCount} lokasi`, 'success');
-                        } else {
-                            showToast('cities.json berhasil diunggah', 'success');
-                        }
-                        
-                        document.getElementById('citiesFileInput').value = '';
-                        document.getElementById('selectedFileName').textContent = 'Belum ada berkas dipilih';
-                        selectedCitiesFile = null;
-                        
-                        setTimeout(() => {
-                            showToast('Memperbarui daftar lokasi...', 'warning');
-                            loadAttempts = 0;
-                            loadCities();
-                        }, 2000);
-                        
-                        setTimeout(() => {
-                            progressDiv.classList.add('hide');
-                            uploadBtn.disabled = false;
-                            uploadBtn.textContent = 'Unggah Berkas';
-                        }, 5000);
-                        
-                    } else {
-                        throw new Error('Mengunggah gagal');
-                    }
-                });
-                
-                xhr.addEventListener('error', () => {
-                    throw new Error('Terjadi kesalahan jaringan - koneksi terputus');
-                });
-                
-                xhr.addEventListener('timeout', () => {
-                    throw new Error('Waktu Mengunggah habis - berkas terlalu lama');
-                });
-                
-                xhr.open('POST', '/uploadcities', true);
-                xhr.timeout = 30000;
-                xhr.send(formData);
-                
-            } catch (error) {                
-                progressBar.classList.add('alert');
-                progressBar.style.width = '100%';
-                statusText.innerHTML = `<span class="label alert">❌ ${error.message}</span>`;
-                
-                showToast('Mengunggah gagal: ' + error.message, 'error');
-                
-                setTimeout(() => {
-                    progressDiv.classList.add('hide');
-                    uploadBtn.disabled = false;
-                    uploadBtn.textContent = '📤 Mengunggah Berkas';
-                }, 3000);
-            }
-        }
-
-        function clearSelectedFile() {
-            const fileInput = document.getElementById('citiesFileInput');
-            const fileNameDisplay = document.getElementById('selectedFileName');
-            const uploadBtn = document.getElementById('uploadBtn');
-            const clearBtn = document.getElementById('clearFileBtn');
-            
-            fileInput.value = '';
-            selectedCitiesFile = null;
-            
-            fileNameDisplay.textContent = 'Belum ada berkas yang dipilih';
-            fileNameDisplay.className = 'help-text';
-            
-            uploadBtn.disabled = true;
-            clearBtn.style.display = 'none';
-            
-            showToast('Berkas dihapus', 'warning');
-        }
-
-        // ================================
-        // FUNGSI PEMILIHAN METODE
-        // ================================
-        async function loadCurrentMethod() {
-            if (isLoadingMethod) {
-                return false;
-            }
-            
-            isLoadingMethod = true;
-                    
-            try {
-                const response = await fetch('/getmethod', {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error('HTTP ' + response.status);
-                }
-                
-                const data = await response.json();
-                
-                if (data.methodId !== undefined) {
-                    methodConfig.methodId = data.methodId;
-                    methodConfig.methodName = data.methodName;
-                } else {
-                    methodConfig.methodId = 5;
-                    methodConfig.methodName = 'Egyptian General Authority of Survey';
-                }
-                
-                const currentMethodTop = document.getElementById('currentMethodTop');
-                const currentMethodBottom = document.getElementById('currentMethodBottom');
-                const methodDropdown = document.getElementById('methodDropdown');
-                
-                if (currentMethodTop) {
-                    currentMethodTop.textContent = methodConfig.methodName;
-                }
-                if (currentMethodBottom) {
-                    currentMethodBottom.textContent = methodConfig.methodName;
-                }
-                if (methodDropdown) {
-                    methodDropdown.value = methodConfig.methodId;
-                }
-                
-                return true;
-                
-            } catch (error) {                
-                methodConfig.methodId = 5;
-                methodConfig.methodName = 'Egyptian General Authority of Survey';
-                
-                const currentMethodTop = document.getElementById('currentMethodTop');
-                const currentMethodBottom = document.getElementById('currentMethodBottom');
-                if (currentMethodTop) currentMethodTop.textContent = methodConfig.methodName;
-                if (currentMethodBottom) currentMethodBottom.textContent = methodConfig.methodName;
-                
-                return false;
-            } finally {
-                isLoadingMethod = false;
-            }
-        }
-
-        async function saveMethod() {
-            const dropdown = document.getElementById('methodDropdown');
-            const methodId = dropdown.value;
-            const methodName = dropdown.options[dropdown.selectedIndex].text;
-            
-            if (!methodId) {
-                showToast('Silakan pilih metode terlebih dahulu', 'error');
-                return;
-            }
-            
-            const btn = event.target;
-            const originalText = btn.textContent;
-            btn.disabled = true;
-            btn.textContent = 'Menyimpan...';
-            
-            try {
-                const formData = new URLSearchParams();
-                formData.append('methodId', methodId);
-                formData.append('methodName', methodName);
-                
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
-                
-                const response = await fetch('/setmethod', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Accept': 'application/json'
-                    },
-                    body: formData.toString(),
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    
-                    showToast('Metode kalkulasi berhasil disimpan', 'success');
-                    
-                    const currentMethodTop = document.getElementById('currentMethodTop');
-                    const currentMethodBottom = document.getElementById('currentMethodBottom');
-                    
-                    if (currentMethodTop) {
-                        currentMethodTop.textContent = methodName;
-                    }
-                    if (currentMethodBottom) {
-                        currentMethodBottom.textContent = methodName;
-                    }
-                    
-                    if (result.prayerTimesUpdating) {
-                        setTimeout(() => {
-                            showToast('Jadwal salat sedang diperbarui dengan metode baru...', 'warning');
-                        }, 1500);
-                        
-                        setTimeout(() => {
-                            loadSavedPrayerTimes();
-                        }, 4000);
-                    } else {
-                        setTimeout(() => {
-                            showToast('Metode disimpan. Pilih lokasi untuk menghitung jadwal salat jika belum diatur', 'warning');
-                        }, 1500);
-                    }
-                    
-                } else {
-                    throw new Error('Gagal menyimpan metode');
-                }
-                
-            } catch (error) {
-                showToast('Gagal menyimpan metode', 'error');
-                
-            } finally {
-                btn.disabled = false;
-                btn.textContent = originalText;
-            }
-        }
-        
-        async function restartDevice() {
-            if (!confirm('🔄 Yakin ingin memulai ulang perangkat?')) {
-                return;
-            }
-
-            const btn = event.target;
-            const originalText = btn.textContent;
-            btn.disabled = true;
-            btn.textContent = 'Memulai ulang...';
-
-            try {
-                const response = await fetch('/restart', { 
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    }
-                });
-                
-                if (response.ok) {
-                    showToast('Perintah mulai ulang terkirim', 'success');
-                    
-                    setTimeout(() => {
-                        showToast('Perangkat akan dimulai ulang', 'warning');
-                    }, 1500);
-                    
-                    setTimeout(() => {
-                        btn.disabled = false;
-                        btn.textContent = originalText;
-                    }, 6000);
-                    
-                    setTimeout(() => {
-                        showToast('Halaman akan di muat ulang otomatis...', 'warning');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                    }, 18000);
-                    
-                } else {
-                    throw new Error('Perintah mulai ulang gagal');
-                }
-            } catch (error) {
-                showToast('Gagal memulai ulang perangkat', 'error');
-                btn.disabled = false;
-                btn.textContent = originalText;
-            }
-        }
-
-        // ================================
-        // FUNGSI TIMEZONE - INLINE EDITING
-        // ================================
-        let isEditingTimezone = false;
-
-        function toggleTimezoneEdit() {
-            const displayText = document.getElementById('timezoneDisplayText');
-            const input = document.getElementById('timezoneInput');
-            const btn = document.getElementById('timezoneBtn');
-            const cancelBtn = document.getElementById('timezoneCancelBtn');
-            
-            if (!isEditingTimezone) {
-                displayText.style.display = 'none';
-                input.style.display = 'inline-block';
-                input.value = timezoneConfig.offset >= 0 ? '+' + timezoneConfig.offset : timezoneConfig.offset;
-                input.focus();
-                input.select();
-                btn.textContent = '💾';
-                btn.title = 'Simpan Timezone';
-                cancelBtn.style.display = 'inline-block';
-                isEditingTimezone = true;
-            } else {
-                saveTimezone();
-            }
-        }
-
-        function cancelTimezoneEdit() {
-            const displayText = document.getElementById('timezoneDisplayText');
-            const input = document.getElementById('timezoneInput');
-            const btn = document.getElementById('timezoneBtn');
-            const cancelBtn = document.getElementById('timezoneCancelBtn');
-            
-            displayText.style.display = 'inline';
-            input.style.display = 'none';
-            btn.textContent = '🕐';
-            btn.title = 'Edit Timezone';
-            cancelBtn.style.display = 'none';
-            isEditingTimezone = false;
-            
-            input.value = timezoneConfig.offset >= 0 ? '+' + timezoneConfig.offset : timezoneConfig.offset;
-        }
-        
-        async function loadTimezoneConfig() {            
-            try {
-                const response = await fetch('/gettimezone', {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error('HTTP ' + response.status);
-                }
-                
-                const data = await response.json();
-                
-                if (data.offset !== undefined) {
-                    timezoneConfig.offset = data.offset;
-                } else {
-                    timezoneConfig.offset = 7;
-                }
-                
-                updateTimezoneDisplay();
-                
-                return true;
-                
-            } catch (error) {
-                timezoneConfig.offset = 7;
-                updateTimezoneDisplay();
-                return false;
-            }
-        }
-
-        function updateTimezoneDisplay() {
-            const displayText = document.getElementById('timezoneDisplayText');
-            const input = document.getElementById('timezoneInput');
-            
-            const displayValue = (timezoneConfig.offset >= 0 ? '+' : '') + timezoneConfig.offset;
-            
-            if (displayText) {
-                displayText.textContent = displayValue;
-            }
-            if (input) {
-                input.value = displayValue;
-            }
-        }
-
-        async function saveTimezone() {
-            const input = document.getElementById('timezoneInput');
-            const displayText = document.getElementById('timezoneDisplayText');
-            const btn = document.getElementById('timezoneBtn');
-            const cancelBtn = document.getElementById('timezoneCancelBtn');
-            
-            let offsetStr = input.value.trim();
-            
-            if (!offsetStr) {
-                showToast('Timezone offset tidak boleh kosong', 'error');
-                input.focus();
-                return;
-            }
-            
-            let offset = parseInt(offsetStr);
-            
-            if (isNaN(offset)) {
-                showToast('Format tidak valid. Contoh: +7, -5, +8', 'error');
-                input.focus();
-                return;
-            }
-            
-            if (offset < -12 || offset > 14) {
-                showToast('Offset harus antara -12 hingga +14', 'error');
-                input.focus();
-                return;
-            }
-            
-            btn.disabled = true;
-            btn.textContent = '...';
-            
-            try {
-                const formData = new URLSearchParams();
-                formData.append('offset', offset);
-                
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
-                
-                const response = await fetch('/settimezone', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Accept': 'application/json'
-                    },
-                    body: formData.toString(),
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    
-                    timezoneConfig.offset = offset;
-                    
-                    const displayValue = (offset >= 0 ? '+' : '') + offset;
-                    displayText.textContent = displayValue;
-                    input.value = displayValue;
-                    
-                    displayText.style.display = 'inline';
-                    input.style.display = 'none';
-                    btn.textContent = '🕐';
-                    btn.title = 'Edit Timezone';
-                    btn.disabled = false;
-                    isEditingTimezone = false;
-                    cancelBtn.style.display = 'none';
-                    
-                    showToast('Timezone berhasil disimpan', 'success');
-                    
-                    setTimeout(() => {
-                        showToast('NTP akan melakukan perbarui ulang dengan zona waktu baru...', 'warning');
-                    }, 1500);
-                    
-                } else {
-                    throw new Error('Gagal menyimpan timezone');
-                }
-                
-            } catch (error) {
-                showToast('Gagal menyimpan timezone', 'error');
-                
-                btn.textContent = '💾';
-                btn.disabled = false;
-                input.focus();
-            }
-        }
-
-        // ================================
-        // VANILLA JS TABS FUNCTIONALITY
-        // ================================
-        function initTabs() {
-            const tabLinks = document.querySelectorAll('.tabs a');
-            const tabPanels = document.querySelectorAll('.tabs-panel');
-            
-            tabLinks.forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const targetId = this.getAttribute('href').substring(1);
-                    
-                    document.querySelectorAll('.tabs-title').forEach(tab => {
-                        tab.classList.remove('is-active');
-                    });
-                    tabPanels.forEach(panel => {
-                        panel.classList.remove('is-active');
-                    });
-                    
-                    this.parentElement.classList.add('is-active');
-                    document.getElementById(targetId).classList.add('is-active');
-                    
-                    // Load tab data
-                    handleTabClick(targetId);
-                });
-            });
-        }
-
-        // ================================
-        // INISIALISASI
-        // ================================
-        async function initializeApp() {
-            const progressBar = document.getElementById('loadingProgress');
-            const percentage = document.getElementById('loadingPercentage');
-            const status = document.getElementById('loadingStatus');
-            
-            let currentProgress = 0;
-            
-            function updateProgress(targetProgress, message) {
-                return new Promise((resolve) => {
-                    const interval = setInterval(() => {
-                        if (currentProgress < targetProgress) {
-                            currentProgress += 1;
-                            if (progressBar) progressBar.style.width = currentProgress + '%';
-                            if (percentage) percentage.textContent = currentProgress + '%';
-                            if (status) status.textContent = message;
-                        } else {
-                            clearInterval(interval);
-                            resolve();
-                        }
-                    }, 20);
-                });
-            }
-            
-            const LOADING_TIMEOUT = 10000;
-            let timeoutReached = false;
-            
-            const timeoutTimer = setTimeout(() => {
-                timeoutReached = true;
-                if (status) status.textContent = 'Timeout - melanjutkan...';
-                setTimeout(() => {
-                    LoadingManager.completeLoading();
-                }, 500);
-            }, LOADING_TIMEOUT);
-            
-            try {
-                // ================================
-                // CSS Check (0-50%)
-                // ================================
-                if (status) status.textContent = 'Memuat halaman...';
-                await updateProgress(10, 'Memuat halaman...');
-
-                await cssLoaded;
-                await updateProgress(50, 'Menyiapkan tampilan...');
-                await new Promise(r => setTimeout(r, 150));
-
-                if (timeoutReached) return;
-
-                // ================================
-                // Finalize (50-100%)
-                // ================================
-                if (status) status.textContent = 'Menyiapkan halaman...';
-                await updateProgress(90, 'Menyiapkan halaman...');
-
-                initTabs();
-
-                setInterval(updateRealtimeDisplay, 1000);
-
-                setInterval(() => {
-                    const activePanel = document.querySelector('.tabs-panel.is-active');
-                    const activeTab = activePanel ? activePanel.getAttribute('id') : null;
-                    
-                    if (activeTab === 'home') {
-                        updateDeviceStatus();
-                    } else if (activeTab === 'prayer') {
-                        loadSavedPrayerTimes();
-                    }
-                }, 5000);
-                
-                setInterval(updateRealtimeDisplay, 1000);
-                
-                setInterval(() => {
-                    const activeTab = $('.tabs-panel.is-active').attr('id');
-                    
-                    if (activeTab === 'home') {
-                        updateDeviceStatus();
-                    } else if (activeTab === 'prayer') {
-                        loadSavedPrayerTimes();
-                    }
-                }, 5000);
-                
-                await updateProgress(100, 'Siap digunakan');
-                await new Promise(r => setTimeout(r, 300));
-                
-                clearTimeout(timeoutTimer);
-                                
-                LoadingManager.completeLoading();
-                
-            } catch (error) {
-                clearTimeout(timeoutTimer);
-                
-                if (status) status.textContent = 'Error: ' + error.message;
-                await updateProgress(100, 'Selesai dengan error');
-                
-                setTimeout(() => {
-                    LoadingManager.completeLoading();
-                }, 1500);
-            }
-        }
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            document.body.classList.add('loading');
-            
-            LoadingManager.updateProgress(1, 'Action');
-
-            LoadingManager.updateProgress(1, 'Action');
-            
-            initializeApp();
-            
-            setTimeout(() => {
-                handleTabClick('home');
-            }, 500);
-            
-            // ================================
-            // ESC KEY HANDLER
-            // ================================
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    if (isEditingTimezone) {
-                        cancelTimezoneEdit();
-                    }
-                    
-                    const clearBtn = document.getElementById('clearFileBtn');
-                    if (clearBtn && clearBtn.style.display === 'block') {
-                        clearSelectedFile();
-                    }
-                }
-            });
+				fetch('/synctime', { 
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded',
+					},
+					body: `y=${year}&m=${month}&d=${day}&h=${hour}&i=${minute}&s=${second}`
+				})
+				.then(response => response.text())
+				.then(data => {
+					showToast('Waktu berhasil diperbarui', 'success');
+					updateDeviceStatus();
+					btn.disabled = false;
+					btn.textContent = 'Perbarui Waktu';
+				})
+				.catch(error => {
+					showToast('Gagal memperbarui waktu', 'error');
+					btn.disabled = false;
+					btn.textContent = ' Perbarui Waktu';
+				});
+			}
 
 			// ================================
-			// VALIDASI IP ADDRESS INPUT
+			// RESET PABRIK
 			// ================================
-			const apIPInput = document.getElementById('apIP');
-			const gatewayInput = document.getElementById('gatewayIP');
-			const subnetInput = document.getElementById('subnetMask');
+			function resetSettings() {
+				if (!confirm('⚠️ Yakin ingin mereset seluruh pengaturan ke setelan pabrik? Perangkat akan dimulai ulang dan kembali ke pengaturan awal.')) {
+					return;
+				}
 
-			function validateIPAddress(ip) {
-				const ipPattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
-				const match = ip.match(ipPattern);
+				const btn = event.target;
+				const originalText = btn.textContent;
+				btn.disabled = true;
+				btn.textContent = 'Mengatur ulang...';
+
+				fetch('/reset', { method: 'POST' })
+				.then(response => {
+					if (response.ok) {
+						showToast('Perangkat berhasil direset', 'success');
+						
+						setTimeout(() => {
+							showToast('Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
+						}, 1500);
+						
+						setTimeout(() => {
+							showToast('Sambungkan kembali ke Access Point: JWS Indonesia', 'warning');
+						}, 3500);
+						
+						setTimeout(() => {
+							btn.disabled = false;
+							btn.textContent = originalText;
+						}, 6000);
+						
+						setTimeout(() => {
+							showToast('Halaman akan di muat ulang otomatis...', 'warning');
+							setTimeout(() => {
+								window.location.reload();
+							}, 2000);
+						}, 18000);
+						
+					} else {
+						throw new Error('Pengaturan ulang gagal');
+					}
+				})
+				.catch(error => {
+					showToast('Gagal mengatur ulang perangkat', 'error');
+					btn.disabled = false;
+					btn.textContent = originalText;
+				});
+			}
+
+			// ================================
+			// FUNGSI UNGGAH CITIES.JSON
+			// ================================
+			let selectedCitiesFile = null;
+
+			function calculateArduinoJsonSize(json) {
+				let totalSize = 0;
+				totalSize += 24;
 				
-				if (!match) return false;
-				
-				for (let i = 1; i <= 4; i++) {
-					const octet = parseInt(match[i]);
-					if (octet < 0 || octet > 255) return false;
+				if (Array.isArray(json)) {
+					totalSize += 16;
+					totalSize += json.length * 8;
+					
+					json.forEach(item => {
+						if (typeof item === 'object' && item !== null) {
+							totalSize += 16;
+							
+							const keys = Object.keys(item);
+							totalSize += keys.length * 24;
+							
+							keys.forEach(key => {
+								totalSize += key.length + 1;
+								totalSize += Math.ceil((key.length + 1) / 4) * 4;
+								
+								const value = item[key];
+								if (typeof value === 'string') {
+									totalSize += value.length + 1;
+									totalSize += Math.ceil((value.length + 1) / 4) * 4;
+								} else if (typeof value === 'number') {
+									totalSize += 8;
+								} else if (typeof value === 'boolean') {
+									totalSize += 1;
+								}
+							});
+						}
+					});
 				}
 				
-				return true;
+				totalSize = Math.ceil(totalSize * 1.2);
+				return totalSize;
 			}
 
-			function setupIPInput(input, fieldName) {
-				if (!input) return;
+			function handleCitiesFileSelect(event) {
+				const file = event.target.files[0];
+				const fileNameDisplay = document.getElementById('selectedFileName');
+				const uploadBtn = document.getElementById('uploadBtn');
+				const clearBtn = document.getElementById('clearFileBtn');
 				
-				// Validasi karakter yang diketik
-				input.addEventListener('keydown', function(e) {
-					// Izinkan keyboard shortcuts dan navigation keys
-					if ([8, 9, 27, 13, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1 ||
-						(e.keyCode === 65 && e.ctrlKey === true) ||
-						(e.keyCode === 67 && e.ctrlKey === true) ||
-						(e.keyCode === 86 && e.ctrlKey === true) ||
-						(e.keyCode === 88 && e.ctrlKey === true) ||
-						(e.keyCode === 65 && e.metaKey === true) ||
-						(e.keyCode === 67 && e.metaKey === true) ||
-						(e.keyCode === 86 && e.metaKey === true) ||
-						(e.keyCode === 88 && e.metaKey === true)) {
-						return;
-					}
-					
-					const char = e.key;
-					// Hanya izinkan angka dan titik
-					if (!/^[\d\.]$/.test(char)) {
-						e.preventDefault();
-					}
-				});
+				if (!file) {
+					selectedCitiesFile = null;
+					fileNameDisplay.textContent = 'Belum ada berkas dipilih';
+					fileNameDisplay.className = 'help-text';
+					uploadBtn.disabled = true;
+					clearBtn.style.display = 'none';
+					return;
+				}
 				
-				// Validasi saat kehilangan fokus
-				input.addEventListener('blur', function() {
-					const value = this.value.trim();
-					
-					if (value === '') {
-						this.style.borderColor = '';
-						return;
-					}
-					
-					if (!validateIPAddress(value)) {
-						showToast(`${fieldName} tidak valid. Format: xxx.xxx.xxx.xxx (0-255)`, 'warning');
-						this.style.borderColor = '#cc4b37';
-					} else {
-						this.style.borderColor = '#3adb76';
-					}
-				});
+				if (file.name !== 'cities.json') {
+					showToast('Nama berkas harus cities.json', 'error');
+					selectedCitiesFile = null;
+					fileNameDisplay.innerHTML = '<span class="label alert">❌ Nama berkas tidak valid</span>';
+					uploadBtn.disabled = true;
+					clearBtn.style.display = 'none';
+					event.target.value = '';
+					return;
+				}
 				
-				// Validasi realtime saat mengetik
-				input.addEventListener('input', function() {
-					const value = this.value;
-					
-					// Cek apakah ada karakter selain angka dan titik
-					if (/[^\d\.]/.test(value)) {
-						this.value = value.replace(/[^\d\.]/g, '');
-					}
-					
-					// Cek apakah ada titik berturut-turut
-					if (/\.{2,}/.test(value)) {
-						this.value = value.replace(/\.{2,}/g, '.');
-					}
-					
-					// Batasi maksimal 3 titik
-					const dots = (value.match(/\./g) || []).length;
-					if (dots > 3) {
-						const parts = value.split('.');
-						this.value = parts.slice(0, 4).join('.');
-					}
-					
-					// Batasi setiap oktet maksimal 3 digit
-					const parts = value.split('.');
-					const validParts = parts.map(part => {
-						if (part.length > 3) {
-							return part.substring(0, 3);
+				const maxSize = 1 * 1024 * 1024;
+				if (file.size > maxSize) {
+					showToast('Berkas terlalu besar (maksimal 1MB)', 'error');
+					selectedCitiesFile = null;
+					fileNameDisplay.innerHTML = '<span class="label alert">❌ Berkas terlalu besar</span>';
+					uploadBtn.disabled = true;
+					clearBtn.style.display = 'none';
+					event.target.value = '';
+					return;
+				}
+				
+				const reader = new FileReader();
+				reader.onload = function(e) {
+					try {
+						const json = JSON.parse(e.target.result);
+						
+						if (!Array.isArray(json)) {
+							throw new Error('JSON harus berupa array');
 						}
-						return part;
+						
+						if (json.length === 0) {
+							throw new Error('Array JSON tidak boleh kosong');
+						}
+						
+						const requiredFields = ['api', 'display', 'province'];
+						
+						for (let i = 0; i < json.length; i++) {
+							const item = json[i];
+							
+							for (const field of requiredFields) {
+								if (!item.hasOwnProperty(field) || !item[field]) {
+									throw new Error(`Item ${i}: kolom '${field}' tidak ada atau kosong`);
+								}
+								
+								if (typeof item[field] !== 'string') {
+									throw new Error(`Item ${i}: kolom '${field}' harus berupa teks`);
+								}
+							}
+							
+							if (item.lat) {
+								const lat = parseFloat(item.lat);
+								if (isNaN(lat) || lat < -90 || lat > 90) {
+									throw new Error(`Item ${i}: lintang tidak valid (${item.lat})`);
+								}
+							}
+							
+							if (item.lon) {
+								const lon = parseFloat(item.lon);
+								if (isNaN(lon) || lon < -180 || lon > 180) {
+									throw new Error(`Item ${i}: bujur tidak valid (${item.lon})`);
+								}
+							}
+						}
+						
+						const jsonSize = calculateArduinoJsonSize(json);
+						const ESP32_MAX_HEAP = 320000;
+						
+						if (jsonSize > ESP32_MAX_HEAP) {
+							const sizeKB = (jsonSize / 1024).toFixed(2);
+							const maxKB = (ESP32_MAX_HEAP / 1024).toFixed(2);
+							
+							showToast(`Berkas terlalu berat untuk perangkat ${sizeKB} KB > ${maxKB} KB`, 'error');
+							
+							selectedCitiesFile = null;
+							fileNameDisplay.innerHTML = `<span class="label alert">❌ Terlalu berat (${sizeKB} KB)</span>`;
+							uploadBtn.disabled = true;
+							clearBtn.style.display = 'none';
+							event.target.value = '';
+							return;
+						}
+						
+						selectedCitiesFile = file;
+						selectedCitiesFile.jsonMetadata = {
+							citiesCount: json.length,
+							jsonSize: jsonSize,
+							fileSize: file.size
+						};
+						
+						const sizeKB = (file.size / 1024).toFixed(2);
+						const jsonSizeKB = (jsonSize / 1024).toFixed(2);
+						
+						fileNameDisplay.innerHTML = 
+							`<span class="label success">${file.name} (${sizeKB} KB)</span><br>` +
+							`<small>${json.length} lokasi | DynamicJsonDocument: ${jsonSizeKB} KB</small>`;
+						uploadBtn.disabled = false;
+						clearBtn.style.display = 'block';
+						
+					} catch (error) {
+						showToast('Validasi gagal: ' + error.message, 'error');
+						selectedCitiesFile = null;
+						fileNameDisplay.innerHTML = `<span class="label alert">❌ ${error.message}</span>`;
+						uploadBtn.disabled = true;
+						clearBtn.style.display = 'none';
+						event.target.value = '';
+					}
+				};
+				
+				reader.onerror = function() {
+					showToast('Gagal membaca berkas', 'error');
+					selectedCitiesFile = null;
+					fileNameDisplay.innerHTML = '<span class="label alert">❌ Gagal membaca berkas</span>';
+					uploadBtn.disabled = true;
+					clearBtn.style.display = 'none';
+					event.target.value = '';
+				};
+				
+				reader.readAsText(file);
+			}
+
+			async function uploadCitiesFile() {
+				if (!selectedCitiesFile) {
+					showToast('Pilih berkas terlebih dahulu', 'error');
+					return;
+				}
+				
+				const uploadBtn = document.getElementById('uploadBtn');
+				const progressDiv = document.getElementById('uploadProgress');
+				const progressBar = document.getElementById('uploadProgressBar');
+				const statusText = document.getElementById('uploadStatus');
+				
+				uploadBtn.disabled = true;
+				uploadBtn.textContent = 'Mengunggah...';
+				progressDiv.classList.remove('hide');
+				progressBar.style.width = '0%';
+				progressBar.querySelector('.progress-meter-text').textContent = '0%';
+				statusText.textContent = 'Memulai mengunggah...';
+				
+				try {
+					const formData = new FormData();
+					formData.append('file', selectedCitiesFile);
+					
+					if (selectedCitiesFile.jsonMetadata) {
+						formData.append('jsonSize', selectedCitiesFile.jsonMetadata.jsonSize);
+						formData.append('citiesCount', selectedCitiesFile.jsonMetadata.citiesCount);
+					}
+					
+					const xhr = new XMLHttpRequest();
+					
+					xhr.upload.addEventListener('progress', (e) => {
+						if (e.lengthComputable) {
+							const percentComplete = Math.round((e.loaded / e.total) * 100);
+							progressBar.style.width = percentComplete + '%';
+							progressBar.querySelector('.progress-meter-text').textContent = percentComplete + '%';
+							statusText.textContent = `Mengunggah: ${(e.loaded / 1024).toFixed(1)} KB / ${(e.total / 1024).toFixed(1)} KB`;
+						}
 					});
 					
-					if (validParts.join('.') !== value) {
-						this.value = validParts.join('.');
+					xhr.addEventListener('load', async () => {
+						if (xhr.status === 200) {
+							progressBar.style.width = '100%';
+							progressBar.querySelector('.progress-meter-text').textContent = '100%';
+							statusText.innerHTML = '<span class="label success">Pengunggahan berhasil</span>';
+							
+							if (selectedCitiesFile.jsonMetadata) {
+								const jsonSizeKB = (selectedCitiesFile.jsonMetadata.jsonSize / 1024).toFixed(2);
+								showToast(`cities.json berhasil diunggah ${selectedCitiesFile.jsonMetadata.citiesCount} lokasi`, 'success');
+							} else {
+								showToast('cities.json berhasil diunggah', 'success');
+							}
+							
+							document.getElementById('citiesFileInput').value = '';
+							document.getElementById('selectedFileName').textContent = 'Belum ada berkas dipilih';
+							selectedCitiesFile = null;
+							
+							setTimeout(() => {
+								showToast('Memperbarui daftar lokasi...', 'warning');
+								loadAttempts = 0;
+								loadCities();
+							}, 2000);
+							
+							setTimeout(() => {
+								progressDiv.classList.add('hide');
+								uploadBtn.disabled = false;
+								uploadBtn.textContent = 'Unggah Berkas';
+							}, 5000);
+							
+						} else {
+							throw new Error('Mengunggah gagal');
+						}
+					});
+					
+					xhr.addEventListener('error', () => {
+						throw new Error('Terjadi kesalahan jaringan - koneksi terputus');
+					});
+					
+					xhr.addEventListener('timeout', () => {
+						throw new Error('Waktu Mengunggah habis - berkas terlalu lama');
+					});
+					
+					xhr.open('POST', '/uploadcities', true);
+					xhr.timeout = 30000;
+					xhr.send(formData);
+					
+				} catch (error) {                
+					progressBar.classList.add('alert');
+					progressBar.style.width = '100%';
+					statusText.innerHTML = `<span class="label alert">❌ ${error.message}</span>`;
+					
+					showToast('Mengunggah gagal: ' + error.message, 'error');
+					
+					setTimeout(() => {
+						progressDiv.classList.add('hide');
+						uploadBtn.disabled = false;
+						uploadBtn.textContent = '📤 Mengunggah Berkas';
+					}, 3000);
+				}
+			}
+
+			function clearSelectedFile() {
+				const fileInput = document.getElementById('citiesFileInput');
+				const fileNameDisplay = document.getElementById('selectedFileName');
+				const uploadBtn = document.getElementById('uploadBtn');
+				const clearBtn = document.getElementById('clearFileBtn');
+				
+				fileInput.value = '';
+				selectedCitiesFile = null;
+				
+				fileNameDisplay.textContent = 'Belum ada berkas yang dipilih';
+				fileNameDisplay.className = 'help-text';
+				
+				uploadBtn.disabled = true;
+				clearBtn.style.display = 'none';
+				
+				showToast('Berkas dihapus', 'warning');
+			}
+
+			// ================================
+			// FUNGSI PEMILIHAN METODE
+			// ================================
+			async function loadCurrentMethod() {
+				if (isLoadingMethod) {
+					return false;
+				}
+				
+				isLoadingMethod = true;
+						
+				try {
+					const response = await fetch('/getmethod', {
+						method: 'GET',
+						headers: {
+							'Accept': 'application/json'
+						}
+					});
+					
+					if (!response.ok) {
+						throw new Error('HTTP ' + response.status);
 					}
+					
+					const data = await response.json();
+					
+					if (data.methodId !== undefined) {
+						methodConfig.methodId = data.methodId;
+						methodConfig.methodName = data.methodName;
+					} else {
+						methodConfig.methodId = 5;
+						methodConfig.methodName = 'Egyptian General Authority of Survey';
+					}
+					
+					const currentMethodTop = document.getElementById('currentMethodTop');
+					const currentMethodBottom = document.getElementById('currentMethodBottom');
+					const methodDropdown = document.getElementById('methodDropdown');
+					
+					if (currentMethodTop) {
+						currentMethodTop.textContent = methodConfig.methodName;
+					}
+					if (currentMethodBottom) {
+						currentMethodBottom.textContent = methodConfig.methodName;
+					}
+					if (methodDropdown) {
+						methodDropdown.value = methodConfig.methodId;
+					}
+					
+					return true;
+					
+				} catch (error) {                
+					methodConfig.methodId = 5;
+					methodConfig.methodName = 'Egyptian General Authority of Survey';
+					
+					const currentMethodTop = document.getElementById('currentMethodTop');
+					const currentMethodBottom = document.getElementById('currentMethodBottom');
+					if (currentMethodTop) currentMethodTop.textContent = methodConfig.methodName;
+					if (currentMethodBottom) currentMethodBottom.textContent = methodConfig.methodName;
+					
+					return false;
+				} finally {
+					isLoadingMethod = false;
+				}
+			}
+
+			async function saveMethod() {
+				const dropdown = document.getElementById('methodDropdown');
+				const methodId = dropdown.value;
+				const methodName = dropdown.options[dropdown.selectedIndex].text;
+				
+				if (!methodId) {
+					showToast('Silakan pilih metode terlebih dahulu', 'error');
+					return;
+				}
+				
+				const btn = event.target;
+				const originalText = btn.textContent;
+				btn.disabled = true;
+				btn.textContent = 'Menyimpan...';
+				
+				try {
+					const formData = new URLSearchParams();
+					formData.append('methodId', methodId);
+					formData.append('methodName', methodName);
+					
+					const controller = new AbortController();
+					const timeoutId = setTimeout(() => controller.abort(), 10000);
+					
+					const response = await fetch('/setmethod', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/x-www-form-urlencoded',
+							'Accept': 'application/json'
+						},
+						body: formData.toString(),
+						signal: controller.signal
+					});
+					
+					clearTimeout(timeoutId);
+					
+					if (response.ok) {
+						const result = await response.json();
+						
+						showToast('Metode kalkulasi berhasil disimpan', 'success');
+						
+						const currentMethodTop = document.getElementById('currentMethodTop');
+						const currentMethodBottom = document.getElementById('currentMethodBottom');
+						
+						if (currentMethodTop) {
+							currentMethodTop.textContent = methodName;
+						}
+						if (currentMethodBottom) {
+							currentMethodBottom.textContent = methodName;
+						}
+						
+						if (result.prayerTimesUpdating) {
+							setTimeout(() => {
+								showToast('Jadwal salat sedang diperbarui dengan metode baru...', 'warning');
+							}, 1500);
+							
+							setTimeout(() => {
+								loadSavedPrayerTimes();
+							}, 4000);
+						} else {
+							setTimeout(() => {
+								showToast('Metode disimpan. Pilih lokasi untuk menghitung jadwal salat jika belum diatur', 'warning');
+							}, 1500);
+						}
+						
+					} else {
+						throw new Error('Gagal menyimpan metode');
+					}
+					
+				} catch (error) {
+					showToast('Gagal menyimpan metode', 'error');
+					
+				} finally {
+					btn.disabled = false;
+					btn.textContent = originalText;
+				}
+			}
+			
+			async function restartDevice() {
+				if (!confirm('🔄 Yakin ingin memulai ulang perangkat?')) {
+					return;
+				}
+
+				const btn = event.target;
+				const originalText = btn.textContent;
+				btn.disabled = true;
+				btn.textContent = 'Memulai ulang...';
+
+				try {
+					const response = await fetch('/restart', { 
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/x-www-form-urlencoded'
+						}
+					});
+					
+					if (response.ok) {
+						showToast('Perintah mulai ulang terkirim', 'success');
+						
+						setTimeout(() => {
+							showToast('Perangkat akan dimulai ulang', 'warning');
+						}, 1500);
+						
+						setTimeout(() => {
+							btn.disabled = false;
+							btn.textContent = originalText;
+						}, 6000);
+						
+						setTimeout(() => {
+							showToast('Halaman akan di muat ulang otomatis...', 'warning');
+							setTimeout(() => {
+								window.location.reload();
+							}, 2000);
+						}, 18000);
+						
+					} else {
+						throw new Error('Perintah mulai ulang gagal');
+					}
+				} catch (error) {
+					showToast('Gagal memulai ulang perangkat', 'error');
+					btn.disabled = false;
+					btn.textContent = originalText;
+				}
+			}
+
+			// ================================
+			// FUNGSI TIMEZONE - INLINE EDITING
+			// ================================
+			let isEditingTimezone = false;
+
+			function toggleTimezoneEdit() {
+				const displayText = document.getElementById('timezoneDisplayText');
+				const input = document.getElementById('timezoneInput');
+				const btn = document.getElementById('timezoneBtn');
+				const cancelBtn = document.getElementById('timezoneCancelBtn');
+				
+				if (!isEditingTimezone) {
+					displayText.style.display = 'none';
+					input.style.display = 'inline-block';
+					input.value = timezoneConfig.offset >= 0 ? '+' + timezoneConfig.offset : timezoneConfig.offset;
+					input.focus();
+					input.select();
+					btn.textContent = '💾';
+					btn.title = 'Simpan Timezone';
+					cancelBtn.style.display = 'inline-block';
+					isEditingTimezone = true;
+				} else {
+					saveTimezone();
+				}
+			}
+
+			function cancelTimezoneEdit() {
+				const displayText = document.getElementById('timezoneDisplayText');
+				const input = document.getElementById('timezoneInput');
+				const btn = document.getElementById('timezoneBtn');
+				const cancelBtn = document.getElementById('timezoneCancelBtn');
+				
+				displayText.style.display = 'inline';
+				input.style.display = 'none';
+				btn.textContent = '🕐';
+				btn.title = 'Edit Timezone';
+				cancelBtn.style.display = 'none';
+				isEditingTimezone = false;
+				
+				input.value = timezoneConfig.offset >= 0 ? '+' + timezoneConfig.offset : timezoneConfig.offset;
+			}
+			
+			async function loadTimezoneConfig() {            
+				try {
+					const response = await fetch('/gettimezone', {
+						method: 'GET',
+						headers: {
+							'Accept': 'application/json'
+						}
+					});
+					
+					if (!response.ok) {
+						throw new Error('HTTP ' + response.status);
+					}
+					
+					const data = await response.json();
+					
+					if (data.offset !== undefined) {
+						timezoneConfig.offset = data.offset;
+					} else {
+						timezoneConfig.offset = 7;
+					}
+					
+					updateTimezoneDisplay();
+					
+					return true;
+					
+				} catch (error) {
+					timezoneConfig.offset = 7;
+					updateTimezoneDisplay();
+					return false;
+				}
+			}
+
+			function updateTimezoneDisplay() {
+				const displayText = document.getElementById('timezoneDisplayText');
+				const input = document.getElementById('timezoneInput');
+				
+				const displayValue = (timezoneConfig.offset >= 0 ? '+' : '') + timezoneConfig.offset;
+				
+				if (displayText) {
+					displayText.textContent = displayValue;
+				}
+				if (input) {
+					input.value = displayValue;
+				}
+			}
+
+			async function saveTimezone() {
+				const input = document.getElementById('timezoneInput');
+				const displayText = document.getElementById('timezoneDisplayText');
+				const btn = document.getElementById('timezoneBtn');
+				const cancelBtn = document.getElementById('timezoneCancelBtn');
+				
+				let offsetStr = input.value.trim();
+				
+				if (!offsetStr) {
+					showToast('Timezone offset tidak boleh kosong', 'error');
+					input.focus();
+					return;
+				}
+				
+				let offset = parseInt(offsetStr);
+				
+				if (isNaN(offset)) {
+					showToast('Format tidak valid. Contoh: +7, -5, +8', 'error');
+					input.focus();
+					return;
+				}
+				
+				if (offset < -12 || offset > 14) {
+					showToast('Offset harus antara -12 hingga +14', 'error');
+					input.focus();
+					return;
+				}
+				
+				btn.disabled = true;
+				btn.textContent = '...';
+				
+				try {
+					const formData = new URLSearchParams();
+					formData.append('offset', offset);
+					
+					const controller = new AbortController();
+					const timeoutId = setTimeout(() => controller.abort(), 10000);
+					
+					const response = await fetch('/settimezone', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/x-www-form-urlencoded',
+							'Accept': 'application/json'
+						},
+						body: formData.toString(),
+						signal: controller.signal
+					});
+					
+					clearTimeout(timeoutId);
+					
+					if (response.ok) {
+						const result = await response.json();
+						
+						timezoneConfig.offset = offset;
+						
+						const displayValue = (offset >= 0 ? '+' : '') + offset;
+						displayText.textContent = displayValue;
+						input.value = displayValue;
+						
+						displayText.style.display = 'inline';
+						input.style.display = 'none';
+						btn.textContent = '🕐';
+						btn.title = 'Edit Timezone';
+						btn.disabled = false;
+						isEditingTimezone = false;
+						cancelBtn.style.display = 'none';
+						
+						showToast('Timezone berhasil disimpan', 'success');
+						
+						setTimeout(() => {
+							showToast('NTP akan melakukan perbarui ulang dengan zona waktu baru...', 'warning');
+						}, 1500);
+						
+					} else {
+						throw new Error('Gagal menyimpan timezone');
+					}
+					
+				} catch (error) {
+					showToast('Gagal menyimpan timezone', 'error');
+					
+					btn.textContent = '💾';
+					btn.disabled = false;
+					input.focus();
+				}
+			}
+
+			// ================================
+			// VANILLA JS TABS FUNCTIONALITY
+			// ================================
+			function initTabs() {
+				const tabLinks = document.querySelectorAll('.tabs a');
+				const tabPanels = document.querySelectorAll('.tabs-panel');
+				
+				tabLinks.forEach(link => {
+					link.addEventListener('click', function(e) {
+						e.preventDefault();
+						const targetId = this.getAttribute('href').substring(1);
+						
+						document.querySelectorAll('.tabs-title').forEach(tab => {
+							tab.classList.remove('is-active');
+						});
+						tabPanels.forEach(panel => {
+							panel.classList.remove('is-active');
+						});
+						
+						this.parentElement.classList.add('is-active');
+						document.getElementById(targetId).classList.add('is-active');
+						
+						// Load tab data
+						handleTabClick(targetId);
+					});
 				});
 			}
 
-			// Setup validasi untuk ketiga input
-			setupIPInput(apIPInput, 'IP Address Access Point');
-			setupIPInput(gatewayInput, 'Gateway');
-			setupIPInput(subnetInput, 'Subnet Mask');
-            
-            // ================================
-            // TIMEZONE INPUT - ENTER KEY TO SAVE
-            // ================================
-            const timezoneInput = document.getElementById('timezoneInput');
-            if (timezoneInput) {
-                timezoneInput.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter' && isEditingTimezone) {
-                        e.preventDefault();
-                        saveTimezone();
-                    }
-                    
-                    if (e.key === 'Escape' && isEditingTimezone) {
-                        e.preventDefault();
-                        cancelTimezoneEdit();
-                    }
-                    
-                    // Validasi ketik hanya + - dan angka, tapi izinkan keyboard shortcuts
-                    if ([8, 9, 27, 13, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1 ||
-                        (e.keyCode === 65 && e.ctrlKey === true) ||
-                        (e.keyCode === 67 && e.ctrlKey === true) ||
-                        (e.keyCode === 86 && e.ctrlKey === true) ||
-                        (e.keyCode === 88 && e.ctrlKey === true) ||
-                        (e.keyCode === 65 && e.metaKey === true) ||
-                        (e.keyCode === 67 && e.metaKey === true) ||
-                        (e.keyCode === 86 && e.metaKey === true) ||
-                        (e.keyCode === 88 && e.metaKey === true)) {
-                        return;
-                    }
-                    
-                    const char = e.key;
-                    if (!/^[\d\+\-]$/.test(char)) {
-                        e.preventDefault();
-                    }
-                });
-            }
-            
-            // ================================
-            // KOORDINAT INPUT - BEBAS KETIK & PASTE
-            // ================================
-            const latInput = document.getElementById('latInput');
-            if (latInput) {
-                latInput.addEventListener('keydown', function(e) {
-                    // Izinkan keyboard shortcuts dan navigation keys
-                    if ([8, 9, 27, 13, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1 ||
-                        (e.keyCode === 65 && e.ctrlKey === true) ||
-                        (e.keyCode === 67 && e.ctrlKey === true) ||
-                        (e.keyCode === 86 && e.ctrlKey === true) ||
-                        (e.keyCode === 88 && e.ctrlKey === true) ||
-                        (e.keyCode === 65 && e.metaKey === true) ||
-                        (e.keyCode === 67 && e.metaKey === true) ||
-                        (e.keyCode === 86 && e.metaKey === true) ||
-                        (e.keyCode === 88 && e.metaKey === true)) {
-                        return;
-                    }
-                    
-                    const char = e.key;
-                    if (!/^[\d\.\+\-]$/.test(char)) {
-                        e.preventDefault();
-                    }
-                });
-                
-                latInput.addEventListener('blur', function() {
-                    const val = parseFloat(this.value);
-                    if (!isNaN(val) && (val < -90 || val > 90)) {
-                        showToast('Latitude harus antara -90 hingga 90', 'warning');
-                        this.style.borderColor = '#cc4b37';
-                    } else {
-                        this.style.borderColor = '';
-                    }
-                });
-            }
-            
-            const lonInput = document.getElementById('lonInput');
-            if (lonInput) {
-                lonInput.addEventListener('keydown', function(e) {
-                    if ([8, 9, 27, 13, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1 ||
-                        (e.keyCode === 65 && e.ctrlKey === true) ||
-                        (e.keyCode === 67 && e.ctrlKey === true) ||
-                        (e.keyCode === 86 && e.ctrlKey === true) ||
-                        (e.keyCode === 88 && e.ctrlKey === true) ||
-                        (e.keyCode === 65 && e.metaKey === true) ||
-                        (e.keyCode === 67 && e.metaKey === true) ||
-                        (e.keyCode === 86 && e.metaKey === true) ||
-                        (e.keyCode === 88 && e.metaKey === true)) {
-                        return;
-                    }
-                    
-                    const char = e.key;
-                    if (!/^[\d\.\+\-]$/.test(char)) {
-                        e.preventDefault();
-                    }
-                });
-                
-                lonInput.addEventListener('blur', function() {
-                    const val = parseFloat(this.value);
-                    if (!isNaN(val) && (val < -180 || val > 180)) {
-                        showToast('Longitude harus antara -180 hingga 180', 'warning');
-                        this.style.borderColor = '#cc4b37';
-                    } else {
-                        this.style.borderColor = '';
-                    }
-                });
-            }
-            
-            // ================================
-            // FILE INPUT - DRAG & DROP SUPPORT
-            // ================================
-            const citiesFileInput = document.getElementById('citiesFileInput');
-            const fileLabel = citiesFileInput ? citiesFileInput.closest('label') : null;
-            
-            if (fileLabel) {
-                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                    fileLabel.addEventListener(eventName, preventDefaults, false);
-                    document.body.addEventListener(eventName, preventDefaults, false);
-                });
-                
-                function preventDefaults(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-                
-                ['dragenter', 'dragover'].forEach(eventName => {
-                    fileLabel.addEventListener(eventName, function() {
-                        this.style.borderColor = '#1779ba';
-                        this.style.backgroundColor = '#e7f4ff';
-                    }, false);
-                });
-                
-                ['dragleave', 'drop'].forEach(eventName => {
-                    fileLabel.addEventListener(eventName, function() {
-                        this.style.borderColor = '';
-                        this.style.backgroundColor = '';
-                    }, false);
-                });
-                
-                fileLabel.addEventListener('drop', function(e) {
-                    const dt = e.dataTransfer;
-                    const files = dt.files;
-                    
-                    if (files.length > 0) {
-                        citiesFileInput.files = files;
-                        
-                        const event = new Event('change', { bubbles: true });
-                        citiesFileInput.dispatchEvent(event);
-                    }
-                }, false);
-            }
-            
-            // ================================
-            // CITY DROPDOWN - SEARCH FUNCTIONALITY
-            // ================================
-            const cityDropdown = document.getElementById('cityDropdown');
-            if (cityDropdown) {
-                cityDropdown.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter') {
-                        handleCityChange();
-                    }
-                });
-                
-                cityDropdown.addEventListener('change', function() {
-                    const selectedOption = this.options[this.selectedIndex];
-                    if (selectedOption && selectedOption.value) {
-                        const lat = selectedOption.getAttribute('data-lat');
-                        const lon = selectedOption.getAttribute('data-lon');
-                    }
-                });
-            }
-            
-            // ================================
-            // METHOD DROPDOWN - LOG SELECTION
-            // ================================
-            const methodDropdown = document.getElementById('methodDropdown');
-            if (methodDropdown) {
-                methodDropdown.addEventListener('change', function() {
-                    const selectedOption = this.options[this.selectedIndex];
-                });
-            }
-            
-            // ================================
-            // FORM INPUTS - CLEAR ERROR ON FOCUS
-            // ================================
-            const allInputs = document.querySelectorAll('input[type="text"], input[type="password"]');
-            allInputs.forEach(input => {
-                input.addEventListener('focus', function() {
-                    this.style.borderColor = '';
-                    this.style.backgroundColor = '';
-                });
-            });
-            
-            // ================================
-            // PREVENT ACCIDENTAL FORM SUBMISSION
-            // ================================
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'BUTTON') {
-                    if (e.target.id !== 'timezoneInput') {
-                        const form = e.target.closest('form');
-                        if (!form) {
-                            e.preventDefault();
-                        }
-                    }
-                }
-            });
-            
-            // ================================
-            // VISIBILITY CHANGE - PAUSE/RESUME UPDATES
-            // ================================
-            document.addEventListener('visibilitychange', function() {
-                if (document.hidden) {
-                    // Do nothing
-                } else {
-                    updateDeviceStatus();
-                    loadSavedPrayerTimes();
-                }
-            });
-            
-            // ================================
-            // WINDOW BEFOREUNLOAD - WARN IF EDITING
-            // ================================
-            window.addEventListener('beforeunload', function(e) {
-                if (isEditingTimezone) {
-                    e.preventDefault();
-                    e.returnValue = 'Anda sedang mengedit timezone. Yakin ingin meninggalkan halaman?';
-                    return e.returnValue;
-                }
-                
-                const clearBtn = document.getElementById('clearFileBtn');
-                if (clearBtn && clearBtn.style.display === 'block') {
-                    e.preventDefault();
-                    e.returnValue = 'Berkas belum diupload. Yakin ingin meninggalkan halaman?';
-                    return e.returnValue;
-                }
-            });
-            
-            // ================================
-            // ONLINE/OFFLINE DETECTION
-            // ================================
-            window.addEventListener('online', function() {
-                showToast('Koneksi internet tersambung', 'success');
-                
-                setTimeout(() => {
-                    updateDeviceStatus();
-                }, 1000);
-            }, 1000);
-            
-            window.addEventListener('offline', function() {
-                showToast('Tidak ada koneksi internet', 'warning');
-            });
-        });
-    </script>
-</body>
+			// ================================
+			// INISIALISASI
+			// ================================
+			async function initializeApp() {
+				const progressBar = document.getElementById('loadingProgress');
+				const percentage = document.getElementById('loadingPercentage');
+				const status = document.getElementById('loadingStatus');
+				
+				let currentProgress = 0;
+				
+				function updateProgress(targetProgress, message) {
+					return new Promise((resolve) => {
+						const interval = setInterval(() => {
+							if (currentProgress < targetProgress) {
+								currentProgress += 1;
+								if (progressBar) progressBar.style.width = currentProgress + '%';
+								if (percentage) percentage.textContent = currentProgress + '%';
+								if (status) status.textContent = message;
+							} else {
+								clearInterval(interval);
+								resolve();
+							}
+						}, 20);
+					});
+				}
+				
+				const LOADING_TIMEOUT = 10000;
+				let timeoutReached = false;
+				
+				const timeoutTimer = setTimeout(() => {
+					timeoutReached = true;
+					if (status) status.textContent = 'Timeout - melanjutkan...';
+					setTimeout(() => {
+						LoadingManager.completeLoading();
+					}, 500);
+				}, LOADING_TIMEOUT);
+				
+				try {
+					// ================================
+					// CSS Check (0-50%)
+					// ================================
+					if (status) status.textContent = 'Memuat halaman...';
+					await updateProgress(10, 'Memuat halaman...');
+
+					await cssLoaded;
+					await updateProgress(50, 'Menyiapkan tampilan...');
+					await new Promise(r => setTimeout(r, 150));
+
+					if (timeoutReached) return;
+
+					// ================================
+					// Finalize (50-100%)
+					// ================================
+					if (status) status.textContent = 'Menyiapkan halaman...';
+					await updateProgress(90, 'Menyiapkan halaman...');
+
+					initTabs();
+
+					setInterval(updateRealtimeDisplay, 1000);
+
+					setInterval(() => {
+						const activePanel = document.querySelector('.tabs-panel.is-active');
+						const activeTab = activePanel ? activePanel.getAttribute('id') : null;
+						
+						if (activeTab === 'home') {
+							updateDeviceStatus();
+						} else if (activeTab === 'prayer') {
+							loadSavedPrayerTimes();
+						}
+					}, 5000);
+					
+					setInterval(updateRealtimeDisplay, 1000);
+					
+					setInterval(() => {
+						const activeTab = $('.tabs-panel.is-active').attr('id');
+						
+						if (activeTab === 'home') {
+							updateDeviceStatus();
+						} else if (activeTab === 'prayer') {
+							loadSavedPrayerTimes();
+						}
+					}, 5000);
+					
+					await updateProgress(100, 'Siap digunakan');
+					await new Promise(r => setTimeout(r, 300));
+					
+					clearTimeout(timeoutTimer);
+									
+					LoadingManager.completeLoading();
+					
+				} catch (error) {
+					clearTimeout(timeoutTimer);
+					
+					if (status) status.textContent = 'Error: ' + error.message;
+					await updateProgress(100, 'Selesai dengan error');
+					
+					setTimeout(() => {
+						LoadingManager.completeLoading();
+					}, 1500);
+				}
+			}
+			
+			document.addEventListener('DOMContentLoaded', function() {
+				document.body.classList.add('loading');
+				
+				LoadingManager.updateProgress(1, 'Action');
+
+				LoadingManager.updateProgress(1, 'Action');
+				
+				initializeApp();
+				
+				setTimeout(() => {
+					handleTabClick('home');
+				}, 500);
+				
+				// ================================
+				// ESC KEY HANDLER
+				// ================================
+				document.addEventListener('keydown', function(e) {
+					if (e.key === 'Escape') {
+						if (isEditingTimezone) {
+							cancelTimezoneEdit();
+						}
+						
+						const clearBtn = document.getElementById('clearFileBtn');
+						if (clearBtn && clearBtn.style.display === 'block') {
+							clearSelectedFile();
+						}
+					}
+				});
+
+				// ================================
+				// VALIDASI IP ADDRESS INPUT
+				// ================================
+				const apIPInput = document.getElementById('apIP');
+				const gatewayInput = document.getElementById('gatewayIP');
+				const subnetInput = document.getElementById('subnetMask');
+
+				function validateIPAddress(ip) {
+					const ipPattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+					const match = ip.match(ipPattern);
+					
+					if (!match) return false;
+					
+					for (let i = 1; i <= 4; i++) {
+						const octet = parseInt(match[i]);
+						if (octet < 0 || octet > 255) return false;
+					}
+					
+					return true;
+				}
+
+				function setupIPInput(input, fieldName) {
+					if (!input) return;
+					
+					// Validasi karakter yang diketik
+					input.addEventListener('keydown', function(e) {
+						// Izinkan keyboard shortcuts dan navigation keys
+						if ([8, 9, 27, 13, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1 ||
+							(e.keyCode === 65 && e.ctrlKey === true) ||
+							(e.keyCode === 67 && e.ctrlKey === true) ||
+							(e.keyCode === 86 && e.ctrlKey === true) ||
+							(e.keyCode === 88 && e.ctrlKey === true) ||
+							(e.keyCode === 65 && e.metaKey === true) ||
+							(e.keyCode === 67 && e.metaKey === true) ||
+							(e.keyCode === 86 && e.metaKey === true) ||
+							(e.keyCode === 88 && e.metaKey === true)) {
+							return;
+						}
+						
+						const char = e.key;
+						// Hanya izinkan angka dan titik
+						if (!/^[\d\.]$/.test(char)) {
+							e.preventDefault();
+						}
+					});
+					
+					// Validasi saat kehilangan fokus
+					input.addEventListener('blur', function() {
+						const value = this.value.trim();
+						
+						if (value === '') {
+							this.style.borderColor = '';
+							return;
+						}
+						
+						if (!validateIPAddress(value)) {
+							showToast(`${fieldName} tidak valid. Format: xxx.xxx.xxx.xxx (0-255)`, 'warning');
+							this.style.borderColor = '#cc4b37';
+						} else {
+							this.style.borderColor = '#3adb76';
+						}
+					});
+					
+					// Validasi realtime saat mengetik
+					input.addEventListener('input', function() {
+						const value = this.value;
+						
+						// Cek apakah ada karakter selain angka dan titik
+						if (/[^\d\.]/.test(value)) {
+							this.value = value.replace(/[^\d\.]/g, '');
+						}
+						
+						// Cek apakah ada titik berturut-turut
+						if (/\.{2,}/.test(value)) {
+							this.value = value.replace(/\.{2,}/g, '.');
+						}
+						
+						// Batasi maksimal 3 titik
+						const dots = (value.match(/\./g) || []).length;
+						if (dots > 3) {
+							const parts = value.split('.');
+							this.value = parts.slice(0, 4).join('.');
+						}
+						
+						// Batasi setiap oktet maksimal 3 digit
+						const parts = value.split('.');
+						const validParts = parts.map(part => {
+							if (part.length > 3) {
+								return part.substring(0, 3);
+							}
+							return part;
+						});
+						
+						if (validParts.join('.') !== value) {
+							this.value = validParts.join('.');
+						}
+					});
+				}
+
+				// Setup validasi untuk ketiga input
+				setupIPInput(apIPInput, 'IP Address Access Point');
+				setupIPInput(gatewayInput, 'Gateway');
+				setupIPInput(subnetInput, 'Subnet Mask');
+				
+				// ================================
+				// TIMEZONE INPUT - ENTER KEY TO SAVE
+				// ================================
+				const timezoneInput = document.getElementById('timezoneInput');
+				if (timezoneInput) {
+					timezoneInput.addEventListener('keydown', function(e) {
+						if (e.key === 'Enter' && isEditingTimezone) {
+							e.preventDefault();
+							saveTimezone();
+						}
+						
+						if (e.key === 'Escape' && isEditingTimezone) {
+							e.preventDefault();
+							cancelTimezoneEdit();
+						}
+						
+						// Validasi ketik hanya + - dan angka, tapi izinkan keyboard shortcuts
+						if ([8, 9, 27, 13, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1 ||
+							(e.keyCode === 65 && e.ctrlKey === true) ||
+							(e.keyCode === 67 && e.ctrlKey === true) ||
+							(e.keyCode === 86 && e.ctrlKey === true) ||
+							(e.keyCode === 88 && e.ctrlKey === true) ||
+							(e.keyCode === 65 && e.metaKey === true) ||
+							(e.keyCode === 67 && e.metaKey === true) ||
+							(e.keyCode === 86 && e.metaKey === true) ||
+							(e.keyCode === 88 && e.metaKey === true)) {
+							return;
+						}
+						
+						const char = e.key;
+						if (!/^[\d\+\-]$/.test(char)) {
+							e.preventDefault();
+						}
+					});
+				}
+				
+				// ================================
+				// KOORDINAT INPUT - BEBAS KETIK & PASTE
+				// ================================
+				const latInput = document.getElementById('latInput');
+				if (latInput) {
+					latInput.addEventListener('keydown', function(e) {
+						// Izinkan keyboard shortcuts dan navigation keys
+						if ([8, 9, 27, 13, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1 ||
+							(e.keyCode === 65 && e.ctrlKey === true) ||
+							(e.keyCode === 67 && e.ctrlKey === true) ||
+							(e.keyCode === 86 && e.ctrlKey === true) ||
+							(e.keyCode === 88 && e.ctrlKey === true) ||
+							(e.keyCode === 65 && e.metaKey === true) ||
+							(e.keyCode === 67 && e.metaKey === true) ||
+							(e.keyCode === 86 && e.metaKey === true) ||
+							(e.keyCode === 88 && e.metaKey === true)) {
+							return;
+						}
+						
+						const char = e.key;
+						if (!/^[\d\.\+\-]$/.test(char)) {
+							e.preventDefault();
+						}
+					});
+					
+					latInput.addEventListener('blur', function() {
+						const val = parseFloat(this.value);
+						if (!isNaN(val) && (val < -90 || val > 90)) {
+							showToast('Latitude harus antara -90 hingga 90', 'warning');
+							this.style.borderColor = '#cc4b37';
+						} else {
+							this.style.borderColor = '';
+						}
+					});
+				}
+				
+				const lonInput = document.getElementById('lonInput');
+				if (lonInput) {
+					lonInput.addEventListener('keydown', function(e) {
+						if ([8, 9, 27, 13, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1 ||
+							(e.keyCode === 65 && e.ctrlKey === true) ||
+							(e.keyCode === 67 && e.ctrlKey === true) ||
+							(e.keyCode === 86 && e.ctrlKey === true) ||
+							(e.keyCode === 88 && e.ctrlKey === true) ||
+							(e.keyCode === 65 && e.metaKey === true) ||
+							(e.keyCode === 67 && e.metaKey === true) ||
+							(e.keyCode === 86 && e.metaKey === true) ||
+							(e.keyCode === 88 && e.metaKey === true)) {
+							return;
+						}
+						
+						const char = e.key;
+						if (!/^[\d\.\+\-]$/.test(char)) {
+							e.preventDefault();
+						}
+					});
+					
+					lonInput.addEventListener('blur', function() {
+						const val = parseFloat(this.value);
+						if (!isNaN(val) && (val < -180 || val > 180)) {
+							showToast('Longitude harus antara -180 hingga 180', 'warning');
+							this.style.borderColor = '#cc4b37';
+						} else {
+							this.style.borderColor = '';
+						}
+					});
+				}
+				
+				// ================================
+				// FILE INPUT - DRAG & DROP SUPPORT
+				// ================================
+				const citiesFileInput = document.getElementById('citiesFileInput');
+				const fileLabel = citiesFileInput ? citiesFileInput.closest('label') : null;
+				
+				if (fileLabel) {
+					['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+						fileLabel.addEventListener(eventName, preventDefaults, false);
+						document.body.addEventListener(eventName, preventDefaults, false);
+					});
+					
+					function preventDefaults(e) {
+						e.preventDefault();
+						e.stopPropagation();
+					}
+					
+					['dragenter', 'dragover'].forEach(eventName => {
+						fileLabel.addEventListener(eventName, function() {
+							this.style.borderColor = '#1779ba';
+							this.style.backgroundColor = '#e7f4ff';
+						}, false);
+					});
+					
+					['dragleave', 'drop'].forEach(eventName => {
+						fileLabel.addEventListener(eventName, function() {
+							this.style.borderColor = '';
+							this.style.backgroundColor = '';
+						}, false);
+					});
+					
+					fileLabel.addEventListener('drop', function(e) {
+						const dt = e.dataTransfer;
+						const files = dt.files;
+						
+						if (files.length > 0) {
+							citiesFileInput.files = files;
+							
+							const event = new Event('change', { bubbles: true });
+							citiesFileInput.dispatchEvent(event);
+						}
+					}, false);
+				}
+				
+				// ================================
+				// CITY DROPDOWN - SEARCH FUNCTIONALITY
+				// ================================
+				const cityDropdown = document.getElementById('cityDropdown');
+				if (cityDropdown) {
+					cityDropdown.addEventListener('keydown', function(e) {
+						if (e.key === 'Enter') {
+							handleCityChange();
+						}
+					});
+					
+					cityDropdown.addEventListener('change', function() {
+						const selectedOption = this.options[this.selectedIndex];
+						if (selectedOption && selectedOption.value) {
+							const lat = selectedOption.getAttribute('data-lat');
+							const lon = selectedOption.getAttribute('data-lon');
+						}
+					});
+				}
+				
+				// ================================
+				// METHOD DROPDOWN - LOG SELECTION
+				// ================================
+				const methodDropdown = document.getElementById('methodDropdown');
+				if (methodDropdown) {
+					methodDropdown.addEventListener('change', function() {
+						const selectedOption = this.options[this.selectedIndex];
+					});
+				}
+				
+				// ================================
+				// FORM INPUTS - CLEAR ERROR ON FOCUS
+				// ================================
+				const allInputs = document.querySelectorAll('input[type="text"], input[type="password"]');
+				allInputs.forEach(input => {
+					input.addEventListener('focus', function() {
+						this.style.borderColor = '';
+						this.style.backgroundColor = '';
+					});
+				});
+				
+				// ================================
+				// PREVENT ACCIDENTAL FORM SUBMISSION
+				// ================================
+				document.addEventListener('keydown', function(e) {
+					if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'BUTTON') {
+						if (e.target.id !== 'timezoneInput') {
+							const form = e.target.closest('form');
+							if (!form) {
+								e.preventDefault();
+							}
+						}
+					}
+				});
+				
+				// ================================
+				// VISIBILITY CHANGE - PAUSE/RESUME UPDATES
+				// ================================
+				document.addEventListener('visibilitychange', function() {
+					if (document.hidden) {
+						// Do nothing
+					} else {
+						updateDeviceStatus();
+						loadSavedPrayerTimes();
+					}
+				});
+				
+				// ================================
+				// WINDOW BEFOREUNLOAD - WARN IF EDITING
+				// ================================
+				window.addEventListener('beforeunload', function(e) {
+					if (isEditingTimezone) {
+						e.preventDefault();
+						e.returnValue = 'Anda sedang mengedit timezone. Yakin ingin meninggalkan halaman?';
+						return e.returnValue;
+					}
+					
+					const clearBtn = document.getElementById('clearFileBtn');
+					if (clearBtn && clearBtn.style.display === 'block') {
+						e.preventDefault();
+						e.returnValue = 'Berkas belum diupload. Yakin ingin meninggalkan halaman?';
+						return e.returnValue;
+					}
+				});
+				
+				// ================================
+				// ONLINE/OFFLINE DETECTION
+				// ================================
+				window.addEventListener('online', function() {
+					showToast('Koneksi internet tersambung', 'success');
+					
+					setTimeout(() => {
+						updateDeviceStatus();
+					}, 1000);
+				}, 1000);
+				
+				window.addEventListener('offline', function() {
+					showToast('Tidak ada koneksi internet', 'warning');
+				});
+			});
+    	</script>
+	</body>
 </html>
