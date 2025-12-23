@@ -7685,7 +7685,7 @@ screen and (max-width:39.99875em) {
 	height: .5rem;
 	margin-top: 1.25rem;
 	margin-bottom: 2.25rem;
-	background-color: #e6e6e6;
+	background-color: #1779ba;
 	cursor: pointer;
 	-webkit-user-select: none;
 	-moz-user-select: none;
@@ -7721,7 +7721,7 @@ screen and (max-width:39.99875em) {
 	width: 1.4rem;
 	height: 1.4rem;
 	border-radius: 0;
-	background-color: #1779ba;
+	background-color: #5ebcfa;
 	-webkit-transition: all .2s ease-in-out;
 	transition: all .2s ease-in-out;
 	-ms-touch-action: manipulation;
@@ -7737,7 +7737,7 @@ screen and (max-width:39.99875em) {
 }
 
 .slider-handle:hover {
-	background-color: rgb(19.55, 102.85, 158.1)
+	background-color: #5ebcfa
 }
 
 .slider-handle.is-dragging {
@@ -7819,7 +7819,7 @@ screen and (max-width:39.99875em) {
 	outline: 0;
 	font-size: .875rem;
 	font-weight: 700;
-	color: #fefefe;
+	color: #000000;
 	-webkit-user-select: none;
 	-moz-user-select: none;
 	-ms-user-select: none;
@@ -7839,7 +7839,7 @@ screen and (max-width:39.99875em) {
 	width: 4rem;
 	height: 2rem;
 	border-radius: 0;
-	background: #cacaca;
+	background: #1779ba;
 	-webkit-transition: all .25s ease-out;
 	transition: all .25s ease-out;
 	font-weight: inherit;
@@ -7848,7 +7848,10 @@ screen and (max-width:39.99875em) {
 }
 
 input+.switch-paddle {
-	margin: 0
+	width: auto;
+	margin: 0;
+	margin-left: 5px;
+	margin-right: 5px;
 }
 
 .switch-paddle::after {
@@ -7900,6 +7903,8 @@ input:disabled~.switch-paddle {
 .switch-inactive {
 	position: absolute;
 	top: 50%;
+	margin-right: -3px;
+	margin-left: 2px;
 	-webkit-transform: translateY(-50%);
 	transform: translateY(-50%)
 }

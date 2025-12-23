@@ -44,6 +44,12 @@
 //#define RTC_SDA    21
 //#define RTC_SCL    22
 
+// Pin & PWM config
+#define BUZZER_PIN 26
+#define BUZZER_CHANNEL 1
+#define BUZZER_FREQ 2000
+#define BUZZER_RESOLUTION 8
+
 // PWM Backlight Configuration
 #define TFT_BL_CHANNEL 0
 #define TFT_BL_FREQ 5000
@@ -182,12 +188,27 @@ struct MethodConfig {
   String methodName;
 };
 
-// Global configurations
+struct BuzzerConfig {
+  bool imsakEnabled;
+  bool subuhEnabled;
+  bool terbitEnabled;
+  bool zuhurEnabled;
+  bool asharEnabled;
+  bool maghribEnabled;
+  bool isyaEnabled;
+  int volume;
+};
+
 WiFiConfig wifiConfig;
 TimeConfig timeConfig;
 PrayerConfig prayerConfig;
 MethodConfig methodConfig = { 5, "Egyptian General Authority of Survey" };
 int timezoneOffset = 7;
+
+BuzzerConfig buzzerConfig = {
+  true, true, true, true, true, true, true,
+  50
+};
 
 volatile bool needPrayerUpdate = false;
 String pendingPrayerLat = "";
@@ -281,60 +302,79 @@ const unsigned long RESTART_DEBOUNCE_MS = 3000; // 3 detik minimum antar restart
 // FORWARD DECLARATIONS
 // ================================
 
-// Display Functions
+// ============================================
+// Display & UI Functions
+// ============================================
 void updateCityDisplay();
 void updateTimeDisplay();
 void updatePrayerDisplay();
 void hideAllUIElements();
 void showAllUIElements();
 
-// Prayer Blink Functions
+// ============================================
+// Prayer Time Blink Functions
+// ============================================
 void checkPrayerTime();
 void startBlinking(String prayerName);
 void stopBlinking();
 void handleBlinking();
 
-// Prayer Times Functions
+// ============================================
+// Prayer Times API Functions
+// ============================================
 void getPrayerTimesByCoordinates(String lat, String lon);
 void savePrayerTimes();
 void loadPrayerTimes();
 
+// ============================================
 // WiFi Functions
+// ============================================
 void saveWiFiCredentials();
 void loadWiFiCredentials();
 void saveAPCredentials();
 void setupWiFiEvents();
 
-// Settings Functions
+// ============================================
+// Settings & Configuration Functions
+// ============================================
 void saveTimezoneConfig();
 void loadTimezoneConfig();
+void saveBuzzerConfig();
+void loadBuzzerConfig();
 void saveCitySelection();
 void loadCitySelection();
 void saveMethodSelection();
 void loadMethodSelection();
 
-// Time Functions
-void saveTimeToRTC();
+// ============================================
+// RTC Functions
+// ============================================
 bool initRTC();
+void saveTimeToRTC();
 
-// Server Functions
+// ============================================
+// Web Server Functions
+// ============================================
 void setupServerRoutes();
 
+// ============================================
 // Utility Functions
+// ============================================
 void scheduleRestart(int delaySeconds);
 void delayedRestart(void *parameter);
-
-// LittleFS Functions
 bool init_littlefs();
+void printStackReport();
 
-// LVGL Callbacks
+// ============================================
+// LVGL Callback Functions
+// ============================================
 void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map);
 void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data);
 
-// RTOS Tasks
+// ============================================
+// FreeRTOS Task Functions
+// ============================================
 void uiTask(void *parameter);
-void restartWiFiTask(void *parameter);
-void restartAPTask(void *parameter);
 void wifiTask(void *parameter);
 void ntpTask(void *parameter);
 void webTask(void *parameter);
@@ -342,7 +382,15 @@ void prayerTask(void *parameter);
 void rtcSyncTask(void *parameter);
 void clockTickTask(void *parameter);
 
-// Display Functions
+// ============================================
+// WiFi & AP Restart Tasks
+// ============================================
+void restartWiFiTask(void *parameter);
+void restartAPTask(void *parameter);
+
+// ============================================
+// Display & UI Functions
+// ============================================
 void updateCityDisplay() {
   if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
     String displayText = "--";
@@ -394,6 +442,45 @@ void updateTimeDisplay() {
   }
 }
 
+void updatePrayerDisplay() {
+  if (objects.imsak_time) lv_label_set_text(objects.imsak_time, prayerConfig.imsakTime.c_str());
+  if (objects.subuh_time) lv_label_set_text(objects.subuh_time, prayerConfig.subuhTime.c_str());
+  if (objects.terbit_time) lv_label_set_text(objects.terbit_time, prayerConfig.terbitTime.c_str());
+  if (objects.zuhur_time) lv_label_set_text(objects.zuhur_time, prayerConfig.zuhurTime.c_str());
+  if (objects.ashar_time) lv_label_set_text(objects.ashar_time, prayerConfig.asharTime.c_str());
+  if (objects.maghrib_time) lv_label_set_text(objects.maghrib_time, prayerConfig.maghribTime.c_str());
+  if (objects.isya_time) lv_label_set_text(objects.isya_time, prayerConfig.isyaTime.c_str());
+}
+
+void hideAllUIElements() {
+  if (objects.time_now) lv_obj_add_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
+  if (objects.date_now) lv_obj_add_flag(objects.date_now, LV_OBJ_FLAG_HIDDEN);
+  if (objects.city_time) lv_obj_add_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.imsak_time) lv_obj_add_flag(objects.imsak_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.subuh_time) lv_obj_add_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.terbit_time) lv_obj_add_flag(objects.terbit_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.zuhur_time) lv_obj_add_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.ashar_time) lv_obj_add_flag(objects.ashar_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.maghrib_time) lv_obj_add_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.isya_time) lv_obj_add_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
+}
+
+void showAllUIElements() {
+  if (objects.time_now) lv_obj_clear_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
+  if (objects.date_now) lv_obj_clear_flag(objects.date_now, LV_OBJ_FLAG_HIDDEN);
+  if (objects.city_time) lv_obj_clear_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.imsak_time) lv_obj_clear_flag(objects.imsak_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.subuh_time) lv_obj_clear_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.terbit_time) lv_obj_clear_flag(objects.terbit_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.zuhur_time) lv_obj_clear_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.ashar_time) lv_obj_clear_flag(objects.ashar_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.maghrib_time) lv_obj_clear_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.isya_time) lv_obj_clear_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
+}
+
+// ============================================
+// Prayer Time Blink Functions
+// ============================================
 void checkPrayerTime() {
   if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
     time_t now_t = timeConfig.currentTime;
@@ -409,19 +496,19 @@ void checkPrayerTime() {
       String current = String(currentTime);
       
       if (!blinkState.isBlinking) {
-        if (current == prayerConfig.imsakTime) {
+        if (current == prayerConfig.imsakTime && buzzerConfig.imsakEnabled) {
           startBlinking("imsak");
-        } else if (current == prayerConfig.subuhTime) {
+        } else if (current == prayerConfig.subuhTime && buzzerConfig.subuhEnabled) {
           startBlinking("subuh");
-        } else if (current == prayerConfig.terbitTime) {
+        } else if (current == prayerConfig.terbitTime && buzzerConfig.terbitEnabled) {
           startBlinking("terbit");
-        } else if (current == prayerConfig.zuhurTime) {
+        } else if (current == prayerConfig.zuhurTime && buzzerConfig.zuhurEnabled) {
           startBlinking("zuhur");
-        } else if (current == prayerConfig.asharTime) {
+        } else if (current == prayerConfig.asharTime && buzzerConfig.asharEnabled) {
           startBlinking("ashar");
-        } else if (current == prayerConfig.maghribTime) {
+        } else if (current == prayerConfig.maghribTime && buzzerConfig.maghribEnabled) {
           startBlinking("maghrib");
-        } else if (current == prayerConfig.isyaTime) {
+        } else if (current == prayerConfig.isyaTime && buzzerConfig.isyaEnabled) {
           startBlinking("isya");
         }
       }
@@ -474,6 +561,8 @@ void handleBlinking() {
   
   if (currentMillis - blinkState.blinkStartTime >= BLINK_DURATION) {
     stopBlinking();
+    // Matikan buzzer
+    ledcWrite(BUZZER_CHANNEL, 0);
     return;
   }
   
@@ -495,8 +584,13 @@ void handleBlinking() {
       if (targetLabel) {
         if (blinkState.currentVisible) {
           lv_obj_clear_flag(targetLabel, LV_OBJ_FLAG_HIDDEN);
+          // Buzzer ON
+          int pwmValue = map(buzzerConfig.volume, 0, 100, 0, 255);
+          ledcWrite(BUZZER_CHANNEL, pwmValue);
         } else {
           lv_obj_add_flag(targetLabel, LV_OBJ_FLAG_HIDDEN);
+          // Buzzer OFF
+          ledcWrite(BUZZER_CHANNEL, 0);
         }
       }
       
@@ -505,43 +599,9 @@ void handleBlinking() {
   }
 }
 
-void updatePrayerDisplay() {
-  if (objects.imsak_time) lv_label_set_text(objects.imsak_time, prayerConfig.imsakTime.c_str());
-  if (objects.subuh_time) lv_label_set_text(objects.subuh_time, prayerConfig.subuhTime.c_str());
-  if (objects.terbit_time) lv_label_set_text(objects.terbit_time, prayerConfig.terbitTime.c_str());
-  if (objects.zuhur_time) lv_label_set_text(objects.zuhur_time, prayerConfig.zuhurTime.c_str());
-  if (objects.ashar_time) lv_label_set_text(objects.ashar_time, prayerConfig.asharTime.c_str());
-  if (objects.maghrib_time) lv_label_set_text(objects.maghrib_time, prayerConfig.maghribTime.c_str());
-  if (objects.isya_time) lv_label_set_text(objects.isya_time, prayerConfig.isyaTime.c_str());
-}
-
-void hideAllUIElements() {
-  if (objects.time_now) lv_obj_add_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
-  if (objects.date_now) lv_obj_add_flag(objects.date_now, LV_OBJ_FLAG_HIDDEN);
-  if (objects.city_time) lv_obj_add_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.imsak_time) lv_obj_add_flag(objects.imsak_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.subuh_time) lv_obj_add_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.terbit_time) lv_obj_add_flag(objects.terbit_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.zuhur_time) lv_obj_add_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.ashar_time) lv_obj_add_flag(objects.ashar_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.maghrib_time) lv_obj_add_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.isya_time) lv_obj_add_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
-}
-
-void showAllUIElements() {
-  if (objects.time_now) lv_obj_clear_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
-  if (objects.date_now) lv_obj_clear_flag(objects.date_now, LV_OBJ_FLAG_HIDDEN);
-  if (objects.city_time) lv_obj_clear_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.imsak_time) lv_obj_clear_flag(objects.imsak_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.subuh_time) lv_obj_clear_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.terbit_time) lv_obj_clear_flag(objects.terbit_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.zuhur_time) lv_obj_clear_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.ashar_time) lv_obj_clear_flag(objects.ashar_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.maghrib_time) lv_obj_clear_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.isya_time) lv_obj_clear_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
-}
-
-// Prayer Times Functions
+// ============================================
+// Prayer Times API Functions
+// ============================================
 void getPrayerTimesByCoordinates(String lat, String lon) {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi not connected - keeping existing prayer times");
@@ -767,7 +827,9 @@ void loadPrayerTimes() {
   }
 }
 
+// ============================================
 // WiFi Functions
+// ============================================
 void saveWiFiCredentials() {
   if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
     fs::File file = LittleFS.open("/wifi_creds.txt", "w");
@@ -1003,7 +1065,9 @@ void setupWiFiEvents() {
     Serial.print("WiFi Event Handler registered (with restart protection)");
 }
 
-// Settings Functions
+// ============================================
+// Settings & Configuration Functions
+// ============================================
 void saveTimezoneConfig() {
   if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
     fs::File file = LittleFS.open("/timezone.txt", "w");
@@ -1039,6 +1103,47 @@ void loadTimezoneConfig() {
     } else {
       timezoneOffset = 7;
       Serial.println("No timezone config found - using default (UTC+7)");
+    }
+    xSemaphoreGive(settingsMutex);
+  }
+}
+
+void loadBuzzerConfig() {
+  if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+    if (LittleFS.exists("/buzzer_config.txt")) {
+      fs::File file = LittleFS.open("/buzzer_config.txt", "r");
+      if (file) {
+        buzzerConfig.imsakEnabled = file.readStringUntil('\n').toInt() == 1;
+        buzzerConfig.subuhEnabled = file.readStringUntil('\n').toInt() == 1;
+        buzzerConfig.terbitEnabled = file.readStringUntil('\n').toInt() == 1;
+        buzzerConfig.zuhurEnabled = file.readStringUntil('\n').toInt() == 1;
+        buzzerConfig.asharEnabled = file.readStringUntil('\n').toInt() == 1;
+        buzzerConfig.maghribEnabled = file.readStringUntil('\n').toInt() == 1;
+        buzzerConfig.isyaEnabled = file.readStringUntil('\n').toInt() == 1;
+        buzzerConfig.volume = file.readStringUntil('\n').toInt();
+        file.close();
+        Serial.println("Buzzer config loaded");
+      }
+    }
+    xSemaphoreGive(settingsMutex);
+  }
+}
+
+void saveBuzzerConfig() {
+  if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+    fs::File file = LittleFS.open("/buzzer_config.txt", "w");
+    if (file) {
+      file.println(buzzerConfig.imsakEnabled ? "1" : "0");
+      file.println(buzzerConfig.subuhEnabled ? "1" : "0");
+      file.println(buzzerConfig.terbitEnabled ? "1" : "0");
+      file.println(buzzerConfig.zuhurEnabled ? "1" : "0");
+      file.println(buzzerConfig.asharEnabled ? "1" : "0");
+      file.println(buzzerConfig.maghribEnabled ? "1" : "0");
+      file.println(buzzerConfig.isyaEnabled ? "1" : "0");
+      file.println(buzzerConfig.volume);
+      file.flush();
+      file.close();
+      Serial.println("Buzzer config saved");
     }
     xSemaphoreGive(settingsMutex);
   }
@@ -1140,6 +1245,10 @@ void loadMethodSelection() {
     xSemaphoreGive(settingsMutex);
   }
 }
+
+// ============================================
+// RTC Functions
+// ============================================
 
 bool initRTC() {
     Serial.println("\n========================================");
@@ -1307,7 +1416,9 @@ void saveTimeToRTC() {
     }
 }
 
-// Server Functions
+// ============================================
+// Web Server Functions
+// ============================================
 void setupServerRoutes() {
     // ========================================
     // HTML
@@ -1537,6 +1648,67 @@ void setupServerRoutes() {
         response += "}";
 
         request->send(200, "application/json", response);
+    });
+
+    // ========================================
+    // GET buzzer config
+    // ========================================
+    server.on("/getbuzzerconfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+      String json = "{";
+      json += "\"imsak\":" + String(buzzerConfig.imsakEnabled ? "true" : "false") + ",";
+      json += "\"subuh\":" + String(buzzerConfig.subuhEnabled ? "true" : "false") + ",";
+      json += "\"terbit\":" + String(buzzerConfig.terbitEnabled ? "true" : "false") + ",";
+      json += "\"zuhur\":" + String(buzzerConfig.zuhurEnabled ? "true" : "false") + ",";
+      json += "\"ashar\":" + String(buzzerConfig.asharEnabled ? "true" : "false") + ",";
+      json += "\"maghrib\":" + String(buzzerConfig.maghribEnabled ? "true" : "false") + ",";
+      json += "\"isya\":" + String(buzzerConfig.isyaEnabled ? "true" : "false") + ",";
+      json += "\"volume\":" + String(buzzerConfig.volume);
+      json += "}";
+      
+      request->send(200, "application/json", json);
+    });
+
+    // ========================================
+    // SET buzzer toggle (individual)
+    // ========================================
+    server.on("/setbuzzertoggle", HTTP_POST, [](AsyncWebServerRequest *request) {
+      if (!request->hasParam("prayer", true) || !request->hasParam("enabled", true)) {
+        request->send(400, "text/plain", "Missing parameters");
+        return;
+      }
+      
+      String prayer = request->getParam("prayer", true)->value();
+      bool enabled = request->getParam("enabled", true)->value() == "true";
+      
+      if (prayer == "imsak") buzzerConfig.imsakEnabled = enabled;
+      else if (prayer == "subuh") buzzerConfig.subuhEnabled = enabled;
+      else if (prayer == "terbit") buzzerConfig.terbitEnabled = enabled;
+      else if (prayer == "zuhur") buzzerConfig.zuhurEnabled = enabled;
+      else if (prayer == "ashar") buzzerConfig.asharEnabled = enabled;
+      else if (prayer == "maghrib") buzzerConfig.maghribEnabled = enabled;
+      else if (prayer == "isya") buzzerConfig.isyaEnabled = enabled;
+      
+      saveBuzzerConfig();
+      request->send(200, "text/plain", "OK");
+    });
+
+    // ========================================
+    // SET buzzer volume
+    // ========================================
+    server.on("/setbuzzervolume", HTTP_POST, [](AsyncWebServerRequest *request) {
+      if (!request->hasParam("volume", true)) {
+        request->send(400, "text/plain", "Missing volume");
+        return;
+      }
+      
+      int volume = request->getParam("volume", true)->value().toInt();
+      if (volume < 0) volume = 0;
+      if (volume > 100) volume = 100;
+      
+      buzzerConfig.volume = volume;
+      saveBuzzerConfig();
+      
+      request->send(200, "text/plain", "OK");
     });
 
     // ========================================
@@ -2510,7 +2682,9 @@ void setupServerRoutes() {
     });
 }
 
+// ============================================
 // Utility Functions
+// ============================================
 void scheduleRestart(int delaySeconds) {
   static int delay = delaySeconds;
   xTaskCreate(
@@ -2553,7 +2727,96 @@ bool init_littlefs() {
   return true;
 }
 
-// LVGL Callbacks
+void printStackReport() {
+  Serial.println("\n========================================");
+  Serial.println("STACK USAGE ANALYSIS");
+  Serial.println("========================================");
+
+  struct TaskInfo {
+    TaskHandle_t handle;
+    const char *name;
+    uint32_t size;
+  };
+
+  TaskInfo tasks[] = {
+    { uiTaskHandle, "UI", UI_TASK_STACK_SIZE },
+    { webTaskHandle, "Web", WEB_TASK_STACK_SIZE },
+    { wifiTaskHandle, "WiFi", WIFI_TASK_STACK_SIZE },
+    { ntpTaskHandle, "NTP", NTP_TASK_STACK_SIZE },
+    { prayerTaskHandle, "Prayer", PRAYER_TASK_STACK_SIZE },
+    { rtcTaskHandle, "RTC", RTC_TASK_STACK_SIZE }
+  };
+
+  uint32_t totalAllocated = 0;
+  uint32_t totalUsed = 0;
+  uint32_t totalFree = 0;
+
+  for (int i = 0; i < 6; i++) { 
+    if (tasks[i].handle) {
+      UBaseType_t hwm = uxTaskGetStackHighWaterMark(tasks[i].handle);
+      
+      uint32_t free = hwm * sizeof(StackType_t);
+      uint32_t used = tasks[i].size - free;
+      float percent = (used * 100.0) / tasks[i].size;
+
+      totalAllocated += tasks[i].size;
+      totalUsed += used;
+      totalFree += free;
+
+      Serial.printf("%-10s: %5d/%5d (%5.1f%%) [Free: %5d] ",
+                    tasks[i].name, used, tasks[i].size, percent, free);
+
+      if (percent < 40) Serial.println("BOROS - bisa dikurangi");
+      else if (percent < 60) Serial.println("OPTIMAL");
+      else if (percent < 75) Serial.println("PAS");
+      else if (percent < 90) Serial.println("TINGGI - monitor terus");
+      else if (percent < 95) Serial.println("BAHAYA - harus dinaikkan");
+      else Serial.println("KRITIS - segera naikkan");
+    } else {
+      Serial.printf("%-10s: TASK NOT RUNNING\n", tasks[i].name);
+    }
+  }
+
+  Serial.println("========================================");
+  Serial.printf("Total Allocated: %d bytes (%.1f KB)\n",
+                totalAllocated, totalAllocated / 1024.0);
+  Serial.printf("Total Used:      %d bytes (%.1f KB)\n",
+                totalUsed, totalUsed / 1024.0);
+  Serial.printf("Total Free:      %d bytes (%.1f KB)\n",
+                totalFree, totalFree / 1024.0);
+  Serial.printf("Efficiency:      %.1f%%\n",
+                (totalUsed * 100.0) / totalAllocated);
+  
+  bool hasCritical = false;
+  for (int i = 0; i < 6; i++) {
+    if (tasks[i].handle) {
+      UBaseType_t hwm = uxTaskGetStackHighWaterMark(tasks[i].handle);
+      uint32_t free = hwm * sizeof(StackType_t);
+      uint32_t used = tasks[i].size - free;
+      float percent = (used * 100.0) / tasks[i].size;
+      
+      if (percent >= 90) {
+        if (!hasCritical) {
+          Serial.println("========================================");
+          Serial.println("CRITICAL TASKS:");
+          hasCritical = true;
+        }
+        Serial.printf("   %s: %.1f%% (free: %d bytes)\n", 
+                      tasks[i].name, percent, free);
+      }
+    }
+  }
+  
+  if (hasCritical) {
+    Serial.println("   ACTION: Increase stack size ASAP");
+  }
+  
+  Serial.println("========================================\n");
+}
+
+// ============================================
+// LVGL Callback Functions
+// ============================================
 void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
   if (spiMutex != NULL && xSemaphoreTake(spiMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
     uint32_t w = area->x2 - area->x1 + 1;
@@ -2619,7 +2882,9 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data) {
   touchPressed = false;
 }
 
-// RTOS Tasks
+// ============================================
+// FreeRTOS Task Functions
+// ============================================
 void uiTask(void *parameter) {
   TickType_t xLastWakeTime = xTaskGetTickCount();
   const TickType_t xFrequency = pdMS_TO_TICKS(50);
@@ -2670,502 +2935,227 @@ void uiTask(void *parameter) {
       }
     }
     
-    // Handle blinking effect
     handleBlinking();
     
     vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
 }
 
-// ================================
-// WIFI RESTART TASK
-// ================================
-void restartWiFiTask(void *parameter) {
-    // ============================================
-    // DEBOUNCING
-    // ============================================
-    unsigned long now = millis();
-    if (now - lastWiFiRestartRequest < RESTART_DEBOUNCE_MS) {
-        unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastWiFiRestartRequest);
-        
-        Serial.println("\n========================================");
-        Serial.println("WiFi RESTART REJECTED - TOO FAST");
-        Serial.println("========================================");
-        Serial.printf("Reason: Last restart was %lu ms ago\n", now - lastWiFiRestartRequest);
-        Serial.printf("Minimum interval: %lu ms\n", RESTART_DEBOUNCE_MS);
-        Serial.printf("Please wait: %lu ms (%.1f seconds)\n", waitTime, waitTime / 1000.0);
-        Serial.println("========================================\n");
-        
-        vTaskDelete(NULL);
-        return;
-    }
-    
-    lastWiFiRestartRequest = now;
-    
-    // ============================================
-    // LOCK
-    // ============================================
-    if (wifiRestartMutex == NULL) {
-        wifiRestartMutex = xSemaphoreCreateMutex();
-        if (wifiRestartMutex == NULL) {
-            Serial.println("ERROR: Failed to create wifiRestartMutex");
-            vTaskDelete(NULL);
-            return;
-        }
-    }
-    
-    if (xSemaphoreTake(wifiRestartMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
-        Serial.println("\n========================================");
-        Serial.println("WiFi RESTART BLOCKED");
-        Serial.println("========================================");
-        Serial.println("Reason: Another WiFi/AP restart in progress");
-        Serial.println("Action: Request ignored for safety");
-        Serial.println("========================================\n");
-        
-        vTaskDelete(NULL);
-        return;
-    }
-    
-    if (wifiRestartInProgress || apRestartInProgress) {
-        Serial.println("\n========================================");
-        Serial.println("WiFi RESTART ABORTED");
-        Serial.println("========================================");
-        Serial.printf("WiFi restart in progress: %s\n", wifiRestartInProgress ? "YES" : "NO");
-        Serial.printf("AP restart in progress: %s\n", apRestartInProgress ? "YES" : "NO");
-        Serial.println("========================================\n");
-        
-        xSemaphoreGive(wifiRestartMutex);
-        vTaskDelete(NULL);
-        return;
-    }
-    
-    wifiRestartInProgress = true;
+void wifiTask(void *parameter) {
+    esp_task_wdt_add(NULL);
     
     Serial.println("\n========================================");
-    Serial.println("SAFE WiFi RESTART SEQUENCE STARTED");
-    Serial.println("========================================");
-    Serial.println("Protection: Debouncing + Mutex Lock Active");
-    Serial.println("Mode: Safe reconnect (no mode switching)");
+    Serial.println("WiFi Task Started - Event-Driven Mode");
     Serial.println("========================================\n");
-    
-    vTaskDelay(pdMS_TO_TICKS(3000));
-    
-    // ============================================
-    // SIMPAN KREDENSIAL DULU
-    // ============================================
-    Serial.println("Preparing for reconnect...");
-    
-    String ssid, password;
-    if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-        ssid = wifiConfig.routerSSID;
-        password = wifiConfig.routerPassword;
-        wifiConfig.isConnected = false;
-        wifiState = WIFI_IDLE;
-        reconnectAttempts = 0;
-        xSemaphoreGive(wifiMutex);
-        
-        Serial.println("   Credentials loaded from memory");
-        Serial.println("   SSID: " + ssid);
-        Serial.println("   Connection state reset");
-    } else {
-        Serial.println("   ERROR: Failed to acquire wifiMutex");
-        wifiRestartInProgress = false;
-        xSemaphoreGive(wifiRestartMutex);
-        vTaskDelete(NULL);
-        return;
-    }
-    
-    // ============================================
-    // DISCONNECT DENGAN AMAN
-    // ============================================
-    Serial.println("\nDisconnecting old WiFi...");
-    WiFi.disconnect(false, false); // Keep config, don't erase
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    Serial.println("   Disconnected (config preserved)");
-    
-    // ============================================
-    // CEK & RESTORE AP JIKA MATI
-    // ============================================
-    Serial.println("\nVerifying AP status...");
-    
-    IPAddress apIP = WiFi.softAPIP();
-    if (apIP == IPAddress(0, 0, 0, 0)) {
-        Serial.println("   WARNING: AP died during disconnect");
-        Serial.println("   Restoring AP...");
-        
-        WiFi.softAPdisconnect(false);
-        vTaskDelay(pdMS_TO_TICKS(500));
-        
-        WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
-        bool apStarted = WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        
-        if (apStarted) {
-            Serial.println("   AP restored successfully");
-            Serial.println("   AP IP: " + WiFi.softAPIP().toString());
-        } else {
-            Serial.println("   ERROR: Failed to restore AP");
-        }
-    } else {
-        Serial.println("   AP still alive: " + apIP.toString());
-    }
-    
-    // ============================================
-    // RECONNECT WiFi
-    // ============================================
-    if (ssid.length() > 0) {
-        Serial.println("\nReconnecting to WiFi...");
-        Serial.println("   Target SSID: " + ssid);
-        Serial.println("   Initiating connection...");
-        
-        WiFi.begin(ssid.c_str(), password.c_str());
-        
-        Serial.println("\n========================================");
-        Serial.println("WiFi RECONNECT INITIATED");
-        Serial.println("========================================");
-        Serial.println("Status: Connection request sent");
-        Serial.println("Monitor: WiFi Task will handle connection");
-        Serial.println("Expected: See WiFi events in serial log");
-        Serial.println("========================================\n");
-    } else {
-        Serial.println("\n========================================");
-        Serial.println("WiFi RECONNECT FAILED");
-        Serial.println("========================================");
-        Serial.println("Reason: No SSID configured in memory");
-        Serial.println("Action: Configure WiFi via web interface");
-        Serial.println("========================================\n");
-    }
-    
-    // Delay sebelum release lock
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    
-    // ============================================
-    // RELEASE LOCK & CLEANUP
-    // ============================================
-    wifiRestartInProgress = false;
-    xSemaphoreGive(wifiRestartMutex);
-    
-    Serial.println("WiFi restart sequence completed");
-    Serial.println("Lock released - system ready for next request\n");
-    
-    vTaskDelete(NULL);
-}
 
-// ================================
-// AP RESTART TASK
-// ================================
-void restartAPTask(void *parameter) {
-    // ============================================
-    // DEBOUNCING CHECK
-    // ============================================
-    unsigned long now = millis();
-    if (now - lastAPRestartRequest < RESTART_DEBOUNCE_MS) {
-        unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastAPRestartRequest);
-        
-        String msg = "⏳ Please wait " + 
-                    String(waitTime / 1000) + 
-                    " seconds before next AP restart";
-        
-        Serial.println("\n========================================");
-        Serial.println("AP RESTART REQUEST REJECTED");
-        Serial.println("========================================");
-        Serial.println("Reason: Too fast (debouncing active)");
-        Serial.printf("Wait time: %lu ms\n", waitTime);
-        Serial.println("========================================\n");
-        
-        vTaskDelete(NULL);
-        return;
-    }
-    
-    lastAPRestartRequest = now;
-    
-    // ============================================
-    // LOCK - PREVENT CONCURRENT RESTARTS
-    // ============================================
-    if (wifiRestartMutex == NULL) {
-        wifiRestartMutex = xSemaphoreCreateMutex();
-        if (wifiRestartMutex == NULL) {
-            Serial.println("ERROR: Failed to create wifiRestartMutex");
-            vTaskDelete(NULL);
-            return;
-        }
-    }
-    
-    if (xSemaphoreTake(wifiRestartMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
-        Serial.println("\n========================================");
-        Serial.println("AP RESTART BLOCKED");
-        Serial.println("========================================");
-        Serial.println("Reason: Another WiFi/AP restart in progress");
-        Serial.println("Action: Request ignored for safety");
-        Serial.println("========================================\n");
-        
-        vTaskDelete(NULL);
-        return;
-    }
-    
-    // Double-check flag dengan mutex held
-    if (apRestartInProgress || wifiRestartInProgress) {
-        Serial.println("\n========================================");
-        Serial.println("AP RESTART ABORTED");
-        Serial.println("========================================");
-        Serial.printf("AP restart in progress: %s\n", apRestartInProgress ? "YES" : "NO");
-        Serial.printf("WiFi restart in progress: %s\n", wifiRestartInProgress ? "YES" : "NO");
-        Serial.println("========================================\n");
-        
-        xSemaphoreGive(wifiRestartMutex);
-        vTaskDelete(NULL);
-        return;
-    }
-    
-    apRestartInProgress = true;
-    
-    Serial.println("\n========================================");
-    Serial.println("SAFE AP RESTART SEQUENCE STARTED");
-    Serial.println("========================================");
-    Serial.println("Protection: Debouncing + Mutex Lock Active");
-    Serial.println("Mode: Safe AP restart with custom network");
-    Serial.println("========================================\n");
-    
-    // Delay awal untuk stabilitas
-    vTaskDelay(pdMS_TO_TICKS(3000));
-    
-    // ============================================
-    // SAVE CURRENT AP CREDENTIALS & SETTINGS
-    // ============================================
-    Serial.println("Loading AP configuration from memory...");
-    
-    char savedSSID[33];
-    char savedPassword[65];
-    IPAddress savedAPIP;
-    IPAddress savedGateway;
-    IPAddress savedSubnet;
-    
-    if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-        strncpy(savedSSID, wifiConfig.apSSID, sizeof(savedSSID));
-        strncpy(savedPassword, wifiConfig.apPassword, sizeof(savedPassword));
-        savedAPIP = wifiConfig.apIP;
-        savedGateway = wifiConfig.apGateway;
-        savedSubnet = wifiConfig.apSubnet;
-        
-        xSemaphoreGive(settingsMutex);
-        
-        Serial.println("   AP Configuration loaded:");
-        Serial.println("   SSID: " + String(savedSSID));
-        Serial.println("   Password length: " + String(strlen(savedPassword)));
-        Serial.println("   IP: " + savedAPIP.toString());
-        Serial.println("   Gateway: " + savedGateway.toString());
-        Serial.println("   Subnet: " + savedSubnet.toString());
-    } else {
-        Serial.println("   ERROR: Failed to acquire settingsMutex");
-        Serial.println("   Using default settings as fallback");
-        
-        strncpy(savedSSID, DEFAULT_AP_SSID, sizeof(savedSSID));
-        strncpy(savedPassword, DEFAULT_AP_PASSWORD, sizeof(savedPassword));
-        savedAPIP = IPAddress(192, 168, 4, 1);
-        savedGateway = IPAddress(192, 168, 4, 1);
-        savedSubnet = IPAddress(255, 255, 255, 0);
-    }
-    
-    // ============================================
-    // DISCONNECT AP CLIENTS GRACEFULLY
-    // ============================================
-    Serial.println("\nDisconnecting AP clients...");
-    int clientsBefore = WiFi.softAPgetStationNum();
-    Serial.printf("   Clients connected: %d\n", clientsBefore);
-    
-    if (clientsBefore > 0) {
-        Serial.println("   Sending disconnect notification to clients...");
-    }
-    
-    WiFi.softAPdisconnect(false);  // Don't erase config
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    
-    int clientsAfter = WiFi.softAPgetStationNum();
-    Serial.printf("   Clients after disconnect: %d\n", clientsAfter);
-    
-    if (clientsAfter > 0) {
-        Serial.println("   WARNING: Some clients still connected");
-        Serial.println("   Forcing disconnect...");
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-    
-    // ============================================
-    // CONFIGURE AP WITH CUSTOM NETWORK SETTINGS
-    // ============================================
-    Serial.println("\nConfiguring AP network settings...");
-    Serial.println("   AP IP: " + savedAPIP.toString());
-    Serial.println("   Gateway: " + savedGateway.toString());
-    Serial.println("   Subnet: " + savedSubnet.toString());
-    
-    bool configSuccess = WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
-    
-    if (!configSuccess) {
-        Serial.println("   ERROR: softAPConfig() failed");
-        Serial.println("   Trying with default network settings...");
-        
-        IPAddress defaultIP(192, 168, 4, 1);
-        IPAddress defaultGW(192, 168, 4, 1);
-        IPAddress defaultSN(255, 255, 255, 0);
-        
-        configSuccess = WiFi.softAPConfig(defaultIP, defaultGW, defaultSN);
-        
-        if (configSuccess) {
-            Serial.println("   Default network config applied successfully");
-        } else {
-            Serial.println("   ERROR: Even default config failed");
-        }
-    } else {
-        Serial.println("   Network configuration successful");
-    }
-    
-    vTaskDelay(pdMS_TO_TICKS(500));
-    
-    // ============================================
-    // START AP WITH NEW SETTINGS
-    // ============================================
-    Serial.println("\nStarting new AP...");
-    Serial.println("   SSID: " + String(savedSSID));
-    Serial.println("   Password: " + String(strlen(savedPassword) > 0 ? "***" : "(none)"));
-    Serial.println("   Channel: 1 (default)");
-    Serial.println("   Max Connections: 4 (default)");
-    
-    WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
-    bool apStarted = WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
-    
-    vTaskDelay(pdMS_TO_TICKS(1500));
-    
-    // ============================================
-    // VERIFY AP START SUCCESS
-    // ============================================
-    if (apStarted) {
-        IPAddress newAPIP = WiFi.softAPIP();
-        String currentSSID = WiFi.softAPSSID();
-        
-        // Verifikasi IP match
-        bool ipMatches = (newAPIP == savedAPIP);
-        
-        Serial.println("\n========================================");
-        Serial.println("AP RESTART SUCCESS");
-        Serial.println("========================================");
-        Serial.println("SSID: " + currentSSID);
-        Serial.println("Password: " + String(strlen(savedPassword) > 0 ? "Protected" : "Open (no password)"));
-        Serial.println("");
-        Serial.println("Network Configuration:");
-        Serial.println("   AP IP: " + newAPIP.toString() + (ipMatches ? "" : "MISMATCH"));
-        Serial.println("   Expected Config:");
-        Serial.println("     IP: " + savedAPIP.toString());
-        Serial.println("     Gateway: " + savedGateway.toString());
-        Serial.println("     Subnet: " + savedSubnet.toString());
-        Serial.println("   MAC: " + WiFi.softAPmacAddress());
-        Serial.println("");
-        
-        if (!ipMatches) {
-            Serial.println("WARNING: AP IP does not match expected");
-            Serial.println("   Expected: " + savedAPIP.toString());
-            Serial.println("   Actual: " + newAPIP.toString());
-            Serial.println("");
-            Serial.println("Possible causes:");
-            Serial.println("   1. softAPConfig() was ignored by ESP32");
-            Serial.println("   2. Another task changed WiFi config");
-            Serial.println("   3. ESP32 WiFi firmware limitation");
-            Serial.println("");
-            Serial.println("Action: Try restarting device manually");
-            Serial.println("========================================");
-        }
-        
-        Serial.println("Status: Ready for client connections");
-        Serial.println("Clients can connect to:");
-        Serial.println("   WiFi: " + currentSSID);
-        Serial.println("   Browser: http://" + newAPIP.toString());
-        Serial.println("========================================\n");
-        
-    } else {
-        Serial.println("\n========================================");
-        Serial.println("AP RESTART FAILED");
-        Serial.println("========================================");
-        Serial.println("Reason: softAP() returned false");
-        Serial.println("Possible causes:");
-        Serial.println("   1. Invalid SSID (empty or too long)");
-        Serial.println("   2. Invalid password (too short if set)");
-        Serial.println("   3. Network conflict");
-        Serial.println("   4. Hardware/firmware issue");
-        Serial.println("");
-        Serial.println("Action: Rolling back to default AP...");
-        Serial.println("========================================");
-        
-        // Rollback ke default
-        strcpy(savedSSID, DEFAULT_AP_SSID);
-        strcpy(savedPassword, DEFAULT_AP_PASSWORD);
-        savedAPIP = IPAddress(192, 168, 4, 1);
-        savedGateway = IPAddress(192, 168, 4, 1);
-        savedSubnet = IPAddress(255, 255, 255, 0);
-        
-        // Update global config
-        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-            strcpy(wifiConfig.apSSID, savedSSID);
-            strcpy(wifiConfig.apPassword, savedPassword);
-            wifiConfig.apIP = savedAPIP;
-            wifiConfig.apGateway = savedGateway;
-            wifiConfig.apSubnet = savedSubnet;
-            xSemaphoreGive(settingsMutex);
-        }
-        
-        // Try with defaults
-        WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
-        vTaskDelay(pdMS_TO_TICKS(500));
-        
-        bool rollbackSuccess = WiFi.softAP(savedSSID, savedPassword, 1, 0, 4);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        
-        Serial.println("\nRollback attempt completed:");
-        if (rollbackSuccess) {
-            Serial.println("   Status: SUCCESS");
-            Serial.println("   Default SSID: " + String(savedSSID));
-            Serial.println("   Default IP: " + WiFi.softAPIP().toString());
-            Serial.println("");
-            Serial.println("Connect to default AP to reconfigure:");
-            Serial.println("   WiFi: " + String(savedSSID));
-            Serial.println("   Password: " + String(savedPassword));
-            Serial.println("   Browser: http://192.168.4.1");
-        } else {
-            Serial.println("   Status: FAILED");
-            Serial.println("   CRITICAL: Cannot start AP even with defaults");
-            Serial.println("   Recommend: Full device restart required");
-        }
-        Serial.println("========================================\n");
-    }
-    
-    // ============================================
-    // WAIT FOR AP TO STABILIZE
-    // ============================================
-    Serial.println("Waiting for AP to stabilize...");
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    
-    IPAddress finalIP = WiFi.softAPIP();
-    if (finalIP != IPAddress(0, 0, 0, 0)) {
-        Serial.println("Final verification: AP is active");
-        Serial.println("   IP: " + finalIP.toString());
-        Serial.println("   Clients: " + String(WiFi.softAPgetStationNum()));
-    } else {
-        Serial.println("WARNING: AP IP is 0.0.0.0 - AP may not be working");
-    }
-    
-    // ============================================
-    // RELEASE LOCK & CLEANUP
-    // ============================================
-    apRestartInProgress = false;
-    xSemaphoreGive(wifiRestartMutex);
-    
-    Serial.println("\nAP restart sequence completed");
-    Serial.println("Lock released - system ready for next request");
-    Serial.println("========================================\n");
-    
-    vTaskDelete(NULL);
-}
+    bool autoUpdateDone = false;
+    unsigned long lastMonitor = 0;
 
-// ================================
-// WIFI TASK - EVENT DRIVEN
-// ================================
+    while (true) {
+        esp_task_wdt_reset();
+
+        // ========================================
+        // WAIT FOR WIFI EVENTS (Event-driven)
+        // ========================================
+        EventBits_t bits = xEventGroupWaitBits(
+            wifiEventGroup,
+            WIFI_CONNECTED_BIT | WIFI_DISCONNECTED_BIT | WIFI_GOT_IP_BIT,
+            pdFALSE,
+            pdFALSE,
+            pdMS_TO_TICKS(5000)
+        );
+
+        // ========================================
+        // EVENT: WiFi Disconnected
+        // ========================================
+        if (bits & WIFI_DISCONNECTED_BIT) {
+            xEventGroupClearBits(wifiEventGroup, WIFI_DISCONNECTED_BIT);
+            
+            Serial.print("Handling disconnect event...");
+            
+            // ============================================
+            // SAFETY
+            // ============================================
+            if (wifiRestartInProgress || apRestartInProgress) {
+                Serial.println("\nWiFi/AP restart in progress - skipping auto-reconnect");
+                Serial.println("Reason: Avoid conflict with manual restart operation");
+                vTaskDelay(pdMS_TO_TICKS(2000));
+                continue;
+            }
+            
+            IPAddress apIP = WiFi.softAPIP();
+            if (apIP == IPAddress(0, 0, 0, 0)) {
+                Serial.print("AP died during disconnect Restarting...");
+                
+                WiFi.softAPdisconnect(false);
+                vTaskDelay(pdMS_TO_TICKS(500));
+                
+                WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
+                WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+                vTaskDelay(pdMS_TO_TICKS(500));
+                
+                Serial.print("AP restored: " + WiFi.softAPIP().toString());
+            } else {
+                Serial.println("AP still alive: " + apIP.toString());
+            }
+            
+            autoUpdateDone = false;
+            ntpSyncInProgress = false;
+            ntpSyncCompleted = false;
+            
+            if (wifiConfig.routerSSID.length() > 0) {
+                Serial.print("Attempting reconnect to: " + wifiConfig.routerSSID);
+                WiFi.begin(wifiConfig.routerSSID.c_str(), 
+                          wifiConfig.routerPassword.c_str());
+                wifiState = WIFI_CONNECTING;
+            }
+        }
+
+        // ========================================
+        // EVENT: WiFi Got IP (Connected)
+        // ========================================
+
+        if (bits & WIFI_GOT_IP_BIT) {
+            if (!autoUpdateDone && wifiConfig.isConnected) {
+                // ============================================
+                // TUNGGU NTP SYNC START
+                // ============================================
+                if (!ntpSyncInProgress && !ntpSyncCompleted) {
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+                    
+                    if (!ntpSyncInProgress && !ntpSyncCompleted) {
+                        Serial.println("WARNING: NTP sync not started yet");
+                        vTaskDelay(pdMS_TO_TICKS(2000));
+                    }
+                    continue;
+                }
+
+                // ============================================
+                // TUNGGU NTP SYNC SELESAI
+                // ============================================
+                if (ntpSyncInProgress) {
+                    int ntpWaitCounter = 0;
+                    unsigned long waitStartTime = millis();
+                    const unsigned long maxWaitTime = 30000; // 30 detik
+                    
+                    while (ntpSyncInProgress && (millis() - waitStartTime < maxWaitTime)) {
+                        vTaskDelay(pdMS_TO_TICKS(500));
+                        ntpWaitCounter++;
+                        
+                        if (ntpWaitCounter % 10 == 0) {  // Log setiap 5 detik
+                            Serial.printf("Waiting for NTP sync to complete... (%lu ms)\n", 
+                                        millis() - waitStartTime);
+                        }
+                        
+                        esp_task_wdt_reset();
+                    }
+                    
+                    if (ntpSyncInProgress) {
+                        Serial.println("NTP sync timeout - proceeding anyway");
+                    }
+                    
+                    continue;
+                }
+
+                // ============================================
+                // NTP SELESAI, UPDATE PRAYER TIMES
+                // ============================================
+                if (ntpSyncCompleted && timeConfig.ntpSynced) {
+                    Serial.println("\n========================================");
+                    Serial.println("NTP SYNC COMPLETED - UPDATING PRAYER TIMES");
+                    Serial.println("========================================");
+
+                    vTaskDelay(pdMS_TO_TICKS(2000));
+
+                    if (prayerConfig.latitude.length() > 0 && 
+                        prayerConfig.longitude.length() > 0) {
+                        
+                        char timeStr[20], dateStr[20];
+                        time_t now_t;
+                        struct tm timeinfo;
+
+                        if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                            now_t = timeConfig.currentTime;
+                            xSemaphoreGive(timeMutex);
+                        } else {
+                            time(&now_t);
+                        }
+
+                        localtime_r(&now_t, &timeinfo);
+
+                        sprintf(timeStr, "%02d:%02d:%02d",
+                                timeinfo.tm_hour,
+                                timeinfo.tm_min,
+                                timeinfo.tm_sec);
+                        sprintf(dateStr, "%02d/%02d/%04d",
+                                timeinfo.tm_mday,
+                                timeinfo.tm_mon + 1,
+                                timeinfo.tm_year + 1900);
+
+                        Serial.println("Verified Time: " + String(timeStr));
+                        Serial.println("Verified Date: " + String(dateStr));
+                        
+                        if (timeinfo.tm_year + 1900 >= 2024) {
+                            Serial.println("Time is valid - fetching prayer times...");
+                            Serial.println("City: " + prayerConfig.selectedCity);
+                            Serial.println("Coordinates: " + prayerConfig.latitude + 
+                                        ", " + prayerConfig.longitude);
+                            Serial.println("");
+
+                            esp_task_wdt_reset();
+                            
+                            getPrayerTimesByCoordinates(
+                                prayerConfig.latitude,
+                                prayerConfig.longitude);
+
+                            Serial.println("Prayer times update completed");
+                        } else {
+                            Serial.println("ERROR: Time still invalid (year < 2024)");
+                            Serial.println("Skipping prayer times update");
+                        }
+                        
+                        Serial.println("========================================\n");
+
+                    } else {
+                        Serial.println("\n========================================");
+                        Serial.println("PRAYER TIMES AUTO-UPDATE SKIPPED");
+                        Serial.println("========================================");
+                        Serial.println("Reason: No city coordinates available");
+                        Serial.println("========================================\n");
+                    }
+
+                    autoUpdateDone = true;
+                }
+            }
+            
+            // Monitoring log setiap 60 detik
+            if (millis() - lastMonitor > 60000) {
+                lastMonitor = millis();
+                Serial.printf("📊 WiFi: Connected | RSSI: %d dBm | IP: %s\n",
+                            WiFi.RSSI(),
+                            WiFi.localIP().toString().c_str());
+            }
+        }
+
+        // ========================================
+        // Cek apakah perlu koneksi pertama kali
+        // ========================================
+        if (wifiState == WIFI_IDLE && wifiConfig.routerSSID.length() > 0) {
+            bool isConnected = (bits & WIFI_CONNECTED_BIT) != 0;
+            
+            if (!isConnected) {
+                Serial.print("Initial WiFi connect...");
+                Serial.print("   SSID: " + wifiConfig.routerSSID);
+                
+                WiFi.begin(wifiConfig.routerSSID.c_str(), 
+                          wifiConfig.routerPassword.c_str());
+                wifiState = WIFI_CONNECTING;
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
 
 void wifiTask(void *parameter) {
     esp_task_wdt_add(NULL);
@@ -3548,93 +3538,6 @@ void ntpTask(void *parameter) {
         
         esp_task_wdt_reset();
     }
-}
-
-void printStackReport() {
-  Serial.println("\n========================================");
-  Serial.println("STACK USAGE ANALYSIS");
-  Serial.println("========================================");
-
-  struct TaskInfo {
-    TaskHandle_t handle;
-    const char *name;
-    uint32_t size;
-  };
-
-  TaskInfo tasks[] = {
-    { uiTaskHandle, "UI", UI_TASK_STACK_SIZE },
-    { webTaskHandle, "Web", WEB_TASK_STACK_SIZE },
-    { wifiTaskHandle, "WiFi", WIFI_TASK_STACK_SIZE },
-    { ntpTaskHandle, "NTP", NTP_TASK_STACK_SIZE },
-    { prayerTaskHandle, "Prayer", PRAYER_TASK_STACK_SIZE },
-    { rtcTaskHandle, "RTC", RTC_TASK_STACK_SIZE }
-  };
-
-  uint32_t totalAllocated = 0;
-  uint32_t totalUsed = 0;
-  uint32_t totalFree = 0;
-
-  for (int i = 0; i < 6; i++) { 
-    if (tasks[i].handle) {
-      UBaseType_t hwm = uxTaskGetStackHighWaterMark(tasks[i].handle);
-      
-      uint32_t free = hwm * sizeof(StackType_t);
-      uint32_t used = tasks[i].size - free;
-      float percent = (used * 100.0) / tasks[i].size;
-
-      totalAllocated += tasks[i].size;
-      totalUsed += used;
-      totalFree += free;
-
-      Serial.printf("%-10s: %5d/%5d (%5.1f%%) [Free: %5d] ",
-                    tasks[i].name, used, tasks[i].size, percent, free);
-
-      if (percent < 40) Serial.println("BOROS - bisa dikurangi");
-      else if (percent < 60) Serial.println("OPTIMAL");
-      else if (percent < 75) Serial.println("PAS");
-      else if (percent < 90) Serial.println("TINGGI - monitor terus");
-      else if (percent < 95) Serial.println("BAHAYA - harus dinaikkan");
-      else Serial.println("KRITIS - segera naikkan");
-    } else {
-      Serial.printf("%-10s: TASK NOT RUNNING\n", tasks[i].name);
-    }
-  }
-
-  Serial.println("========================================");
-  Serial.printf("Total Allocated: %d bytes (%.1f KB)\n",
-                totalAllocated, totalAllocated / 1024.0);
-  Serial.printf("Total Used:      %d bytes (%.1f KB)\n",
-                totalUsed, totalUsed / 1024.0);
-  Serial.printf("Total Free:      %d bytes (%.1f KB)\n",
-                totalFree, totalFree / 1024.0);
-  Serial.printf("Efficiency:      %.1f%%\n",
-                (totalUsed * 100.0) / totalAllocated);
-  
-  bool hasCritical = false;
-  for (int i = 0; i < 6; i++) {
-    if (tasks[i].handle) {
-      UBaseType_t hwm = uxTaskGetStackHighWaterMark(tasks[i].handle);
-      uint32_t free = hwm * sizeof(StackType_t);
-      uint32_t used = tasks[i].size - free;
-      float percent = (used * 100.0) / tasks[i].size;
-      
-      if (percent >= 90) {
-        if (!hasCritical) {
-          Serial.println("========================================");
-          Serial.println("CRITICAL TASKS:");
-          hasCritical = true;
-        }
-        Serial.printf("   %s: %.1f%% (free: %d bytes)\n", 
-                      tasks[i].name, percent, free);
-      }
-    }
-  }
-  
-  if (hasCritical) {
-    Serial.println("   ACTION: Increase stack size ASAP");
-  }
-  
-  Serial.println("========================================\n");
 }
 
 void webTask(void *parameter) {
@@ -4077,6 +3980,489 @@ void clockTickTask(void *parameter) {
     }
 }
 
+// ============================================
+// WiFi & AP Restart Tasks
+// ============================================
+void restartWiFiTask(void *parameter) {
+    // ============================================
+    // DEBOUNCING
+    // ============================================
+    unsigned long now = millis();
+    if (now - lastWiFiRestartRequest < RESTART_DEBOUNCE_MS) {
+        unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastWiFiRestartRequest);
+        
+        Serial.println("\n========================================");
+        Serial.println("WiFi RESTART REJECTED - TOO FAST");
+        Serial.println("========================================");
+        Serial.printf("Reason: Last restart was %lu ms ago\n", now - lastWiFiRestartRequest);
+        Serial.printf("Minimum interval: %lu ms\n", RESTART_DEBOUNCE_MS);
+        Serial.printf("Please wait: %lu ms (%.1f seconds)\n", waitTime, waitTime / 1000.0);
+        Serial.println("========================================\n");
+        
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    lastWiFiRestartRequest = now;
+    
+    // ============================================
+    // LOCK
+    // ============================================
+    if (wifiRestartMutex == NULL) {
+        wifiRestartMutex = xSemaphoreCreateMutex();
+        if (wifiRestartMutex == NULL) {
+            Serial.println("ERROR: Failed to create wifiRestartMutex");
+            vTaskDelete(NULL);
+            return;
+        }
+    }
+    
+    if (xSemaphoreTake(wifiRestartMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+        Serial.println("\n========================================");
+        Serial.println("WiFi RESTART BLOCKED");
+        Serial.println("========================================");
+        Serial.println("Reason: Another WiFi/AP restart in progress");
+        Serial.println("Action: Request ignored for safety");
+        Serial.println("========================================\n");
+        
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    if (wifiRestartInProgress || apRestartInProgress) {
+        Serial.println("\n========================================");
+        Serial.println("WiFi RESTART ABORTED");
+        Serial.println("========================================");
+        Serial.printf("WiFi restart in progress: %s\n", wifiRestartInProgress ? "YES" : "NO");
+        Serial.printf("AP restart in progress: %s\n", apRestartInProgress ? "YES" : "NO");
+        Serial.println("========================================\n");
+        
+        xSemaphoreGive(wifiRestartMutex);
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    wifiRestartInProgress = true;
+    
+    Serial.println("\n========================================");
+    Serial.println("SAFE WiFi RESTART SEQUENCE STARTED");
+    Serial.println("========================================");
+    Serial.println("Protection: Debouncing + Mutex Lock Active");
+    Serial.println("Mode: Safe reconnect (no mode switching)");
+    Serial.println("========================================\n");
+    
+    vTaskDelay(pdMS_TO_TICKS(3000));
+    
+    // ============================================
+    // SIMPAN KREDENSIAL DULU
+    // ============================================
+    Serial.println("Preparing for reconnect...");
+    
+    String ssid, password;
+    if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+        ssid = wifiConfig.routerSSID;
+        password = wifiConfig.routerPassword;
+        wifiConfig.isConnected = false;
+        wifiState = WIFI_IDLE;
+        reconnectAttempts = 0;
+        xSemaphoreGive(wifiMutex);
+        
+        Serial.println("   Credentials loaded from memory");
+        Serial.println("   SSID: " + ssid);
+        Serial.println("   Connection state reset");
+    } else {
+        Serial.println("   ERROR: Failed to acquire wifiMutex");
+        wifiRestartInProgress = false;
+        xSemaphoreGive(wifiRestartMutex);
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    // ============================================
+    // DISCONNECT DENGAN AMAN
+    // ============================================
+    Serial.println("\nDisconnecting old WiFi...");
+    WiFi.disconnect(false, false); // Keep config, don't erase
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    Serial.println("   Disconnected (config preserved)");
+    
+    // ============================================
+    // CEK & RESTORE AP JIKA MATI
+    // ============================================
+    Serial.println("\nVerifying AP status...");
+    
+    IPAddress apIP = WiFi.softAPIP();
+    if (apIP == IPAddress(0, 0, 0, 0)) {
+        Serial.println("   WARNING: AP died during disconnect");
+        Serial.println("   Restoring AP...");
+        
+        WiFi.softAPdisconnect(false);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        
+        WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
+        bool apStarted = WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        
+        if (apStarted) {
+            Serial.println("   AP restored successfully");
+            Serial.println("   AP IP: " + WiFi.softAPIP().toString());
+        } else {
+            Serial.println("   ERROR: Failed to restore AP");
+        }
+    } else {
+        Serial.println("   AP still alive: " + apIP.toString());
+    }
+    
+    // ============================================
+    // RECONNECT WiFi
+    // ============================================
+    if (ssid.length() > 0) {
+        Serial.println("\nReconnecting to WiFi...");
+        Serial.println("   Target SSID: " + ssid);
+        Serial.println("   Initiating connection...");
+        
+        WiFi.begin(ssid.c_str(), password.c_str());
+        
+        Serial.println("\n========================================");
+        Serial.println("WiFi RECONNECT INITIATED");
+        Serial.println("========================================");
+        Serial.println("Status: Connection request sent");
+        Serial.println("Monitor: WiFi Task will handle connection");
+        Serial.println("Expected: See WiFi events in serial log");
+        Serial.println("========================================\n");
+    } else {
+        Serial.println("\n========================================");
+        Serial.println("WiFi RECONNECT FAILED");
+        Serial.println("========================================");
+        Serial.println("Reason: No SSID configured in memory");
+        Serial.println("Action: Configure WiFi via web interface");
+        Serial.println("========================================\n");
+    }
+    
+    // Delay sebelum release lock
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    
+    // ============================================
+    // RELEASE LOCK & CLEANUP
+    // ============================================
+    wifiRestartInProgress = false;
+    xSemaphoreGive(wifiRestartMutex);
+    
+    Serial.println("WiFi restart sequence completed");
+    Serial.println("Lock released - system ready for next request\n");
+    
+    vTaskDelete(NULL);
+}
+
+void restartAPTask(void *parameter) {
+    // ============================================
+    // DEBOUNCING CHECK
+    // ============================================
+    unsigned long now = millis();
+    if (now - lastAPRestartRequest < RESTART_DEBOUNCE_MS) {
+        unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastAPRestartRequest);
+        
+        String msg = "⏳ Please wait " + 
+                    String(waitTime / 1000) + 
+                    " seconds before next AP restart";
+        
+        Serial.println("\n========================================");
+        Serial.println("AP RESTART REQUEST REJECTED");
+        Serial.println("========================================");
+        Serial.println("Reason: Too fast (debouncing active)");
+        Serial.printf("Wait time: %lu ms\n", waitTime);
+        Serial.println("========================================\n");
+        
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    lastAPRestartRequest = now;
+    
+    // ============================================
+    // LOCK - PREVENT CONCURRENT RESTARTS
+    // ============================================
+    if (wifiRestartMutex == NULL) {
+        wifiRestartMutex = xSemaphoreCreateMutex();
+        if (wifiRestartMutex == NULL) {
+            Serial.println("ERROR: Failed to create wifiRestartMutex");
+            vTaskDelete(NULL);
+            return;
+        }
+    }
+    
+    if (xSemaphoreTake(wifiRestartMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+        Serial.println("\n========================================");
+        Serial.println("AP RESTART BLOCKED");
+        Serial.println("========================================");
+        Serial.println("Reason: Another WiFi/AP restart in progress");
+        Serial.println("Action: Request ignored for safety");
+        Serial.println("========================================\n");
+        
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    // Double-check flag dengan mutex held
+    if (apRestartInProgress || wifiRestartInProgress) {
+        Serial.println("\n========================================");
+        Serial.println("AP RESTART ABORTED");
+        Serial.println("========================================");
+        Serial.printf("AP restart in progress: %s\n", apRestartInProgress ? "YES" : "NO");
+        Serial.printf("WiFi restart in progress: %s\n", wifiRestartInProgress ? "YES" : "NO");
+        Serial.println("========================================\n");
+        
+        xSemaphoreGive(wifiRestartMutex);
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    apRestartInProgress = true;
+    
+    Serial.println("\n========================================");
+    Serial.println("SAFE AP RESTART SEQUENCE STARTED");
+    Serial.println("========================================");
+    Serial.println("Protection: Debouncing + Mutex Lock Active");
+    Serial.println("Mode: Safe AP restart with custom network");
+    Serial.println("========================================\n");
+    
+    // Delay awal untuk stabilitas
+    vTaskDelay(pdMS_TO_TICKS(3000));
+    
+    // ============================================
+    // SAVE CURRENT AP CREDENTIALS & SETTINGS
+    // ============================================
+    Serial.println("Loading AP configuration from memory...");
+    
+    char savedSSID[33];
+    char savedPassword[65];
+    IPAddress savedAPIP;
+    IPAddress savedGateway;
+    IPAddress savedSubnet;
+    
+    if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+        strncpy(savedSSID, wifiConfig.apSSID, sizeof(savedSSID));
+        strncpy(savedPassword, wifiConfig.apPassword, sizeof(savedPassword));
+        savedAPIP = wifiConfig.apIP;
+        savedGateway = wifiConfig.apGateway;
+        savedSubnet = wifiConfig.apSubnet;
+        
+        xSemaphoreGive(settingsMutex);
+        
+        Serial.println("   AP Configuration loaded:");
+        Serial.println("   SSID: " + String(savedSSID));
+        Serial.println("   Password length: " + String(strlen(savedPassword)));
+        Serial.println("   IP: " + savedAPIP.toString());
+        Serial.println("   Gateway: " + savedGateway.toString());
+        Serial.println("   Subnet: " + savedSubnet.toString());
+    } else {
+        Serial.println("   ERROR: Failed to acquire settingsMutex");
+        Serial.println("   Using default settings as fallback");
+        
+        strncpy(savedSSID, DEFAULT_AP_SSID, sizeof(savedSSID));
+        strncpy(savedPassword, DEFAULT_AP_PASSWORD, sizeof(savedPassword));
+        savedAPIP = IPAddress(192, 168, 4, 1);
+        savedGateway = IPAddress(192, 168, 4, 1);
+        savedSubnet = IPAddress(255, 255, 255, 0);
+    }
+    
+    // ============================================
+    // DISCONNECT AP CLIENTS GRACEFULLY
+    // ============================================
+    Serial.println("\nDisconnecting AP clients...");
+    int clientsBefore = WiFi.softAPgetStationNum();
+    Serial.printf("   Clients connected: %d\n", clientsBefore);
+    
+    if (clientsBefore > 0) {
+        Serial.println("   Sending disconnect notification to clients...");
+    }
+    
+    WiFi.softAPdisconnect(false);  // Don't erase config
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    
+    int clientsAfter = WiFi.softAPgetStationNum();
+    Serial.printf("   Clients after disconnect: %d\n", clientsAfter);
+    
+    if (clientsAfter > 0) {
+        Serial.println("   WARNING: Some clients still connected");
+        Serial.println("   Forcing disconnect...");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+    
+    // ============================================
+    // CONFIGURE AP WITH CUSTOM NETWORK SETTINGS
+    // ============================================
+    Serial.println("\nConfiguring AP network settings...");
+    Serial.println("   AP IP: " + savedAPIP.toString());
+    Serial.println("   Gateway: " + savedGateway.toString());
+    Serial.println("   Subnet: " + savedSubnet.toString());
+    
+    bool configSuccess = WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
+    
+    if (!configSuccess) {
+        Serial.println("   ERROR: softAPConfig() failed");
+        Serial.println("   Trying with default network settings...");
+        
+        IPAddress defaultIP(192, 168, 4, 1);
+        IPAddress defaultGW(192, 168, 4, 1);
+        IPAddress defaultSN(255, 255, 255, 0);
+        
+        configSuccess = WiFi.softAPConfig(defaultIP, defaultGW, defaultSN);
+        
+        if (configSuccess) {
+            Serial.println("   Default network config applied successfully");
+        } else {
+            Serial.println("   ERROR: Even default config failed");
+        }
+    } else {
+        Serial.println("   Network configuration successful");
+    }
+    
+    vTaskDelay(pdMS_TO_TICKS(500));
+    
+    // ============================================
+    // START AP WITH NEW SETTINGS
+    // ============================================
+    Serial.println("\nStarting new AP...");
+    Serial.println("   SSID: " + String(savedSSID));
+    Serial.println("   Password: " + String(strlen(savedPassword) > 0 ? "***" : "(none)"));
+    Serial.println("   Channel: 1 (default)");
+    Serial.println("   Max Connections: 4 (default)");
+    
+    WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
+    bool apStarted = WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+    
+    vTaskDelay(pdMS_TO_TICKS(1500));
+    
+    // ============================================
+    // VERIFY AP START SUCCESS
+    // ============================================
+    if (apStarted) {
+        IPAddress newAPIP = WiFi.softAPIP();
+        String currentSSID = WiFi.softAPSSID();
+        
+        // Verifikasi IP match
+        bool ipMatches = (newAPIP == savedAPIP);
+        
+        Serial.println("\n========================================");
+        Serial.println("AP RESTART SUCCESS");
+        Serial.println("========================================");
+        Serial.println("SSID: " + currentSSID);
+        Serial.println("Password: " + String(strlen(savedPassword) > 0 ? "Protected" : "Open (no password)"));
+        Serial.println("");
+        Serial.println("Network Configuration:");
+        Serial.println("   AP IP: " + newAPIP.toString() + (ipMatches ? "" : "MISMATCH"));
+        Serial.println("   Expected Config:");
+        Serial.println("     IP: " + savedAPIP.toString());
+        Serial.println("     Gateway: " + savedGateway.toString());
+        Serial.println("     Subnet: " + savedSubnet.toString());
+        Serial.println("   MAC: " + WiFi.softAPmacAddress());
+        Serial.println("");
+        
+        if (!ipMatches) {
+            Serial.println("WARNING: AP IP does not match expected");
+            Serial.println("   Expected: " + savedAPIP.toString());
+            Serial.println("   Actual: " + newAPIP.toString());
+            Serial.println("");
+            Serial.println("Possible causes:");
+            Serial.println("   1. softAPConfig() was ignored by ESP32");
+            Serial.println("   2. Another task changed WiFi config");
+            Serial.println("   3. ESP32 WiFi firmware limitation");
+            Serial.println("");
+            Serial.println("Action: Try restarting device manually");
+            Serial.println("========================================");
+        }
+        
+        Serial.println("Status: Ready for client connections");
+        Serial.println("Clients can connect to:");
+        Serial.println("   WiFi: " + currentSSID);
+        Serial.println("   Browser: http://" + newAPIP.toString());
+        Serial.println("========================================\n");
+        
+    } else {
+        Serial.println("\n========================================");
+        Serial.println("AP RESTART FAILED");
+        Serial.println("========================================");
+        Serial.println("Reason: softAP() returned false");
+        Serial.println("Possible causes:");
+        Serial.println("   1. Invalid SSID (empty or too long)");
+        Serial.println("   2. Invalid password (too short if set)");
+        Serial.println("   3. Network conflict");
+        Serial.println("   4. Hardware/firmware issue");
+        Serial.println("");
+        Serial.println("Action: Rolling back to default AP...");
+        Serial.println("========================================");
+        
+        // Rollback ke default
+        strcpy(savedSSID, DEFAULT_AP_SSID);
+        strcpy(savedPassword, DEFAULT_AP_PASSWORD);
+        savedAPIP = IPAddress(192, 168, 4, 1);
+        savedGateway = IPAddress(192, 168, 4, 1);
+        savedSubnet = IPAddress(255, 255, 255, 0);
+        
+        // Update global config
+        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+            strcpy(wifiConfig.apSSID, savedSSID);
+            strcpy(wifiConfig.apPassword, savedPassword);
+            wifiConfig.apIP = savedAPIP;
+            wifiConfig.apGateway = savedGateway;
+            wifiConfig.apSubnet = savedSubnet;
+            xSemaphoreGive(settingsMutex);
+        }
+        
+        // Try with defaults
+        WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        
+        bool rollbackSuccess = WiFi.softAP(savedSSID, savedPassword, 1, 0, 4);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        
+        Serial.println("\nRollback attempt completed:");
+        if (rollbackSuccess) {
+            Serial.println("   Status: SUCCESS");
+            Serial.println("   Default SSID: " + String(savedSSID));
+            Serial.println("   Default IP: " + WiFi.softAPIP().toString());
+            Serial.println("");
+            Serial.println("Connect to default AP to reconfigure:");
+            Serial.println("   WiFi: " + String(savedSSID));
+            Serial.println("   Password: " + String(savedPassword));
+            Serial.println("   Browser: http://192.168.4.1");
+        } else {
+            Serial.println("   Status: FAILED");
+            Serial.println("   CRITICAL: Cannot start AP even with defaults");
+            Serial.println("   Recommend: Full device restart required");
+        }
+        Serial.println("========================================\n");
+    }
+    
+    // ============================================
+    // WAIT FOR AP TO STABILIZE
+    // ============================================
+    Serial.println("Waiting for AP to stabilize...");
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    
+    IPAddress finalIP = WiFi.softAPIP();
+    if (finalIP != IPAddress(0, 0, 0, 0)) {
+        Serial.println("Final verification: AP is active");
+        Serial.println("   IP: " + finalIP.toString());
+        Serial.println("   Clients: " + String(WiFi.softAPgetStationNum()));
+    } else {
+        Serial.println("WARNING: AP IP is 0.0.0.0 - AP may not be working");
+    }
+    
+    // ============================================
+    // RELEASE LOCK & CLEANUP
+    // ============================================
+    apRestartInProgress = false;
+    xSemaphoreGive(wifiRestartMutex);
+    
+    Serial.println("\nAP restart sequence completed");
+    Serial.println("Lock released - system ready for next request");
+    Serial.println("========================================\n");
+    
+    vTaskDelete(NULL);
+}
+
 // ================================
 // SETUP - ESP32 CORE 3.x
 // ================================
@@ -4141,6 +4527,8 @@ void setup() {
   loadMethodSelection();
   loadTimezoneConfig();
 
+  loadBuzzerConfig();
+
   Wire.begin(/*RTC_SDA, RTC_SCL*/);
   delay(500);
 
@@ -4167,6 +4555,10 @@ void setup() {
   touch.begin(touchSPI);
   touch.setRotation(1);
   Serial.println("Touch initialized");
+
+  ledcAttach(BUZZER_PIN, BUZZER_FREQ, BUZZER_RESOLUTION);
+  ledcWrite(BUZZER_CHANNEL, 0); // Mati dulu
+  Serial.println("Buzzer initialized (GPIO26)");
 
   // ================================
   // LVGL INIT

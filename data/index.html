@@ -174,6 +174,66 @@
 				animation: spinner 1s ease-in-out infinite;
 			}
 
+			/* Volume Slider - Custom Style */
+			#volumeSlider {
+				-webkit-appearance: none;
+				appearance: none;
+				height: 8px;
+				border-radius: 5px;
+				background: linear-gradient(to right, #e6e6e6 0%, #e6e6e6 100%);
+				outline: none;
+			}
+
+			#volumeSlider::-webkit-slider-thumb {
+				-webkit-appearance: none;
+				appearance: none;
+				width: 24px;
+				height: 24px;
+				border-radius: 50%;
+				background: #1779ba;
+				cursor: pointer;
+				box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+			}
+
+			#volumeSlider::-moz-range-thumb {
+				width: 24px;
+				height: 24px;
+				border-radius: 50%;
+				background: #1779ba;
+				cursor: pointer;
+				border: none;
+				box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+			}
+
+			#volumeSlider::-webkit-slider-thumb:hover {
+				background: #14679e;
+				box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+			}
+
+			#volumeSlider::-moz-range-thumb:hover {
+				background: #14679e;
+				box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+			}
+
+			/* Update slider background saat nilai berubah */
+				#volumeSlider::-webkit-slider-runnable-track {
+				background: linear-gradient(to right, #1779ba 0%, #1779ba var(--slider-value, 50%), #e6e6e6 var(--slider-value, 50%), #e6e6e6 100%);
+				height: 8px;
+				border-radius: 5px;
+			}
+
+			#volumeSlider::-moz-range-track {
+				background: #e6e6e6;
+				height: 8px;
+				border-radius: 5px;
+			}
+
+			#volumeSlider::-moz-range-progress {
+				background: #1779ba;
+				height: 8px;
+				border-radius: 5px;
+			}
+
 			.toast {
 				position: fixed;
 				top: -100px;
@@ -563,54 +623,52 @@
 									<div class="callout">
 										<div class="grid-x grid-margin-x grid-margin-y">
 											<div class="large-12 medium-12 small-12 cell">
-												<div class="large-12 medium-12 small-12 cell">
-													<div class="grid-x grid-padding-y">
-														<div class="large-12 text-center cell">
-															<h5>
-																<strong>📤 Unggah cities.json</strong>
-															</h5>
+												<div class="grid-x grid-padding-y">
+													<div class="large-12 text-center cell">
+														<h5>
+															<strong>🕌 Lokasi & Metode Kalkulasi</strong>
+														</h5>
+													</div>
+												</div>
+												<div class="grid-x grid-margin-x">
+													<div class="large-12 medium-12 small-12 cell">
+														<div class="callout secondary">
+															<p>
+																<strong>Kapan perlu unggah cities.json?</strong>
+																<br>
+															</p>
+															<p>
+															<div class="help-text"> ➕ Ada lokasi baru yang ditambahkan <br> 📍 Data koordinat lokasi ada yang diperbarui <br> ⚠️ Berkas <code>cities.json</code> rusak atau hilang </div>
+															</p>
 														</div>
 													</div>
-													<div class="grid-x grid-margin-x">
-														<div class="large-12 medium-12 small-12 cell">
-															<div class="callout secondary">
-																<p>
-																	<strong>Kapan perlu unggah cities.json?</strong>
-																	<br>
-																</p>
-																<p>
-																<div class="help-text"> ➕ Ada lokasi baru yang ditambahkan <br> 📍 Data koordinat lokasi ada yang diperbarui <br> ⚠️ Berkas <code>cities.json</code> rusak atau hilang </div>
-																</p>
-															</div>
+												</div>
+												<div class="large-8 medium-8 small-12 cell">
+													<label for="citiesFileInput" class="button hollow expanded"> 📁 Pilih file cities.json <input type="file" id="citiesFileInput" accept=".json" class="show-for-sr" onchange="handleCitiesFileSelect(event)">
+													</label>
+													<p id="selectedFileName" class="help-text"> Belum ada berkas yang dipilih </p>
+												</div>
+												<div class="large-4 medium-4 small-12 cell">
+													<button id="uploadBtn" class="button primary expanded" onclick="uploadCitiesFile()" disabled> 📤 Unggah Berkas </button>
+													<button id="clearFileBtn" class="button primary expanded" onclick="clearSelectedFile()" style="display: none; margin-top: 10px;"> ✖ Batal </button>
+												</div>
+												<div id="uploadProgress" class="hide">
+													<div class="progress" role="progressbar">
+														<div id="uploadProgressBar" class="progress-meter" style="width: 0%">
+															<p class="progress-meter-text">0%</p>
 														</div>
 													</div>
-													<div class="large-8 medium-8 small-12 cell">
-														<label for="citiesFileInput" class="button hollow expanded"> 📁 Pilih file cities.json <input type="file" id="citiesFileInput" accept=".json" class="show-for-sr" onchange="handleCitiesFileSelect(event)">
-														</label>
-														<p id="selectedFileName" class="help-text"> Belum ada berkas yang dipilih </p>
-													</div>
-													<div class="large-4 medium-4 small-12 cell">
-														<button id="uploadBtn" class="button primary expanded" onclick="uploadCitiesFile()" disabled> 📤 Unggah Berkas </button>
-														<button id="clearFileBtn" class="button primary expanded" onclick="clearSelectedFile()" style="display: none; margin-top: 10px;"> ✖ Batal </button>
-													</div>
-													<div id="uploadProgress" class="hide">
-														<div class="progress" role="progressbar">
-															<div id="uploadProgressBar" class="progress-meter" style="width: 0%">
-																<p class="progress-meter-text">0%</p>
-															</div>
-														</div>
-														<p id="uploadStatus" class="help-text"> Memulai pengunggahan… </p>
-													</div>
-													<div class="grid-x grid-margin-x">
-														<div class="large-12 medium-12 small-12 cell">
-															<div class="callout secondary">
-																<p>
-																	<strong>⚠️ Penting</strong>
-																</p>
-																<p class="help-text"> 📄 Nama berkas harus <code>cities.json</code>
-																	<br> 🧾 Format harus valid JSON array <br> 📦 Ukuran maksimal: 1 MB <br> 🔄 Dropdown lokasi akan otomatis diperbarui setelah berhasil
-																</p>
-															</div>
+													<p id="uploadStatus" class="help-text"> Memulai pengunggahan… </p>
+												</div>
+												<div class="grid-x grid-margin-x">
+													<div class="large-12 medium-12 small-12 cell">
+														<div class="callout secondary">
+															<p>
+																<strong>⚠️ Penting</strong>
+															</p>
+															<p class="help-text"> 📄 Nama berkas harus <code>cities.json</code>
+																<br> 🧾 Format harus valid JSON array <br> 📦 Ukuran maksimal: 1 MB <br> 🔄 Dropdown lokasi akan otomatis diperbarui setelah berhasil
+															</p>
 														</div>
 													</div>
 												</div>
@@ -640,7 +698,14 @@
 																<tbody>
 																	<tr>
 																		<td class="text-left">
+																			<div class="switch tiny">
 																			<strong>🌙 Imsak</strong>
+																			<input class="switch-input buzzer-toggle" id="toggle-imsak" type="checkbox" name="buzzer-imsak" data-prayer="imsak">
+																			<label class="switch-paddle" for="toggle-imsak">
+																				<span class="switch-active" aria-hidden="true">ON</span>
+																				<span class="switch-inactive" aria-hidden="true">OFF</span>
+																			</label>
+																			</div>
 																		</td>
 																		<td class="text-right">
 																			<h5 id="imsakTime">--:--</h5>
@@ -648,7 +713,14 @@
 																	</tr>
 																	<tr>
 																		<td class="text-left">
+																			<div class="switch tiny">
 																			<strong>🌅 Subuh</strong>
+																			<input class="switch-input buzzer-toggle" id="toggle-subuh" type="checkbox" name="buzzer-subuh" data-prayer="subuh">
+																			<label class="switch-paddle" for="toggle-subuh">
+																				<span class="switch-active" aria-hidden="true">ON</span>
+																				<span class="switch-inactive" aria-hidden="true">OFF</span>
+																			</label>
+																			</div>
 																		</td>
 																		<td class="text-right">
 																			<h5 id="subuhTime">--:--</h5>
@@ -656,7 +728,14 @@
 																	</tr>
 																	<tr>
 																		<td class="text-left">
+																			<div class="switch tiny">
 																			<strong>🌄 Terbit</strong>
+																			<input class="switch-input buzzer-toggle" id="toggle-terbit" type="checkbox" name="buzzer-terbit" data-prayer="terbit">
+																			<label class="switch-paddle" for="toggle-terbit">
+																				<span class="switch-active" aria-hidden="true">ON</span>
+																				<span class="switch-inactive" aria-hidden="true">OFF</span>
+																			</label>
+																			</div>
 																		</td>
 																		<td class="text-right">
 																			<h5 id="terbitTime">--:--</h5>
@@ -664,7 +743,14 @@
 																	</tr>
 																	<tr>
 																		<td class="text-left">
-																			<strong>☀️ Zuhur</strong>
+																		<div class="switch tiny">
+																		<strong>☀️ Zuhur</strong>
+																		<input class="switch-input buzzer-toggle" id="toggle-zuhur" type="checkbox" name="buzzer-zuhur" data-prayer="zuhur">
+																		<label class="switch-paddle" for="toggle-zuhur">
+																			<span class="switch-active" aria-hidden="true">ON</span>
+																			<span class="switch-inactive" aria-hidden="true">OFF</span>
+																		</label>
+																		</div>
 																		</td>
 																		<td class="text-right">
 																			<h5 id="zuhurTime">--:--</h5>
@@ -672,7 +758,14 @@
 																	</tr>
 																	<tr>
 																		<td class="text-left">
+																			<div class="switch tiny">
 																			<strong>🌤️ Ashar</strong>
+																			<input class="switch-input buzzer-toggle" id="toggle-ashar" type="checkbox" name="buzzer-ashar" data-prayer="ashar">
+																			<label class="switch-paddle" for="toggle-ashar">
+																				<span class="switch-active" aria-hidden="true">ON</span>
+																				<span class="switch-inactive" aria-hidden="true">OFF</span>
+																			</label>
+																			</div>
 																		</td>
 																		<td class="text-right">
 																			<h5 id="asharTime">--:--</h5>
@@ -680,7 +773,14 @@
 																	</tr>
 																	<tr>
 																		<td class="text-left">
+																			<div class="switch tiny">
 																			<strong>🌆 Maghrib</strong>
+																			<input class="switch-input buzzer-toggle" id="toggle-maghrib" type="checkbox" name="buzzer-maghrib" data-prayer="maghrib">
+																			<label class="switch-paddle" for="toggle-maghrib">
+																				<span class="switch-active" aria-hidden="true">ON</span>
+																				<span class="switch-inactive" aria-hidden="true">OFF</span>
+																			</label>
+																			</div>
 																		</td>
 																		<td class="text-right">
 																			<h5 id="maghribTime">--:--</h5>
@@ -688,7 +788,14 @@
 																	</tr>
 																	<tr>
 																		<td class="text-left">
+																			<div class="switch tiny">
 																			<strong>🌙 Isya</strong>
+																			<input class="switch-input buzzer-toggle" id="toggle-isya" type="checkbox" name="buzzer-isya" data-prayer="isya">
+																			<label class="switch-paddle" for="toggle-isya">
+																				<span class="switch-active" aria-hidden="true">ON</span>
+																				<span class="switch-inactive" aria-hidden="true">OFF</span>
+																			</label>
+																			</div>
 																		</td>
 																		<td class="text-right">
 																			<h5 id="isyaTime">--:--</h5>
@@ -696,6 +803,18 @@
 																	</tr>
 																</tbody>
 															</table>
+
+															<!-- Volume Control - Native HTML5 Slider -->
+															<div class="large-12 medium-12 cell" style="margin-top: 20px;">
+																<strong>🔊 VOLUME BUZZER</strong>
+																<div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+																	<span style="min-width: 30px; font-size: 14px;">0</span>
+																	<input type="range" id="volumeSlider" min="0" max="100" value="50" 
+																		style="flex: 1;">
+																	<span style="min-width: 40px; text-align: right; font-size: 14px;">100</span>
+																	<span id="volumeValue" style="min-width: 50px; font-weight: bold; color: #1779ba; font-size: 16px;">50%</span>
+																</div>
+															</div>
 														</div>
 													</div>
 												</div>
@@ -923,6 +1042,7 @@
 				try {
 					await loadSavedPrayerTimes();
 					await loadCurrentMethod();
+					await loadBuzzerConfig();
 				} catch (error) {}
 			}
 			// ================================
@@ -1422,6 +1542,51 @@
 				} finally {
 					btn.disabled = false;
 					btn.textContent = originalText;
+				}
+			}
+			// ================================
+			// LOAD BUZZER CONFIG
+			// ================================
+			async function loadBuzzerConfig() {
+				try {
+					const response = await fetch('/getbuzzerconfig');
+					const data = await response.json();
+					
+					document.getElementById('toggle-imsak').checked = data.imsak;
+					document.getElementById('toggle-subuh').checked = data.subuh;
+					document.getElementById('toggle-terbit').checked = data.terbit;
+					document.getElementById('toggle-zuhur').checked = data.zuhur;
+					document.getElementById('toggle-ashar').checked = data.ashar;
+					document.getElementById('toggle-maghrib').checked = data.maghrib;
+					document.getElementById('toggle-isya').checked = data.isya;
+					
+					const volumeSlider = document.getElementById('volumeSlider');
+					const volumeValue = document.getElementById('volumeValue');
+					volumeSlider.value = data.volume;
+					volumeValue.textContent = data.volume + '%';
+					
+				} catch (error) {
+					console.error('Failed to load buzzer config:', error);
+				}
+			}
+
+			// ================================
+			// SAVE BUZZER TOGGLE
+			// ================================
+			async function saveBuzzerToggle(prayer, enabled) {
+				try {
+					const formData = new URLSearchParams();
+					formData.append('prayer', prayer);
+					formData.append('enabled', enabled ? 'true' : 'false');
+					
+					await fetch('/setbuzzertoggle', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: formData.toString()
+					});
+					
+				} catch (error) {
+					console.error('Failed to save buzzer toggle:', error);
 				}
 			}
 			// ================================
@@ -2559,6 +2724,31 @@
 				setTimeout(() => {
 					handleTabClick('home');
 				}, 500);
+
+				// ================================
+				// Toggle switches
+				// ================================
+				document.querySelectorAll('.buzzer-toggle').forEach(toggle => {
+					toggle.addEventListener('change', function() {
+					const prayer = this.getAttribute('data-prayer');
+					const enabled = this.checked;
+					saveBuzzerToggle(prayer, enabled);
+					});
+				});
+				
+				// ================================
+				// Volume slider
+				// ================================
+				const volumeSlider = document.getElementById('volumeSlider');
+				const volumeValue = document.getElementById('volumeValue');
+				
+				volumeSlider.addEventListener('input', function() {
+					volumeValue.textContent = this.value + '%';
+				});
+				
+				volumeSlider.addEventListener('change', function() {
+					saveBuzzerVolume(this.value);
+				});
 				
 				// ================================
 				// ESC KEY HANDLER
