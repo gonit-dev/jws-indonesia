@@ -905,7 +905,7 @@ void setupWiFiEvents() {
 
             case ARDUINO_EVENT_WIFI_STA_GOT_IP: {
                 Serial.println("\n========================================");
-                Serial.println("WiFi Connected Successfully!");
+                Serial.println("WiFi Connected Successfully");
                 Serial.println("========================================");
                 Serial.println("IP: " + WiFi.localIP().toString());
                 Serial.println("Gateway: " + WiFi.gatewayIP().toString());
@@ -939,7 +939,7 @@ void setupWiFiEvents() {
 
             case ARDUINO_EVENT_WIFI_STA_DISCONNECTED: {
                 Serial.println("\n========================================");
-                Serial.println("WiFi Disconnected!");
+                Serial.println("WiFi Disconnected");
                 Serial.println("========================================");
                 Serial.printf("Reason Code: %d\n", info.wifi_sta_disconnected.reason);
 
@@ -3051,7 +3051,7 @@ void restartAPTask(void *parameter) {
         Serial.println("Password: " + String(strlen(savedPassword) > 0 ? "Protected" : "Open (no password)"));
         Serial.println("");
         Serial.println("Network Configuration:");
-        Serial.println("   AP IP: " + newAPIP.toString() + (ipMatches ? " ✓" : " ⚠ MISMATCH"));
+        Serial.println("   AP IP: " + newAPIP.toString() + (ipMatches ? "" : "MISMATCH"));
         Serial.println("   Expected Config:");
         Serial.println("     IP: " + savedAPIP.toString());
         Serial.println("     Gateway: " + savedGateway.toString());
