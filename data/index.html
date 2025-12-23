@@ -1566,7 +1566,6 @@
 					volumeValue.textContent = data.volume + '%';
 					
 				} catch (error) {
-					console.error('Failed to load buzzer config:', error);
 				}
 			}
 
@@ -1586,9 +1585,35 @@
 					});
 					
 				} catch (error) {
-					console.error('Failed to save buzzer toggle:', error);
 				}
 			}
+
+			// ================================
+			// SAVE BUZZER VOLUME
+			// ================================
+			let volumeSaveTimeout = null;
+			async function saveBuzzerVolume(volume) {
+				// Debounce - tunggu 500ms setelah user berhenti drag
+				clearTimeout(volumeSaveTimeout);
+				
+				volumeSaveTimeout = setTimeout(async () => {
+					try {
+					const formData = new URLSearchParams();
+					formData.append('volume', volume);
+					
+					const response = await fetch('/setbuzzervolume', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+						body: formData.toString()
+					});
+					
+					if (response.ok) {
+					}
+					} catch (error) {
+					}
+				}, 500);
+			}
+
 			// ================================
 			// JADWAL SALAT
 			// ================================
