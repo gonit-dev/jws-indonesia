@@ -408,7 +408,7 @@ void checkPrayerTime() {
     if (timeinfo.tm_sec == 0) {
       String current = String(currentTime);
       
-      if (!blinkState.isBlinking) {
+      if (blinkState.isBlinking) {
         if (current == prayerConfig.imsakTime) {
           startBlinking("imsak");
         } else if (current == prayerConfig.subuhTime) {
@@ -468,7 +468,7 @@ void stopBlinking() {
 }
 
 void handleBlinking() {
-  if (!blinkState.isBlinking) return;
+  if (blinkState.isBlinking) return;
   
   unsigned long currentMillis = millis();
   
@@ -479,7 +479,7 @@ void handleBlinking() {
   
   if (currentMillis - blinkState.lastBlinkToggle >= BLINK_INTERVAL) {
     blinkState.lastBlinkToggle = currentMillis;
-    blinkState.currentVisible = !blinkState.currentVisible;
+    blinkState.currentVisible = blinkState.currentVisible;
     
     if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
       lv_obj_t *targetLabel = NULL;
@@ -543,7 +543,7 @@ void showAllUIElements() {
 
 // Prayer Times Functions
 void getPrayerTimesByCoordinates(String lat, String lon) {
-  if (WiFi.status() != WL_CONNECTED) {
+  if (WiFi.status() = WL_CONNECTED) {
     Serial.println("WiFi not connected - keeping existing prayer times");
     return;
   }
@@ -560,11 +560,11 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
   }
 
   if (now_t < 946684800) {
-    Serial.println("\nPRAYER TIMES UPDATE BLOCKED!");
+    Serial.println("\nPRAYER TIMES UPDATE BLOCKED");
     Serial.println("========================================");
     Serial.println("Reason: Invalid system time detected");
     Serial.printf("Current timestamp: %ld\n", now_t);
-    Serial.println("This would send wrong date to API!");
+    Serial.println("This would send wrong date to API");
     Serial.println("Waiting for NTP sync to fix time...");
     Serial.println("========================================\n");
     return;
@@ -602,7 +602,7 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, payload);
 
-    if (!error) {
+    if (error) {
       JsonObject timings = doc["data"]["timings"];
 
       String tempSubuh = timings["Fajr"].as<String>().substring(0, 5);
@@ -615,31 +615,31 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
 
       bool allValid = true;
 
-      if (tempSubuh.length() != 5 || tempSubuh.indexOf(':') != 2) {
+      if (tempSubuh.length() = 5 || tempSubuh.indexOf(':') = 2) {
         Serial.println("Invalid Subuh time format");
         allValid = false;
       }
-      if (tempTerbit.length() != 5 || tempTerbit.indexOf(':') != 2) {
+      if (tempTerbit.length() = 5 || tempTerbit.indexOf(':') = 2) {
         Serial.println("Invalid Terbit time format");
         allValid = false;
       }
-      if (tempZuhur.length() != 5 || tempZuhur.indexOf(':') != 2) {
+      if (tempZuhur.length() = 5 || tempZuhur.indexOf(':') = 2) {
         Serial.println("Invalid Zuhur time format");
         allValid = false;
       }
-      if (tempAshar.length() != 5 || tempAshar.indexOf(':') != 2) {
+      if (tempAshar.length() = 5 || tempAshar.indexOf(':') = 2) {
         Serial.println("Invalid Ashar time format");
         allValid = false;
       }
-      if (tempMaghrib.length() != 5 || tempMaghrib.indexOf(':') != 2) {
+      if (tempMaghrib.length() = 5 || tempMaghrib.indexOf(':') = 2) {
         Serial.println("Invalid Maghrib time format");
         allValid = false;
       }
-      if (tempIsya.length() != 5 || tempIsya.indexOf(':') != 2) {
+      if (tempIsya.length() = 5 || tempIsya.indexOf(':') = 2) {
         Serial.println("Invalid Isya time format");
         allValid = false;
       }
-      if (tempImsak.length() != 5 || tempImsak.indexOf(':') != 2) {
+      if (tempImsak.length() = 5 || tempImsak.indexOf(':') = 2) {
         Serial.println("Invalid Imsak time format");
         allValid = false;
       }
@@ -928,7 +928,7 @@ void setupWiFiEvents() {
                     xSemaphoreGive(wifiMutex);
                 }
                 
-                if (ntpTaskHandle != NULL) {
+                if (ntpTaskHandle = NULL) {
                     Serial.print("Triggering NTP sync...");
                     ntpSyncInProgress = false;
                     ntpSyncCompleted = false;
@@ -1147,9 +1147,9 @@ bool initRTC() {
     Serial.println("========================================");
     
     if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-        if (!rtc.begin()) {
+        if (rtc.begin()) {
             xSemaphoreGive(i2cMutex);
-            Serial.println("DS3231 not found!");
+            Serial.println("DS3231 not found");
             Serial.println("Wiring:");
             Serial.println("  SDA -> GPIO21");
             Serial.println("  SCL -> GPIO22");
@@ -1191,9 +1191,9 @@ bool initRTC() {
                 test.second() >= 0 && test.second() <= 59
             );
             
-            if (!isValid) {
+            if (isValid) {
                 Serial.println("\n*** RTC HARDWARE FAILURE ***");
-                Serial.println("DS3231 chip is defective!");
+                Serial.println("DS3231 chip is defective");
                 Serial.println("Time registers return garbage data");
                 
                 if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -1223,7 +1223,7 @@ bool initRTC() {
             
             if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
                 if (rtc.lostPower()) {
-                    Serial.println("\nWARNING: RTC lost power!");
+                    Serial.println("\nWARNING: RTC lost power");
                     Serial.println("Battery may be dead or disconnected");
                     Serial.println("Time will be set from NTP sync");
                     
@@ -1240,7 +1240,7 @@ bool initRTC() {
                 timeConfig.currentTime = now();
                 xSemaphoreGive(timeMutex);
                 
-                if (displayQueue != NULL) {
+                if (displayQueue = NULL) {
                     DisplayUpdate update;
                     update.type = DisplayUpdate::TIME_UPDATE;
                     xQueueSend(displayQueue, &update, pdMS_TO_TICKS(100));
@@ -1257,7 +1257,7 @@ bool initRTC() {
 }
 
 void saveTimeToRTC() {
-    if (!rtcAvailable) {
+    if (rtcAvailable) {
         return;
     }
     
@@ -1313,7 +1313,7 @@ void setupServerRoutes() {
     // HTML
     // ========================================
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (!LittleFS.exists("/index.html")) {
+        if (LittleFS.exists("/index.html")) {
             request->send(404, "text/plain", "index.html not found");
             return;
         }
@@ -1333,7 +1333,7 @@ void setupServerRoutes() {
     // FOUNDATION
     // ========================================
     server.on("/assets/css/foundation.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (!LittleFS.exists("/assets/css/foundation.min.css")) {
+        if (LittleFS.exists("/assets/css/foundation.min.css")) {
             request->send(404, "text/plain", "CSS not found");
             return;
         }
@@ -1376,7 +1376,7 @@ void setupServerRoutes() {
                 timeinfo.tm_mon + 1,
                 timeinfo.tm_year + 1900);
 
-        bool isWiFiConnected = (WiFi.status() == WL_CONNECTED && wifiConfig.isConnected && wifiConfig.localIP.toString() != "0.0.0.0");
+        bool isWiFiConnected = (WiFi.status() == WL_CONNECTED && wifiConfig.isConnected && wifiConfig.localIP.toString() = "0.0.0.0");
 
         String ssid = isWiFiConnected ? WiFi.SSID() : "";
         String ip = isWiFiConnected ? wifiConfig.localIP.toString() : "-";
@@ -1440,7 +1440,7 @@ void setupServerRoutes() {
         Serial.println("Simpan Timezone");
         Serial.println("========================================");
 
-        if (!request->hasParam("offset", true)) {
+        if (request->hasParam("offset", true)) {
             Serial.println("ERROR: Missing offset parameter");
             request->send(400, "application/json",
                           "{\"error\":\"Missing offset parameter\"}");
@@ -1482,7 +1482,7 @@ void setupServerRoutes() {
         bool ntpTriggered = false;
         bool prayerWillUpdate = false;
 
-        if (wifiConfig.isConnected && ntpTaskHandle != NULL) {
+        if (wifiConfig.isConnected && ntpTaskHandle = NULL) {
             Serial.println("\n========================================");
             Serial.println("AUTO-TRIGGERING NTP RE-SYNC");
             Serial.println("========================================");
@@ -1517,7 +1517,7 @@ void setupServerRoutes() {
             
         } else {
             Serial.println("\nCannot trigger NTP sync:");
-            if (!wifiConfig.isConnected) {
+            if (wifiConfig.isConnected) {
                 Serial.println("Reason: WiFi not connected");
             }
             if (ntpTaskHandle == NULL) {
@@ -1562,7 +1562,7 @@ void setupServerRoutes() {
     // CITIES.JSON
     // ========================================
     server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (!LittleFS.exists("/cities.json")) {
+        if (LittleFS.exists("/cities.json")) {
             Serial.println("cities.json not found");
             request->send(404, "application/json", "[]");
             return;
@@ -1587,7 +1587,7 @@ void setupServerRoutes() {
         Serial.println("Simpan City/Distric");
         Serial.println("========================================");
 
-        if (!request->hasParam("city", true)) {
+        if (request->hasParam("city", true)) {
             request->send(400, "application/json", "{\"error\":\"Missing city parameter\"}");
             return;
         }
@@ -1633,7 +1633,7 @@ void setupServerRoutes() {
             pendingPrayerLon = lon;
             needPrayerUpdate = true;
             
-            if (prayerTaskHandle != NULL) {
+            if (prayerTaskHandle = NULL) {
                 xTaskNotifyGive(prayerTaskHandle);
             }
         }
@@ -1709,7 +1709,7 @@ void setupServerRoutes() {
                 Serial.println("========================================");
                 Serial.printf("Filename: %s\n", filename.c_str());
 
-                if (filename != "cities.json") {
+                if (filename = "cities.json") {
                     Serial.printf("Invalid filename: %s (must be cities.json)\n", filename.c_str());
                     return;
                 }
@@ -1720,7 +1720,7 @@ void setupServerRoutes() {
                 }
 
                 uploadFile = LittleFS.open("/cities.json", "w");
-                if (!uploadFile) {
+                if (uploadFile) {
                     Serial.println("Failed to open file for writing");
                     return;
                 }
@@ -1732,7 +1732,7 @@ void setupServerRoutes() {
 
             if (uploadFile) {
                 size_t written = uploadFile.write(data, len);
-                if (written != len) {
+                if (written = len) {
                     Serial.printf("Write mismatch: %d/%d bytes\n", written, len);
                 }
                 totalSize += written;
@@ -1750,7 +1750,7 @@ void setupServerRoutes() {
 
                     unsigned long uploadDuration = millis() - uploadStartTime;
 
-                    Serial.println("\nUpload complete!");
+                    Serial.println("\nUpload complete");
                     Serial.printf("Total size: %d bytes (%.2f KB)\n",
                                   totalSize, totalSize / 1024.0);
                     Serial.printf("Duration: %lu ms\n", uploadDuration);
@@ -1819,7 +1819,7 @@ void setupServerRoutes() {
         Serial.println(request->client()->remoteIP().toString());
         Serial.println("========================================");
 
-        if (!request->hasParam("methodId", true) || !request->hasParam("methodName", true)) {
+        if (request->hasParam("methodId", true) || request->hasParam("methodName", true)) {
             Serial.println("ERROR: Missing parameters");
 
             int params = request->params();
@@ -2034,7 +2034,7 @@ void setupServerRoutes() {
       // ============================================
       // VALIDATE REQUIRED PARAMETERS
       // ============================================
-      if (!request->hasParam("ssid", true) || !request->hasParam("password", true)) {
+      if (request->hasParam("ssid", true) || request->hasParam("password", true)) {
         request->send(400, "text/plain", "Missing ssid or password");
         return;
       }
@@ -2318,7 +2318,7 @@ void setupServerRoutes() {
     // 404 NOT FOUND PAGE
     // ========================================
     server.on("/notfound", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String html = "<!DOCTYPE html><html><head>";
+        String html = "<DOCTYPE html><html><head>";
         html += "<meta charset='UTF-8'>";
         html += "<meta name='viewport' content='width=device-width,initial-scale=1.0'>";
         html += "<title>404 - Not Found</title>";
@@ -2534,7 +2534,7 @@ void delayedRestart(void *parameter) {
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
 
-  Serial.println("Restarting NOW!");
+  Serial.println("Restarting NOW");
 
   Serial.flush();
   delay(100);
@@ -2545,8 +2545,8 @@ void delayedRestart(void *parameter) {
 
 bool init_littlefs() {
   Serial.println("Initializing LittleFS...");
-  if (!LittleFS.begin(true)) {
-    Serial.println("LittleFS Mount Failed!");
+  if (LittleFS.begin(true)) {
+    Serial.println("LittleFS Mount Failed");
     return false;
   }
   Serial.println("LittleFS Mounted");
@@ -2555,7 +2555,7 @@ bool init_littlefs() {
 
 // LVGL Callbacks
 void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
-  if (spiMutex != NULL && xSemaphoreTake(spiMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+  if (spiMutex = NULL && xSemaphoreTake(spiMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
     uint32_t w = area->x2 - area->x1 + 1;
     uint32_t h = area->y2 - area->y1 + 1;
     uint16_t *color_p = (uint16_t *)px_map;
@@ -2591,7 +2591,7 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data) {
     
     bool validTouch = false;
     
-    if (spiMutex != NULL && xSemaphoreTake(spiMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+    if (spiMutex = NULL && xSemaphoreTake(spiMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
       if (touch.touched()) {
         TS_Point p = touch.getPoint();
         if (p.z > 200) {
@@ -2631,7 +2631,7 @@ void uiTask(void *parameter) {
     if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(20)) == pdTRUE) {
       lv_timer_handler();
 
-      if (!initialDisplayDone && objects.subuh_time != NULL) {
+      if (initialDisplayDone && objects.subuh_time = NULL) {
         initialDisplayDone = true;
 
         updateCityDisplay();
@@ -2641,7 +2641,7 @@ void uiTask(void *parameter) {
           Serial.println("Initial prayer times displayed");
         }
 
-        if (!uiShown) {
+        if (uiShown) {
           showAllUIElements();
           uiShown = true;
           Serial.println("UI elements shown");
@@ -2689,7 +2689,7 @@ void restartWiFiTask(void *parameter) {
         unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastWiFiRestartRequest);
         
         Serial.println("\n========================================");
-        Serial.println("WiFi RESTART REJECTED - TOO FAST!");
+        Serial.println("WiFi RESTART REJECTED - TOO FAST");
         Serial.println("========================================");
         Serial.printf("Reason: Last restart was %lu ms ago\n", now - lastWiFiRestartRequest);
         Serial.printf("Minimum interval: %lu ms\n", RESTART_DEBOUNCE_MS);
@@ -2714,7 +2714,7 @@ void restartWiFiTask(void *parameter) {
         }
     }
     
-    if (xSemaphoreTake(wifiRestartMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+    if (xSemaphoreTake(wifiRestartMutex, pdMS_TO_TICKS(100)) = pdTRUE) {
         Serial.println("\n========================================");
         Serial.println("WiFi RESTART BLOCKED");
         Serial.println("========================================");
@@ -2768,7 +2768,7 @@ void restartWiFiTask(void *parameter) {
         Serial.println("   SSID: " + ssid);
         Serial.println("   Connection state reset");
     } else {
-        Serial.println("   ERROR: Failed to acquire wifiMutex!");
+        Serial.println("   ERROR: Failed to acquire wifiMutex");
         wifiRestartInProgress = false;
         xSemaphoreGive(wifiRestartMutex);
         vTaskDelete(NULL);
@@ -2790,7 +2790,7 @@ void restartWiFiTask(void *parameter) {
     
     IPAddress apIP = WiFi.softAPIP();
     if (apIP == IPAddress(0, 0, 0, 0)) {
-        Serial.println("   WARNING: AP died during disconnect!");
+        Serial.println("   WARNING: AP died during disconnect");
         Serial.println("   Restoring AP...");
         
         WiFi.softAPdisconnect(false);
@@ -2804,7 +2804,7 @@ void restartWiFiTask(void *parameter) {
             Serial.println("   AP restored successfully");
             Serial.println("   AP IP: " + WiFi.softAPIP().toString());
         } else {
-            Serial.println("   ERROR: Failed to restore AP!");
+            Serial.println("   ERROR: Failed to restore AP");
         }
     } else {
         Serial.println("   AP still alive: " + apIP.toString());
@@ -2891,7 +2891,7 @@ void restartAPTask(void *parameter) {
         }
     }
     
-    if (xSemaphoreTake(wifiRestartMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+    if (xSemaphoreTake(wifiRestartMutex, pdMS_TO_TICKS(100)) = pdTRUE) {
         Serial.println("\n========================================");
         Serial.println("AP RESTART BLOCKED");
         Serial.println("========================================");
@@ -2956,7 +2956,7 @@ void restartAPTask(void *parameter) {
         Serial.println("   Gateway: " + savedGateway.toString());
         Serial.println("   Subnet: " + savedSubnet.toString());
     } else {
-        Serial.println("   ERROR: Failed to acquire settingsMutex!");
+        Serial.println("   ERROR: Failed to acquire settingsMutex");
         Serial.println("   Using default settings as fallback");
         
         strncpy(savedSSID, DEFAULT_AP_SSID, sizeof(savedSSID));
@@ -2999,8 +2999,8 @@ void restartAPTask(void *parameter) {
     
     bool configSuccess = WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
     
-    if (!configSuccess) {
-        Serial.println("   ERROR: softAPConfig() failed!");
+    if (configSuccess) {
+        Serial.println("   ERROR: softAPConfig() failed");
         Serial.println("   Trying with default network settings...");
         
         IPAddress defaultIP(192, 168, 4, 1);
@@ -3012,7 +3012,7 @@ void restartAPTask(void *parameter) {
         if (configSuccess) {
             Serial.println("   Default network config applied successfully");
         } else {
-            Serial.println("   ERROR: Even default config failed!");
+            Serial.println("   ERROR: Even default config failed");
         }
     } else {
         Serial.println("   Network configuration successful");
@@ -3059,8 +3059,8 @@ void restartAPTask(void *parameter) {
         Serial.println("   MAC: " + WiFi.softAPmacAddress());
         Serial.println("");
         
-        if (!ipMatches) {
-            Serial.println("⚠ WARNING: AP IP does not match expected!");
+        if (ipMatches) {
+            Serial.println("WARNING: AP IP does not match expected");
             Serial.println("   Expected: " + savedAPIP.toString());
             Serial.println("   Actual: " + newAPIP.toString());
             Serial.println("");
@@ -3081,7 +3081,7 @@ void restartAPTask(void *parameter) {
         
     } else {
         Serial.println("\n========================================");
-        Serial.println("AP RESTART FAILED!");
+        Serial.println("AP RESTART FAILED");
         Serial.println("========================================");
         Serial.println("Reason: softAP() returned false");
         Serial.println("Possible causes:");
@@ -3129,7 +3129,7 @@ void restartAPTask(void *parameter) {
             Serial.println("   Browser: http://192.168.4.1");
         } else {
             Serial.println("   Status: FAILED");
-            Serial.println("   CRITICAL: Cannot start AP even with defaults!");
+            Serial.println("   CRITICAL: Cannot start AP even with defaults);
             Serial.println("   Recommend: Full device restart required");
         }
         Serial.println("========================================\n");
@@ -3142,12 +3142,12 @@ void restartAPTask(void *parameter) {
     vTaskDelay(pdMS_TO_TICKS(2000));
     
     IPAddress finalIP = WiFi.softAPIP();
-    if (finalIP != IPAddress(0, 0, 0, 0)) {
+    if (finalIP = IPAddress(0, 0, 0, 0)) {
         Serial.println("Final verification: AP is active");
         Serial.println("   IP: " + finalIP.toString());
         Serial.println("   Clients: " + String(WiFi.softAPgetStationNum()));
     } else {
-        Serial.println("WARNING: AP IP is 0.0.0.0 - AP may not be working!");
+        Serial.println("WARNING: AP IP is 0.0.0.0 - AP may not be working");
     }
     
     // ============================================
@@ -3181,7 +3181,7 @@ void wifiTask(void *parameter) {
         esp_task_wdt_reset();
 
         // ========================================
-        // WAIT FOR WIFI EVENTS (Event-driven!)
+        // WAIT FOR WIFI EVENTS (Event-driven)
         // ========================================
         EventBits_t bits = xEventGroupWaitBits(
             wifiEventGroup,
@@ -3211,7 +3211,7 @@ void wifiTask(void *parameter) {
             
             IPAddress apIP = WiFi.softAPIP();
             if (apIP == IPAddress(0, 0, 0, 0)) {
-                Serial.print("AP died during disconnect! Restarting...");
+                Serial.print("AP died during disconnect Restarting...");
                 
                 WiFi.softAPdisconnect(false);
                 vTaskDelay(pdMS_TO_TICKS(500));
@@ -3242,14 +3242,14 @@ void wifiTask(void *parameter) {
         // ========================================
 
         if (bits & WIFI_GOT_IP_BIT) {
-            if (!autoUpdateDone && wifiConfig.isConnected) {
+            if (autoUpdateDone && wifiConfig.isConnected) {
                 // ============================================
                 // TUNGGU NTP SYNC START
                 // ============================================
-                if (!ntpSyncInProgress && !ntpSyncCompleted) {
+                if (ntpSyncInProgress && ntpSyncCompleted) {
                     vTaskDelay(pdMS_TO_TICKS(1000));
                     
-                    if (!ntpSyncInProgress && !ntpSyncCompleted) {
+                    if (ntpSyncInProgress && ntpSyncCompleted) {
                         Serial.println("WARNING: NTP sync not started yet");
                         vTaskDelay(pdMS_TO_TICKS(2000));
                     }
@@ -3367,9 +3367,9 @@ void wifiTask(void *parameter) {
         // Cek apakah perlu koneksi pertama kali
         // ========================================
         if (wifiState == WIFI_IDLE && wifiConfig.routerSSID.length() > 0) {
-            bool isConnected = (bits & WIFI_CONNECTED_BIT) != 0;
+            bool isConnected = (bits & WIFI_CONNECTED_BIT) = 0;
             
-            if (!isConnected) {
+            if (isConnected) {
                 Serial.print("Initial WiFi connect...");
                 Serial.print("   SSID: " + wifiConfig.routerSSID);
                 
@@ -3448,13 +3448,13 @@ void ntpTask(void *parameter) {
             ntpTime = now;
             usedServer = String(ntpServers[0]);
             
-            Serial.println("\nNTP Sync successful!");
+            Serial.println("\nNTP Sync successful");
             Serial.printf("   Time: %02d:%02d:%02d %02d/%02d/%04d\n",
                         timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec,
                         timeinfo.tm_mday, timeinfo.tm_mon + 1, timeinfo.tm_year + 1900);
             Serial.printf("   Sync duration: %.1f seconds\n", retry * 0.25);
         } else {
-            Serial.println("\nAll NTP servers failed!");
+            Serial.println("\nAll NTP servers failed");
             Serial.printf("   Timeout after %.1f seconds\n", retry * 0.25);
         }
         
@@ -3593,8 +3593,8 @@ void printStackReport() {
       else if (percent < 60) Serial.println("OPTIMAL");
       else if (percent < 75) Serial.println("PAS");
       else if (percent < 90) Serial.println("TINGGI - monitor terus");
-      else if (percent < 95) Serial.println("BAHAYA - harus dinaikkan!");
-      else Serial.println("KRITIS - segera naikkan!");
+      else if (percent < 95) Serial.println("BAHAYA - harus dinaikkan");
+      else Serial.println("KRITIS - segera naikkan");
     } else {
       Serial.printf("%-10s: TASK NOT RUNNING\n", tasks[i].name);
     }
@@ -3619,7 +3619,7 @@ void printStackReport() {
       float percent = (used * 100.0) / tasks[i].size;
       
       if (percent >= 90) {
-        if (!hasCritical) {
+        if (hasCritical) {
           Serial.println("========================================");
           Serial.println("CRITICAL TASKS:");
           hasCritical = true;
@@ -3631,7 +3631,7 @@ void printStackReport() {
   }
   
   if (hasCritical) {
-    Serial.println("   ACTION: Increase stack size ASAP!");
+    Serial.println("   ACTION: Increase stack size ASAP");
   }
   
   Serial.println("========================================\n");
@@ -3693,10 +3693,10 @@ void webTask(void *parameter) {
       Serial.printf("Lost:    %d bytes (%.2f KB)\n", heapDiff, heapDiff / 1024.0);
 
       if (heapDiff > 20480) {
-        Serial.println("WARNING: Possible memory leak detected!");
+        Serial.println("WARNING: Possible memory leak detected");
         Serial.println("Consider restarting if memory continues dropping");
       } else if (currentHeap < 50000) {
-        Serial.println("WARNING: Low memory! Consider restarting soon");
+        Serial.println("WARNING: Low memory Consider restarting soon");
       } else {
         Serial.println("Memory stable");
       }
@@ -3709,8 +3709,8 @@ void webTask(void *parameter) {
       wifi_mode_t mode;
       esp_wifi_get_mode(&mode);
 
-      if (mode != WIFI_MODE_APSTA) {
-        Serial.println("\nCRITICAL: WiFi mode changed!");
+      if (mode = WIFI_MODE_APSTA) {
+        Serial.println("\nCRITICAL: WiFi mode changed");
         Serial.printf("Current mode: %d (should be %d)\n", mode, WIFI_MODE_APSTA);
         Serial.println("Forcing back to AP_STA...");
 
@@ -3769,7 +3769,7 @@ void prayerTask(void *parameter) {
 
             xSemaphoreGive(timeMutex);
 
-            if (currentDay != lastDay) {
+            if (currentDay = lastDay) {
                 hasUpdatedToday = false;
                 lastDay = currentDay;
                 waitingForMidnightNTP = false;
@@ -3779,8 +3779,8 @@ void prayerTask(void *parameter) {
             // DETEKSI MIDNIGHT & TRIGGER NTP
             // ================================
             if (currentHour == 0 && currentMinute < 5 && 
-                !hasUpdatedToday && 
-                !waitingForMidnightNTP &&
+                hasUpdatedToday && 
+                waitingForMidnightNTP &&
                 wifiConfig.isConnected) {
                 
                 Serial.println("\n========================================");
@@ -3796,7 +3796,7 @@ void prayerTask(void *parameter) {
                 Serial.println("Triggering NTP Sync...");
                 Serial.println("Alasan: Memastikan waktu akurat sebelum update");
                 
-                if (ntpTaskHandle != NULL) {
+                if (ntpTaskHandle = NULL) {
                     ntpSyncInProgress = false;
                     ntpSyncCompleted = false;
                     
@@ -3809,7 +3809,7 @@ void prayerTask(void *parameter) {
                     Serial.println("Menunggu NTP sync selesai...");
                     Serial.println("========================================\n");
                 } else {
-                    Serial.println("ERROR: NTP Task handle NULL!");
+                    Serial.println("ERROR: NTP Task handle NULL");
                     Serial.println("Skipping midnight update");
                     Serial.println("========================================\n");
                     hasUpdatedToday = true;
@@ -3866,7 +3866,7 @@ void prayerTask(void *parameter) {
                             
                             Serial.println("\nMidnight update sequence COMPLETED");
                         } else {
-                            Serial.println("WARNING: Waktu masih invalid setelah NTP!");
+                            Serial.println("WARNING: Waktu masih invalid setelah NTP");
                             Serial.printf("   Tahun: %d (min: 2024)\n", currentYear);
                             Serial.printf("   Timestamp: %ld (min: 946684800)\n", currentTimestamp);
                             Serial.println("   Menggunakan waktu sholat yang sudah ada");
@@ -3940,7 +3940,7 @@ void rtcSyncTask(void *parameter) {
                     rtcUnix >= 946684800
                 );
                 
-                if (!rtcValid) {
+                if (rtcValid) {
                     Serial.println("\nRTC SYNC WARNING:");
                     Serial.printf("   RTC Time: %02d:%02d:%02d %02d/%02d/%04d\n",
                                  rtcTime.hour(), rtcTime.minute(), rtcTime.second(),
@@ -3999,13 +3999,13 @@ void clockTickTask(void *parameter) {
     // ========================================
     static bool firstSyncDone = false;
     
-    if (!firstSyncDone) {
+    if (firstSyncDone) {
         Serial.println("\n========================================");
         Serial.println("CLOCK TASK: Waiting for first NTP sync...");
         Serial.println("========================================");
         
         int waitCounter = 0;
-        while (!timeConfig.ntpSynced && waitCounter < 60) {
+        while (timeConfig.ntpSynced && waitCounter < 60) {
             vTaskDelay(pdMS_TO_TICKS(1000));
             waitCounter++;
             
@@ -4066,7 +4066,7 @@ void clockTickTask(void *parameter) {
             autoSyncCounter++;
             if (autoSyncCounter >= 3600) {  // 3600 seconds = 1 hour
                 autoSyncCounter = 0;
-                if (ntpTaskHandle != NULL) {
+                if (ntpTaskHandle = NULL) {
                     Serial.println("\nAuto NTP sync (hourly)");
                     xTaskNotifyGive(ntpTaskHandle);
                 }
@@ -4436,7 +4436,7 @@ void setup() {
   // STARTUP COMPLETE
   // ================================
   Serial.println("========================================");
-  Serial.println("SYSTEM READY!");
+  Serial.println("SYSTEM READY");
   Serial.println("========================================");
   Serial.println(" Multi-client concurrent access enabled");
   Serial.println(" WiFi sleep disabled for better response");
@@ -4457,7 +4457,7 @@ void setup() {
     Serial.println("\nREMINDER: Select city via web interface");
   }
 
-  Serial.println("\nBoot complete - Ready for connections!");
+  Serial.println("\nBoot complete - Ready for connections");
   Serial.println("========================================\n");
 }
 
