@@ -206,7 +206,7 @@ MethodConfig methodConfig = { 5, "Egyptian General Authority of Survey" };
 int timezoneOffset = 7;
 
 BuzzerConfig buzzerConfig = {
-  true, true, true, true, true, true, true,
+  false, false, false, false, false, false, true,
   50
 };
 
