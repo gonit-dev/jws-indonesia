@@ -4310,7 +4310,6 @@ void setup() {
   loadCitySelection();
   loadMethodSelection();
   loadTimezoneConfig();
-
   loadBuzzerConfig();
 
   Wire.begin(/*RTC_SDA, RTC_SCL*/);
