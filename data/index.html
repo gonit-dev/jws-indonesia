@@ -574,7 +574,7 @@
 																<p class="help-text">Contoh: 106.8456</p>
 															</div>
 															<div class="large-6 medium-6 small-6 cell">
-																<button class="button secondary expanded" onclick="resetToDefaultCoordinates()" title="Reset ke koordinat awal dari JSON"> Reset </button>
+																<button class="button secondary expanded" onclick="resetToDefaultCoordinates()" title="Reset ke koordinat dari JSON"> Reset </button>
 															</div>
 															<div class="large-6 medium-6 small-6 cell">
 																<button class="button secondary expanded" onclick="cancelCoordinatesEdit()" title="Batalkan perubahan koordinat"> Batal </button>
@@ -583,7 +583,7 @@
 														<div class="grid-x grid-margin-x">
 															<div class="large-12 medium-12 small-12 cell">
 																<div class="callout secondary">
-																	<p class="help-text"> 📍 Koordinat awal <span id="defaultCoords">-</span>
+																	<p class="help-text"> 📍 Koordinat <span id="defaultCoords">-</span>
 																		<br> 🧮 Gunakan format angka dengan titik desimal <br> 🌐 Latitude: -90 hingga 90 | Longitude: -180 hingga 180
 																	</p>
 																</div>
@@ -842,7 +842,7 @@
 												<div class="grid-x grid-padding-y">
 													<div class="large-12 text-center cell">
 														<h5>
-															<strong>🔄 Setelan Awal</strong>
+															<strong>🔄 Setelan</strong>
 														</h5>
 													</div>
 												</div>
@@ -858,7 +858,7 @@
 													</div>
 												</div>
 												<div class="large-12 medium-12 small-12 cell">
-													<button class="button secondary expanded" onclick="restartDevice()"> Mulai Ulang Perangkat </button>
+													<button class="button secondary expanded" onclick="resetSettings()"> Reset </button>
 												</div>
 											</div>
 										</div>
@@ -1341,13 +1341,13 @@
 				}
 			}
 			// ================================
-			// FUNGSI RESET KE KOORDINAT AWAL
+			// FUNGSI RESET KE KOORDINAT
 			// ================================
 			function resetToDefaultCoordinates() {
 				const latInput = document.getElementById('latInput');
 				const lonInput = document.getElementById('lonInput');
 				if (!defaultCoordinates.lat || !defaultCoordinates.lon) {
-					showToast('Tidak ada koordinat awal tersedia', 'warning');
+					showToast('Tidak ada koordinat tersedia', 'warning');
 					return;
 				}
 				latInput.value = defaultCoordinates.lat;
@@ -1389,7 +1389,7 @@
 							latInput.value = defaultLat;
 							lonInput.value = defaultLon;
 						} else {
-							showToast('Tidak ada koordinat awal tersedia', 'warning');
+							showToast('Tidak ada koordinat tersedia', 'warning');
 						}
 					}
 				}).catch(error => {
@@ -1397,7 +1397,7 @@
 						latInput.value = defaultLat;
 						lonInput.value = defaultLon;
 					} else {
-						showToast('Tidak ada koordinat awal tersedia', 'warning');
+						showToast('Tidak ada koordinat tersedia', 'warning');
 					}
 				});
 			}
@@ -1913,7 +1913,7 @@
 			// RESET PABRIK
 			// ================================
 			function resetSettings() {
-				if (!confirm('⚠️ Yakin ingin mereset seluruh pengaturan ke setelan pabrik? Perangkat akan dimulai ulang dan kembali ke pengaturan awal.')) {
+				if (!confirm('⚠️ Yakin ingin mereset seluruh pengaturan ke setelan ulang? Perangkat akan dimulai ulang dan kembali ke pengaturan ulang.')) {
 					return;
 				}
 

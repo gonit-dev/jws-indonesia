@@ -2523,7 +2523,6 @@ void setupServerRoutes() {
         Serial.println("FACTORY RESET STARTED");
         Serial.println("========================================");
         
-        // Hapus semua file konfigurasi
         if (LittleFS.exists("/wifi_creds.txt")) {
             LittleFS.remove("/wifi_creds.txt");
             Serial.println("WiFi creds deleted");
@@ -2562,7 +2561,58 @@ void setupServerRoutes() {
         if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
             methodConfig.methodId = 5;
             methodConfig.methodName = "Egyptian General Authority of Survey";
+            xSemaphoreGive(settingsMutex);
+        }
+
+        timezoneOffset = 7;
+        Serial.println("\nResetting time to 00:00:00 01/01/2000...");
+        
+        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+            setTime(0, 0, 0, 1, 1, 2000);
+            timeConfig.currentTime = now();
+            timeConfig.ntpSynced = false;
+            timeConfig.ntpServer = "";
             
+            DisplayUpdate update;
+            update.type = DisplayUpdate::TIME_UPDATE;
+            xQueueSend(displayQueue, &update, pdMS_TO_TICKS(100));
+            
+            xSemaphoreGive(timeMutex);
+        }
+        
+        if (rtcAvailable) {
+            Serial.println("\nSaving time to RTC hardware...");
+            
+            saveTimeToRTC();
+            
+            delay(500);
+            
+            DateTime rtcNow = rtc.now();
+            Serial.println("RTC Verification:");
+            Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+                          rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
+                          rtcNow.day(), rtcNow.month(), rtcNow.year());
+            
+            bool rtcValid = (
+                rtcNow.year() >= 2000 && rtcNow.year() <= 2100 &&
+                rtcNow.month() >= 1 && rtcNow.month() <= 12 &&
+                rtcNow.day() >= 1 && rtcNow.day() <= 31
+            );
+            
+            if (rtcValid) {
+                Serial.println("RTC saved successfully");
+                Serial.println("Time will persist across restarts");
+            } else {
+                Serial.println("RTC save FAILED - time is invalid");
+                Serial.println("Check RTC battery or I2C connection");
+            }
+        } else {
+            Serial.println("\nRTC not available - time will reset on restart");
+        }
+        
+        Serial.println("Time reset complete");
+
+        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
             wifiConfig.routerSSID = "";
             wifiConfig.routerPassword = "";
             wifiConfig.isConnected = false;
@@ -2581,48 +2631,26 @@ void setupServerRoutes() {
             
             strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
             strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
-            wifiConfig.apIP = IPAddress(192, 168, 4, 1);
-            wifiConfig.apGateway = IPAddress(192, 168, 4, 1);
-            wifiConfig.apSubnet = IPAddress(255, 255, 255, 0);
-            WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
+            IPAddress defaultIP(192, 168, 4, 1);
+            IPAddress defaultGW(192, 168, 4, 1);
+            IPAddress defaultSN(255, 255, 255, 0);
             
             xSemaphoreGive(settingsMutex);
         }
-
-        timezoneOffset = 7;
         
-        // Reset waktu
-        Serial.println("\nResetting time to 00:00:00 01/01/2000...");
-        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            setTime(0, 0, 0, 1, 1, 2000);
-            timeConfig.currentTime = now();
-            timeConfig.ntpSynced = false;
-            timeConfig.ntpServer = "";
-            xSemaphoreGive(timeMutex);
-        }
-        
-        // Reset RTC jika tersedia
-        if (rtcAvailable) {
-            Serial.println("Resetting RTC to 01/01/2000...");
-            saveTimeToRTC();
-        }
-        
-        // Disconnect WiFi
         updateCityDisplay();
         WiFi.disconnect(true);
         
         Serial.println("\n========================================");
         Serial.println("FACTORY RESET COMPLETE");
-        Serial.println("Device will restart in 3 seconds...");
+        Serial.println("Device will restart in 5 seconds...");
         Serial.println("========================================\n");
         
-        // ✅ KIRIM RESPONSE DULU SEBELUM RESTART
         request->send(200, "text/plain", "OK");
         
-        // ✅ BUAT TASK RESTART SEGERA SETELAH RESPONSE TERKIRIM
         xTaskCreate(
             [](void* param) {
-                vTaskDelay(pdMS_TO_TICKS(3000)); // 3 detik delay
+                vTaskDelay(pdMS_TO_TICKS(3000));
                 
                 Serial.println("Restarting NOW...");
                 Serial.flush();
