@@ -28,8 +28,10 @@
 			}
 
 			body.loading {
-				overflow: hidden;
-				height: 100vh;
+				overflow: hidden !important;
+				height: 100vh !important;
+				position: fixed !important;
+				width: 100% !important;
 			}
 
 			/* Hide main content during loading */
@@ -792,6 +794,18 @@
 					}, 300);
 				}
 			};
+			function forceRemoveLoadingState() {
+				document.body.classList.remove('loading');
+				document.body.style.overflow = '';
+				document.body.style.height = '';
+				document.body.style.position = '';
+				document.body.style.width = '';
+				
+				const loader = document.getElementById('pageLoader');
+				if (loader) {
+					loader.style.display = 'none';
+				}
+			}
 			const cssLoaded = new Promise((resolve) => {
 				const checkCSS = setInterval(() => {
 					const testDiv = document.createElement('div');
@@ -2534,8 +2548,10 @@
 			document.addEventListener('DOMContentLoaded', function() {
 				document.body.classList.add('loading');
 				
-				LoadingManager.updateProgress(1, 'Action');
-
+				setTimeout(() => {
+					forceRemoveLoadingState();
+				}, 15000);
+				
 				LoadingManager.updateProgress(1, 'Action');
 				
 				initializeApp();
@@ -2874,6 +2890,9 @@
 					if (document.hidden) {
 						// Do nothing
 					} else {
+						// PERBAIKAN: Force remove loading state saat kembali
+						forceRemoveLoadingState();
+						
 						updateDeviceStatus();
 						loadSavedPrayerTimes();
 					}
