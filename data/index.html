@@ -1243,7 +1243,7 @@
 					}
 					const data = await response.json();
 					if (!Array.isArray(data) || data.length === 0) {
-						throw new Error('Daftar lokasi tidak valid atau kosong');
+						throw new Error('Daftar lokasi tidak sesuai atau kosong');
 					}
 					cityList = data;
 					dropdown.innerHTML = '<option value="">-- Pilih lokasi --</option>';
@@ -1488,7 +1488,7 @@
 				const latNum = parseFloat(lat);
 				const lonNum = parseFloat(lon);
 				if (isNaN(latNum) || isNaN(lonNum)) {
-					showToast('Format tidak valid. Gunakan angka dengan titik desimal', 'error');
+					showToast('Format tidak sesuai. Gunakan angka dengan titik desimal', 'error');
 					return;
 				}
 				if (latNum < -90 || latNum > 90) {
@@ -1813,7 +1813,6 @@
 
 				const formData = new URLSearchParams();
 				
-				// Ambil SSID dan password yang sudah tersimpan
 				const ssid = document.getElementById('apSSID').value.trim();
 				const password = document.getElementById('apPassword').value;
 				
@@ -2540,7 +2539,7 @@
 				let offset = parseInt(offsetStr);
 				
 				if (isNaN(offset)) {
-					showToast('Format tidak valid. Contoh: +7, -5, +8', 'error');
+					showToast('Format salah. Contoh: +7, -5, +8', 'error');
 					input.focus();
 					return;
 				}
@@ -2593,7 +2592,7 @@
 						showToast('Timezone berhasil disimpan', 'success');
 						
 						setTimeout(() => {
-							showToast('NTP akan melakukan perbarui ulang dengan zona waktu baru...', 'warning');
+							showToast('NTP akan melakukan pembaruan ulang dengan zona waktu baru...', 'warning');
 						}, 1500);
 						
 					} else {
@@ -2894,7 +2893,6 @@
 					});
 				}
 
-				// Setup validasi untuk ketiga input
 				setupIPInput(apIPInput, 'IP Address Access Point');
 				setupIPInput(gatewayInput, 'Gateway');
 				setupIPInput(subnetInput, 'Subnet Mask');
