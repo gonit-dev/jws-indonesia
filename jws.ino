@@ -118,7 +118,6 @@ XPT2046_Touchscreen touch(TOUCH_CS, TOUCH_IRQ);
 
 RTC_DS3231 rtc;
 bool rtcAvailable = false;
-bool useLocalTime = false;
 
 // ================================
 // DEFAULT AP CONFIGURATION
@@ -204,7 +203,7 @@ WiFiConfig wifiConfig;
 TimeConfig timeConfig;
 PrayerConfig prayerConfig;
 MethodConfig methodConfig = { 5, "Egyptian General Authority of Survey" };
-int timezoneOffset = 0;
+int timezoneOffset = 7;
 
 BuzzerConfig buzzerConfig = {
   false, false, false, false, false, false, false,
@@ -422,15 +421,7 @@ void updateTimeDisplay() {
     
     time_t now_t = timeConfig.currentTime;
     struct tm timeinfo;
-    
-    // ================================
-    // USE UTC OR LOCAL TIME
-    // ================================
-    if (useLocalTime) {
-      localtime_r(&now_t, &timeinfo);
-    } else {
-      gmtime_r(&now_t, &timeinfo);
-    }
+    localtime_r(&now_t, &timeinfo);
 
     sprintf(timeStr, "%02d:%02d",
             timeinfo.tm_hour,
@@ -1105,14 +1096,14 @@ void loadTimezoneConfig() {
 
         if (timezoneOffset < -12 || timezoneOffset > 14) {
           Serial.println("Invalid timezone offset in file, using default +7");
-          timezoneOffset = 0;
+          timezoneOffset = 7;
         }
 
         file.close();
         Serial.println("Timezone loaded: UTC" + String(timezoneOffset >= 0 ? "+" : "") + String(timezoneOffset));
       }
     } else {
-      timezoneOffset = 0;
+      timezoneOffset = 7;
       Serial.println("No timezone config found - using default (UTC+7)");
     }
     xSemaphoreGive(settingsMutex);
@@ -1265,9 +1256,6 @@ bool initRTC() {
     Serial.println("INITIALIZING DS3231 RTC");
     Serial.println("========================================");
     
-    // ================================
-    // RTC NOT FOUND
-    // ================================
     if (!rtc.begin()) {
         Serial.println("DS3231 not found!");
         Serial.println("Wiring:");
@@ -1276,28 +1264,19 @@ bool initRTC() {
         Serial.println("  VCC -> 3.3V");
         Serial.println("  GND -> GND");
         Serial.println("\nRunning without RTC");
-        Serial.println("Time will reset to 01/01/2000 on every restart");
-        Serial.println("Display mode: UTC (00:00 format until NTP sync)");
         Serial.println("========================================\n");
         
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            timeConfig.currentTime = 946684800;
-            setTime(timeConfig.currentTime);
+            setTime(7, 0, 0, 1, 1, 2000);
+            timeConfig.currentTime = now();
             xSemaphoreGive(timeMutex);
         }
-        
-        useLocalTime = false;
-        
         return false;
     }
     
     Serial.println("DS3231 detected on I2C");
     
-    // ================================
-    // RTC HARDWARE TEST
-    // ================================
     Serial.println("Testing RTC functionality...");
-    rtc.adjust(DateTime(2024, 12, 16, 10, 30, 0));
     delay(2000);
     
     DateTime test = rtc.now();
@@ -1314,14 +1293,11 @@ bool initRTC() {
         test.second() >= 0 && test.second() <= 59
     );
     
-    // ================================
-    // RTC HARDWARE FAILURE
-    // ================================
     if (!isValid) {
         Serial.println("\n*** RTC HARDWARE FAILURE ***");
         Serial.println("DS3231 chip is defective!");
         Serial.println("Time registers return garbage data");
-        Serial.println("Temperature sensor works: " + String(rtc.getTemperature()) + "°C");
+        Serial.println("Temperature sensor works: " + String(rtc.getTemperature()) + "Â°C");
         Serial.println("\nPossible causes:");
         Serial.println("  1. Counterfeit/clone DS3231 chip");
         Serial.println("  2. Crystal oscillator failure");
@@ -1330,17 +1306,13 @@ bool initRTC() {
         Serial.println("\nSystem will run without RTC");
         Serial.println("Time will reset to 01/01/2000 on every restart");
         Serial.println("NTP sync will fix time when WiFi connects");
-        Serial.println("Display mode: UTC (00:00 format until NTP sync)");
         Serial.println("========================================\n");
         
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            // Set ke Unix timestamp 01/01/2000 00:00:00 UTC
-            timeConfig.currentTime = 946684800;
-            setTime(timeConfig.currentTime);
+            setTime(7, 0, 0, 1, 1, 2000);
+            timeConfig.currentTime = now();
             xSemaphoreGive(timeMutex);
         }
-        
-        useLocalTime = false;
         
         return false;
     }
@@ -1348,52 +1320,24 @@ bool initRTC() {
     Serial.println("RTC hardware test PASSED");
     Serial.println("RTC is working correctly");
     
-    // ================================
-    // BATTERY STATUS
-    // ================================
+    // ========================================
+    // CHECK BATTERY STATUS
+    // ========================================
     if (rtc.lostPower()) {
         Serial.println("\nWARNING: RTC lost power!");
         Serial.println("Battery may be dead or disconnected");
         Serial.println("Time will be set from NTP sync");
         
         rtc.adjust(DateTime(2000, 1, 1, 0, 0, 0));
-        
-        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            timeConfig.currentTime = 946684800;
-            setTime(timeConfig.currentTime);
-            xSemaphoreGive(timeMutex);
-        }
-        
-        useLocalTime = false;
-        
-        Serial.println("Display mode: UTC (00:00 format until NTP sync)");
     } else {
         Serial.println("\nRTC battery backup is good");
     }
     
-    // ================================
-    // LOAD TIME FROM RTC
-    // ================================
     if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
         setTime(test.hour(), test.minute(), test.second(),
                test.day(), test.month(), test.year());
         timeConfig.currentTime = now();
         xSemaphoreGive(timeMutex);
-        
-        // ================================
-        // DECIDE: UTC MODE OR LOCAL TIME MODE
-        // ================================
-        if (test.year() >= 2024) {
-            // Waktu RTC valid (bukan default 2000)
-            useLocalTime = true;
-            Serial.println("RTC time is valid → Local Time mode enabled");
-            Serial.println("Display will show time with timezone offset");
-        } else {
-            // Waktu RTC masih default (tahun 2000)
-            useLocalTime = false;
-            Serial.println("RTC time is default (year 2000) → UTC mode");
-            Serial.println("Display will show 00:00 until NTP sync");
-        }
         
         if (displayQueue != NULL) {
             DisplayUpdate update;
@@ -1426,18 +1370,6 @@ bool isRTCValid() {
         if (rtc.lostPower()) {
             xSemaphoreGive(i2cMutex);
             Serial.println("RTC Check: Battery dead/lost power");
-            
-            if (useLocalTime && !timeConfig.ntpSynced) {
-                useLocalTime = false;
-                Serial.println("WARNING: Switching to UTC mode (RTC lost power)");
-                Serial.println("Display will show 00:00 until NTP sync");
-                
-                // Update display
-                DisplayUpdate update;
-                update.type = DisplayUpdate::TIME_UPDATE;
-                xQueueSend(displayQueue, &update, 0);
-            }
-            
             return false;
         }
         
@@ -1449,18 +1381,6 @@ bool isRTCValid() {
             Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
                          rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
                          rtcNow.day(), rtcNow.month(), rtcNow.year());
-            
-            if (useLocalTime && !timeConfig.ntpSynced) {
-                useLocalTime = false;
-                Serial.println("WARNING: Switching to UTC mode (RTC data invalid)");
-                Serial.println("Display will show 00:00 until NTP sync");
-                
-                // Update display
-                DisplayUpdate update;
-                update.type = DisplayUpdate::TIME_UPDATE;
-                xQueueSend(displayQueue, &update, 0);
-            }
-            
             return false;
         }
         
@@ -1482,10 +1402,6 @@ void saveTimeToRTC() {
         Serial.println("========================================");
         Serial.println("Reason: RTC not valid (battery/hardware issue)");
         Serial.println("Time will NOT persist across restarts");
-        
-        rtcAvailable = false;
-        Serial.println("RTC marked as unavailable for this session");
-        
         Serial.println("========================================\n");
         return;
     }
@@ -2689,17 +2605,13 @@ void setupServerRoutes() {
             xSemaphoreGive(settingsMutex);
         }
 
-        timezoneOffset = 0;
+        timezoneOffset = 7;
         
-        Serial.println("\nResetting time to 00:00:00 01/01/2000...");
+        Serial.println("\nResetting time to 07:00:00 01/01/2000...");
         
-        useLocalTime = false;
-        Serial.println("Display mode: UTC (00:00 format, no timezone offset)");
-
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            // Set ke Unix timestamp 01/01/2000 00:00:00 UTC
-            timeConfig.currentTime = 946684800;
-            setTime(timeConfig.currentTime);
+            setTime(7, 0, 0, 1, 1, 2000);
+            timeConfig.currentTime = now();
             timeConfig.ntpSynced = false;
             timeConfig.ntpServer = "";
             
@@ -2715,7 +2627,7 @@ void setupServerRoutes() {
             
             if (isRTCValid()) {
                 Serial.println("RTC Status: OK");
-                Serial.println("Resetting RTC to 01/01/2000 00:00:00...");
+                Serial.println("Resetting RTC to 01/01/2000 07:00:00...");
                 
                 if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
                     rtc.adjust(DateTime(2000, 1, 1, 0, 0, 0));
@@ -3358,28 +3270,14 @@ void ntpTask(void *parameter) {
         syncSuccess = (timeinfo.tm_year >= (2024 - 1900));
         
         if (syncSuccess) {
-            if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-                timeConfig.currentTime = ntpTime;
-                setTime(timeConfig.currentTime);
-                timeConfig.ntpSynced = true;
-                timeConfig.ntpServer = usedServer;
-                xSemaphoreGive(timeMutex);
-                
-                // ================================
-                // ENABLE LOCAL TIME MODE 
-                // ================================
-                useLocalTime = true;
-                Serial.println("\n========================================");
-                Serial.println("TIMEZONE ACTIVATED");
-                Serial.println("========================================");
-                Serial.printf("Mode switched: UTC → Local (UTC%+d)\n", timezoneOffset);
-                Serial.println("Display now shows local time with timezone");
-                Serial.println("========================================\n");
-                
-                DisplayUpdate update;
-                update.type = DisplayUpdate::TIME_UPDATE;
-                xQueueSend(displayQueue, &update, pdMS_TO_TICKS(100));
-            }
+            ntpTime = now;
+            usedServer = String(ntpServers[0]);
+            
+            Serial.println("\nNTP Sync successful");
+            Serial.printf("   Time: %02d:%02d:%02d %02d/%02d/%04d\n",
+                        timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec,
+                        timeinfo.tm_mday, timeinfo.tm_mon + 1, timeinfo.tm_year + 1900);
+            Serial.printf("   Sync duration: %.1f seconds\n", retry * 0.25);
         } else {
             Serial.println("\nAll NTP servers failed");
             Serial.printf("   Timeout after %.1f seconds\n", retry * 0.25);
@@ -3775,39 +3673,10 @@ void rtcSyncTask(void *parameter) {
     while (true) {
         if (rtcAvailable) {
             // ================================
-            // SAFETY CHECK: RTC MASIH HIDUP?
+            // CEK RTC VALID DULU
             // ================================
             if (!isRTCValid()) {
-                Serial.println("\nRTC BECAME INVALID DURING RUNTIME");
-                Serial.println("========================================");
-                Serial.println("Possible causes:");
-                Serial.println("  - Battery died");
-                Serial.println("  - Hardware failure");
-                Serial.println("  - Connection lost");
-                Serial.println("");
-                Serial.println("Action: Disabling RTC for this session");
-                Serial.println("System will rely on NTP for time");
-                Serial.println("========================================\n");
-                
-                rtcAvailable = false;
-                
-                if (!timeConfig.ntpSynced) {
-                    if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-                        timeConfig.currentTime = 946684800;
-                        setTime(timeConfig.currentTime);
-                        xSemaphoreGive(timeMutex);
-                    }
-                    
-                    useLocalTime = false;
-                    
-                    DisplayUpdate update;
-                    update.type = DisplayUpdate::TIME_UPDATE;
-                    xQueueSend(displayQueue, &update, 0);
-                    
-                    Serial.println("Time reset to 00:00 01/01/2000 (UTC mode)");
-                    Serial.println("Waiting for NTP sync...\n");
-                }
-                
+                Serial.println("\n[RTC Sync] Skipped - RTC invalid");
                 vTaskDelayUntil(&xLastWakeTime, xFrequency);
                 continue;
             }
@@ -3934,20 +3803,20 @@ void clockTickTask(void *parameter) {
             if (timeConfig.currentTime < EPOCH_2000) { 
                 Serial.println("\nCLOCK TASK WARNING:");
                 Serial.printf("  Invalid timestamp detected: %ld\n", timeConfig.currentTime);
-                Serial.println("  This is before 01/01/2000 00:00:00");
-                Serial.println("  Forcing reset to: 01/01/2000 00:00:00");
+                Serial.println("  This is before 01/01/2000 07:00:00");
+                Serial.println("  Forcing reset to: 01/01/2000 07:00:00");
                 
-                // HARD SET ke UTC timestamp
-                timeConfig.currentTime = EPOCH_2000;  // 946684800
+                // RESET KE 01/01/2000 07:00:00
+                setTime(7, 0, 0, 1, 1, 2000);
+                timeConfig.currentTime = now();
                 
-                // Sync TimeLib
-                setTime(timeConfig.currentTime);
+                if (timeConfig.currentTime < EPOCH_2000) {
+                    Serial.println("TimeLib.h issue - using hardcoded timestamp");
+                    timeConfig.currentTime = EPOCH_2000; // 946684800
+                }
                 
-                useLocalTime = false;
-                
-                Serial.printf("Time corrected to: %ld (01/01/2000 00:00:00 UTC)\n", 
-                            timeConfig.currentTime);
-                Serial.println("Display mode: UTC (00:00 format until NTP sync)\n");
+                Serial.printf("Time corrected to: %ld (01/01/2000 07:00:00)\n\n", 
+                             timeConfig.currentTime);
             } else {
                 timeConfig.currentTime++;
             }
@@ -4510,8 +4379,6 @@ void setup() {
   // ================================
   // LITTLEFS & LOAD SETTINGS
   // ================================
-  init_littlefs();
-  loadWiFiCredentials();
 
   if (wifiConfig.apIP == IPAddress(0, 0, 0, 0)) {
     wifiConfig.apIP = IPAddress(192, 168, 4, 1);
@@ -4519,6 +4386,8 @@ void setup() {
     wifiConfig.apSubnet = IPAddress(255, 255, 255, 0);
   }
 
+  init_littlefs();
+  loadWiFiCredentials();
   loadPrayerTimes();
   loadCitySelection();
   loadMethodSelection();
@@ -4663,8 +4532,6 @@ void setup() {
   // ================================
   timeConfig.ntpServer = "pool.ntp.org";
   timeConfig.ntpSynced = false;
-
-  useLocalTime = false;
 
   // ================================
   // DISPLAY LOADED CITY & PRAYER TIMES

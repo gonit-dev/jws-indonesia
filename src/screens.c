@@ -173,7 +173,7 @@ void create_screen_main() {
                                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff000000), LV_PART_MAIN | LV_STATE_DEFAULT);
                                             lv_obj_set_style_text_font(obj, &ui_font_prototype_38, LV_PART_MAIN | LV_STATE_DEFAULT);
                                             lv_obj_set_style_text_letter_space(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
-                                            lv_label_set_text(obj, "00:00");
+                                            lv_label_set_text(obj, "07:00");
                                         }
                                         {
                                             // dateNow
