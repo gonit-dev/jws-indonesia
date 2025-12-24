@@ -203,7 +203,7 @@ WiFiConfig wifiConfig;
 TimeConfig timeConfig;
 PrayerConfig prayerConfig;
 MethodConfig methodConfig = { 5, "Egyptian General Authority of Survey" };
-int timezoneOffset = 7;
+int timezoneOffset = 0;
 
 BuzzerConfig buzzerConfig = {
   false, false, false, false, false, false, false,
@@ -1096,14 +1096,14 @@ void loadTimezoneConfig() {
 
         if (timezoneOffset < -12 || timezoneOffset > 14) {
           Serial.println("Invalid timezone offset in file, using default +7");
-          timezoneOffset = 7;
+          timezoneOffset = 0;
         }
 
         file.close();
         Serial.println("Timezone loaded: UTC" + String(timezoneOffset >= 0 ? "+" : "") + String(timezoneOffset));
       }
     } else {
-      timezoneOffset = 7;
+      timezoneOffset = 0;
       Serial.println("No timezone config found - using default (UTC+7)");
     }
     xSemaphoreGive(settingsMutex);
@@ -2608,7 +2608,7 @@ void setupServerRoutes() {
             xSemaphoreGive(settingsMutex);
         }
 
-        timezoneOffset = 7;
+        timezoneOffset = 0;
         
         Serial.println("\nResetting time to 00:00:00 01/01/2000...");
         
