@@ -1,81 +1,72 @@
 # 🕌 ESP32 Islamic Prayer Clock
 
-> Jam Waktu Sholat Digital Otomatis dengan Web Interface & RTC Backup
+> Jam digital otomatis untuk waktu sholat dengan web interface dan RTC backup
 
-![Version](https://img.shields.io/badge/version-2.1-blue) ![LVGL](https://img.shields.io/badge/LVGL-9.2.0-green) ![Platform](https://img.shields.io/badge/platform-ESP32-red) ![License](https://img.shields.io/badge/license-MIT-yellow)
+[![Version](https://img.shields.io/badge/version-2.1-blue)](https://github.com/gonit-dev/jws-indonesia) [![LVGL](https://img.shields.io/badge/LVGL-9.2.0-green)](https://lvgl.io/) [![Platform](https://img.shields.io/badge/platform-ESP32-red)](https://www.espressif.com/) [![License](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 
 ---
 
 ## 📸 Preview
+
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/d0e64d2a-2a00-4a62-b92b-9aa36d95f4b8" height="250" alt="Home Screen">
-  <img src="https://github.com/user-attachments/assets/55d84d62-d986-460a-b2b2-3ac4d2b4aaf1" height="250" alt="WiFi Settings">
-  <img src="https://github.com/user-attachments/assets/b9f1db1c-83f2-4492-aef8-7b62997da9a9" height="250" alt="Time Sync">
-  <img src="https://github.com/user-attachments/assets/84408e8e-ef1b-4ee5-aa42-9c0f965bb031" height="250" alt="City Selection">
-  <img src="https://github.com/user-attachments/assets/6479dfd9-99b9-4034-a0d2-29453d6c46d9" height="250" alt="Coordinates Edit">
-  <img src="https://github.com/user-attachments/assets/57c8726d-adf2-4ce2-bd92-2c5e05f66533" height="250" alt="Upload Cities">
-  <img src="https://github.com/user-attachments/assets/1f105d28-80a6-490c-a4a9-d7f8174a3c3e" height="250" alt="Prayer Times">
+
+| Home Screen | WiFi Settings | Time Sync |
+|-------------|---------------|-----------|
+| ![Home](https://github.com/user-attachments/assets/d0e64d2a-2a00-4a62-b92b-9aa36d95f4b8) | ![WiFi](https://github.com/user-attachments/assets/55d84d62-d986-460a-b2b2-3ac4d2b4aaf1) | ![Time](https://github.com/user-attachments/assets/b9f1db1c-83f2-4492-aef8-7b62997da9a9) |
+
+| City Selection | Edit Coordinates | Prayer Times |
+|----------------|------------------|--------------|
+| ![City](https://github.com/user-attachments/assets/84408e8e-ef1b-4ee5-aa42-9c0f965bb031) | ![Coords](https://github.com/user-attachments/assets/6479dfd9-99b9-4034-a0d2-29453d6c46d9) | ![Prayer](https://github.com/user-attachments/assets/1f105d28-80a6-490c-a4a9-d7f8174a3c3e) |
+
 </div>
 
 ---
 
 ## ✨ Fitur Utama
 
-| Fitur | Deskripsi |
-|-------|-----------|
-| 🕌 **Auto Prayer Times** | Update otomatis tengah malam via Aladhan API |
-| ⏰ **NTP Time Sync** | Sinkronisasi jam otomatis setiap 1 jam |
-| 🌐 **Web Interface** | Konfigurasi lengkap via browser (responsive) |
-| 📍 **500+ Cities** | Database kota Indonesia dengan koordinat GPS |
-| 💾 **RTC DS3231** | Jam tetap akurat saat mati lampu (battery backup) |
-| 🖥️ **LVGL 9.2.0** | UI touchscreen smooth 20 FPS |
-| 🔄 **Event-Driven WiFi** | Auto-reconnect cepat tanpa polling |
-| 🕋 **8 Methods** | Pilih metode: Kemenag, MWL, Egyptian, dll |
-| 📍 **Manual GPS Edit** | Edit koordinat manual dengan reset default |
-| 🌍 **Timezone Config** | Set UTC offset (-12 hingga +14) |
+- 🕌 **Jadwal Sholat Otomatis** - Update otomatis tengah malam via Aladhan API
+- ⏰ **NTP Time Sync** - Sinkronisasi jam otomatis setiap 1 jam
+- 🌐 **Web Interface** - Konfigurasi lengkap via browser (responsive)
+- 📍 **500+ Kota** - Database kota Indonesia dengan koordinat GPS
+- 💾 **RTC DS3231** - Jam tetap akurat saat mati lampu (battery backup)
+- 🖥️ **LVGL 9.2.0** - UI touchscreen smooth 20 FPS
+- 🔄 **Event-Driven WiFi** - Auto-reconnect cepat tanpa polling
+- 🕋 **8 Metode Kalkulasi** - Kemenag, MWL, Egyptian, ISNA, dll
+- 🔊 **Buzzer Configurable** - Toggle & volume control per waktu sholat
 
 ---
 
 ## 🔧 Hardware Requirements
 
-### Board Utama: ESP32-2432S024
-- **MCU:** ESP32 Dual-Core @ 240MHz
-- **Display:** ILI9341 2.4" TFT (320x240, 65K colors)
-- **Touch:** XPT2046 Resistive
-- **WiFi:** 802.11 b/g/n (2.4GHz)
-- **Power:** 5V USB (minimum 2A)
+### Board: ESP32-2432S024
+- MCU: ESP32 Dual-Core @ 240MHz
+- Display: ILI9341 2.4" TFT (320x240)
+- Touch: XPT2046 Resistive
+- WiFi: 802.11 b/g/n (2.4GHz)
+- Power: 5V USB (min 2A)
 
-⚠️ **Penting:** Gunakan power supply 5V 2A minimum & kabel USB berkualitas baik!
-
-### RTC DS3231 (Opsional, Sangat Direkomendasikan)
-
+### RTC DS3231 (Opsional)
 ```
-DS3231       ESP32-2432S024
+DS3231       ESP32
 VCC     →    3.3V
 GND     →    GND
 SDA     →    GPIO 21
 SCL     →    GPIO 22
 ```
 
-**Keuntungan RTC:**
-- ✅ Jam tetap akurat saat mati lampu
-- ✅ Auto-load time saat boot
-- ✅ Auto-save setiap NTP sync
-- ✅ Battery CR2032 (bertahun-tahun)
-
 ---
 
 ## 📦 Instalasi
 
-### 1️⃣ Requirements
+### 1. Requirements
 
-| Komponen | Versi | Wajib? |
-|----------|-------|--------|
-| **ESP32 Board** | **v3.0.7** | 🔴 Ya |
-| **LVGL** | **9.2.0** | 🔴 Ya |
-| Arduino IDE | 2.x+ | Atau PlatformIO |
+| Komponen | Versi | Wajib |
+|----------|-------|-------|
+| ESP32 Board | v3.0.7 | ✅ |
+| LVGL | 9.2.0 | ✅ |
+| Arduino IDE | 2.x+ | - |
 
-### 2️⃣ Install ESP32 Board
+### 2. Install ESP32 Board
 
 **Arduino IDE:**
 ```
@@ -85,9 +76,9 @@ https://espressif.github.io/arduino-esp32/package_esp32_index.json
 Tools → Board → Boards Manager → Install: esp32 v3.0.7
 ```
 
-### 3️⃣ Install Libraries
+### 3. Install Libraries
 
-Via **Library Manager** (Sketch → Include Library → Manage Libraries):
+Via Library Manager (Sketch → Include Library → Manage Libraries):
 
 ```
 ✅ LVGL                   9.2.0
@@ -100,7 +91,7 @@ Via **Library Manager** (Sketch → Include Library → Manage Libraries):
 ✅ RTClib                 2.1.1+
 ```
 
-### 4️⃣ Upload
+### 4. Upload
 
 ```bash
 # Clone repository
@@ -111,7 +102,7 @@ cd jws-indonesia
 Tools → ESP32 Sketch Data Upload
 
 # Upload code
-Sketch → Upload (atau Ctrl+U)
+Sketch → Upload (Ctrl+U)
 ```
 
 **Board Settings:**
@@ -130,21 +121,22 @@ Partition Scheme: Default 4MB with spiffs
 ```
 📶 SSID: "JWS Indonesia"
 🔐 Password: "12345678"
-🌐 IP: 192.168.4.1
+🌐 IP: http://192.168.4.1
 ```
 
 ### Step 2: Konfigurasi WiFi
 1. Hubungkan ke WiFi **"JWS Indonesia"**
 2. Buka browser → `http://192.168.4.1`
-3. Tab **WIRELESS** → Masukkan SSID & Password WiFi rumah
+3. Tab **WIFI** → Masukkan SSID & Password WiFi rumah
 4. Klik **Simpan** → Tunggu auto-connect (~15 detik)
 
 ### Step 3: Set Lokasi
-1. Tab **CITY** → Pilih kota dari dropdown (500+ pilihan)
-2. *Optional:* Edit koordinat GPS manual
-3. Klik **Simpan** → Jadwal shalat auto-update
+1. Tab **LOKASI** → Pilih kota dari dropdown
+2. *Opsional:* Edit koordinat GPS manual
+3. Pilih metode kalkulasi (default: Egyptian)
+4. Klik **Simpan** → Jadwal sholat auto-update
 
-### Step 4: Timezone (Opsional)
+### Step 4: Timezone
 ```
 Default: UTC+7 (WIB)
 - WIB: +7  (Jawa, Sumatera)
@@ -152,140 +144,70 @@ Default: UTC+7 (WIB)
 - WIT: +9  (Papua, Maluku)
 ```
 
-Tab **TIME SYNC** → Edit timezone → Klik **💾 Simpan**
+Tab **WAKTU** → Edit timezone → Klik **💾**
 
 ---
 
-## 🌐 Web Interface Guide
+## 🌐 Web Interface
 
-**Access Points:**
+**Access:**
 ```
 AP Mode:  http://192.168.4.1
-STA Mode: http://<IP-ESP32>  (cek serial monitor)
+STA Mode: http://<IP-ESP32>  (lihat serial monitor)
 ```
 
-### 📑 Tab Overview
+### Tab Overview
 
-#### 🏠 HOME
-- Device status (WiFi, IP, NTP, Uptime)
+#### 🏠 BERANDA
+- Status device (WiFi, IP, NTP, Uptime)
 - Real-time clock display
 - Manual restart button
 
-#### 📡 WIRELESS
-- **WiFi Settings:** SSID & Password WiFi rumah
-- **AP Settings:** Custom SSID & Password Access Point
+#### 📡 WIFI
+- **WiFi Router:** SSID & Password WiFi rumah
+- **Access Point:** Custom SSID & Password AP
+- **Network Config:** IP, Gateway, Subnet AP
 
-#### ⏰ TIME SYNC
+#### ⏰ WAKTU
 - **Manual Sync:** Sync waktu dari browser
 - **Auto NTP:** Otomatis sync setiap 1 jam
 - **Timezone:** Set UTC offset (-12 hingga +14)
 
-#### 🕌 CITY
+#### 🕌 LOKASI
 - **Pilih Lokasi:** 500+ kota Indonesia
 - **Edit GPS:** Manual coordinates dengan reset default
-- **Metode Kalkulasi:** 8 pilihan (Kemenag, MWL, Egyptian, dll)
+- **Metode:** 8 pilihan (Kemenag, MWL, Egyptian, dll)
 - **Upload JSON:** Upload cities.json baru (max 1MB)
 
-#### 🙏 PRAYER
-- Jadwal shalat lengkap (Imsak → Isya)
+#### 🙏 JADWAL
+- Jadwal sholat lengkap (Imsak → Isya)
+- Toggle buzzer per waktu sholat
+- Volume control (0-100%)
 - Auto-refresh tengah malam
-- Display metode kalkulasi aktif
 
-#### ⚠️ FACTORY
+#### ⚠️ RESET
 - Factory reset (hapus semua data)
 - Device auto-restart
 
 ---
 
-## 🏗️ System Architecture
-
-### Multi-Core FreeRTOS Tasks
-
-| Task | Core | Priority | Stack | Function |
-|------|------|----------|-------|----------|
-| **UI Task** | 1 | 3 (High) | 12KB | LVGL rendering @ 20 FPS |
-| **WiFi Task** | 0 | 2 (High) | 4KB | Event-driven connection |
-| **NTP Task** | 0 | 2 (High) | 6KB | Time sync (5 server fallback) |
-| **Web Task** | 0 | 1 (Low) | 6KB | AsyncWebServer (5 clients) |
-| **Prayer Task** | 0 | 1 (Low) | 6KB | Midnight auto-update |
-| **Clock Task** | 0 | 2 (High) | 2KB | 1-second tick + hourly NTP |
-| **RTC Sync** | 0 | 1 (Low) | 2KB | RTC ↔ System time sync |
-
-### Auto-Update System
-
-**Midnight Prayer Update:**
-```cpp
-// Setiap hari jam 00:00-00:05
-if (hour == 0 && minute < 5 && !hasUpdatedToday) {
-    triggerNTPSync();        // Step 1: Sync waktu dulu
-    waitNTPComplete();       // Step 2: Tunggu selesai
-    updatePrayerTimes();     // Step 3: Update jadwal
-}
-```
-
-**Hourly NTP Sync:**
-```cpp
-// Setiap 1 jam (3600 detik)
-if (++autoSyncCounter >= 3600) {
-    triggerNTPSync();
-    autoSyncCounter = 0;
-}
-```
-
-**Timezone Auto-Apply:**
-- Save ke LittleFS → Trigger NTP re-sync → Update prayer times
-
----
-
-## 📁 File Structure
-
-```
-jws-indonesia/
-├── jws.ino                    # Main program (8000+ lines)
-├── src/                       # EEZ Studio UI
-│   ├── ui.h/cpp
-│   ├── screens.h
-│   ├── images.h
-│   └── fonts.h
-├── data/                      # LittleFS (upload ke ESP32)
-│   ├── index.html             # Web interface
-│   ├── assets/
-│   │   └── css/foundation.min.css
-│   └── cities.json            # 500+ cities database
-└── README.md
-```
-
-**Runtime Files (Auto-created di LittleFS):**
-```
-/wifi_creds.txt       → WiFi credentials
-/ap_creds.txt         → Access Point config
-/prayer_times.txt     → Cached prayer times
-/city_selection.txt   → City + GPS coordinates
-/method_selection.txt → Calculation method
-/timezone.txt         → UTC offset
-```
-
----
-
 ## 🔍 Troubleshooting
 
-### ❌ Compile Errors
+### Compile Errors
 
-**Error:** `ledcAttach() not declared`
+**`ledcAttach() not declared`**
 ```
-Penyebab: ESP32 Board bukan v3.0.7
-Solusi: Uninstall ESP32 → Install v3.0.7
-```
-
-**Error:** LVGL function errors
-```
-Penyebab: LVGL bukan v9.2.0
-Solusi: Uninstall LVGL → Install v9.2.0
+Solusi: Install ESP32 Board v3.0.7
 ```
 
-### 📤 Upload Errors
+**LVGL function errors**
+```
+Solusi: Install LVGL v9.2.0
+```
 
-**Error:** `Timed out waiting for packet header`
+### Upload Errors
+
+**`Timed out waiting for packet header`**
 ```
 Solusi:
 1. Tekan & tahan tombol BOOT saat upload
@@ -294,60 +216,36 @@ Solusi:
 4. Install driver CH340/CP2102
 ```
 
-### 🌐 Runtime Issues
+### Runtime Issues
 
 **WiFi tidak connect**
 ```
 ✅ Cek SSID/password (case-sensitive)
 ✅ Router harus 2.4GHz (bukan 5GHz)
-✅ Restart device
-✅ Factory reset via web interface
+✅ Restart device atau factory reset
 ```
 
-**Prayer times tidak akurat (selisih >5 menit)**
+**Jadwal sholat tidak akurat**
 ```
 ✅ Edit koordinat GPS manual (Google Maps)
-✅ Ganti metode kalkulasi (8 pilihan)
+✅ Ganti metode kalkulasi
 ✅ Koordinat akurat = waktu akurat
 ```
 
-**Jam 01/01/2000 setelah mati lampu lama**
+**Jam 01/01/2000 setelah mati lampu**
 ```
 ✅ Normal jika belum NTP sync
 ✅ Tunggu WiFi connect
 ✅ Install RTC DS3231 (battery backup)
 ```
 
-**Timezone tidak tersimpan**
-```
-✅ Cek LittleFS mounted
-✅ Jangan factory reset setelah set
-✅ Verifikasi serial: "Timezone loaded: UTC+X"
-```
-
----
-
-## 🔐 Security
-
-**Default Credentials:**
-```
-AP SSID:    JWS Indonesia
-AP Password: 12345678
-```
-
-**Recommendations:**
-- ✅ Ganti AP password via web interface
-- ✅ Gunakan strong WiFi password
-- ✅ Akses hanya dari trusted network
-- ❌ Jangan expose ke public internet
-
 ---
 
 ## 🌐 API Endpoint
 
-### `/api/data` - IoT Integration
+### GET `/api/data` - IoT Integration
 
-**GET Request:**
+**Request:**
 ```bash
 curl http://192.168.4.1/api/data
 ```
@@ -376,7 +274,6 @@ curl http://192.168.4.1/api/data
   "device": {
     "wifiConnected": true,
     "ntpSynced": true,
-    "ntpServer": "pool.ntp.org",
     "freeHeap": 245632,
     "uptime": 3600
   }
@@ -385,63 +282,98 @@ curl http://192.168.4.1/api/data
 
 ---
 
-## 🚀 Performance Optimizations
+## 📊 System Architecture
 
-### Why So Fast?
+### FreeRTOS Tasks
+
+| Task | Core | Priority | Stack | Function |
+|------|------|----------|-------|----------|
+| UI Task | 1 | High | 12KB | LVGL rendering @ 20 FPS |
+| WiFi Task | 0 | High | 4KB | Event-driven connection |
+| NTP Task | 0 | High | 6KB | Time sync fallback |
+| Web Task | 0 | Low | 6KB | AsyncWebServer |
+| Prayer Task | 0 | Low | 6KB | Midnight auto-update |
+| Clock Task | 0 | High | 2KB | 1-second tick |
+| RTC Sync | 0 | Low | 2KB | RTC ↔ System sync |
+
+### Auto-Update System
+
+**Midnight Prayer Update:**
+```
+00:00-00:05 → Trigger NTP Sync → Wait Complete → Update Prayer Times
+```
+
+**Hourly NTP Sync:**
+```
+Every 3600 seconds → Trigger NTP Sync → Update Display
+```
+
+---
+
+## 📁 File Structure
+
+```
+jws-indonesia/
+├── jws.ino                    # Main program
+├── src/                       # EEZ Studio UI
+│   ├── ui.h/cpp
+│   ├── screens.h
+│   ├── images.h
+│   └── fonts.h
+├── data/                      # LittleFS
+│   ├── index.html             # Web interface
+│   ├── assets/css/foundation.min.css
+│   └── cities.json            # 500+ cities
+└── README.md
+```
+
+**Runtime Files (Auto-created):**
+```
+/wifi_creds.txt       → WiFi credentials
+/ap_creds.txt         → Access Point config
+/prayer_times.txt     → Cached prayer times
+/city_selection.txt   → City + GPS coordinates
+/method_selection.txt → Calculation method
+/timezone.txt         → UTC offset
+/buzzer_config.txt    → Buzzer settings
+```
+
+---
+
+## 🚀 Performance
+
+### Optimizations
 
 1. **WiFi Sleep DOUBLE-DISABLED**
-   ```cpp
-   WiFi.setSleep(WIFI_PS_NONE);       // Arduino layer
-   esp_wifi_set_ps(WIFI_PS_NONE);     // ESP-IDF layer
-   ```
-   - Response: <10ms (vs 100-500ms dulu)
+   - Response: <10ms (vs 100-500ms)
 
 2. **Event-Driven WiFi**
-   ```cpp
-   WiFi.onEvent([](WiFiEvent_t event) { ... });
-   ```
-   - No polling → CPU idle → more resources
+   - No polling → CPU idle
 
 3. **Pre-allocated Buffers**
-   ```cpp
-   char jsonBuffer[512];
-   snprintf(jsonBuffer, sizeof(jsonBuffer), ...);
-   ```
    - No malloc/free → super fast
 
 4. **Browser Caching**
-   ```cpp
-   response->addHeader("Cache-Control", "public, max-age=3600");
-   ```
    - Load CSS once → instant reload
 
 **Result:** Page load **200-500ms** (was 2-5 seconds!)
 
 ---
 
-## 📊 Memory Usage
+## 🔐 Security
 
+**Default Credentials:**
 ```
-Task Stacks:      ~40KB
-LVGL Buffer:      3.2KB
-JSON Document:    Variable (cities.json)
-Free Heap:        ~240KB (typical)
+AP SSID:     JWS Indonesia
+AP Password: 12345678
 ```
 
-**Stack Analysis:**
-```
-UI Task:      OPTIMAL (60-70% usage)
-Web Task:     OPTIMAL (50-60% usage)
-WiFi Task:    OPTIMAL (40-50% usage)
-NTP Task:     OPTIMAL (50-60% usage)
-Prayer Task:  PAS (70-80% usage)
-```
----
+**Recommendations:**
+- ✅ Ganti AP password via web interface
+- ✅ Gunakan strong WiFi password
+- ✅ Akses hanya dari trusted network
+- ❌ Jangan expose ke public internet
 
-<div align="center">
-
-**Made with ❤️ in Indonesia**
-
-⭐ Star this repo if helpful!
+[Report Bug](https://github.com/gonit-dev/jws-indonesia/issues) · [Request Feature](https://github.com/gonit-dev/jws-indonesia/issues)
 
 </div>
