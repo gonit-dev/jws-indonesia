@@ -1276,14 +1276,17 @@ bool initRTC() {
     
     Serial.println("DS3231 detected on I2C");
     
+    // Test apakah RTC bisa menyimpan waktu
     Serial.println("Testing RTC functionality...");
-    delay(2000);
+    rtc.adjust(DateTime(2024, 12, 16, 10, 30, 0));
+    delay(2000); // Tunggu 2 detik
     
     DateTime test = rtc.now();
     Serial.printf("Test result: %02d:%02d:%02d %02d/%02d/%04d\n",
                  test.hour(), test.minute(), test.second(),
                  test.day(), test.month(), test.year());
     
+    // Validasi hasil
     bool isValid = (
         test.year() >= 2024 && test.year() <= 2025 &&
         test.month() >= 1 && test.month() <= 12 &&
@@ -1352,7 +1355,7 @@ bool initRTC() {
 
 bool isRTCTimeValid(DateTime dt) {
     return (
-        dt.year() >= 2024 && dt.year() <= 2100 &&
+        dt.year() >= 2000 && dt.year() <= 2100 &&
         dt.month() >= 1 && dt.month() <= 12 &&
         dt.day() >= 1 && dt.day() <= 31 &&
         dt.hour() >= 0 && dt.hour() <= 23 &&
@@ -1396,16 +1399,6 @@ void saveTimeToRTC() {
         return;
     }
     
-    if (!isRTCValid()) {
-        Serial.println("\n========================================");
-        Serial.println("RTC SAVE SKIPPED");
-        Serial.println("========================================");
-        Serial.println("Reason: RTC not valid (battery/hardware issue)");
-        Serial.println("Time will NOT persist across restarts");
-        Serial.println("========================================\n");
-        return;
-    }
-    
     if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         DateTime dt(year(timeConfig.currentTime),
                    month(timeConfig.currentTime),
@@ -1414,32 +1407,34 @@ void saveTimeToRTC() {
                    minute(timeConfig.currentTime),
                    second(timeConfig.currentTime));
         
+        rtc.adjust(dt);
+        
         xSemaphoreGive(timeMutex);
         
-        if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-            rtc.adjust(dt);
-            xSemaphoreGive(i2cMutex);
+        delay(500);
+        DateTime verify = rtc.now();
+        
+        bool saved = (
+            verify.year() >= 2000 && verify.year() <= 2100 &&
+            verify.month() >= 1 && verify.month() <= 12 &&
+            verify.day() >= 1 && verify.day() <= 31 &&
+            verify.hour() >= 0 && verify.hour() <= 23
+        );
+        
+        if (saved) {
+            Serial.println("Time saved to RTC successfully");
+        } else {
+            Serial.println("WARNING: RTC save failed (hardware issue)");
+            Serial.println("RTC returned: " + String(verify.hour()) + ":" + 
+                          String(verify.minute()) + " " + 
+                          String(verify.day()) + "/" + String(verify.month()));
             
-            delay(500);
-            
-            // Verify save
-            if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-                DateTime verify = rtc.now();
-                xSemaphoreGive(i2cMutex);
-                
-                if (isRTCTimeValid(verify)) {
-                    Serial.println("Time saved to RTC successfully");
-                    Serial.printf("RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
-                                 verify.hour(), verify.minute(), verify.second(),
-                                 verify.day(), verify.month(), verify.year());
-                } else {
-                    Serial.println("WARNING: RTC save failed (verification failed)");
-                    rtcAvailable = false;
-                }
-            }
+            rtcAvailable = false;
+            Serial.println("RTC disabled due to hardware failure");
         }
     }
 }
+
 
 // ============================================
 // Web Server Functions
@@ -2381,29 +2376,39 @@ void setupServerRoutes() {
             }
 
             if (rtcAvailable) {
-                Serial.println("\nChecking RTC status...");
+                Serial.println("\nSaving time to RTC hardware...");
                 
-                if (isRTCValid()) {
-                    Serial.println("RTC Status: OK");
-                    Serial.println("Saving time to RTC...");
-                    saveTimeToRTC();
+                saveTimeToRTC();
+                
+                delay(500);
+                
+                DateTime rtcNow = rtc.now();
+                Serial.println("RTC Verification:");
+                Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+                            rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
+                            rtcNow.day(), rtcNow.month(), rtcNow.year());
+                
+                bool rtcValid = (
+                    rtcNow.year() >= 2000 && rtcNow.year() <= 2100 &&
+                    rtcNow.month() >= 1 && rtcNow.month() <= 12 &&
+                    rtcNow.day() >= 1 && rtcNow.day() <= 31
+                );
+                
+                if (rtcValid) {
+                    Serial.println("RTC saved successfully");
                     Serial.println("Time will persist across restarts");
                 } else {
-                    Serial.println("RTC Status: INVALID");
-                    Serial.println("Possible issues:");
-                    Serial.println("  - Battery dead/disconnected");
-                    Serial.println("  - Hardware failure");
-                    Serial.println("  - Time corruption");
-                    Serial.println("Time will NOT persist across restarts");
+                    Serial.println("RTC save FAILED - time is invalid");
+                    Serial.println("Check RTC battery or I2C connection");
                 }
             } else {
-                Serial.println("\nRTC not available");
-                Serial.println("Time will reset to 01/01/2000 on restart");
+                Serial.println("\nRTC not available - time will reset on restart");
             }
             
             Serial.println("========================================\n");
 
-            request->send(200, "text/plain", "Waktu berhasil di-sync!");
+            AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "Waktu berhasil di-sync!");
+            request->send(resp);
             
         } else {
             request->send(400, "text/plain", "Data waktu tidak lengkap");
@@ -2606,7 +2611,8 @@ void setupServerRoutes() {
         }
 
         timezoneOffset = 7;
-        
+        Serial.println("Settings reset to default");
+
         Serial.println("\nResetting time to 00:00:00 01/01/2000...");
         
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
@@ -2623,46 +2629,37 @@ void setupServerRoutes() {
         }
         
         if (rtcAvailable) {
-            Serial.println("\nChecking RTC status...");
+            Serial.println("\nSaving time to RTC hardware...");
             
-            if (isRTCValid()) {
-                Serial.println("RTC Status: OK");
-                Serial.println("Resetting RTC to 01/01/2000 00:00:00...");
-                
-                if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-                    rtc.adjust(DateTime(2000, 1, 1, 0, 0, 0));
-                    xSemaphoreGive(i2cMutex);
-                    
-                    delay(500);
-                    
-                    // Verify
-                    if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-                        DateTime verify = rtc.now();
-                        xSemaphoreGive(i2cMutex);
-                        
-                        if (isRTCTimeValid(verify) && verify.year() == 2000) {
-                            Serial.println("RTC reset successful");
-                            Serial.printf("RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
-                                        verify.hour(), verify.minute(), verify.second(),
-                                        verify.day(), verify.month(), verify.year());
-                        } else {
-                            Serial.println("WARNING: RTC reset failed");
-                        }
-                    }
-                }
+            saveTimeToRTC();
+            
+            delay(500);
+            
+            DateTime rtcNow = rtc.now();
+            Serial.println("RTC Verification:");
+            Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+                        rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
+                        rtcNow.day(), rtcNow.month(), rtcNow.year());
+            
+            bool rtcValid = (
+                rtcNow.year() >= 2000 && rtcNow.year() <= 2100 &&
+                rtcNow.month() >= 1 && rtcNow.month() <= 12 &&
+                rtcNow.day() >= 1 && rtcNow.day() <= 31
+            );
+            
+            if (rtcValid) {
+                Serial.println("RTC saved successfully");
+                Serial.println("Time will persist across restarts");
             } else {
-                Serial.println("RTC Status: INVALID");
-                Serial.println("Possible issues:");
-                Serial.println("  - Battery dead/disconnected");
-                Serial.println("  - Hardware failure");
-                Serial.println("  - Time corruption");
-                Serial.println("RTC will not be reset (already invalid)");
+                Serial.println("RTC save FAILED - time is invalid");
+                Serial.println("Check RTC battery or I2C connection");
             }
         } else {
-            Serial.println("\nRTC not available");
+            Serial.println("\nRTC not available - time will reset on restart");
         }
         
-        // Disconnect WiFi
+        Serial.println("Time reset complete");
+        
         updateCityDisplay();
         WiFi.disconnect(true);
         
@@ -2671,10 +2668,8 @@ void setupServerRoutes() {
         Serial.println("Device will restart in 3 seconds...");
         Serial.println("========================================\n");
         
-        // ✅ KIRIM RESPONSE DULU SEBELUM RESTART
         request->send(200, "text/plain", "OK");
         
-        // ✅ BUAT TASK RESTART SEGERA SETELAH RESPONSE TERKIRIM
         xTaskCreate(
             [](void* param) {
                 vTaskDelay(pdMS_TO_TICKS(3000)); // 3 detik delay
