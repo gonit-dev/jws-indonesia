@@ -1267,7 +1267,7 @@ bool initRTC() {
         Serial.println("========================================\n");
         
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            setTime(7, 0, 0, 1, 1, 2000);
+            setTime(0, 0, 0, 1, 1, 2000);
             timeConfig.currentTime = now();
             xSemaphoreGive(timeMutex);
         }
@@ -1309,7 +1309,7 @@ bool initRTC() {
         Serial.println("========================================\n");
         
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            setTime(7, 0, 0, 1, 1, 2000);
+            setTime(0, 0, 0, 1, 1, 2000);
             timeConfig.currentTime = now();
             xSemaphoreGive(timeMutex);
         }
@@ -2607,10 +2607,10 @@ void setupServerRoutes() {
 
         timezoneOffset = 7;
         
-        Serial.println("\nResetting time to 07:00:00 01/01/2000...");
+        Serial.println("\nResetting time to 00:00:00 01/01/2000...");
         
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            setTime(7, 0, 0, 1, 1, 2000);
+            setTime(0, 0, 0, 1, 1, 2000);
             timeConfig.currentTime = now();
             timeConfig.ntpSynced = false;
             timeConfig.ntpServer = "";
@@ -2627,7 +2627,7 @@ void setupServerRoutes() {
             
             if (isRTCValid()) {
                 Serial.println("RTC Status: OK");
-                Serial.println("Resetting RTC to 01/01/2000 07:00:00...");
+                Serial.println("Resetting RTC to 01/01/2000 00:00:00...");
                 
                 if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
                     rtc.adjust(DateTime(2000, 1, 1, 0, 0, 0));
@@ -3803,11 +3803,11 @@ void clockTickTask(void *parameter) {
             if (timeConfig.currentTime < EPOCH_2000) { 
                 Serial.println("\nCLOCK TASK WARNING:");
                 Serial.printf("  Invalid timestamp detected: %ld\n", timeConfig.currentTime);
-                Serial.println("  This is before 01/01/2000 07:00:00");
-                Serial.println("  Forcing reset to: 01/01/2000 07:00:00");
+                Serial.println("  This is before 01/01/2000 00:00:00");
+                Serial.println("  Forcing reset to: 01/01/2000 00:00:00");
                 
-                // RESET KE 01/01/2000 07:00:00
-                setTime(7, 0, 0, 1, 1, 2000);
+                // RESET KE 01/01/2000 00:00:00
+                setTime(0, 0, 0, 1, 1, 2000);
                 timeConfig.currentTime = now();
                 
                 if (timeConfig.currentTime < EPOCH_2000) {
@@ -3815,7 +3815,7 @@ void clockTickTask(void *parameter) {
                     timeConfig.currentTime = EPOCH_2000; // 946684800
                 }
                 
-                Serial.printf("Time corrected to: %ld (01/01/2000 07:00:00)\n\n", 
+                Serial.printf("Time corrected to: %ld (01/01/2000 00:00:00)\n\n", 
                              timeConfig.currentTime);
             } else {
                 timeConfig.currentTime++;
