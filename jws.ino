@@ -1699,7 +1699,9 @@ void setupServerRoutes() {
       json += "\"volume\":" + String(buzzerConfig.volume);
       json += "}";
       
-      request->send(200, "application/json", json);
+      AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+      resp->addHeader("Cache-Control", "no-cache");
+      request->send(resp);
     });
 
     // ========================================
@@ -2161,7 +2163,9 @@ void setupServerRoutes() {
       
       json += "}";
 
-      request->send(200, "application/json", json);
+      AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+      resp->addHeader("Cache-Control", "no-cache");
+      request->send(resp);
     });
 
     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
