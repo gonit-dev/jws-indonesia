@@ -8099,11 +8099,19 @@ table.hover:not(.unstriped) tr:nth-of-type(even):hover {
 }
 
 .tabs {
-	margin: 0;
-	border: 0px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+
+	margin: 0 auto;
+	padding: 0;
+
+	list-style: none;
 	background: #fefefe;
-	list-style-type: none
+
+	flex-wrap: wrap; /* kalau di mobile turun baris, tetap center */
 }
+
 
 .tabs::after,
 .tabs::before {
