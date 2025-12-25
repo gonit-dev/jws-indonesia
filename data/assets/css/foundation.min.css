@@ -8100,7 +8100,7 @@ table.hover:not(.unstriped) tr:nth-of-type(even):hover {
 
 .tabs {
 	margin: 0;
-	border: 1px solid #e6e6e6;
+	border: 0px;
 	background: #fefefe;
 	list-style-type: none
 }
@@ -8175,8 +8175,8 @@ table.hover:not(.unstriped) tr:nth-of-type(even):hover {
 }
 
 .tabs-content {
+	border-radius: 15px;
 	border: 1px solid #e6e6e6;
-	border-top: 0;
 	background: #fefefe;
 	color: #0a0a0a;
 	-webkit-transition: all .5s ease;
