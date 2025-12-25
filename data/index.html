@@ -254,7 +254,7 @@
 		<!-- Page Loading Screen -->
 		<div class="grid-container full">
 			<div class="grid-x grid-padding-x grid-margin-y align-center">
-				<div class="small-12 medium-12 large-12 cell">
+				<div class="medium-12 small-12 large-12 cell">
 					<div id="pageLoader">
 						<div class="loader-content">
 							<div class="loader-icon">🕌</div>
@@ -274,15 +274,15 @@
 		<div id="toast" class="toast callout success"></div>
 		<div class="grid-container">
 			<div class="grid-x grid-padding-x grid-margin-y align-center">
-				<div class="small-12 medium-10 large-10 cell">
+				<div class="medium-10 small-12 large-10 cell">
 					<!-- Header -->
 					<div class="grid-x grid-padding-y">
-						<div class="large-12 text-center cell">
+						<div class="medium-12 small-12 large-12 text-center cell">
 							<h3>🕌 Jadwal Shalat</h3>
 							<p class="subheader">Pengaturan otomatis melalui WiFi</p>
 						</div>
 					</div>
-					<div class="large-12 medium-12 small-12 cell">
+					<div class="medium-12 small-12 large-12 cell">
 						<ul class="tabs" data-tabs id="example-tabs">
 							<li class="tabs-title is-active">
 								<a href="#home" aria-selected="true">BERANDA</a>
@@ -307,19 +307,19 @@
 					<div class="tabs-content" data-tabs-content="example-tabs">
 						<div class="tabs-panel is-active" id="home">
 							<div class="grid-x grid-padding-x">
-								<div class="large-12 text-center cell">
+								<div class="medium-12 small-12 large-12 text-center cell">
 									<div class="callout">
 										<div class="grid-x grid-margin-x grid-margin-y">
-											<div class="large-12 medium-12 small-12 cell">
+											<div class="medium-12 small-12 large-12 cell">
 												<div class="grid-x grid-padding-y">
-													<div class="large-12 text-center cell">
+													<div class="medium-12 small-12 large-12 text-center cell">
 														<h5>
 															<strong>📊 Status Perangkat</strong>
 														</h5>
 													</div>
 												</div>
 												<div class="grid-x grid-margin-x">
-													<div class="large-6 medium-6 small-12 cell text-left">
+													<div class="medium-6 small-12 large-6 cell text-left">
 														<p>
 															<strong>Jaringan WiFi:</strong>
 															<span id="wifiName">-</span>
@@ -333,7 +333,7 @@
 															<span id="internetStatus" class="label warning">Menghubungkan…</span>
 														</p>
 													</div>
-													<div class="large-6 medium-6 small-12 cell text-left">
+													<div class="medium-6 small-12 large-6 cell text-left">
 														<p>
 															<strong>Status NTP:</strong>
 															<span id="ntpStatus">-</span>
@@ -355,7 +355,7 @@
 															<span id="uptime">--:--:--</span>
 														</p>
 													</div>
-													<div class="large-12 medium-12 small-12 cell">
+													<div class="medium-12 small-12 large-12 cell">
 														<button class="button secondary expanded" onclick="restartDevice()"> Mulai Ulang Perangkat </button>
 													</div>
 												</div>
@@ -367,88 +367,88 @@
 						</div>
 						<div class="tabs-panel" id="wifi">
 							<div class="grid-x grid-padding-x">
-								<div class="large-12 text-center cell">
+								<div class="medium-12 small-12 large-12 text-center cell">
 									<div class="callout">
 										<div class="grid-x grid-margin-x grid-margin-y align-center ">
-											<div class="large-6 medium-6 small-12 cell">
+											<div class="medium-6 small-12 large-6 cell">
 												<div class="grid-x grid-padding-x">
-													<div class="large-12 medium-12 small-12 cell">
+													<div class="medium-12 small-12 large-12 cell">
 														<div class="grid-x grid-padding-y">
-															<div class="large-12 text-center cell">
+															<div class="medium-12 small-12 large-12 text-center cell">
 																<h5>
 																	<strong>📡 WiFi Router</strong>
 																</h5>
 															</div>
 														</div>
 														<div class="grid-x grid-margin-x">
-															<div class="large-12 medium-12 small-12 cell">
+															<div class="medium-12 small-12 large-12 cell">
 																<label>SSID WiFi Router</label>
 																<input type="text" id="wifiSSID" placeholder="Masukkan SSID WiFi">
 															</div>
-															<div class="large-12 medium-12 small-12 cell">
+															<div class="medium-12 small-12 large-12 cell">
 																<label>Password WiFi</label>
 																<input type="password" id="wifiPassword" placeholder="Masukkan password WiFi">
 															</div>
-															<div class="large-6 medium-6 small-6 cell">
+															<div class="medium-6 small-6 large-6 cell">
 																<button class="button secondary expanded" onclick="setWiFi()"> Simpan </button>
 															</div>
-															<div class="large-6 medium-6 small-6 cell">
+															<div class="medium-6 small-6 large-6 cell">
 																<button class="button secondary expanded" onclick="clearWiFiForm()"> Batal </button>
 															</div>
 														</div>
 													</div>
 												</div>
 											</div>
-											<div class="large-6 medium-6 small-12 cell">
+											<div class="medium-6 small-12 large-6 cell">
 												<div class="grid-x grid-padding-y">
-													<div class="large-12 text-center cell">
+													<div class="medium-12 small-12 large-12 text-center cell">
 														<h5>
 															<strong>📶 Access Point</strong>
 														</h5>
 													</div>
 												</div>
 												<div class="grid-x grid-margin-x">
-													<div class="large-12 medium-12 small-12 cell">
+													<div class="medium-12 small-12 large-12 cell">
 														<label>SSID Access Point</label>
 														<input type="text" id="apSSID" placeholder="Masukkan SSID AP">
 													</div>
-													<div class="large-12 medium-12 small-12 cell">
+													<div class="medium-12 small-12 large-12 cell">
 														<label>Password Access Point</label>
 														<input type="password" id="apPassword" placeholder="Masukkan password AP (minimal 8 karakter)">
 													</div>
-													<div class="large-6 medium-6 small-6 cell">
+													<div class="medium-6 small-6 large-6 cell">
 														<button class="button secondary expanded" onclick="setAP()"> Simpan </button>
 													</div>
-													<div class="large-6 medium-6 small-6 cell">
+													<div class="medium-6 small-6 large-6 cell">
 														<button class="button secondary expanded" onclick="clearAPForm()"> Batal </button>
 													</div>
 												</div>
 											</div>
-											<div class="large-6 medium-6 small-12 cell">
+											<div class="medium-6 small-12 large-6 cell">
 												<div class="grid-x grid-padding-y">
-													<div class="large-12 text-center cell">
+													<div class="medium-12 small-12 large-12 text-center cell">
 														<h5>
 															<strong>🌐 Konfigurasi Jaringan Access Point</strong>
 														</h5>
 													</div>
 												</div>
 												<div class="grid-x grid-margin-x">
-													<div class="large-12 medium-12 small-12 cell">
+													<div class="medium-12 small-12 large-12 cell">
 														<label>IP Address Access Point</label>
 														<input type="text" id="apIP" placeholder="192.168.4.1">
 													</div>
-													<div class="large-12 medium-12 small-12 cell">
+													<div class="medium-12 small-12 large-12 cell">
 														<label>Gateway</label>
 														<input type="text" id="gatewayIP" placeholder="192.168.4.1">
 													</div>
-													<div class="large-12 medium-12 small-12 cell">
+													<div class="medium-12 small-12 large-12 cell">
 														<label>Subnet Mask</label>
 														<input type="text" id="subnetMask" placeholder="255.255.255.0">
 													</div>
-													<div class="large-6 medium-6 small-6 cell">
+													<div class="medium-6 small-6 large-6 cell">
 														<button class="button secondary expanded" onclick="setAPNetwork()">Simpan</button>
 													</div>
-													<div class="large-6 medium-6 small-6 cell">
+													<div class="medium-6 small-6 large-6 cell">
 														<button class="button secondary expanded" onclick="clearDHCPForm()">Batal</button>
 													</div>
 												</div>
@@ -460,41 +460,41 @@
 						</div>
 						<div class="tabs-panel" id="time">
 							<div class="grid-x grid-padding-x">
-								<div class="large-12 text-center cell">
+								<div class="medium-12 small-12 large-12 text-center cell">
 									<div class="callout">
 										<div class="grid-x grid-margin-x grid-margin-y">
-											<div class="large-12 medium-12 small-12 cell">
+											<div class="medium-12 small-12 large-12 cell">
 												<div class="grid-x grid-padding-y">
-													<div class="large-12 text-center cell">
+													<div class="medium-12 small-12 large-12 text-center cell">
 														<h5>
 															<strong>⏰ Waktu & Sinkronisasi</strong>
 														</h5>
 													</div>
 												</div>
 												<div class="grid-x grid-margin-x align-middle">
-													<div class="large-6 medium-6 small-12 cell">
+													<div class="medium-6 small-12 large-6 cell">
 														<div class="callout secondary">
-															<div class="large-12 medium-12 small-12 cell">
+															<div class="medium-12 small-12 large-12 cell">
 																<h6>
 																	<strong>📱 Pembaruan Manual</strong>
 																</h6>
 																<p class="help-text">Perbarui waktu dari perangkat Anda</p>
 															</div>
-															<div class="large-12 medium-12 small-12 cell">
+															<div class="medium-12 small-12 large-12 cell">
 																<button class="button secondary expanded" onclick="syncTime()"> Perbarui Waktu </button>
 															</div>
 														</div>
 													</div>
-													<div class="large-6 medium-6 small-12 cell">
+													<div class="medium-6 small-12 large-6 cell">
 														<div class="callout secondary">
-															<div class="large-12 medium-12 small-12 cell">
+															<div class="medium-12 small-12 large-12 cell">
 																<h6>
 																	<strong>🌐 Pembaruan Otomatis (NTP) <span class="label success">AUTO</span>
 																	</strong>
 																</h6>
 																<p class="help-text">Waktu diperbarui otomatis saat terhubung ke internet</p>
 															</div>
-															<div class="large-12 medium-12 small-12 cell">
+															<div class="medium-12 small-12 large-12 cell">
 																<p class="help-text"> 🔄 Perbarui otomatis setiap 1 jam <br> 🗄️ Beberapa server cadangan <br> 🌐 Timezone: UTC <span id="timezoneDisplayText">+7</span>
 																	<input type="text" id="timezoneInput" value="+7" style="display: none; width: 60px; height: 25px; padding: 2px 5px; margin: 0 5px; text-align: center; font-weight: bold;" pattern="^[+-]?\d+$" maxlength="3">
 																	<button id="timezoneBtn" onclick="toggleTimezoneEdit()" style="margin-left: -5px; padding: 5px 10px; line-height: 1;" title="Edit Timezone"> 🕐 </button>
@@ -514,19 +514,19 @@
 						</div>
 						<div class="tabs-panel" id="location">
 							<div class="grid-x grid-padding-x">
-								<div class="large-12 text-center cell">
+								<div class="medium-12 small-12 large-12 text-center cell">
 									<div class="callout">
 										<div class="grid-x grid-margin-x grid-margin-y">
-											<div class="large-12 medium-12 small-12 cell">
+											<div class="medium-12 small-12 large-12 cell">
 												<div class="grid-x grid-padding-y">
-													<div class="large-12 text-center cell">
+													<div class="medium-12 small-12 large-12 text-center cell">
 														<h5>
 															<strong>🕌 Lokasi & Metode Kalkulasi</strong>
 														</h5>
 													</div>
 												</div>
 												<div class="grid-x grid-margin-x">
-													<div class="large-12 medium-12 small-12 cell">
+													<div class="medium-12 small-12 large-12 cell">
 														<div class="callout secondary">
 															<p>
 																<strong>Lokasi Terpilih:</strong>
@@ -543,19 +543,19 @@
 													</div>
 												</div>
 												<div class="grid-x grid-margin-x">
-													<div class="large-9 medium-8 small-12 cell">
+													<div class="medium-8 small-12 large-9 cell">
 														<label>Pilih Lokasi</label>
 														<select id="cityDropdown" onchange="handleCityChange()">
 															<option value="">-- Pilih lokasi --</option>
 														</select>
 													</div>
-													<div class="large-3 medium-4 small-12 cell">
+													<div class="medium-4 small-12 large-3 cell">
 														<label class="show-for-medium">&nbsp;</label>
 														<button class="button secondary expanded" onclick="saveCity()"> Simpan </button>
 													</div>
-													<div id="coordinatesForm" class="large-12 medium-12 small-12 cell hide">
+													<div id="coordinatesForm" class="medium-12 small-12 large-12 cell hide">
 														<div class="grid-x grid-padding-y">
-															<div class="large-12 text-center cell">
+															<div class="medium-12 small-12 large-12 text-center cell">
 																<h5>
 																	<strong>📍 Ubah Koordinat</strong>
 																</h5>
@@ -563,25 +563,25 @@
 															</div>
 														</div>
 														<div class="grid-x grid-margin-x">
-															<div class="large-6 medium-6 small-12 cell">
+															<div class="medium-6 small-12 large-6 cell">
 																<label>Latitude (Lintang)</label>
 																<input type="text" id="latInput" placeholder="-6.2088" pattern="^-?\d+\.?\d*$">
 																<p class="help-text">Contoh: -6.2088</p>
 															</div>
-															<div class="large-6 medium-6 small-12 cell">
+															<div class="medium-6 small-12 large-6 cell">
 																<label>Longitude (Bujur)</label>
 																<input type="text" id="lonInput" placeholder="106.8456" pattern="^-?\d+\.?\d*$">
 																<p class="help-text">Contoh: 106.8456</p>
 															</div>
-															<div class="large-6 medium-6 small-6 cell">
+															<div class="medium-6 small-6 large-6 cell">
 																<button class="button secondary expanded" onclick="resetToDefaultCoordinates()" title="Reset ke koordinat dari JSON"> Reset </button>
 															</div>
-															<div class="large-6 medium-6 small-6 cell">
+															<div class="medium-6 small-6 large-6 cell">
 																<button class="button secondary expanded" onclick="cancelCoordinatesEdit()" title="Batalkan perubahan koordinat"> Batal </button>
 															</div>
 														</div>
 														<div class="grid-x grid-margin-x">
-															<div class="large-12 medium-12 small-12 cell">
+															<div class="medium-12 small-12 large-12 cell">
 																<div class="callout secondary">
 																	<p class="help-text"> 📍 Koordinat <span id="defaultCoords">-</span>
 																		<br> 🧮 Gunakan format angka dengan titik desimal <br> 🌐 Latitude: -90 hingga 90 | Longitude: -180 hingga 180
@@ -590,7 +590,7 @@
 															</div>
 														</div>
 													</div>
-													<div class="large-9 medium-8 small-12 cell">
+													<div class="medium-8 small-12 large-9 cell">
 														<label>Metode Kalkulasi Jadwal Shalat</label>
 														<select id="methodDropdown">
 															<option value="20">Kementerian Agama Indonesia (Kemenag)</option>
@@ -603,13 +603,13 @@
 															<option value="7">Institute of Geophysics, University of Tehran</option>
 														</select>
 													</div>
-													<div class="large-3 medium-4 small-12 cell">
+													<div class="medium-4 small-12 large-3 cell">
 														<label class="show-for-medium">&nbsp;</label>
 														<button class="button secondary expanded" onclick="saveMethod()"> Simpan </button>
 													</div>
 												</div>
 												<div class="grid-x grid-margin-x">
-													<div class="large-12 medium-12 small-12 cell">
+													<div class="medium-12 small-12 large-12 cell">
 														<div class="callout secondary">
 															<p class="help-text"> 📍 Pilih lokasi untuk menghitung jadwal shalat <br> 📐 Pilih metode perhitungan yang diinginkan <br> 🔄 Jadwal akan diperbarui otomatis setelah memilih lokasi </p>
 														</div>
@@ -619,19 +619,19 @@
 										</div>
 									</div>
 								</div>
-								<div class="large-12 text-center cell">
+								<div class="medium-12 small-12 large-12 text-center cell">
 									<div class="callout">
 										<div class="grid-x grid-margin-x grid-margin-y">
-											<div class="large-12 medium-12 small-12 cell">
+											<div class="medium-12 small-12 large-12 cell">
 												<div class="grid-x grid-padding-y">
-													<div class="large-12 text-center cell">
+													<div class="medium-12 small-12 large-12 text-center cell">
 														<h5>
 															<strong>📍 Perbarui Lokasi</strong>
 														</h5>
 													</div>
 												</div>
 												<div class="grid-x grid-margin-x">
-													<div class="large-12 medium-12 small-12 cell">
+													<div class="medium-12 small-12 large-12 cell">
 														<div class="callout secondary">
 															<p>
 																<strong>Kapan perlu unggah cities.json?</strong>
@@ -643,12 +643,12 @@
 														</div>
 													</div>
 												</div>
-												<div class="large-8 medium-8 small-12 cell">
+												<div class="medium-8 small-12 large-8 cell">
 													<label for="citiesFileInput" class="button hollow expanded"> 📁 Pilih berkas cities.json <input type="file" id="citiesFileInput" accept=".json" class="show-for-sr" onchange="handleCitiesFileSelect(event)">
 													</label>
 													<p id="selectedFileName" class="help-text"> Belum ada berkas yang dipilih </p>
 												</div>
-												<div class="large-4 medium-4 small-12 cell">
+												<div class="medium-4 small-12 large-4 cell">
 													<button id="uploadBtn" class="button primary expanded" onclick="uploadCitiesFile()" disabled> 📤 Unggah Berkas </button>
 													<button id="clearFileBtn" class="button primary expanded" onclick="clearSelectedFile()" style="display: none; margin-top: 10px;"> ✖ Batal </button>
 												</div>
@@ -661,7 +661,7 @@
 													<p id="uploadStatus" class="help-text"> Memulai mengunggah… </p>
 												</div>
 												<div class="grid-x grid-margin-x">
-													<div class="large-12 medium-12 small-12 cell">
+													<div class="medium-12 small-12 large-12 cell">
 														<div class="callout secondary">
 															<p>
 																<strong>⚠️ Penting</strong>
@@ -680,19 +680,19 @@
 						</div>
 						<div class="tabs-panel" id="prayer">
 							<div class="grid-x grid-padding-x">
-								<div class="large-12 text-center cell">
+								<div class="medium-12 small-12 large-12 text-center cell">
 									<div class="callout">
 										<div class="grid-x grid-margin-x grid-margin-y">
-											<div class="large-12 medium-12 small-12 cell">
+											<div class="medium-12 small-12 large-12 cell">
 												<div class="grid-x grid-padding-y">
-													<div class="large-12 text-center cell">
+													<div class="medium-12 small-12 large-12 text-center cell">
 														<h5>
 															<strong>🕌 Jadwal Shalat</strong>
 														</h5>
 													</div>
 												</div>
 												<div class="grid-x grid-margin-x">
-													<div class="large-12 medium-12 cell">
+													<div class="medium-12 small-12 large-12 cell">
 														<div class="callout secondary" id="prayerTimesBox">
 															<table class="unstriped hover">
 																<tbody>
@@ -803,9 +803,8 @@
 																	</tr>
 																</tbody>
 															</table>
-
 															<!-- Volume Control - Native HTML5 Slider -->
-															<div class="large-12 medium-12 cell" style="margin-top: 20px;">
+															<div class="medium-12 small-12 large-12 cell" style="margin-top: 20px;">
 																<strong>🔊 VOLUME BUZZER</strong>
 																<div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
 																	<span>0</span>
@@ -819,7 +818,7 @@
 													</div>
 												</div>
 												<div class="grid-x grid-margin-x">
-													<div class="large-12 medium-12 small-12 cell">
+													<div class="medium-12 small-12 large-12 cell">
 														<div class="callout secondary">
 															<p class="help-text"> 🕌 Jadwal shalat berdasarkan lokasi yang dipilih <br> 🔄 Diperbarui otomatis setiap tengah malam <br> 📐 <span id="currentMethodBottom">Egyptian General Authority of Survey</span>
 																<br> ⚡ Diperbarui otomatis saat terhubung ke internet
@@ -835,19 +834,19 @@
 						</div>
 						<div class="tabs-panel" id="factory">
 							<div class="grid-x grid-padding-x">
-								<div class="large-12 text-center cell">
+								<div class="medium-12 small-12 large-12 text-center cell">
 									<div class="callout">
 										<div class="grid-x grid-margin-x grid-margin-y">
-											<div class="large-12 medium-12 small-12 cell">
+											<div class="medium-12 small-12 large-12 cell">
 												<div class="grid-x grid-padding-y">
-													<div class="large-12 text-center cell">
+													<div class="medium-12 small-12 large-12 text-center cell">
 														<h5>
 															<strong>🔄 Setelan</strong>
 														</h5>
 													</div>
 												</div>
 												<div class="grid-x grid-margin-x">
-													<div class="large-12 medium-12 small-12 cell">
+													<div class="medium-12 small-12 large-12 cell">
 														<div class="callout secondary">
 															<p>
 																<strong>Peringatan</strong> Tindakan ini akan menghapus seluruh data dan tidak dapat dibatalkan
@@ -857,7 +856,7 @@
 														</div>
 													</div>
 												</div>
-												<div class="large-12 medium-12 small-12 cell">
+												<div class="medium-12 small-12 large-12 cell">
 													<button class="button secondary expanded" onclick="resetSettings()"> Reset </button>
 												</div>
 											</div>
