@@ -1455,7 +1455,7 @@ void saveTimeToRTC() {
 // ============================================
 void setupServerRoutes() {
     // ========================================
-    // HTML
+    // 1. HALAMAN UTAMA & ASSETS
     // ========================================
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (!LittleFS.exists("/index.html")) {
@@ -1474,9 +1474,6 @@ void setupServerRoutes() {
         request->send(response);
     });
 
-    // ========================================
-    // FOUNDATION
-    // ========================================
     server.on("/assets/css/foundation.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (!LittleFS.exists("/assets/css/foundation.min.css")) {
             request->send(404, "text/plain", "CSS not found");
@@ -1492,8 +1489,9 @@ void setupServerRoutes() {
         request->send(response);
     });
 
+
     // ========================================
-    // DEVICE STATUS
+    // 2. TAB BERANDA - DEVICE STATUS
     // ========================================
     server.on("/devicestatus", HTTP_GET, [](AsyncWebServerRequest *request) {
         char timeStr[20];
@@ -1557,577 +1555,20 @@ void setupServerRoutes() {
         request->send(resp);
     });
 
-    // ========================================
-    // TIMEZONE
-    // ========================================
-    server.on("/gettimezone", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = "{";
-
-        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            json += "\"offset\":" + String(timezoneOffset);
-            xSemaphoreGive(settingsMutex);
-        } else {
-            json += "\"offset\":7";
-        }
-
-        json += "}";
-
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Cache-Control", "no-cache");
-        request->send(resp);
-    });
-
-    // ========================================
-    // TIMEZONE
-    // ========================================
-    server.on("/settimezone", HTTP_POST, [](AsyncWebServerRequest *request) {
+    server.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
         Serial.println("\n========================================");
-        Serial.println("Simpan Timezone");
+        Serial.println("MANUAL RESTART REQUESTED");
         Serial.println("========================================");
-
-        if (!request->hasParam("offset", true)) {
-            Serial.println("ERROR: Missing offset parameter");
-            request->send(400, "application/json",
-                          "{\"error\":\"Missing offset parameter\"}");
-            return;
-        }
-
-        String offsetStr = request->getParam("offset", true)->value();
-        offsetStr.trim();
-
-        int offset = offsetStr.toInt();
-
-        Serial.println("Received offset: " + String(offset));
-
-        if (offset < -12 || offset > 14) {
-            Serial.println("ERROR: Invalid timezone offset");
-            request->send(400, "application/json",
-                          "{\"error\":\"Invalid timezone offset (must be -12 to +14)\"}");
-            return;
-        }
-
-        Serial.println("Saving to memory and file...");
-
-        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
-            timezoneOffset = offset;
-            xSemaphoreGive(settingsMutex);
-            Serial.println("Memory updated");
-        }
-
-        saveTimezoneConfig();
-
-        Serial.println("========================================");
-        Serial.println("SUCCESS: Timezone saved");
-        Serial.println("Offset: UTC" + String(offset >= 0 ? "+" : "") + String(offset));
+        Serial.println("Device will restart in 5 seconds...");
         Serial.println("========================================\n");
 
-        // ========================================
-        // TRIGGER NTP SYNC
-        // ========================================
-        bool ntpTriggered = false;
-        bool prayerWillUpdate = false;
+        request->send(200, "text/plain", "OK");
 
-        if (wifiConfig.isConnected && ntpTaskHandle != NULL) {
-            Serial.println("\n========================================");
-            Serial.println("AUTO-TRIGGERING NTP RE-SYNC");
-            Serial.println("========================================");
-            Serial.println("Reason: Timezone changed to UTC" + String(offset >= 0 ? "+" : "") + String(offset));
-            
-            // Check if prayer times will be updated
-            if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-                Serial.println("City: " + prayerConfig.selectedCity);
-                Serial.println("Coordinates: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
-                Serial.println("");
-                Serial.println("NTP Task will automatically:");
-                Serial.println("  1. Sync time with new timezone");
-                Serial.println("  2. Update prayer times with correct date");
-                prayerWillUpdate = true;
-            } else {
-                Serial.println("Note: No city coordinates available");
-                Serial.println("Only time will be synced (no prayer times update)");
-            }
-            
-            // Reset NTP status
-            if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-                timeConfig.ntpSynced = false;
-                xSemaphoreGive(timeMutex);
-            }
-
-            // Trigger NTP sync
-            xTaskNotifyGive(ntpTaskHandle);
-            ntpTriggered = true;
-            
-            Serial.println("NTP re-sync triggered successfully");
-            Serial.println("========================================\n");
-            
-        } else {
-            Serial.println("\nCannot trigger NTP sync:");
-            if (!wifiConfig.isConnected) {
-                Serial.println("Reason: WiFi not connected");
-            }
-            if (ntpTaskHandle == NULL) {
-                Serial.println("Reason: NTP task not running");
-            }
-            Serial.println("Timezone will apply on next connection\n");
-        }
-
-        // ========================================
-        // SEND RESPONSE
-        // ========================================
-        String response = "{";
-        response += "\"success\":true,";
-        response += "\"offset\":" + String(offset) + ",";
-        response += "\"ntpTriggered\":" + String(ntpTriggered ? "true" : "false") + ",";
-        response += "\"prayerTimesWillUpdate\":" + String(prayerWillUpdate ? "true" : "false");
-        response += "}";
-
-        request->send(200, "application/json", response);
+        scheduleRestart(5);
     });
 
     // ========================================
-    // GET buzzer config
-    // ========================================
-    server.on("/getbuzzerconfig", HTTP_GET, [](AsyncWebServerRequest *request) {
-      String json = "{";
-      json += "\"imsak\":" + String(buzzerConfig.imsakEnabled ? "true" : "false") + ",";
-      json += "\"subuh\":" + String(buzzerConfig.subuhEnabled ? "true" : "false") + ",";
-      json += "\"terbit\":" + String(buzzerConfig.terbitEnabled ? "true" : "false") + ",";
-      json += "\"zuhur\":" + String(buzzerConfig.zuhurEnabled ? "true" : "false") + ",";
-      json += "\"ashar\":" + String(buzzerConfig.asharEnabled ? "true" : "false") + ",";
-      json += "\"maghrib\":" + String(buzzerConfig.maghribEnabled ? "true" : "false") + ",";
-      json += "\"isya\":" + String(buzzerConfig.isyaEnabled ? "true" : "false") + ",";
-      json += "\"volume\":" + String(buzzerConfig.volume);
-      json += "}";
-      
-      AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-      resp->addHeader("Cache-Control", "no-cache");
-      request->send(resp);
-    });
-
-    // ========================================
-    // SET buzzer toggle (individual)
-    // ========================================
-    server.on("/setbuzzertoggle", HTTP_POST, [](AsyncWebServerRequest *request) {
-      if (!request->hasParam("prayer", true) || !request->hasParam("enabled", true)) {
-        request->send(400, "text/plain", "Missing parameters");
-        return;
-      }
-      
-      String prayer = request->getParam("prayer", true)->value();
-      bool enabled = request->getParam("enabled", true)->value() == "true";
-      
-      if (prayer == "imsak") buzzerConfig.imsakEnabled = enabled;
-      else if (prayer == "subuh") buzzerConfig.subuhEnabled = enabled;
-      else if (prayer == "terbit") buzzerConfig.terbitEnabled = enabled;
-      else if (prayer == "zuhur") buzzerConfig.zuhurEnabled = enabled;
-      else if (prayer == "ashar") buzzerConfig.asharEnabled = enabled;
-      else if (prayer == "maghrib") buzzerConfig.maghribEnabled = enabled;
-      else if (prayer == "isya") buzzerConfig.isyaEnabled = enabled;
-      
-      saveBuzzerConfig();
-      request->send(200, "text/plain", "OK");
-    });
-
-    // ========================================
-    // SET buzzer volume
-    // ========================================
-    server.on("/setbuzzervolume", HTTP_POST, [](AsyncWebServerRequest *request) {
-      if (!request->hasParam("volume", true)) {
-        request->send(400, "text/plain", "Missing volume");
-        return;
-      }
-      
-      int volume = request->getParam("volume", true)->value().toInt();
-      if (volume < 0) volume = 0;
-      if (volume > 100) volume = 100;
-      
-      buzzerConfig.volume = volume;
-      saveBuzzerConfig();
-
-      request->send(200, "text/plain", "OK");
-    });
-
-    // ========================================
-    // PRAYER TIMES
-    // ========================================
-    server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = "{";
-        json += "\"imsak\":\"" + prayerConfig.imsakTime + "\",";
-        json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
-        json += "\"terbit\":\"" + prayerConfig.terbitTime + "\",";
-        json += "\"zuhur\":\"" + prayerConfig.zuhurTime + "\",";
-        json += "\"ashar\":\"" + prayerConfig.asharTime + "\",";
-        json += "\"maghrib\":\"" + prayerConfig.maghribTime + "\",";
-        json += "\"isya\":\"" + prayerConfig.isyaTime + "\"";
-        json += "}";
-
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Cache-Control", "no-cache");
-        request->send(resp);
-    });
-
-    // ========================================
-    // CITIES.JSON
-    // ========================================
-    server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (!LittleFS.exists("/cities.json")) {
-            Serial.println("cities.json not found");
-            request->send(404, "application/json", "[]");
-            return;
-        }
-
-        AsyncWebServerResponse *response = request->beginResponse(
-            LittleFS,
-            "/cities.json",
-            "application/json");
-
-        response->addHeader("Access-Control-Allow-Origin", "*");
-        response->addHeader("Cache-Control", "public, max-age=3600");
-        response->setContentLength(LittleFS.open("/cities.json", "r").size());
-        request->send(response);
-    });
-
-    // ========================================
-    // CITY SELECTION
-    // ========================================
-    server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request) {
-        Serial.println("\n========================================");
-        Serial.println("Simpan City/Distric");
-        Serial.println("========================================");
-
-        if (!request->hasParam("city", true)) {
-            request->send(400, "application/json", "{\"error\":\"Missing city parameter\"}");
-            return;
-        }
-
-        String cityApi = request->getParam("city", true)->value();
-        String cityName = request->hasParam("cityName", true) ? request->getParam("cityName", true)->value() : cityApi;
-        String lat = request->hasParam("lat", true) ? request->getParam("lat", true)->value() : "";
-        String lon = request->hasParam("lon", true) ? request->getParam("lon", true)->value() : "";
-
-        cityApi.trim();
-        cityName.trim();
-        lat.trim();
-        lon.trim();
-
-        Serial.println("City: " + cityApi);
-        Serial.println("Lat: " + lat + ", Lon: " + lon);
-
-        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-            prayerConfig.selectedCity = cityApi;
-            prayerConfig.selectedCityName = cityName;
-            prayerConfig.latitude = lat;
-            prayerConfig.longitude = lon;
-            xSemaphoreGive(settingsMutex);
-        }
-
-        saveCitySelection();
-        updateCityDisplay();
-
-        bool willUpdate = (WiFi.status() == WL_CONNECTED && lat.length() > 0 && lon.length() > 0);
-        
-        char responseBuffer[256];
-        snprintf(responseBuffer, sizeof(responseBuffer),
-            "{\"success\":true,\"city\":\"%s\",\"updating\":%s}",
-            cityName.c_str(),
-            willUpdate ? "true" : "false"
-        );
-
-        request->send(200, "application/json", responseBuffer);
-
-        if (willUpdate) {
-            Serial.println("Triggering background prayer times update...");
-            pendingPrayerLat = lat;
-            pendingPrayerLon = lon;
-            needPrayerUpdate = true;
-            
-            if (prayerTaskHandle != NULL) {
-                xTaskNotifyGive(prayerTaskHandle);
-            }
-        }
-
-        Serial.println("========================================\n");
-    });
-
-    server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = "{";
-
-        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            bool hasSelection = (prayerConfig.selectedCity.length() > 0);
-
-            json += "\"selectedCity\":\"" + prayerConfig.selectedCity + "\",";
-            json += "\"selectedCityApi\":\"" + prayerConfig.selectedCity + "\",";
-            json += "\"latitude\":\"" + prayerConfig.latitude + "\",";
-            json += "\"longitude\":\"" + prayerConfig.longitude + "\",";
-            json += "\"hasSelection\":" + String(hasSelection ? "true" : "false");
-
-            xSemaphoreGive(settingsMutex);
-        } else {
-            json += "\"selectedCity\":\"\",";
-            json += "\"selectedCityApi\":\"\",";
-            json += "\"latitude\":\"\",";
-            json += "\"longitude\":\"\",";
-            json += "\"hasSelection\":false";
-        }
-
-        json += "}";
-
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Cache-Control", "no-cache");
-        request->send(resp);
-    });
-
-    server.on(
-        "/uploadcities", HTTP_POST,
-        [](AsyncWebServerRequest *request) {
-            String jsonSizeStr = "";
-            String citiesCountStr = "";
-
-            if (request->hasParam("jsonSize", true)) {
-                jsonSizeStr = request->getParam("jsonSize", true)->value();
-            }
-
-            if (request->hasParam("citiesCount", true)) {
-                citiesCountStr = request->getParam("citiesCount", true)->value();
-            }
-
-            if (jsonSizeStr.length() > 0 && citiesCountStr.length() > 0) {
-                fs::File metaFile = LittleFS.open("/cities_meta.txt", "w");
-                if (metaFile) {
-                    metaFile.println(jsonSizeStr);
-                    metaFile.println(citiesCountStr);
-                    metaFile.close();
-
-                    Serial.println("Cities metadata saved:");
-                    Serial.println("JSON Size: " + jsonSizeStr + " bytes");
-                    Serial.println("Cities Count: " + citiesCountStr);
-                }
-            }
-
-            request->send(200, "application/json", "{\"success\":true}");
-        },
-        [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-            static fs::File uploadFile;
-            static size_t totalSize = 0;
-            static unsigned long uploadStartTime = 0;
-
-            if (index == 0) {
-                Serial.println("\n========================================");
-                Serial.println("CITIES.JSON UPLOAD STARTED");
-                Serial.println("========================================");
-                Serial.printf("Filename: %s\n", filename.c_str());
-
-                if (filename != "cities.json") {
-                    Serial.printf("Invalid filename: %s (must be cities.json)\n", filename.c_str());
-                    return;
-                }
-
-                if (LittleFS.exists("/cities.json")) {
-                    LittleFS.remove("/cities.json");
-                    Serial.println("Old cities.json deleted");
-                }
-
-                uploadFile = LittleFS.open("/cities.json", "w");
-                if (!uploadFile) {
-                    Serial.println("Failed to open file for writing");
-                    return;
-                }
-
-                totalSize = 0;
-                uploadStartTime = millis();
-                Serial.println("Writing to LittleFS...");
-            }
-
-            if (uploadFile) {
-                size_t written = uploadFile.write(data, len);
-                if (written != len) {
-                    Serial.printf("Write mismatch: %d/%d bytes\n", written, len);
-                }
-                totalSize += written;
-
-                if (totalSize % 5120 == 0 || final) {
-                    Serial.printf("Progress: %d bytes (%.1f KB)\n",
-                                  totalSize, totalSize / 1024.0);
-                }
-            }
-
-            if (final) {
-                if (uploadFile) {
-                    uploadFile.flush();
-                    uploadFile.close();
-
-                    unsigned long uploadDuration = millis() - uploadStartTime;
-
-                    Serial.println("\nUpload complete");
-                    Serial.printf("Total size: %d bytes (%.2f KB)\n",
-                                  totalSize, totalSize / 1024.0);
-                    Serial.printf("Duration: %lu ms\n", uploadDuration);
-
-                    vTaskDelay(pdMS_TO_TICKS(100));
-
-                    if (LittleFS.exists("/cities.json")) {
-                        fs::File verifyFile = LittleFS.open("/cities.json", "r");
-                        if (verifyFile) {
-                            size_t fileSize = verifyFile.size();
-
-                            char buffer[101];
-                            size_t bytesRead = verifyFile.readBytes(buffer, 100);
-                            buffer[bytesRead] = '\0';
-
-                            verifyFile.close();
-
-                            Serial.printf("File verified: %d bytes\n", fileSize);
-                            Serial.println("First 100 chars:");
-                            Serial.println(buffer);
-
-                            String preview(buffer);
-                            if (preview.indexOf('[') >= 0 && preview.indexOf('{') >= 0) {
-                                Serial.println("JSON format looks valid");
-                            } else {
-                                Serial.println("Warning: File may not be valid JSON");
-                            }
-
-                            Serial.println("========================================\n");
-                        }
-                    } else {
-                        Serial.println("File verification failed - file not found");
-                        Serial.println("========================================\n");
-                    }
-                }
-            }
-        }
-    );
-
-    // ========================================
-    // METHOD SELECTION - GET & SET
-    // ========================================
-    server.on("/getmethod", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = "{";
-
-        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            json += "\"methodId\":" + String(methodConfig.methodId) + ",";
-            json += "\"methodName\":\"" + methodConfig.methodName + "\"";
-            xSemaphoreGive(settingsMutex);
-        } else {
-            json += "\"methodId\":5,";
-            json += "\"methodName\":\"Egyptian General Authority of Survey\"";
-        }
-
-        json += "}";
-
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Cache-Control", "no-cache");
-        request->send(resp);
-    });
-
-    server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest *request) {
-        Serial.println("\n========================================");
-        Serial.println("Simpan Metode");
-        Serial.print("Client IP: ");
-        Serial.println(request->client()->remoteIP().toString());
-        Serial.println("========================================");
-
-        if (!request->hasParam("methodId", true) || !request->hasParam("methodName", true)) {
-            Serial.println("ERROR: Missing parameters");
-
-            int params = request->params();
-            Serial.printf("Received parameters (%d):\n", params);
-            for (int i = 0; i < params; i++) {
-                const AsyncWebParameter *p = request->getParam(i);
-                Serial.printf("  %s = %s\n", p->name().c_str(), p->value().c_str());
-            }
-
-            request->send(400, "application/json",
-                          "{\"error\":\"Missing methodId or methodName parameter\"}");
-            return;
-        }
-
-        String methodIdStr = request->getParam("methodId", true)->value();
-        String methodName = request->getParam("methodName", true)->value();
-
-        methodIdStr.trim();
-        methodName.trim();
-
-        int methodId = methodIdStr.toInt();
-
-        Serial.println("Received data:");
-        Serial.println("Method ID: " + String(methodId));
-        Serial.println("Method Name: " + methodName);
-
-        if (methodId < 0 || methodId > 20) {
-            Serial.println("ERROR: Invalid method ID");
-            request->send(400, "application/json",
-                          "{\"error\":\"Invalid method ID\"}");
-            return;
-        }
-
-        if (methodName.length() == 0) {
-            Serial.println("ERROR: Empty method name");
-            request->send(400, "application/json",
-                          "{\"error\":\"Method name cannot be empty\"}");
-            return;
-        }
-
-        if (methodName.length() > 100) {
-            Serial.println("ERROR: Method name too long");
-            request->send(400, "application/json",
-                          "{\"error\":\"Method name too long (max 100 chars)\"}");
-            return;
-        }
-
-        Serial.println("Saving to memory...");
-
-        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
-            methodConfig.methodId = methodId;
-            methodConfig.methodName = methodName;
-
-            xSemaphoreGive(settingsMutex);
-            Serial.println("Memory updated");
-            Serial.println("Method ID: " + String(methodConfig.methodId));
-            Serial.println("Method Name: " + methodConfig.methodName);
-        }
-
-        Serial.println("Writing to LittleFS...");
-        saveMethodSelection();
-
-        bool willFetchPrayerTimes = false;
-
-        if (WiFi.status() == WL_CONNECTED) {
-            if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-                Serial.println("Fetching prayer times with new method...");
-                Serial.println("City: " + prayerConfig.selectedCity);
-                Serial.println("Method: " + methodName);
-                getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
-
-                Serial.println("Prayer times update initiated");
-                willFetchPrayerTimes = true;
-            } else {
-                Serial.println("No coordinates available");
-            }
-        } else {
-            Serial.println("WiFi not connected");
-        }
-
-        Serial.println("========================================");
-        Serial.println("SUCCESS: Method saved successfully");
-        Serial.println("Method: " + methodName);
-        if (willFetchPrayerTimes) {
-            Serial.println("Prayer times will update shortly...");
-        }
-        Serial.println("========================================\n");
-
-        String response = "{";
-        response += "\"success\":true,";
-        response += "\"methodId\":" + String(methodId) + ",";
-        response += "\"methodName\":\"" + methodName + "\",";
-        response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
-        response += "}";
-
-        request->send(200, "application/json", response);
-    });
-
-    // ========================================
-    // WIFI SETTINGS
+    // 3. TAB WIFI - ROUTER & AP CONFIG
     // ========================================
     server.on("/getwificonfig", HTTP_GET, [](AsyncWebServerRequest *request) {
       String json = "{";
@@ -2168,7 +1609,7 @@ void setupServerRoutes() {
       request->send(resp);
     });
 
-    server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
+     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
         // ============================================
         // DEBOUNCING CHECK
         // ============================================
@@ -2359,7 +1800,7 @@ void setupServerRoutes() {
     });
 
     // ========================================
-    // TIME SYNC FROM BROWSER
+    // 4. TAB WAKTU - TIME SYNC & TIMEZONE
     // ========================================
     server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (request->hasParam("y", true) && 
@@ -2433,129 +1874,556 @@ void setupServerRoutes() {
         }
     });
 
-    // ========================================
-    // API DATA ENDPOINT - NO CACHE
-    // ========================================
-    server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request) {
-        char timeStr[20], dateStr[20], dayStr[15];
-        
-        time_t now_t;
-        struct tm timeinfo;
-        
-        if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            now_t = timeConfig.currentTime;
-            xSemaphoreGive(timeMutex);
+    server.on("/gettimezone", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String json = "{";
+
+        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            json += "\"offset\":" + String(timezoneOffset);
+            xSemaphoreGive(settingsMutex);
         } else {
-            time(&now_t);
+            json += "\"offset\":7";
         }
-        
-        localtime_r(&now_t, &timeinfo);
-        
-        sprintf(timeStr, "%02d:%02d:%02d",
-                timeinfo.tm_hour,
-                timeinfo.tm_min,
-                timeinfo.tm_sec);
 
-        sprintf(dateStr, "%02d/%02d/%04d",
-                timeinfo.tm_mday,
-                timeinfo.tm_mon + 1,
-                timeinfo.tm_year + 1900);
+        json += "}";
 
-        const char *dayNames[] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
-        strcpy(dayStr, dayNames[timeinfo.tm_wday]);
-
-        bool isWiFiConnected = (WiFi.status() == WL_CONNECTED && wifiConfig.isConnected);
-        
-        char jsonBuffer[1024];
-        snprintf(jsonBuffer, sizeof(jsonBuffer),
-            "{"
-            "\"time\":\"%s\","
-            "\"date\":\"%s\","
-            "\"day\":\"%s\","
-            "\"timestamp\":%lu,"
-            "\"prayerTimes\":{"
-                "\"imsak\":\"%s\","
-                "\"subuh\":\"%s\","
-                "\"terbit\":\"%s\","
-                "\"zuhur\":\"%s\","
-                "\"ashar\":\"%s\","
-                "\"maghrib\":\"%s\","
-                "\"isya\":\"%s\""
-            "},"
-            "\"location\":{"
-                "\"city\":\"%s\","
-                "\"cityId\":\"%s\","
-                "\"displayName\":\"%s\","
-                "\"latitude\":\"%s\","
-                "\"longitude\":\"%s\""
-            "},"
-            "\"device\":{"
-                "\"wifiConnected\":%s,"
-                "\"apIP\":\"%s\","
-                "\"ntpSynced\":%s,"
-                "\"ntpServer\":\"%s\","
-                "\"freeHeap\":%d,"
-                "\"uptime\":%lu"
-            "}"
-            "}",
-            timeStr, dateStr, dayStr, (unsigned long)now_t,
-            prayerConfig.imsakTime.c_str(),
-            prayerConfig.subuhTime.c_str(),
-            prayerConfig.terbitTime.c_str(),
-            prayerConfig.zuhurTime.c_str(),
-            prayerConfig.asharTime.c_str(),
-            prayerConfig.maghribTime.c_str(),
-            prayerConfig.isyaTime.c_str(),
-            prayerConfig.selectedCity.c_str(),
-            prayerConfig.selectedCity.c_str(),
-            prayerConfig.selectedCityName.c_str(),
-            prayerConfig.latitude.c_str(),
-            prayerConfig.longitude.c_str(),
-            isWiFiConnected ? "true" : "false",
-            WiFi.softAPIP().toString().c_str(),
-            timeConfig.ntpSynced ? "true" : "false",
-            timeConfig.ntpServer.c_str(),
-            ESP.getFreeHeap(),
-            millis() / 1000
-        );
-
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", jsonBuffer);
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
         resp->addHeader("Cache-Control", "no-cache");
-        resp->addHeader("Content-Length", String(strlen(jsonBuffer)));
         request->send(resp);
     });
 
-    // ========================================
-    // 404 NOT FOUND PAGE
-    // ========================================
-    server.on("/notfound", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String html = "<!DOCTYPE html><html><head>";
-        html += "<meta charset='UTF-8'>";
-        html += "<meta name='viewport' content='width=device-width,initial-scale=1.0'>";
-        html += "<title>404 - Not Found</title>";
-        html += "<style>";
-        html += "body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}";
-        html += ".container{max-width:500px;margin:20px;background:white;padding:50px 40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}";
-        html += ".error-code{font-size:120px;font-weight:800;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0;line-height:1}";
-        html += "h2{color:#333;font-size:28px;margin:20px 0 10px;font-weight:600}";
-        html += "p{color:#666;font-size:16px;line-height:1.6;margin:20px 0 30px}";
-        html += ".btn{display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;text-decoration:none;border-radius:50px;font-weight:600;font-size:16px;transition:all 0.3s;box-shadow:0 4px 15px rgba(102,126,234,0.4)}";
-        html += ".btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(102,126,234,0.6)}";
-        html += ".icon{font-size:80px;margin-bottom:20px}";
-        html += "</style></head><body>";
-        html += "<div class='container'>";
-        html += "<div class='icon'>🔍</div>";
-        html += "<div class='error-code'>404</div>";
-        html += "<h2>Page Not Found</h2>";
-        html += "<p>The page you're looking for doesn't exist or you don't have permission to access it. Please return to the home page.</p>";
-        html += "<a href='/' class='btn'>← Back to Home</a>";
-        html += "</div></body></html>";
+    server.on("/settimezone", HTTP_POST, [](AsyncWebServerRequest *request) {
+        Serial.println("\n========================================");
+        Serial.println("Simpan Timezone");
+        Serial.println("========================================");
 
-        request->send(404, "text/html", html);
+        if (!request->hasParam("offset", true)) {
+            Serial.println("ERROR: Missing offset parameter");
+            request->send(400, "application/json",
+                          "{\"error\":\"Missing offset parameter\"}");
+            return;
+        }
+
+        String offsetStr = request->getParam("offset", true)->value();
+        offsetStr.trim();
+
+        int offset = offsetStr.toInt();
+
+        Serial.println("Received offset: " + String(offset));
+
+        if (offset < -12 || offset > 14) {
+            Serial.println("ERROR: Invalid timezone offset");
+            request->send(400, "application/json",
+                          "{\"error\":\"Invalid timezone offset (must be -12 to +14)\"}");
+            return;
+        }
+
+        Serial.println("Saving to memory and file...");
+
+        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+            timezoneOffset = offset;
+            xSemaphoreGive(settingsMutex);
+            Serial.println("Memory updated");
+        }
+
+        saveTimezoneConfig();
+
+        Serial.println("========================================");
+        Serial.println("SUCCESS: Timezone saved");
+        Serial.println("Offset: UTC" + String(offset >= 0 ? "+" : "") + String(offset));
+        Serial.println("========================================\n");
+
+        // ========================================
+        // TRIGGER NTP SYNC
+        // ========================================
+        bool ntpTriggered = false;
+        bool prayerWillUpdate = false;
+
+        if (wifiConfig.isConnected && ntpTaskHandle != NULL) {
+            Serial.println("\n========================================");
+            Serial.println("AUTO-TRIGGERING NTP RE-SYNC");
+            Serial.println("========================================");
+            Serial.println("Reason: Timezone changed to UTC" + String(offset >= 0 ? "+" : "") + String(offset));
+            
+            // Check if prayer times will be updated
+            if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
+                Serial.println("City: " + prayerConfig.selectedCity);
+                Serial.println("Coordinates: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
+                Serial.println("");
+                Serial.println("NTP Task will automatically:");
+                Serial.println("  1. Sync time with new timezone");
+                Serial.println("  2. Update prayer times with correct date");
+                prayerWillUpdate = true;
+            } else {
+                Serial.println("Note: No city coordinates available");
+                Serial.println("Only time will be synced (no prayer times update)");
+            }
+            
+            // Reset NTP status
+            if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                timeConfig.ntpSynced = false;
+                xSemaphoreGive(timeMutex);
+            }
+
+            // Trigger NTP sync
+            xTaskNotifyGive(ntpTaskHandle);
+            ntpTriggered = true;
+            
+            Serial.println("NTP re-sync triggered successfully");
+            Serial.println("========================================\n");
+            
+        } else {
+            Serial.println("\nCannot trigger NTP sync:");
+            if (!wifiConfig.isConnected) {
+                Serial.println("Reason: WiFi not connected");
+            }
+            if (ntpTaskHandle == NULL) {
+                Serial.println("Reason: NTP task not running");
+            }
+            Serial.println("Timezone will apply on next connection\n");
+        }
+
+        // ========================================
+        // SEND RESPONSE
+        // ========================================
+        String response = "{";
+        response += "\"success\":true,";
+        response += "\"offset\":" + String(offset) + ",";
+        response += "\"ntpTriggered\":" + String(ntpTriggered ? "true" : "false") + ",";
+        response += "\"prayerTimesWillUpdate\":" + String(prayerWillUpdate ? "true" : "false");
+        response += "}";
+
+        request->send(200, "application/json", response);
     });
 
     // ========================================
-    // FACTORY RESET
+    // 5. TAB LOKASI - CITY & METHOD
+    // ========================================
+    server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (!LittleFS.exists("/cities.json")) {
+            Serial.println("cities.json not found");
+            request->send(404, "application/json", "[]");
+            return;
+        }
+
+        AsyncWebServerResponse *response = request->beginResponse(
+            LittleFS,
+            "/cities.json",
+            "application/json");
+
+        response->addHeader("Access-Control-Allow-Origin", "*");
+        response->addHeader("Cache-Control", "public, max-age=3600");
+        response->setContentLength(LittleFS.open("/cities.json", "r").size());
+        request->send(response);
+    });
+
+    server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String json = "{";
+
+        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            bool hasSelection = (prayerConfig.selectedCity.length() > 0);
+
+            json += "\"selectedCity\":\"" + prayerConfig.selectedCity + "\",";
+            json += "\"selectedCityApi\":\"" + prayerConfig.selectedCity + "\",";
+            json += "\"latitude\":\"" + prayerConfig.latitude + "\",";
+            json += "\"longitude\":\"" + prayerConfig.longitude + "\",";
+            json += "\"hasSelection\":" + String(hasSelection ? "true" : "false");
+
+            xSemaphoreGive(settingsMutex);
+        } else {
+            json += "\"selectedCity\":\"\",";
+            json += "\"selectedCityApi\":\"\",";
+            json += "\"latitude\":\"\",";
+            json += "\"longitude\":\"\",";
+            json += "\"hasSelection\":false";
+        }
+
+        json += "}";
+
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        resp->addHeader("Cache-Control", "no-cache");
+        request->send(resp);
+    });
+
+    server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request) {
+        Serial.println("\n========================================");
+        Serial.println("Simpan City/Distric");
+        Serial.println("========================================");
+
+        if (!request->hasParam("city", true)) {
+            request->send(400, "application/json", "{\"error\":\"Missing city parameter\"}");
+            return;
+        }
+
+        String cityApi = request->getParam("city", true)->value();
+        String cityName = request->hasParam("cityName", true) ? request->getParam("cityName", true)->value() : cityApi;
+        String lat = request->hasParam("lat", true) ? request->getParam("lat", true)->value() : "";
+        String lon = request->hasParam("lon", true) ? request->getParam("lon", true)->value() : "";
+
+        cityApi.trim();
+        cityName.trim();
+        lat.trim();
+        lon.trim();
+
+        Serial.println("City: " + cityApi);
+        Serial.println("Lat: " + lat + ", Lon: " + lon);
+
+        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+            prayerConfig.selectedCity = cityApi;
+            prayerConfig.selectedCityName = cityName;
+            prayerConfig.latitude = lat;
+            prayerConfig.longitude = lon;
+            xSemaphoreGive(settingsMutex);
+        }
+
+        saveCitySelection();
+        updateCityDisplay();
+
+        bool willUpdate = (WiFi.status() == WL_CONNECTED && lat.length() > 0 && lon.length() > 0);
+        
+        char responseBuffer[256];
+        snprintf(responseBuffer, sizeof(responseBuffer),
+            "{\"success\":true,\"city\":\"%s\",\"updating\":%s}",
+            cityName.c_str(),
+            willUpdate ? "true" : "false"
+        );
+
+        request->send(200, "application/json", responseBuffer);
+
+        if (willUpdate) {
+            Serial.println("Triggering background prayer times update...");
+            pendingPrayerLat = lat;
+            pendingPrayerLon = lon;
+            needPrayerUpdate = true;
+            
+            if (prayerTaskHandle != NULL) {
+                xTaskNotifyGive(prayerTaskHandle);
+            }
+        }
+
+        Serial.println("========================================\n");
+    });
+
+    server.on(
+        "/uploadcities", HTTP_POST,
+        [](AsyncWebServerRequest *request) {
+            String jsonSizeStr = "";
+            String citiesCountStr = "";
+
+            if (request->hasParam("jsonSize", true)) {
+                jsonSizeStr = request->getParam("jsonSize", true)->value();
+            }
+
+            if (request->hasParam("citiesCount", true)) {
+                citiesCountStr = request->getParam("citiesCount", true)->value();
+            }
+
+            if (jsonSizeStr.length() > 0 && citiesCountStr.length() > 0) {
+                fs::File metaFile = LittleFS.open("/cities_meta.txt", "w");
+                if (metaFile) {
+                    metaFile.println(jsonSizeStr);
+                    metaFile.println(citiesCountStr);
+                    metaFile.close();
+
+                    Serial.println("Cities metadata saved:");
+                    Serial.println("JSON Size: " + jsonSizeStr + " bytes");
+                    Serial.println("Cities Count: " + citiesCountStr);
+                }
+            }
+
+            request->send(200, "application/json", "{\"success\":true}");
+        },
+        [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+            static fs::File uploadFile;
+            static size_t totalSize = 0;
+            static unsigned long uploadStartTime = 0;
+
+            if (index == 0) {
+                Serial.println("\n========================================");
+                Serial.println("CITIES.JSON UPLOAD STARTED");
+                Serial.println("========================================");
+                Serial.printf("Filename: %s\n", filename.c_str());
+
+                if (filename != "cities.json") {
+                    Serial.printf("Invalid filename: %s (must be cities.json)\n", filename.c_str());
+                    return;
+                }
+
+                if (LittleFS.exists("/cities.json")) {
+                    LittleFS.remove("/cities.json");
+                    Serial.println("Old cities.json deleted");
+                }
+
+                uploadFile = LittleFS.open("/cities.json", "w");
+                if (!uploadFile) {
+                    Serial.println("Failed to open file for writing");
+                    return;
+                }
+
+                totalSize = 0;
+                uploadStartTime = millis();
+                Serial.println("Writing to LittleFS...");
+            }
+
+            if (uploadFile) {
+                size_t written = uploadFile.write(data, len);
+                if (written != len) {
+                    Serial.printf("Write mismatch: %d/%d bytes\n", written, len);
+                }
+                totalSize += written;
+
+                if (totalSize % 5120 == 0 || final) {
+                    Serial.printf("Progress: %d bytes (%.1f KB)\n",
+                                  totalSize, totalSize / 1024.0);
+                }
+            }
+
+            if (final) {
+                if (uploadFile) {
+                    uploadFile.flush();
+                    uploadFile.close();
+
+                    unsigned long uploadDuration = millis() - uploadStartTime;
+
+                    Serial.println("\nUpload complete");
+                    Serial.printf("Total size: %d bytes (%.2f KB)\n",
+                                  totalSize, totalSize / 1024.0);
+                    Serial.printf("Duration: %lu ms\n", uploadDuration);
+
+                    vTaskDelay(pdMS_TO_TICKS(100));
+
+                    if (LittleFS.exists("/cities.json")) {
+                        fs::File verifyFile = LittleFS.open("/cities.json", "r");
+                        if (verifyFile) {
+                            size_t fileSize = verifyFile.size();
+
+                            char buffer[101];
+                            size_t bytesRead = verifyFile.readBytes(buffer, 100);
+                            buffer[bytesRead] = '\0';
+
+                            verifyFile.close();
+
+                            Serial.printf("File verified: %d bytes\n", fileSize);
+                            Serial.println("First 100 chars:");
+                            Serial.println(buffer);
+
+                            String preview(buffer);
+                            if (preview.indexOf('[') >= 0 && preview.indexOf('{') >= 0) {
+                                Serial.println("JSON format looks valid");
+                            } else {
+                                Serial.println("Warning: File may not be valid JSON");
+                            }
+
+                            Serial.println("========================================\n");
+                        }
+                    } else {
+                        Serial.println("File verification failed - file not found");
+                        Serial.println("========================================\n");
+                    }
+                }
+            }
+        }
+    );
+
+    server.on("/getmethod", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String json = "{";
+
+        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            json += "\"methodId\":" + String(methodConfig.methodId) + ",";
+            json += "\"methodName\":\"" + methodConfig.methodName + "\"";
+            xSemaphoreGive(settingsMutex);
+        } else {
+            json += "\"methodId\":5,";
+            json += "\"methodName\":\"Egyptian General Authority of Survey\"";
+        }
+
+        json += "}";
+
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        resp->addHeader("Cache-Control", "no-cache");
+        request->send(resp);
+    });
+
+    server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest *request) {
+        Serial.println("\n========================================");
+        Serial.println("Simpan Metode");
+        Serial.print("Client IP: ");
+        Serial.println(request->client()->remoteIP().toString());
+        Serial.println("========================================");
+
+        if (!request->hasParam("methodId", true) || !request->hasParam("methodName", true)) {
+            Serial.println("ERROR: Missing parameters");
+
+            int params = request->params();
+            Serial.printf("Received parameters (%d):\n", params);
+            for (int i = 0; i < params; i++) {
+                const AsyncWebParameter *p = request->getParam(i);
+                Serial.printf("  %s = %s\n", p->name().c_str(), p->value().c_str());
+            }
+
+            request->send(400, "application/json",
+                          "{\"error\":\"Missing methodId or methodName parameter\"}");
+            return;
+        }
+
+        String methodIdStr = request->getParam("methodId", true)->value();
+        String methodName = request->getParam("methodName", true)->value();
+
+        methodIdStr.trim();
+        methodName.trim();
+
+        int methodId = methodIdStr.toInt();
+
+        Serial.println("Received data:");
+        Serial.println("Method ID: " + String(methodId));
+        Serial.println("Method Name: " + methodName);
+
+        if (methodId < 0 || methodId > 20) {
+            Serial.println("ERROR: Invalid method ID");
+            request->send(400, "application/json",
+                          "{\"error\":\"Invalid method ID\"}");
+            return;
+        }
+
+        if (methodName.length() == 0) {
+            Serial.println("ERROR: Empty method name");
+            request->send(400, "application/json",
+                          "{\"error\":\"Method name cannot be empty\"}");
+            return;
+        }
+
+        if (methodName.length() > 100) {
+            Serial.println("ERROR: Method name too long");
+            request->send(400, "application/json",
+                          "{\"error\":\"Method name too long (max 100 chars)\"}");
+            return;
+        }
+
+        Serial.println("Saving to memory...");
+
+        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+            methodConfig.methodId = methodId;
+            methodConfig.methodName = methodName;
+
+            xSemaphoreGive(settingsMutex);
+            Serial.println("Memory updated");
+            Serial.println("Method ID: " + String(methodConfig.methodId));
+            Serial.println("Method Name: " + methodConfig.methodName);
+        }
+
+        Serial.println("Writing to LittleFS...");
+        saveMethodSelection();
+
+        bool willFetchPrayerTimes = false;
+
+        if (WiFi.status() == WL_CONNECTED) {
+            if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
+                Serial.println("Fetching prayer times with new method...");
+                Serial.println("City: " + prayerConfig.selectedCity);
+                Serial.println("Method: " + methodName);
+                getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
+
+                Serial.println("Prayer times update initiated");
+                willFetchPrayerTimes = true;
+            } else {
+                Serial.println("No coordinates available");
+            }
+        } else {
+            Serial.println("WiFi not connected");
+        }
+
+        Serial.println("========================================");
+        Serial.println("SUCCESS: Method saved successfully");
+        Serial.println("Method: " + methodName);
+        if (willFetchPrayerTimes) {
+            Serial.println("Prayer times will update shortly...");
+        }
+        Serial.println("========================================\n");
+
+        String response = "{";
+        response += "\"success\":true,";
+        response += "\"methodId\":" + String(methodId) + ",";
+        response += "\"methodName\":\"" + methodName + "\",";
+        response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
+        response += "}";
+
+        request->send(200, "application/json", response);
+    });
+
+    // ========================================
+    // 6. TAB JADWAL - PRAYER TIMES & BUZZER
+    // ========================================
+    server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String json = "{";
+        json += "\"imsak\":\"" + prayerConfig.imsakTime + "\",";
+        json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
+        json += "\"terbit\":\"" + prayerConfig.terbitTime + "\",";
+        json += "\"zuhur\":\"" + prayerConfig.zuhurTime + "\",";
+        json += "\"ashar\":\"" + prayerConfig.asharTime + "\",";
+        json += "\"maghrib\":\"" + prayerConfig.maghribTime + "\",";
+        json += "\"isya\":\"" + prayerConfig.isyaTime + "\"";
+        json += "}";
+
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        resp->addHeader("Cache-Control", "no-cache");
+        request->send(resp);
+    });
+
+    server.on("/getbuzzerconfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+      String json = "{";
+      json += "\"imsak\":" + String(buzzerConfig.imsakEnabled ? "true" : "false") + ",";
+      json += "\"subuh\":" + String(buzzerConfig.subuhEnabled ? "true" : "false") + ",";
+      json += "\"terbit\":" + String(buzzerConfig.terbitEnabled ? "true" : "false") + ",";
+      json += "\"zuhur\":" + String(buzzerConfig.zuhurEnabled ? "true" : "false") + ",";
+      json += "\"ashar\":" + String(buzzerConfig.asharEnabled ? "true" : "false") + ",";
+      json += "\"maghrib\":" + String(buzzerConfig.maghribEnabled ? "true" : "false") + ",";
+      json += "\"isya\":" + String(buzzerConfig.isyaEnabled ? "true" : "false") + ",";
+      json += "\"volume\":" + String(buzzerConfig.volume);
+      json += "}";
+      
+      AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+      resp->addHeader("Cache-Control", "no-cache");
+      request->send(resp);
+    });
+    
+    server.on("/setbuzzertoggle", HTTP_POST, [](AsyncWebServerRequest *request) {
+      if (!request->hasParam("prayer", true) || !request->hasParam("enabled", true)) {
+        request->send(400, "text/plain", "Missing parameters");
+        return;
+      }
+      
+      String prayer = request->getParam("prayer", true)->value();
+      bool enabled = request->getParam("enabled", true)->value() == "true";
+      
+      if (prayer == "imsak") buzzerConfig.imsakEnabled = enabled;
+      else if (prayer == "subuh") buzzerConfig.subuhEnabled = enabled;
+      else if (prayer == "terbit") buzzerConfig.terbitEnabled = enabled;
+      else if (prayer == "zuhur") buzzerConfig.zuhurEnabled = enabled;
+      else if (prayer == "ashar") buzzerConfig.asharEnabled = enabled;
+      else if (prayer == "maghrib") buzzerConfig.maghribEnabled = enabled;
+      else if (prayer == "isya") buzzerConfig.isyaEnabled = enabled;
+      
+      saveBuzzerConfig();
+      request->send(200, "text/plain", "OK");
+    });
+
+    server.on("/setbuzzervolume", HTTP_POST, [](AsyncWebServerRequest *request) {
+      if (!request->hasParam("volume", true)) {
+        request->send(400, "text/plain", "Missing volume");
+        return;
+      }
+      
+      int volume = request->getParam("volume", true)->value().toInt();
+      if (volume < 0) volume = 0;
+      if (volume > 100) volume = 100;
+      
+      buzzerConfig.volume = volume;
+      saveBuzzerConfig();
+
+      request->send(200, "text/plain", "OK");
+    });
+
+    // ========================================
+    // 7. TAB RESET - FACTORY RESET
     // ========================================
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
         Serial.println("\n========================================");
@@ -2716,23 +2584,126 @@ void setupServerRoutes() {
     });
 
     // ========================================
-    // MANUAL RESTART
+    // 8. API DATA - REAL-TIME ENDPOINT
     // ========================================
-    server.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
-        Serial.println("\n========================================");
-        Serial.println("MANUAL RESTART REQUESTED");
-        Serial.println("========================================");
-        Serial.println("Device will restart in 5 seconds...");
-        Serial.println("========================================\n");
+    server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request) {
+        char timeStr[20], dateStr[20], dayStr[15];
+        
+        time_t now_t;
+        struct tm timeinfo;
+        
+        if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            now_t = timeConfig.currentTime;
+            xSemaphoreGive(timeMutex);
+        } else {
+            time(&now_t);
+        }
+        
+        localtime_r(&now_t, &timeinfo);
+        
+        sprintf(timeStr, "%02d:%02d:%02d",
+                timeinfo.tm_hour,
+                timeinfo.tm_min,
+                timeinfo.tm_sec);
 
-        request->send(200, "text/plain", "OK");
+        sprintf(dateStr, "%02d/%02d/%04d",
+                timeinfo.tm_mday,
+                timeinfo.tm_mon + 1,
+                timeinfo.tm_year + 1900);
 
-        scheduleRestart(5);
+        const char *dayNames[] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
+        strcpy(dayStr, dayNames[timeinfo.tm_wday]);
+
+        bool isWiFiConnected = (WiFi.status() == WL_CONNECTED && wifiConfig.isConnected);
+        
+        char jsonBuffer[1024];
+        snprintf(jsonBuffer, sizeof(jsonBuffer),
+            "{"
+            "\"time\":\"%s\","
+            "\"date\":\"%s\","
+            "\"day\":\"%s\","
+            "\"timestamp\":%lu,"
+            "\"prayerTimes\":{"
+                "\"imsak\":\"%s\","
+                "\"subuh\":\"%s\","
+                "\"terbit\":\"%s\","
+                "\"zuhur\":\"%s\","
+                "\"ashar\":\"%s\","
+                "\"maghrib\":\"%s\","
+                "\"isya\":\"%s\""
+            "},"
+            "\"location\":{"
+                "\"city\":\"%s\","
+                "\"cityId\":\"%s\","
+                "\"displayName\":\"%s\","
+                "\"latitude\":\"%s\","
+                "\"longitude\":\"%s\""
+            "},"
+            "\"device\":{"
+                "\"wifiConnected\":%s,"
+                "\"apIP\":\"%s\","
+                "\"ntpSynced\":%s,"
+                "\"ntpServer\":\"%s\","
+                "\"freeHeap\":%d,"
+                "\"uptime\":%lu"
+            "}"
+            "}",
+            timeStr, dateStr, dayStr, (unsigned long)now_t,
+            prayerConfig.imsakTime.c_str(),
+            prayerConfig.subuhTime.c_str(),
+            prayerConfig.terbitTime.c_str(),
+            prayerConfig.zuhurTime.c_str(),
+            prayerConfig.asharTime.c_str(),
+            prayerConfig.maghribTime.c_str(),
+            prayerConfig.isyaTime.c_str(),
+            prayerConfig.selectedCity.c_str(),
+            prayerConfig.selectedCity.c_str(),
+            prayerConfig.selectedCityName.c_str(),
+            prayerConfig.latitude.c_str(),
+            prayerConfig.longitude.c_str(),
+            isWiFiConnected ? "true" : "false",
+            WiFi.softAPIP().toString().c_str(),
+            timeConfig.ntpSynced ? "true" : "false",
+            timeConfig.ntpServer.c_str(),
+            ESP.getFreeHeap(),
+            millis() / 1000
+        );
+
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", jsonBuffer);
+        resp->addHeader("Cache-Control", "no-cache");
+        resp->addHeader("Content-Length", String(strlen(jsonBuffer)));
+        request->send(resp);
     });
 
     // ========================================
-    // 404 HANDLER - REDIRECT TO /notfound
+    // 9. ERROR PAGES - 404 HANDLER
     // ========================================
+    server.on("/notfound", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String html = "<!DOCTYPE html><html><head>";
+        html += "<meta charset='UTF-8'>";
+        html += "<meta name='viewport' content='width=device-width,initial-scale=1.0'>";
+        html += "<title>404 - Not Found</title>";
+        html += "<style>";
+        html += "body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}";
+        html += ".container{max-width:500px;margin:20px;background:white;padding:50px 40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}";
+        html += ".error-code{font-size:120px;font-weight:800;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0;line-height:1}";
+        html += "h2{color:#333;font-size:28px;margin:20px 0 10px;font-weight:600}";
+        html += "p{color:#666;font-size:16px;line-height:1.6;margin:20px 0 30px}";
+        html += ".btn{display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;text-decoration:none;border-radius:50px;font-weight:600;font-size:16px;transition:all 0.3s;box-shadow:0 4px 15px rgba(102,126,234,0.4)}";
+        html += ".btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(102,126,234,0.6)}";
+        html += ".icon{font-size:80px;margin-bottom:20px}";
+        html += "</style></head><body>";
+        html += "<div class='container'>";
+        html += "<div class='icon'>🔍</div>";
+        html += "<div class='error-code'>404</div>";
+        html += "<h2>Page Not Found</h2>";
+        html += "<p>The page you're looking for doesn't exist or you don't have permission to access it. Please return to the home page.</p>";
+        html += "<a href='/' class='btn'>← Back to Home</a>";
+        html += "</div></body></html>";
+
+        request->send(404, "text/html", html);
+    });
+
     server.onNotFound([](AsyncWebServerRequest *request) {
         String url = request->url();
         IPAddress clientIP = request->client()->remoteIP();
