@@ -866,10 +866,24 @@
 							</div>
 						</div>
 					</div>
+					<div class="grid-x grid-padding-y"">
+						<div class="medium-12 small-12 large-12 text-center cell">
+							<h6>
+								<strong>GONIT: GLOBAL NETWORK INDETIFICATION TECHNOLOGY</strong>
+							</h6>
+							<span id="tahun"></span>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
 		<script>
+			const tahunAwal = 2025;
+			const tahunSekarang = new Date().getFullYear();
+
+			document.getElementById("tahun").textContent =
+				tahunAwal + " - " + tahunSekarang;
+				
 			// ================================
 			// LOADING MANAGER
 			// ================================
