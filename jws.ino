@@ -4247,32 +4247,69 @@ void restartAPTask(void *parameter) {
     }
     
     // ============================================
-    // DISCONNECT AP CLIENTS GRACEFULLY
+    // FORCE DISCONNECT ALL AP CLIENTS
     // ============================================
-    Serial.println("\nDisconnecting AP clients...");
+    Serial.println("\n========================================");
+    Serial.println("FORCE DISCONNECTING ALL AP CLIENTS");
+    Serial.println("========================================");
+    
     int clientsBefore = WiFi.softAPgetStationNum();
-    Serial.printf("   Clients connected: %d\n", clientsBefore);
+    Serial.printf("Clients connected: %d\n", clientsBefore);
     
     if (clientsBefore > 0) {
-        Serial.println("   Sending disconnect notification to clients...");
-    }
-    
-    WiFi.softAPdisconnect(false);  // Don't erase config
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    
-    int clientsAfter = WiFi.softAPgetStationNum();
-    Serial.printf("   Clients after disconnect: %d\n", clientsAfter);
-    
-    if (clientsAfter > 0) {
-        Serial.println("   WARNING: Some clients still connected");
-        Serial.println("   Forcing disconnect...");
+        Serial.println("\nMethod 1: Sending deauth frames...");
+        // Kirim deauth ke semua station (PALING EFEKTIF)
+        esp_wifi_deauth_sta(0);  // 0 = disconnect ALL stations
+        vTaskDelay(pdMS_TO_TICKS(500));
+        
+        int afterDeauth = WiFi.softAPgetStationNum();
+        Serial.printf("   After deauth: %d clients\n", afterDeauth);
+        
+        Serial.println("\nMethod 2: Soft disconnect with erase...");
+        // Soft disconnect dengan erase config
+        WiFi.softAPdisconnect(true);  // true = force erase
         vTaskDelay(pdMS_TO_TICKS(1000));
+        
+        int afterSoftDisconnect = WiFi.softAPgetStationNum();
+        Serial.printf("   After soft disconnect: %d clients\n", afterSoftDisconnect);
+        
+        if (afterSoftDisconnect > 0) {
+            Serial.println("\nMethod 3: Hard AP reset (nuclear option)...");
+            Serial.println("   WARNING: Stubborn clients detected");
+            Serial.println("   Performing complete AP mode shutdown...");
+            
+            // Matikan AP mode sepenuhnya
+            WiFi.mode(WIFI_STA);  // Kill AP completely
+            vTaskDelay(pdMS_TO_TICKS(800));
+            
+            // Restore AP+STA mode
+            WiFi.mode(WIFI_AP_STA);
+            vTaskDelay(pdMS_TO_TICKS(500));
+            
+            int afterHardReset = WiFi.softAPgetStationNum();
+            Serial.printf("   After hard reset: %d clients\n", afterHardReset);
+            
+            if (afterHardReset > 0) {
+                Serial.println("   CRITICAL: Clients STILL connected!");
+                Serial.println("   This should never happen");
+            } else {
+                Serial.println("   SUCCESS: All clients force disconnected");
+            }
+        } else {
+            Serial.println("\n✓ All clients disconnected successfully");
+        }
+    } else {
+        Serial.println("No clients connected - skipping force disconnect");
+        WiFi.softAPdisconnect(false);
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
+    
+    Serial.println("========================================\n");
     
     // ============================================
     // CONFIGURE AP WITH CUSTOM NETWORK SETTINGS
     // ============================================
-    Serial.println("\nConfiguring AP network settings...");
+    Serial.println("Configuring AP network settings...");
     Serial.println("   AP IP: " + savedAPIP.toString());
     Serial.println("   Gateway: " + savedGateway.toString());
     Serial.println("   Subnet: " + savedSubnet.toString());
@@ -4309,8 +4346,7 @@ void restartAPTask(void *parameter) {
     Serial.println("   Channel: 1 (default)");
     Serial.println("   Max Connections: 4 (default)");
     
-    WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
-    bool apStarted = WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+    bool apStarted = WiFi.softAP(savedSSID, savedPassword);
     
     vTaskDelay(pdMS_TO_TICKS(1500));
     
@@ -4331,7 +4367,7 @@ void restartAPTask(void *parameter) {
         Serial.println("Password: " + String(strlen(savedPassword) > 0 ? "Protected" : "Open (no password)"));
         Serial.println("");
         Serial.println("Network Configuration:");
-        Serial.println("   AP IP: " + newAPIP.toString() + (ipMatches ? "" : "MISMATCH"));
+        Serial.println("   AP IP: " + newAPIP.toString() + (ipMatches ? " ✓" : " MISMATCH"));
         Serial.println("   Expected Config:");
         Serial.println("     IP: " + savedAPIP.toString());
         Serial.println("     Gateway: " + savedGateway.toString());
@@ -4350,11 +4386,13 @@ void restartAPTask(void *parameter) {
             Serial.println("   3. ESP32 WiFi firmware limitation");
             Serial.println("");
             Serial.println("Action: Try restarting device manually");
-            Serial.println("========================================");
         }
         
-        Serial.println("Status: Ready for client connections");
-        Serial.println("Clients can connect to:");
+        Serial.println("========================================");
+        Serial.println("Status: Ready for NEW client connections");
+        Serial.println("Old clients must reconnect manually");
+        Serial.println("========================================");
+        Serial.println("Connect to:");
         Serial.println("   WiFi: " + currentSSID);
         Serial.println("   Browser: http://" + newAPIP.toString());
         Serial.println("========================================\n");
@@ -4422,12 +4460,32 @@ void restartAPTask(void *parameter) {
     vTaskDelay(pdMS_TO_TICKS(2000));
     
     IPAddress finalIP = WiFi.softAPIP();
+    int finalClients = WiFi.softAPgetStationNum();
+    
     if (finalIP != IPAddress(0, 0, 0, 0)) {
-        Serial.println("Final verification: AP is active");
+        Serial.println("\n========================================");
+        Serial.println("FINAL VERIFICATION");
+        Serial.println("========================================");
+        Serial.println("AP Status: ACTIVE ✓");
         Serial.println("   IP: " + finalIP.toString());
-        Serial.println("   Clients: " + String(WiFi.softAPgetStationNum()));
+        Serial.println("   Connected Clients: " + String(finalClients));
+        
+        if (finalClients > 0) {
+            Serial.println("");
+            Serial.println("WARNING: Clients already reconnected!");
+            Serial.println("   Some devices reconnected automatically");
+            Serial.println("   This is normal for devices with saved WiFi");
+        } else {
+            Serial.println("   Status: Clean start - no clients yet");
+        }
+        Serial.println("========================================\n");
     } else {
-        Serial.println("WARNING: AP IP is 0.0.0.0 - AP may not be working");
+        Serial.println("\n========================================");
+        Serial.println("CRITICAL ERROR");
+        Serial.println("========================================");
+        Serial.println("AP IP is 0.0.0.0 - AP may not be working");
+        Serial.println("Recommend full device restart");
+        Serial.println("========================================\n");
     }
     
     // ============================================
@@ -4436,7 +4494,7 @@ void restartAPTask(void *parameter) {
     apRestartInProgress = false;
     xSemaphoreGive(wifiRestartMutex);
     
-    Serial.println("\nAP restart sequence completed");
+    Serial.println("AP restart sequence completed");
     Serial.println("Lock released - system ready for next request");
     Serial.println("========================================\n");
     
