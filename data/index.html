@@ -520,7 +520,7 @@
 											<div class="grid-x grid-padding-y">
 												<div class="medium-12 small-12 large-12 text-center cell">
 													<h5>
-														<strong>⏰ Waktu & Sinkronisasi</strong>
+														<strong>Waktu & Sinkronisasi</strong>
 													</h5>
 												</div>
 											</div>
@@ -998,7 +998,7 @@
 														</p>
 														<p class="help-text"> 📶 kredensial WiFi </br> 📡 Konfigurasi
 															Access Point </br> 🕌 Jadwal shalat tersimpan </br> 📍
-															Lokasi yang dipilih </br> ⏰ Waktu dan tanggal </br>
+															Lokasi yang dipilih </br> Waktu dan tanggal </br>
 														</p>
 													</div>
 												</div>
@@ -1345,20 +1345,58 @@
 			}, 4000);
 		}
 		// ================================
-		// COUNTDOWN TOAST LOADING (30 DETIK)
+		// COUNTDOWN MANAGER - SERVER-DRIVEN
 		// ================================
-		let countdownInterval = null;
+		let countdownCheckInterval = null;
 		let isCountdownActive = false;
 
-		function showCountdownToast(message, totalSeconds = 30, callback = null) {
-			if (isCountdownActive) {
-				console.warn('Countdown already active, ignoring new request');
-				return;
+		// Start polling countdown status
+		function startCountdownPolling() {
+			if (countdownCheckInterval) {
+				clearInterval(countdownCheckInterval);
 			}
+			
+			// Check immediately
+			checkCountdownStatus();
+			
+			// Then check every second
+			countdownCheckInterval = setInterval(checkCountdownStatus, 1000);
+		}
+		function stopCountdownPolling() {
+			if (countdownCheckInterval) {
+				clearInterval(countdownCheckInterval);
+				countdownCheckInterval = null;
+			}
+		}
+		async function checkCountdownStatus() {
+			try {
+				const response = await fetch('/api/countdown');
+				const data = await response.json();
+				
+				if (data.active && data.remaining > 0) {
+					if (!isCountdownActive) {
+						// Countdown baru dimulai atau web baru di-refresh
+						startCountdownDisplay(data);
+					} else {
+						// Update countdown yang sudah jalan
+						updateCountdownDisplay(data.remaining, data.message);
+					}
+				} else if (isCountdownActive) {
+					// Countdown selesai
+					stopCountdownDisplay();
+				} else if (!data.active) {
+					// Tidak ada countdown aktif, stop polling
+					stopCountdownPolling();
+				}
+			} catch (error) {
+			}
+		}
+		function startCountdownDisplay(data) {
+			if (isCountdownActive) return;
 			
 			isCountdownActive = true;
 			
-			// Lock body scroll dengan class
+			// Lock body scroll
 			document.body.classList.add('countdown-active');
 			
 			// Create overlay
@@ -1377,50 +1415,95 @@
 			`;
 			document.body.appendChild(overlay);
 			
+			// Show toast
 			const toast = document.getElementById('toast');
-			let remainingSeconds = totalSeconds;
-			
-			toast.textContent = `${message} - ${remainingSeconds} detik`;
+			toast.textContent = `${data.message} - ${data.remaining} detik`;
 			toast.className = 'toast callout warning show';
-			toast.style.zIndex = '999999';
+			toast.style.zIndex = '999999';			
+		}
+		function updateCountdownDisplay(remaining, message) {
+			const toast = document.getElementById('toast');
 			
-			if (countdownInterval) {
-				clearInterval(countdownInterval);
+			if (remaining > 0) {
+				toast.textContent = `${message} - ${remaining} detik`;
+				
+				// Change color based on remaining time
+				if (remaining <= 10) {
+					toast.className = 'toast callout alert show';
+				} else if (remaining <= 20) {
+					toast.className = 'toast callout warning show';
+				}
+			}
+		}
+		function stopCountdownDisplay() {
+			if (!isCountdownActive) return;
+					
+			stopCountdownPolling();
+			
+			const overlay = document.getElementById('countdownOverlay');
+			if (overlay) {
+				overlay.remove();
 			}
 			
-			countdownInterval = setInterval(() => {
-				remainingSeconds--;
+			document.body.classList.remove('countdown-active');
+			
+			const toast = document.getElementById('toast');
+			toast.classList.remove('show');
+			toast.style.zIndex = '';
+			
+			isCountdownActive = false;
+			
+			detectCountdownTypeAndReload();
+		}
+		async function detectCountdownTypeAndReload() {
+			try {
+				const response = await fetch('/api/countdown');
+				const data = await response.json();
 				
-				if (remainingSeconds > 0) {
-					toast.textContent = `${message} - ${remainingSeconds} detik`;
-					
-					if (remainingSeconds <= 10) {
-						toast.className = 'toast callout alert show';
-					} else if (remainingSeconds <= 20) {
-						toast.className = 'toast callout warning show';
-					}
-				} else {
-					clearInterval(countdownInterval);
-					countdownInterval = null;
-					
-					// Remove overlay & unlock body
-					const overlayElement = document.getElementById('countdownOverlay');
-					if (overlayElement) {
-						overlayElement.remove();
-					}
-					
-					document.body.classList.remove('countdown-active');
-					
-					toast.classList.remove('show');
-					toast.style.zIndex = '';
-					
-					isCountdownActive = false;
-					
-					if (callback && typeof callback === 'function') {
-						callback();
-					}
+				let message = 'Halaman akan dimuat ulang otomatis...';
+				let redirectUrl = null;
+				
+				// Tentukan pesan berdasarkan reason
+				switch(data.reason) {
+					case 'ap_restart':
+						const apIPInput = document.getElementById('apIP');
+						if (apIPInput && apIPInput.value.trim()) {
+							redirectUrl = `http://${apIPInput.value.trim()}`;
+							message = `Mengarahkan ke ${redirectUrl}...`;
+						} else {
+							message = 'Halaman akan dimuat ulang otomatis...';
+						}
+						break;
+						
+					case 'factory_reset':
+						redirectUrl = 'http://192.168.4.1';
+						message = 'Mengarahkan ke http://192.168.4.1...';
+						break;
+						
+					case 'device_restart':
+						message = 'Halaman akan dimuat ulang otomatis...';
+						break;
+						
+					default:
+						message = 'Halaman akan dimuat ulang otomatis...';
 				}
-			}, 1000);
+				
+				showToast(message, 'warning');
+				
+				setTimeout(() => {
+					if (redirectUrl) {
+						window.location.href = redirectUrl;
+					} else {
+						window.location.reload();
+					}
+				}, 2000);
+				
+			} catch (error) {
+				showToast('Halaman akan dimuat ulang otomatis...', 'warning');
+				setTimeout(() => {
+					window.location.reload();
+				}, 2000);
+			}
 		}
 		// ================================
 		// PEMBARUAN STATUS PERANGKAT
@@ -2020,45 +2103,38 @@
 			formData.append('password', password);
 			formData.append('updateNetworkConfig', 'false');
 
+			startCountdownPolling();
+
 			fetch('/setap', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 				body: formData.toString()
 			})
-				.then(response => {
-					if (response.ok) {
-						savedWiFiConfig.apSSID = ssid;
-						if (password) savedWiFiConfig.apPassword = password;
+			.then(response => {
+				if (response.ok) {
+					savedWiFiConfig.apSSID = ssid;
+					if (password) savedWiFiConfig.apPassword = password;
 
-						showToast(`Pengaturan Access Point "${ssid}" berhasil disimpan`, 'success');
+					showToast(`Pengaturan Access Point "${ssid}" berhasil disimpan`, 'success');
 
-						setTimeout(() => loadWiFiConfig(), 1000);
+					setTimeout(() => loadWiFiConfig(), 1000);
 
-						setTimeout(() => {
-							btn.disabled = false;
-							btn.textContent = originalText;
-						}, 6000);
+					setTimeout(() => {
+						btn.disabled = false;
+						btn.textContent = originalText;
+					}, 3000);
 
-						// COUNTDOWN TOAST 30 DETIK
-						if (isUserLocalAP) {
-							setTimeout(() => {
-								showCountdownToast('Mulai konfigurasi Access Point', 60, () => {
-									showToast('Halaman akan dimuat ulang otomatis...', 'warning');
-									setTimeout(() => {
-										window.location.reload();
-									}, 2000);
-								});
-							}, 6000);
-						}
-					} else {
-						return response.text().then(text => { throw new Error(text); });
-					}
-				})
-				.catch(error => {
-					showToast('Gagal menyimpan Access Point: ' + error.message, 'error');
-					btn.disabled = false;
-					btn.textContent = originalText;
-				});
+				} else {
+					return response.text().then(text => { throw new Error(text); });
+				}
+			})
+			.catch(error => {
+				showToast('Gagal menyimpan Access Point: ' + error.message, 'error');
+				btn.disabled = false;
+				btn.textContent = originalText;
+				
+				stopCountdownPolling();
+			});
 		}
 
 		function setAPNetwork() {
@@ -2089,43 +2165,36 @@
 			if (gateway) formData.append('gateway', gateway);
 			if (subnet) formData.append('subnet', subnet);
 
+			startCountdownPolling();
+
 			fetch('/setap', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 				body: formData.toString()
 			})
-				.then(response => {
-					if (response.ok) {
-						const networkMsg = apIP ? apIP : '192.168.4.1';
-						showToast(`Konfigurasi jaringan berhasil disimpan di ${networkMsg}`, 'success');
+			.then(response => {
+				if (response.ok) {
+					const networkMsg = apIP ? apIP : '192.168.4.1';
+					showToast(`Konfigurasi jaringan berhasil disimpan di ${networkMsg}`, 'success');
 
-						setTimeout(() => loadWiFiConfig(), 1000);
+					setTimeout(() => loadWiFiConfig(), 1000);
 
-						setTimeout(() => {
-							btn.disabled = false;
-							btn.textContent = originalText;
-						}, 6000);
+					setTimeout(() => {
+						btn.disabled = false;
+						btn.textContent = originalText;
+					}, 3000);
 
-						// COUNTDOWN TOAST 30 DETIK
-						if (isUserLocalAP) {
-							setTimeout(() => {
-								showCountdownToast('Mulai konfigurasi jaringan Access Point', 60, () => {
-									showToast('Halaman akan dimuat ulang otomatis...', 'warning');
-									setTimeout(() => {
-										window.location.href = `http://${networkMsg}`;
-									}, 2000);
-								});
-							}, 6000);
-						}
-					} else {
-						return response.text().then(text => { throw new Error(text); });
-					}
-				})
-				.catch(error => {
-					showToast('Gagal menyimpan konfigurasi: ' + error.message, 'error');
-					btn.disabled = false;
-					btn.textContent = originalText;
-				});
+				} else {
+					return response.text().then(text => { throw new Error(text); });
+				}
+			})
+			.catch(error => {
+				showToast('Gagal menyimpan konfigurasi: ' + error.message, 'error');
+				btn.disabled = false;
+				btn.textContent = originalText;
+				
+				stopCountdownPolling();
+			});
 		}
 
 		function clearAPForm() {
@@ -2197,13 +2266,9 @@
 							btn.textContent = originalText;
 						}, 6000);
 
+						// GANTI: Start polling dari server
 						setTimeout(() => {
-							showCountdownToast('Mulai ulang perangkat', 60, () => {
-								showToast('Halaman akan dimuat ulang otomatis...', 'warning');
-								setTimeout(() => {
-									window.location.href = 'http://192.168.4.1';
-								}, 2000);
-							});
+							startCountdownPolling();
 						}, 6000);
 					} else {
 						throw new Error('Pengaturan ulang gagal');
@@ -2679,13 +2744,9 @@
 						btn.textContent = originalText;
 					}, 6000);
 
+					// GANTI: Start polling dari server
 					setTimeout(() => {
-						showCountdownToast('Mulai ulang perangkat', 60, () => {
-							showToast('Halaman akan dimuat ulang otomatis...', 'warning');
-							setTimeout(() => {
-								window.location.reload();
-							}, 2000);
-						});
+						startCountdownPolling();
 					}, 6000);
 				} else {
 					throw new Error('Perintah mulai ulang gagal');
@@ -2942,13 +3003,31 @@
 
 				await cssLoaded;
 				await updateProgress(50, 'Menyiapkan tampilan...');
-				await new Promise(r => setTimeout(r, 150));
+				
+				if (status) status.textContent = 'Mengecek status server...';
+				await updateProgress(60, 'Mengecek status server...');
+				
+				try {
+					const countdownCheck = await fetch('/api/countdown');
+					const countdownData = await countdownCheck.json();
+					
+					if (countdownData.active && countdownData.remaining > 0) {
+						console.log('Countdown detected during page load');
+						console.log('Remaining:', countdownData.remaining, 'seconds');
+						
+						await updateProgress(100, countdownData.message + '...');
+						
+						LoadingManager.completeLoading();
+						
+						startCountdownDisplay(countdownData);
+						startCountdownPolling();
+						
+						return;
+					}
+				} catch (err) {
+				}
 
-				if (timeoutReached) return;
-
-				if (status) status.textContent = 'Menyiapkan halaman...';
 				await updateProgress(90, 'Menyiapkan halaman...');
-
 				initTabs();
 
 				setInterval(updateRealtimeDisplay, 1000);

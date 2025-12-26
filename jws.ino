@@ -199,6 +199,25 @@ struct BuzzerConfig {
   int volume;
 };
 
+
+struct CountdownState {
+  bool isActive;
+  unsigned long startTime;
+  int totalSeconds;
+  String message;
+  String reason; // "ap_restart", "device_restart", "factory_reset"
+};
+
+CountdownState countdownState = {
+  .isActive = false,
+  .startTime = 0,
+  .totalSeconds = 0,
+  .message = "",
+  .reason = ""
+};
+
+SemaphoreHandle_t countdownMutex = NULL;
+
 WiFiConfig wifiConfig;
 TimeConfig timeConfig;
 PrayerConfig prayerConfig;
@@ -442,6 +461,56 @@ void updateTimeDisplay() {
 
     xSemaphoreGive(timeMutex);
   }
+}
+
+// ============================================
+// Countdown Helper Functions
+// ============================================
+void startCountdown(String reason, String message, int seconds) {
+  if (countdownMutex == NULL) {
+    countdownMutex = xSemaphoreCreateMutex();
+  }
+  
+  if (xSemaphoreTake(countdownMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+    countdownState.isActive = true;
+    countdownState.startTime = millis();
+    countdownState.totalSeconds = seconds;
+    countdownState.message = message;
+    countdownState.reason = reason;
+    xSemaphoreGive(countdownMutex);
+    
+    Serial.println("\n========================================");
+    Serial.println("COUNTDOWN STARTED");
+    Serial.println("========================================");
+    Serial.println("Reason: " + reason);
+    Serial.println("Message: " + message);
+    Serial.println("Duration: " + String(seconds) + " seconds");
+    Serial.println("========================================\n");
+  }
+}
+
+void stopCountdown() {
+  if (countdownMutex != NULL && xSemaphoreTake(countdownMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+    countdownState.isActive = false;
+    countdownState.reason = "";
+    xSemaphoreGive(countdownMutex);
+    
+    Serial.println("Countdown stopped");
+  }
+}
+
+int getRemainingSeconds() {
+  if (!countdownState.isActive) return 0;
+  
+  unsigned long elapsed = (millis() - countdownState.startTime) / 1000;
+  int remaining = countdownState.totalSeconds - elapsed;
+  
+  if (remaining <= 0) {
+    stopCountdown();
+    return 0;
+  }
+  
+  return remaining;
 }
 
 void updatePrayerDisplay() {
@@ -1454,1293 +1523,1330 @@ void saveTimeToRTC() {
 // Web Server Functions
 // ============================================
 void setupServerRoutes() {
-    // ========================================
-    // HALAMAN UTAMA & ASSETS
-    // ========================================
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (!LittleFS.exists("/index.html")) {
-            request->send(404, "text/plain", "index.html not found");
-            return;
-        }
-        
-        AsyncWebServerResponse *response = request->beginResponse(
-            LittleFS, "/index.html", "text/html");
-        
-        response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        response->addHeader("Pragma", "no-cache");
-        response->addHeader("Expires", "0");
-        response->addHeader("Content-Type", "text/html; charset=utf-8");
-        
-        request->send(response);
-    });
-
-    server.on("/assets/css/foundation.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (!LittleFS.exists("/assets/css/foundation.min.css")) {
-            request->send(404, "text/plain", "CSS not found");
-            return;
-        }
-        
-        AsyncWebServerResponse *response = request->beginResponse(
-            LittleFS, "/assets/css/foundation.min.css", "text/css");
-        
-        response->addHeader("Cache-Control", "public, max-age=3600");
-        response->addHeader("Content-Type", "text/css; charset=utf-8");
-        
-        request->send(response);
-    });
-
-
-    // ========================================
-    // TAB BERANDA - DEVICE STATUS
-    // ========================================
-    server.on("/devicestatus", HTTP_GET, [](AsyncWebServerRequest *request) {
-        char timeStr[20];
-        char dateStr[20];
-        
-        time_t now_t;
-        struct tm timeinfo;
-        
-        if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            now_t = timeConfig.currentTime;
-            xSemaphoreGive(timeMutex);
-        } else {
-            time(&now_t);
-        }
-        
-        localtime_r(&now_t, &timeinfo);
-
-        sprintf(timeStr, "%02d:%02d:%02d",
-                timeinfo.tm_hour,
-                timeinfo.tm_min,
-                timeinfo.tm_sec);
-
-        sprintf(dateStr, "%02d/%02d/%04d",
-                timeinfo.tm_mday,
-                timeinfo.tm_mon + 1,
-                timeinfo.tm_year + 1900);
-
-        bool isWiFiConnected = (WiFi.status() == WL_CONNECTED && wifiConfig.isConnected && wifiConfig.localIP.toString() != "0.0.0.0");
-
-        String ssid = isWiFiConnected ? WiFi.SSID() : "";
-        String ip = isWiFiConnected ? wifiConfig.localIP.toString() : "-";
-
-        // Pre-allocate buffer
-        char jsonBuffer[512];
-        snprintf(jsonBuffer, sizeof(jsonBuffer),
-            "{"
-            "\"connected\":%s,"
-            "\"ssid\":\"%s\","
-            "\"ip\":\"%s\","
-            "\"ntpSynced\":%s,"
-            "\"ntpServer\":\"%s\","
-            "\"currentTime\":\"%s\","
-            "\"currentDate\":\"%s\","
-            "\"uptime\":%lu,"
-            "\"freeHeap\":\"%d\""
-            "}",
-            isWiFiConnected ? "true" : "false",
-            ssid.c_str(),
-            ip.c_str(),
-            timeConfig.ntpSynced ? "true" : "false",
-            timeConfig.ntpServer.c_str(),
-            timeStr,
-            dateStr,
-            millis() / 1000,
-            ESP.getFreeHeap()
-        );
-
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", jsonBuffer);
-        resp->addHeader("Cache-Control", "no-cache");
-        resp->addHeader("Content-Length", String(strlen(jsonBuffer)));
-        request->send(resp);
-    });
-
-    server.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
-        Serial.println("\n========================================");
-        Serial.println("MANUAL RESTART REQUESTED");
-        Serial.println("========================================");
-        Serial.println("Device will restart in 60 seconds...");
-        Serial.println("========================================\n");
-
-        request->send(200, "text/plain", "OK");
-
-        scheduleRestart(60);
-    });
-
-    // ========================================
-    // TAB WIFI - ROUTER & AP CONFIG
-    // ========================================
-    server.on("/getwificonfig", HTTP_GET, [](AsyncWebServerRequest *request) {
-      String json = "{";
-
-      if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-        json += "\"routerSSID\":\"" + wifiConfig.routerSSID + "\",";
-        json += "\"routerPassword\":\"" + wifiConfig.routerPassword + "\",";
-        xSemaphoreGive(wifiMutex);
-      } else {
-        json += "\"routerSSID\":\"\",";
-        json += "\"routerPassword\":\"\",";
-      }
-
-      String currentAPSSID = WiFi.softAPSSID();
-      if (currentAPSSID.length() == 0 || currentAPSSID == "null") {
-        currentAPSSID = String(wifiConfig.apSSID);
-      }
-      if (currentAPSSID.length() == 0) {
-        currentAPSSID = DEFAULT_AP_SSID;
-      }
-
-      String apPassword = String(wifiConfig.apPassword);
-      if (apPassword.length() == 0) {
-        apPassword = DEFAULT_AP_PASSWORD;
-      }
-
-      json += "\"apSSID\":\"" + currentAPSSID + "\",";
-      json += "\"apPassword\":\"" + apPassword + "\",";
-      
-      json += "\"apIP\":\"" + wifiConfig.apIP.toString() + "\",";
-      json += "\"apGateway\":\"" + wifiConfig.apGateway.toString() + "\",";
-      json += "\"apSubnet\":\"" + wifiConfig.apSubnet.toString() + "\"";
-      
-      json += "}";
-
-      AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-      resp->addHeader("Cache-Control", "no-cache");
-      request->send(resp);
-    });
-
-     server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request) {
-        // ============================================
-        // DEBOUNCING CHECK
-        // ============================================
-        unsigned long now = millis();
-        if (now - lastWiFiRestartRequest < RESTART_DEBOUNCE_MS) {
-            unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastWiFiRestartRequest);
-            
-            String msg = "Please wait " + 
-                        String(waitTime / 1000) + 
-                        " seconds before next WiFi restart";
-            
-            Serial.println("\n========================================");
-            Serial.println("WiFi RESTART REQUEST REJECTED");
-            Serial.println("========================================");
-            Serial.println("Reason: Too fast (debouncing active)");
-            Serial.printf("Wait time: %lu ms\n", waitTime);
-            Serial.println("========================================\n");
-            
-            request->send(429, "text/plain", msg); // 429 = Too Many Requests
-            return;
-        }
-        
-        if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
-            String newSSID = request->getParam("ssid", true)->value();
-            String newPassword = request->getParam("password", true)->value();
-
-            Serial.println("\n========================================");
-            Serial.println("Simpan WiFi Credentials");
-            Serial.println("========================================");
-            Serial.println("New SSID: " + newSSID);
-
-            // Simpan ke memory dan file
-            if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-                wifiConfig.routerSSID = newSSID;
-                wifiConfig.routerPassword = newPassword;
-                xSemaphoreGive(wifiMutex);
-            }
-
-            saveWiFiCredentials();
-
-            Serial.println("Credentials saved to LittleFS");
-            Serial.println("WiFi will reconnect in 3 seconds...");
-            Serial.println("========================================\n");
-
-            request->send(200, "text/plain", "OK");
-
-            xTaskCreate(
-                restartWiFiTask,    // Function
-                "WiFiRestart",      // Name
-                4096,               // Stack size
-                NULL,               // Parameter
-                1,                  // Priority (low)
-                NULL                // Handle
-            );
-
-        } else {
-            request->send(400, "text/plain", "Missing parameters");
-        }
-    });
-
-    server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
-        // ============================================
-        // DEBOUNCING CHECK
-        // ============================================
-        unsigned long now = millis();
-        if (now - lastAPRestartRequest < RESTART_DEBOUNCE_MS) {
-            unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastAPRestartRequest);
-            request->send(429, "text/plain", "Please wait " + String(waitTime / 1000) + " seconds");
-            return;
-        }
-        
-        // ============================================
-        // VALIDATE PARAMETERS
-        // ============================================
-        if (!request->hasParam("ssid", true) || !request->hasParam("password", true)) {
-            request->send(400, "text/plain", "Missing ssid or password");
-            return;
-        }
-
-        String ssid = request->getParam("ssid", true)->value();
-        String pass = request->getParam("password", true)->value();
-
-        if (pass.length() > 0 && pass.length() < 8) {
-            request->send(400, "text/plain", "Password minimal 8 karakter");
-            return;
-        }
-
-        Serial.println("\n========================================");
-        Serial.println("SIMPAN AP CONFIGURATION");
-        Serial.println("========================================");
-
-        // ============================================
-        // LOAD IP SETTINGS (ALWAYS)
-        // ============================================
-        IPAddress newAPIP = wifiConfig.apIP;
-        IPAddress newGateway = wifiConfig.apGateway;
-        IPAddress newSubnet = wifiConfig.apSubnet;
-        
-        if (request->hasParam("apIP", true)) {
-            String ipStr = request->getParam("apIP", true)->value();
-            ipStr.trim();
-            
-            IPAddress tempIP;
-            if (tempIP.fromString(ipStr)) {
-                newAPIP = tempIP;
-                Serial.println("New IP: " + newAPIP.toString());
-            } else {
-                Serial.println("Invalid IP format, keeping: " + newAPIP.toString());
-            }
-        } else {
-            Serial.println("No IP param, keeping: " + newAPIP.toString());
-        }
-        
-        if (request->hasParam("gateway", true)) {
-            String gwStr = request->getParam("gateway", true)->value();
-            gwStr.trim();
-            
-            IPAddress tempGW;
-            if (tempGW.fromString(gwStr)) {
-                newGateway = tempGW;
-                Serial.println("New Gateway: " + newGateway.toString());
-            } else {
-                Serial.println("Invalid Gateway, keeping: " + newGateway.toString());
-            }
-        } else {
-            Serial.println("No Gateway param, keeping: " + newGateway.toString());
-        }
-        
-        if (request->hasParam("subnet", true)) {
-            String snStr = request->getParam("subnet", true)->value();
-            snStr.trim();
-            
-            IPAddress tempSN;
-            if (tempSN.fromString(snStr)) {
-                newSubnet = tempSN;
-                Serial.println("New Subnet: " + newSubnet.toString());
-            } else {
-                Serial.println("Invalid Subnet, keeping: " + newSubnet.toString());
-            }
-        } else {
-            Serial.println("No Subnet param, keeping: " + newSubnet.toString());
-        }
-
-        Serial.println("========================================");
-
-        // ============================================
-        // SAVE TO CONFIG (ALWAYS)
-        // ============================================
-        ssid.toCharArray(wifiConfig.apSSID, 33);
-        pass.toCharArray(wifiConfig.apPassword, 65);
-        wifiConfig.apIP = newAPIP;
-        wifiConfig.apGateway = newGateway;
-        wifiConfig.apSubnet = newSubnet;
-        
-        saveAPCredentials();
-
-        Serial.println("SAVED CONFIG:");
-        Serial.println("  SSID: " + String(wifiConfig.apSSID));
-        Serial.println("  IP: " + newAPIP.toString());
-        Serial.println("========================================\n");
-
-        request->send(200, "text/plain", "OK");
-
-        // ============================================
-        // ALWAYS TRIGGER AP RESTART
-        // ============================================
-        xTaskCreate(restartAPTask, "APRestart", 4096, NULL, 1, NULL);
-    });
-
-    server.on("/api/connection-type", HTTP_GET, [](AsyncWebServerRequest *request) {
-        IPAddress clientIP = request->client()->remoteIP();
-        IPAddress apIP = WiFi.softAPIP();
-        IPAddress apSubnet = WiFi.softAPSubnetMask();
-        
-        IPAddress apNetwork(
-            apIP[0] & apSubnet[0],
-            apIP[1] & apSubnet[1],
-            apIP[2] & apSubnet[2],
-            apIP[3] & apSubnet[3]
-        );
-        
-        IPAddress clientNetwork(
-            clientIP[0] & apSubnet[0],
-            clientIP[1] & apSubnet[1],
-            clientIP[2] & apSubnet[2],
-            clientIP[3] & apSubnet[3]
-        );
-        
-        bool isLocalAP = (apNetwork == clientNetwork);
-        
-        String json = "{";
-        json += "\"isLocalAP\":" + String(isLocalAP ? "true" : "false") + ",";
-        json += "\"clientIP\":\"" + clientIP.toString() + "\",";
-        json += "\"apIP\":\"" + apIP.toString() + "\",";
-        json += "\"apSubnet\":\"" + apSubnet.toString() + "\"";
-        json += "}";
-        
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Cache-Control", "no-cache");
-        request->send(resp);
-    });
-
-    // ========================================
-    // TAB WAKTU - TIME SYNC & TIMEZONE
-    // ========================================
-    server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (request->hasParam("y", true) && 
-            request->hasParam("m", true) && 
-            request->hasParam("d", true) && 
-            request->hasParam("h", true) && 
-            request->hasParam("i", true) && 
-            request->hasParam("s", true)) {
-
-            int y = request->getParam("y", true)->value().toInt();
-            int m = request->getParam("m", true)->value().toInt();
-            int d = request->getParam("d", true)->value().toInt();
-            int h = request->getParam("h", true)->value().toInt();
-            int i = request->getParam("i", true)->value().toInt();
-            int s = request->getParam("s", true)->value().toInt();
-
-            Serial.println("\n========================================");
-            Serial.println("BROWSER TIME SYNC");
-            Serial.println("========================================");
-            Serial.printf("Received: %02d:%02d:%02d %02d/%02d/%04d\n", h, i, s, d, m, y);
-
-            if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-                setTime(h, i, s, d, m, y);
-                timeConfig.currentTime = now();
-                timeConfig.ntpSynced = true;
-
-                DisplayUpdate update;
-                update.type = DisplayUpdate::TIME_UPDATE;
-                xQueueSend(displayQueue, &update, 0);
-
-                xSemaphoreGive(timeMutex);
-            }
-
-            if (rtcAvailable) {
-                Serial.println("\nSaving time to RTC hardware...");
-                
-                saveTimeToRTC();
-                
-                delay(500);
-                
-                DateTime rtcNow = rtc.now();
-                Serial.println("RTC Verification:");
-                Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
-                            rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
-                            rtcNow.day(), rtcNow.month(), rtcNow.year());
-                
-                bool rtcValid = (
-                    rtcNow.year() >= 2000 && rtcNow.year() <= 2100 &&
-                    rtcNow.month() >= 1 && rtcNow.month() <= 12 &&
-                    rtcNow.day() >= 1 && rtcNow.day() <= 31
-                );
-                
-                if (rtcValid) {
-                    Serial.println("RTC saved successfully");
-                    Serial.println("Time will persist across restarts");
-                } else {
-                    Serial.println("RTC save FAILED - time is invalid");
-                    Serial.println("Check RTC battery or I2C connection");
-                }
-            } else {
-                Serial.println("\nRTC not available - time will reset on restart");
-            }
-            
-            Serial.println("========================================\n");
-
-            AsyncWebServerResponse *resp = request->beginResponse(200, "text/plain", "Waktu berhasil di-sync!");
-            request->send(resp);
-            
-        } else {
-            request->send(400, "text/plain", "Data waktu tidak lengkap");
-        }
-    });
-
-    server.on("/gettimezone", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = "{";
-
-        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            json += "\"offset\":" + String(timezoneOffset);
-            xSemaphoreGive(settingsMutex);
-        } else {
-            json += "\"offset\":7";
-        }
-
-        json += "}";
-
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Cache-Control", "no-cache");
-        request->send(resp);
-    });
-
-    server.on("/settimezone", HTTP_POST, [](AsyncWebServerRequest *request) {
-        Serial.println("\n========================================");
-        Serial.println("Simpan Timezone");
-        Serial.println("========================================");
-
-        if (!request->hasParam("offset", true)) {
-            Serial.println("ERROR: Missing offset parameter");
-            request->send(400, "application/json",
-                          "{\"error\":\"Missing offset parameter\"}");
-            return;
-        }
-
-        String offsetStr = request->getParam("offset", true)->value();
-        offsetStr.trim();
-
-        int offset = offsetStr.toInt();
-
-        Serial.println("Received offset: " + String(offset));
-
-        if (offset < -12 || offset > 14) {
-            Serial.println("ERROR: Invalid timezone offset");
-            request->send(400, "application/json",
-                          "{\"error\":\"Invalid timezone offset (must be -12 to +14)\"}");
-            return;
-        }
-
-        Serial.println("Saving to memory and file...");
-
-        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
-            timezoneOffset = offset;
-            xSemaphoreGive(settingsMutex);
-            Serial.println("Memory updated");
-        }
-
-        saveTimezoneConfig();
-
-        Serial.println("========================================");
-        Serial.println("SUCCESS: Timezone saved");
-        Serial.println("Offset: UTC" + String(offset >= 0 ? "+" : "") + String(offset));
-        Serial.println("========================================\n");
-
-        // ========================================
-        // TRIGGER NTP SYNC
-        // ========================================
-        bool ntpTriggered = false;
-        bool prayerWillUpdate = false;
-
-        if (wifiConfig.isConnected && ntpTaskHandle != NULL) {
-            Serial.println("\n========================================");
-            Serial.println("AUTO-TRIGGERING NTP RE-SYNC");
-            Serial.println("========================================");
-            Serial.println("Reason: Timezone changed to UTC" + String(offset >= 0 ? "+" : "") + String(offset));
-            
-            // Check if prayer times will be updated
-            if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-                Serial.println("City: " + prayerConfig.selectedCity);
-                Serial.println("Coordinates: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
-                Serial.println("");
-                Serial.println("NTP Task will automatically:");
-                Serial.println("  1. Sync time with new timezone");
-                Serial.println("  2. Update prayer times with correct date");
-                prayerWillUpdate = true;
-            } else {
-                Serial.println("Note: No city coordinates available");
-                Serial.println("Only time will be synced (no prayer times update)");
-            }
-            
-            // Reset NTP status
-            if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-                timeConfig.ntpSynced = false;
-                xSemaphoreGive(timeMutex);
-            }
-
-            // Trigger NTP sync
-            xTaskNotifyGive(ntpTaskHandle);
-            ntpTriggered = true;
-            
-            Serial.println("NTP re-sync triggered successfully");
-            Serial.println("========================================\n");
-            
-        } else {
-            Serial.println("\nCannot trigger NTP sync:");
-            if (!wifiConfig.isConnected) {
-                Serial.println("Reason: WiFi not connected");
-            }
-            if (ntpTaskHandle == NULL) {
-                Serial.println("Reason: NTP task not running");
-            }
-            Serial.println("Timezone will apply on next connection\n");
-        }
-
-        // ========================================
-        // SEND RESPONSE
-        // ========================================
-        String response = "{";
-        response += "\"success\":true,";
-        response += "\"offset\":" + String(offset) + ",";
-        response += "\"ntpTriggered\":" + String(ntpTriggered ? "true" : "false") + ",";
-        response += "\"prayerTimesWillUpdate\":" + String(prayerWillUpdate ? "true" : "false");
-        response += "}";
-
-        request->send(200, "application/json", response);
-    });
-
-    // ========================================
-    // TAB LOKASI - CITY & METHOD
-    // ========================================
-    server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (!LittleFS.exists("/cities.json")) {
-            Serial.println("cities.json not found");
-            request->send(404, "application/json", "[]");
-            return;
-        }
-
-        AsyncWebServerResponse *response = request->beginResponse(
-            LittleFS,
-            "/cities.json",
-            "application/json");
-
-        response->addHeader("Access-Control-Allow-Origin", "*");
-        response->addHeader("Cache-Control", "public, max-age=3600");
-        response->setContentLength(LittleFS.open("/cities.json", "r").size());
-        request->send(response);
-    });
-
-    server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = "{";
-
-        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            bool hasSelection = (prayerConfig.selectedCity.length() > 0);
-
-            json += "\"selectedCity\":\"" + prayerConfig.selectedCity + "\",";
-            json += "\"selectedCityApi\":\"" + prayerConfig.selectedCity + "\",";
-            json += "\"latitude\":\"" + prayerConfig.latitude + "\",";
-            json += "\"longitude\":\"" + prayerConfig.longitude + "\",";
-            json += "\"hasSelection\":" + String(hasSelection ? "true" : "false");
-
-            xSemaphoreGive(settingsMutex);
-        } else {
-            json += "\"selectedCity\":\"\",";
-            json += "\"selectedCityApi\":\"\",";
-            json += "\"latitude\":\"\",";
-            json += "\"longitude\":\"\",";
-            json += "\"hasSelection\":false";
-        }
-
-        json += "}";
-
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Cache-Control", "no-cache");
-        request->send(resp);
-    });
-
-    server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest *request) {
-        Serial.println("\n========================================");
-        Serial.println("Simpan City/Distric");
-        Serial.println("========================================");
-
-        if (!request->hasParam("city", true)) {
-            request->send(400, "application/json", "{\"error\":\"Missing city parameter\"}");
-            return;
-        }
-
-        String cityApi = request->getParam("city", true)->value();
-        String cityName = request->hasParam("cityName", true) ? request->getParam("cityName", true)->value() : cityApi;
-        String lat = request->hasParam("lat", true) ? request->getParam("lat", true)->value() : "";
-        String lon = request->hasParam("lon", true) ? request->getParam("lon", true)->value() : "";
-
-        cityApi.trim();
-        cityName.trim();
-        lat.trim();
-        lon.trim();
-
-        Serial.println("City: " + cityApi);
-        Serial.println("Lat: " + lat + ", Lon: " + lon);
-
-        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-            prayerConfig.selectedCity = cityApi;
-            prayerConfig.selectedCityName = cityName;
-            prayerConfig.latitude = lat;
-            prayerConfig.longitude = lon;
-            xSemaphoreGive(settingsMutex);
-        }
-
-        saveCitySelection();
-        updateCityDisplay();
-
-        bool willUpdate = (WiFi.status() == WL_CONNECTED && lat.length() > 0 && lon.length() > 0);
-        
-        char responseBuffer[256];
-        snprintf(responseBuffer, sizeof(responseBuffer),
-            "{\"success\":true,\"city\":\"%s\",\"updating\":%s}",
-            cityName.c_str(),
-            willUpdate ? "true" : "false"
-        );
-
-        request->send(200, "application/json", responseBuffer);
-
-        if (willUpdate) {
-            Serial.println("Triggering background prayer times update...");
-            pendingPrayerLat = lat;
-            pendingPrayerLon = lon;
-            needPrayerUpdate = true;
-            
-            if (prayerTaskHandle != NULL) {
-                xTaskNotifyGive(prayerTaskHandle);
-            }
-        }
-
-        Serial.println("========================================\n");
-    });
-
-    server.on(
-        "/uploadcities", HTTP_POST,
-        [](AsyncWebServerRequest *request) {
-            String jsonSizeStr = "";
-            String citiesCountStr = "";
-
-            if (request->hasParam("jsonSize", true)) {
-                jsonSizeStr = request->getParam("jsonSize", true)->value();
-            }
-
-            if (request->hasParam("citiesCount", true)) {
-                citiesCountStr = request->getParam("citiesCount", true)->value();
-            }
-
-            if (jsonSizeStr.length() > 0 && citiesCountStr.length() > 0) {
-                fs::File metaFile = LittleFS.open("/cities_meta.txt", "w");
-                if (metaFile) {
-                    metaFile.println(jsonSizeStr);
-                    metaFile.println(citiesCountStr);
-                    metaFile.close();
-
-                    Serial.println("Cities metadata saved:");
-                    Serial.println("JSON Size: " + jsonSizeStr + " bytes");
-                    Serial.println("Cities Count: " + citiesCountStr);
-                }
-            }
-
-            request->send(200, "application/json", "{\"success\":true}");
-        },
-        [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-            static fs::File uploadFile;
-            static size_t totalSize = 0;
-            static unsigned long uploadStartTime = 0;
-
-            if (index == 0) {
-                Serial.println("\n========================================");
-                Serial.println("CITIES.JSON UPLOAD STARTED");
-                Serial.println("========================================");
-                Serial.printf("Filename: %s\n", filename.c_str());
-
-                if (filename != "cities.json") {
-                    Serial.printf("Invalid filename: %s (must be cities.json)\n", filename.c_str());
-                    return;
-                }
-
-                if (LittleFS.exists("/cities.json")) {
-                    LittleFS.remove("/cities.json");
-                    Serial.println("Old cities.json deleted");
-                }
-
-                uploadFile = LittleFS.open("/cities.json", "w");
-                if (!uploadFile) {
-                    Serial.println("Failed to open file for writing");
-                    return;
-                }
-
-                totalSize = 0;
-                uploadStartTime = millis();
-                Serial.println("Writing to LittleFS...");
-            }
-
-            if (uploadFile) {
-                size_t written = uploadFile.write(data, len);
-                if (written != len) {
-                    Serial.printf("Write mismatch: %d/%d bytes\n", written, len);
-                }
-                totalSize += written;
-
-                if (totalSize % 5120 == 0 || final) {
-                    Serial.printf("Progress: %d bytes (%.1f KB)\n",
-                                  totalSize, totalSize / 1024.0);
-                }
-            }
-
-            if (final) {
-                if (uploadFile) {
-                    uploadFile.flush();
-                    uploadFile.close();
-
-                    unsigned long uploadDuration = millis() - uploadStartTime;
-
-                    Serial.println("\nUpload complete");
-                    Serial.printf("Total size: %d bytes (%.2f KB)\n",
-                                  totalSize, totalSize / 1024.0);
-                    Serial.printf("Duration: %lu ms\n", uploadDuration);
-
-                    vTaskDelay(pdMS_TO_TICKS(100));
-
-                    if (LittleFS.exists("/cities.json")) {
-                        fs::File verifyFile = LittleFS.open("/cities.json", "r");
-                        if (verifyFile) {
-                            size_t fileSize = verifyFile.size();
-
-                            char buffer[101];
-                            size_t bytesRead = verifyFile.readBytes(buffer, 100);
-                            buffer[bytesRead] = '\0';
-
-                            verifyFile.close();
-
-                            Serial.printf("File verified: %d bytes\n", fileSize);
-                            Serial.println("First 100 chars:");
-                            Serial.println(buffer);
-
-                            String preview(buffer);
-                            if (preview.indexOf('[') >= 0 && preview.indexOf('{') >= 0) {
-                                Serial.println("JSON format looks valid");
-                            } else {
-                                Serial.println("Warning: File may not be valid JSON");
-                            }
-
-                            Serial.println("========================================\n");
-                        }
-                    } else {
-                        Serial.println("File verification failed - file not found");
-                        Serial.println("========================================\n");
-                    }
-                }
-            }
-        }
+  // ========================================
+  // HALAMAN UTAMA & ASSETS
+  // ========================================
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
+    if (!LittleFS.exists("/index.html")) {
+      request -> send(404, "text/plain", "index.html not found");
+      return;
+    }
+
+    AsyncWebServerResponse * response = request -> beginResponse(
+      LittleFS, "/index.html", "text/html");
+
+    response -> addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    response -> addHeader("Pragma", "no-cache");
+    response -> addHeader("Expires", "0");
+    response -> addHeader("Content-Type", "text/html; charset=utf-8");
+
+    request -> send(response);
+  });
+
+  server.on("/assets/css/foundation.min.css", HTTP_GET, [](AsyncWebServerRequest * request) {
+    if (!LittleFS.exists("/assets/css/foundation.min.css")) {
+      request -> send(404, "text/plain", "CSS not found");
+      return;
+    }
+
+    AsyncWebServerResponse * response = request -> beginResponse(
+      LittleFS, "/assets/css/foundation.min.css", "text/css");
+
+    response -> addHeader("Cache-Control", "public, max-age=3600");
+    response -> addHeader("Content-Type", "text/css; charset=utf-8");
+
+    request -> send(response);
+  });
+
+  // ========================================
+  // TAB BERANDA - DEVICE STATUS
+  // ========================================
+  server.on("/devicestatus", HTTP_GET, [](AsyncWebServerRequest * request) {
+    char timeStr[20];
+    char dateStr[20];
+
+    time_t now_t;
+    struct tm timeinfo;
+
+    if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      now_t = timeConfig.currentTime;
+      xSemaphoreGive(timeMutex);
+    } else {
+      time( & now_t);
+    }
+
+    localtime_r( & now_t, & timeinfo);
+
+    sprintf(timeStr, "%02d:%02d:%02d",
+      timeinfo.tm_hour,
+      timeinfo.tm_min,
+      timeinfo.tm_sec);
+
+    sprintf(dateStr, "%02d/%02d/%04d",
+      timeinfo.tm_mday,
+      timeinfo.tm_mon + 1,
+      timeinfo.tm_year + 1900);
+
+    bool isWiFiConnected = (WiFi.status() == WL_CONNECTED && wifiConfig.isConnected && wifiConfig.localIP.toString() != "0.0.0.0");
+
+    String ssid = isWiFiConnected ? WiFi.SSID() : "";
+    String ip = isWiFiConnected ? wifiConfig.localIP.toString() : "-";
+
+    // Pre-allocate buffer
+    char jsonBuffer[512];
+    snprintf(jsonBuffer, sizeof(jsonBuffer),
+      "{"
+      "\"connected\":%s,"
+      "\"ssid\":\"%s\","
+      "\"ip\":\"%s\","
+      "\"ntpSynced\":%s,"
+      "\"ntpServer\":\"%s\","
+      "\"currentTime\":\"%s\","
+      "\"currentDate\":\"%s\","
+      "\"uptime\":%lu,"
+      "\"freeHeap\":\"%d\""
+      "}",
+      isWiFiConnected ? "true" : "false",
+      ssid.c_str(),
+      ip.c_str(),
+      timeConfig.ntpSynced ? "true" : "false",
+      timeConfig.ntpServer.c_str(),
+      timeStr,
+      dateStr,
+      millis() / 1000,
+      ESP.getFreeHeap()
     );
 
-    server.on("/getmethod", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = "{";
+    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", jsonBuffer);
+    resp -> addHeader("Cache-Control", "no-cache");
+    resp -> addHeader("Content-Length", String(strlen(jsonBuffer)));
+    request -> send(resp);
+  });
 
-        if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            json += "\"methodId\":" + String(methodConfig.methodId) + ",";
-            json += "\"methodName\":\"" + methodConfig.methodName + "\"";
-            xSemaphoreGive(settingsMutex);
+  server.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
+      Serial.println("\n========================================");
+      Serial.println("MANUAL RESTART REQUESTED");
+      Serial.println("========================================");
+      Serial.println("Device will restart in 60 seconds...");
+      Serial.println("========================================\n");
+
+      request->send(200, "text/plain", "OK");
+
+      startCountdown("device_restart", "Mulai ulang perangkat", 60);
+      scheduleRestart(60);
+  });
+
+  // ========================================
+  // TAB WIFI - ROUTER & AP CONFIG
+  // ========================================
+  server.on("/getwificonfig", HTTP_GET, [](AsyncWebServerRequest * request) {
+    String json = "{";
+
+    if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      json += "\"routerSSID\":\"" + wifiConfig.routerSSID + "\",";
+      json += "\"routerPassword\":\"" + wifiConfig.routerPassword + "\",";
+      xSemaphoreGive(wifiMutex);
+    } else {
+      json += "\"routerSSID\":\"\",";
+      json += "\"routerPassword\":\"\",";
+    }
+
+    String currentAPSSID = WiFi.softAPSSID();
+    if (currentAPSSID.length() == 0 || currentAPSSID == "null") {
+      currentAPSSID = String(wifiConfig.apSSID);
+    }
+    if (currentAPSSID.length() == 0) {
+      currentAPSSID = DEFAULT_AP_SSID;
+    }
+
+    String apPassword = String(wifiConfig.apPassword);
+    if (apPassword.length() == 0) {
+      apPassword = DEFAULT_AP_PASSWORD;
+    }
+
+    json += "\"apSSID\":\"" + currentAPSSID + "\",";
+    json += "\"apPassword\":\"" + apPassword + "\",";
+
+    json += "\"apIP\":\"" + wifiConfig.apIP.toString() + "\",";
+    json += "\"apGateway\":\"" + wifiConfig.apGateway.toString() + "\",";
+    json += "\"apSubnet\":\"" + wifiConfig.apSubnet.toString() + "\"";
+
+    json += "}";
+
+    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
+    resp -> addHeader("Cache-Control", "no-cache");
+    request -> send(resp);
+  });
+
+  server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest * request) {
+    // ============================================
+    // DEBOUNCING CHECK
+    // ============================================
+    unsigned long now = millis();
+    if (now - lastWiFiRestartRequest < RESTART_DEBOUNCE_MS) {
+      unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastWiFiRestartRequest);
+
+      String msg = "Please wait " +
+        String(waitTime / 1000) +
+        " seconds before next WiFi restart";
+
+      Serial.println("\n========================================");
+      Serial.println("WiFi RESTART REQUEST REJECTED");
+      Serial.println("========================================");
+      Serial.println("Reason: Too fast (debouncing active)");
+      Serial.printf("Wait time: %lu ms\n", waitTime);
+      Serial.println("========================================\n");
+
+      request -> send(429, "text/plain", msg); // 429 = Too Many Requests
+      return;
+    }
+
+    if (request -> hasParam("ssid", true) && request -> hasParam("password", true)) {
+      String newSSID = request -> getParam("ssid", true) -> value();
+      String newPassword = request -> getParam("password", true) -> value();
+
+      Serial.println("\n========================================");
+      Serial.println("Simpan WiFi Credentials");
+      Serial.println("========================================");
+      Serial.println("New SSID: " + newSSID);
+
+      // Simpan ke memory dan file
+      if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+        wifiConfig.routerSSID = newSSID;
+        wifiConfig.routerPassword = newPassword;
+        xSemaphoreGive(wifiMutex);
+      }
+
+      saveWiFiCredentials();
+
+      Serial.println("Credentials saved to LittleFS");
+      Serial.println("WiFi will reconnect in 3 seconds...");
+      Serial.println("========================================\n");
+
+      request -> send(200, "text/plain", "OK");
+
+      xTaskCreate(
+        restartWiFiTask, // Function
+        "WiFiRestart", // Name
+        4096, // Stack size
+        NULL, // Parameter
+        1, // Priority (low)
+        NULL // Handle
+      );
+
+    } else {
+      request -> send(400, "text/plain", "Missing parameters");
+    }
+  });
+
+  server.on("/setap", HTTP_POST, [](AsyncWebServerRequest * request) {
+    // ============================================
+    // DEBOUNCING CHECK
+    // ============================================
+    unsigned long now = millis();
+    if (now - lastAPRestartRequest < RESTART_DEBOUNCE_MS) {
+      unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastAPRestartRequest);
+      request -> send(429, "text/plain", "Please wait " + String(waitTime / 1000) + " seconds");
+      return;
+    }
+
+    // ============================================
+    // VALIDATE PARAMETERS
+    // ============================================
+    if (!request -> hasParam("ssid", true) || !request -> hasParam("password", true)) {
+      request -> send(400, "text/plain", "Missing ssid or password");
+      return;
+    }
+
+    String ssid = request -> getParam("ssid", true) -> value();
+    String pass = request -> getParam("password", true) -> value();
+
+    if (pass.length() > 0 && pass.length() < 8) {
+      request -> send(400, "text/plain", "Password minimal 8 karakter");
+      return;
+    }
+
+    Serial.println("\n========================================");
+    Serial.println("SIMPAN AP CONFIGURATION");
+    Serial.println("========================================");
+
+    // ============================================
+    // LOAD IP SETTINGS (ALWAYS)
+    // ============================================
+    IPAddress newAPIP = wifiConfig.apIP;
+    IPAddress newGateway = wifiConfig.apGateway;
+    IPAddress newSubnet = wifiConfig.apSubnet;
+
+    if (request -> hasParam("apIP", true)) {
+      String ipStr = request -> getParam("apIP", true) -> value();
+      ipStr.trim();
+
+      IPAddress tempIP;
+      if (tempIP.fromString(ipStr)) {
+        newAPIP = tempIP;
+        Serial.println("New IP: " + newAPIP.toString());
+      } else {
+        Serial.println("Invalid IP format, keeping: " + newAPIP.toString());
+      }
+    } else {
+      Serial.println("No IP param, keeping: " + newAPIP.toString());
+    }
+
+    if (request -> hasParam("gateway", true)) {
+      String gwStr = request -> getParam("gateway", true) -> value();
+      gwStr.trim();
+
+      IPAddress tempGW;
+      if (tempGW.fromString(gwStr)) {
+        newGateway = tempGW;
+        Serial.println("New Gateway: " + newGateway.toString());
+      } else {
+        Serial.println("Invalid Gateway, keeping: " + newGateway.toString());
+      }
+    } else {
+      Serial.println("No Gateway param, keeping: " + newGateway.toString());
+    }
+
+    if (request -> hasParam("subnet", true)) {
+      String snStr = request -> getParam("subnet", true) -> value();
+      snStr.trim();
+
+      IPAddress tempSN;
+      if (tempSN.fromString(snStr)) {
+        newSubnet = tempSN;
+        Serial.println("New Subnet: " + newSubnet.toString());
+      } else {
+        Serial.println("Invalid Subnet, keeping: " + newSubnet.toString());
+      }
+    } else {
+      Serial.println("No Subnet param, keeping: " + newSubnet.toString());
+    }
+
+    Serial.println("========================================");
+
+    // ============================================
+    // SAVE TO CONFIG (ALWAYS)
+    // ============================================
+    ssid.toCharArray(wifiConfig.apSSID, 33);
+    pass.toCharArray(wifiConfig.apPassword, 65);
+    wifiConfig.apIP = newAPIP;
+    wifiConfig.apGateway = newGateway;
+    wifiConfig.apSubnet = newSubnet;
+
+    saveAPCredentials();
+
+    Serial.println("SAVED CONFIG:");
+    Serial.println("  SSID: " + String(wifiConfig.apSSID));
+    Serial.println("  IP: " + newAPIP.toString());
+    Serial.println("========================================\n");
+
+    request -> send(200, "text/plain", "OK");
+
+    xTaskCreate(restartAPTask, "APRestart", 4096, NULL, 1, NULL);
+  });
+
+  server.on("/api/connection-type", HTTP_GET, [](AsyncWebServerRequest * request) {
+    IPAddress clientIP = request -> client() -> remoteIP();
+    IPAddress apIP = WiFi.softAPIP();
+    IPAddress apSubnet = WiFi.softAPSubnetMask();
+
+    IPAddress apNetwork(
+      apIP[0] & apSubnet[0],
+      apIP[1] & apSubnet[1],
+      apIP[2] & apSubnet[2],
+      apIP[3] & apSubnet[3]
+    );
+
+    IPAddress clientNetwork(
+      clientIP[0] & apSubnet[0],
+      clientIP[1] & apSubnet[1],
+      clientIP[2] & apSubnet[2],
+      clientIP[3] & apSubnet[3]
+    );
+
+    bool isLocalAP = (apNetwork == clientNetwork);
+
+    String json = "{";
+    json += "\"isLocalAP\":" + String(isLocalAP ? "true" : "false") + ",";
+    json += "\"clientIP\":\"" + clientIP.toString() + "\",";
+    json += "\"apIP\":\"" + apIP.toString() + "\",";
+    json += "\"apSubnet\":\"" + apSubnet.toString() + "\"";
+    json += "}";
+
+    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
+    resp -> addHeader("Cache-Control", "no-cache");
+    request -> send(resp);
+  });
+
+  // ========================================
+  // TAB WAKTU - TIME SYNC & TIMEZONE
+  // ========================================
+  server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest * request) {
+    if (request -> hasParam("y", true) &&
+      request -> hasParam("m", true) &&
+      request -> hasParam("d", true) &&
+      request -> hasParam("h", true) &&
+      request -> hasParam("i", true) &&
+      request -> hasParam("s", true)) {
+
+      int y = request -> getParam("y", true) -> value().toInt();
+      int m = request -> getParam("m", true) -> value().toInt();
+      int d = request -> getParam("d", true) -> value().toInt();
+      int h = request -> getParam("h", true) -> value().toInt();
+      int i = request -> getParam("i", true) -> value().toInt();
+      int s = request -> getParam("s", true) -> value().toInt();
+
+      Serial.println("\n========================================");
+      Serial.println("BROWSER TIME SYNC");
+      Serial.println("========================================");
+      Serial.printf("Received: %02d:%02d:%02d %02d/%02d/%04d\n", h, i, s, d, m, y);
+
+      if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+        setTime(h, i, s, d, m, y);
+        timeConfig.currentTime = now();
+        timeConfig.ntpSynced = true;
+
+        DisplayUpdate update;
+        update.type = DisplayUpdate::TIME_UPDATE;
+        xQueueSend(displayQueue, & update, 0);
+
+        xSemaphoreGive(timeMutex);
+      }
+
+      if (rtcAvailable) {
+        Serial.println("\nSaving time to RTC hardware...");
+
+        saveTimeToRTC();
+
+        delay(500);
+
+        DateTime rtcNow = rtc.now();
+        Serial.println("RTC Verification:");
+        Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+          rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
+          rtcNow.day(), rtcNow.month(), rtcNow.year());
+
+        bool rtcValid = (
+          rtcNow.year() >= 2000 && rtcNow.year() <= 2100 &&
+          rtcNow.month() >= 1 && rtcNow.month() <= 12 &&
+          rtcNow.day() >= 1 && rtcNow.day() <= 31
+        );
+
+        if (rtcValid) {
+          Serial.println("RTC saved successfully");
+          Serial.println("Time will persist across restarts");
         } else {
-            json += "\"methodId\":5,";
-            json += "\"methodName\":\"Egyptian General Authority of Survey\"";
+          Serial.println("RTC save FAILED - time is invalid");
+          Serial.println("Check RTC battery or I2C connection");
         }
+      } else {
+        Serial.println("\nRTC not available - time will reset on restart");
+      }
 
-        json += "}";
+      Serial.println("========================================\n");
 
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Cache-Control", "no-cache");
-        request->send(resp);
-    });
+      AsyncWebServerResponse * resp = request -> beginResponse(200, "text/plain", "Waktu berhasil di-sync!");
+      request -> send(resp);
 
-    server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest *request) {
+    } else {
+      request -> send(400, "text/plain", "Data waktu tidak lengkap");
+    }
+  });
+
+  server.on("/gettimezone", HTTP_GET, [](AsyncWebServerRequest * request) {
+    String json = "{";
+
+    if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      json += "\"offset\":" + String(timezoneOffset);
+      xSemaphoreGive(settingsMutex);
+    } else {
+      json += "\"offset\":7";
+    }
+
+    json += "}";
+
+    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
+    resp -> addHeader("Cache-Control", "no-cache");
+    request -> send(resp);
+  });
+
+  server.on("/settimezone", HTTP_POST, [](AsyncWebServerRequest * request) {
+    Serial.println("\n========================================");
+    Serial.println("Simpan Timezone");
+    Serial.println("========================================");
+
+    if (!request -> hasParam("offset", true)) {
+      Serial.println("ERROR: Missing offset parameter");
+      request -> send(400, "application/json",
+        "{\"error\":\"Missing offset parameter\"}");
+      return;
+    }
+
+    String offsetStr = request -> getParam("offset", true) -> value();
+    offsetStr.trim();
+
+    int offset = offsetStr.toInt();
+
+    Serial.println("Received offset: " + String(offset));
+
+    if (offset < -12 || offset > 14) {
+      Serial.println("ERROR: Invalid timezone offset");
+      request -> send(400, "application/json",
+        "{\"error\":\"Invalid timezone offset (must be -12 to +14)\"}");
+      return;
+    }
+
+    Serial.println("Saving to memory and file...");
+
+    if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+      timezoneOffset = offset;
+      xSemaphoreGive(settingsMutex);
+      Serial.println("Memory updated");
+    }
+
+    saveTimezoneConfig();
+
+    Serial.println("========================================");
+    Serial.println("SUCCESS: Timezone saved");
+    Serial.println("Offset: UTC" + String(offset >= 0 ? "+" : "") + String(offset));
+    Serial.println("========================================\n");
+
+    // ========================================
+    // TRIGGER NTP SYNC
+    // ========================================
+    bool ntpTriggered = false;
+    bool prayerWillUpdate = false;
+
+    if (wifiConfig.isConnected && ntpTaskHandle != NULL) {
+      Serial.println("\n========================================");
+      Serial.println("AUTO-TRIGGERING NTP RE-SYNC");
+      Serial.println("========================================");
+      Serial.println("Reason: Timezone changed to UTC" + String(offset >= 0 ? "+" : "") + String(offset));
+
+      // Check if prayer times will be updated
+      if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
+        Serial.println("City: " + prayerConfig.selectedCity);
+        Serial.println("Coordinates: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
+        Serial.println("");
+        Serial.println("NTP Task will automatically:");
+        Serial.println("  1. Sync time with new timezone");
+        Serial.println("  2. Update prayer times with correct date");
+        prayerWillUpdate = true;
+      } else {
+        Serial.println("Note: No city coordinates available");
+        Serial.println("Only time will be synced (no prayer times update)");
+      }
+
+      // Reset NTP status
+      if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+        timeConfig.ntpSynced = false;
+        xSemaphoreGive(timeMutex);
+      }
+
+      // Trigger NTP sync
+      xTaskNotifyGive(ntpTaskHandle);
+      ntpTriggered = true;
+
+      Serial.println("NTP re-sync triggered successfully");
+      Serial.println("========================================\n");
+
+    } else {
+      Serial.println("\nCannot trigger NTP sync:");
+      if (!wifiConfig.isConnected) {
+        Serial.println("Reason: WiFi not connected");
+      }
+      if (ntpTaskHandle == NULL) {
+        Serial.println("Reason: NTP task not running");
+      }
+      Serial.println("Timezone will apply on next connection\n");
+    }
+
+    // ========================================
+    // SEND RESPONSE
+    // ========================================
+    String response = "{";
+    response += "\"success\":true,";
+    response += "\"offset\":" + String(offset) + ",";
+    response += "\"ntpTriggered\":" + String(ntpTriggered ? "true" : "false") + ",";
+    response += "\"prayerTimesWillUpdate\":" + String(prayerWillUpdate ? "true" : "false");
+    response += "}";
+
+    request -> send(200, "application/json", response);
+  });
+
+  // ========================================
+  // TAB LOKASI - CITY & METHOD
+  // ========================================
+  server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest * request) {
+    if (!LittleFS.exists("/cities.json")) {
+      Serial.println("cities.json not found");
+      request -> send(404, "application/json", "[]");
+      return;
+    }
+
+    AsyncWebServerResponse * response = request -> beginResponse(
+      LittleFS,
+      "/cities.json",
+      "application/json");
+
+    response -> addHeader("Access-Control-Allow-Origin", "*");
+    response -> addHeader("Cache-Control", "public, max-age=3600");
+    response -> setContentLength(LittleFS.open("/cities.json", "r").size());
+    request -> send(response);
+  });
+
+  server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest * request) {
+    String json = "{";
+
+    if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      bool hasSelection = (prayerConfig.selectedCity.length() > 0);
+
+      json += "\"selectedCity\":\"" + prayerConfig.selectedCity + "\",";
+      json += "\"selectedCityApi\":\"" + prayerConfig.selectedCity + "\",";
+      json += "\"latitude\":\"" + prayerConfig.latitude + "\",";
+      json += "\"longitude\":\"" + prayerConfig.longitude + "\",";
+      json += "\"hasSelection\":" + String(hasSelection ? "true" : "false");
+
+      xSemaphoreGive(settingsMutex);
+    } else {
+      json += "\"selectedCity\":\"\",";
+      json += "\"selectedCityApi\":\"\",";
+      json += "\"latitude\":\"\",";
+      json += "\"longitude\":\"\",";
+      json += "\"hasSelection\":false";
+    }
+
+    json += "}";
+
+    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
+    resp -> addHeader("Cache-Control", "no-cache");
+    request -> send(resp);
+  });
+
+  server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest * request) {
+    Serial.println("\n========================================");
+    Serial.println("Simpan City/Distric");
+    Serial.println("========================================");
+
+    if (!request -> hasParam("city", true)) {
+      request -> send(400, "application/json", "{\"error\":\"Missing city parameter\"}");
+      return;
+    }
+
+    String cityApi = request -> getParam("city", true) -> value();
+    String cityName = request -> hasParam("cityName", true) ? request -> getParam("cityName", true) -> value() : cityApi;
+    String lat = request -> hasParam("lat", true) ? request -> getParam("lat", true) -> value() : "";
+    String lon = request -> hasParam("lon", true) ? request -> getParam("lon", true) -> value() : "";
+
+    cityApi.trim();
+    cityName.trim();
+    lat.trim();
+    lon.trim();
+
+    Serial.println("City: " + cityApi);
+    Serial.println("Lat: " + lat + ", Lon: " + lon);
+
+    if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+      prayerConfig.selectedCity = cityApi;
+      prayerConfig.selectedCityName = cityName;
+      prayerConfig.latitude = lat;
+      prayerConfig.longitude = lon;
+      xSemaphoreGive(settingsMutex);
+    }
+
+    saveCitySelection();
+    updateCityDisplay();
+
+    bool willUpdate = (WiFi.status() == WL_CONNECTED && lat.length() > 0 && lon.length() > 0);
+
+    char responseBuffer[256];
+    snprintf(responseBuffer, sizeof(responseBuffer),
+      "{\"success\":true,\"city\":\"%s\",\"updating\":%s}",
+      cityName.c_str(),
+      willUpdate ? "true" : "false"
+    );
+
+    request -> send(200, "application/json", responseBuffer);
+
+    if (willUpdate) {
+      Serial.println("Triggering background prayer times update...");
+      pendingPrayerLat = lat;
+      pendingPrayerLon = lon;
+      needPrayerUpdate = true;
+
+      if (prayerTaskHandle != NULL) {
+        xTaskNotifyGive(prayerTaskHandle);
+      }
+    }
+
+    Serial.println("========================================\n");
+  });
+
+  server.on(
+    "/uploadcities", HTTP_POST,
+    [](AsyncWebServerRequest * request) {
+      String jsonSizeStr = "";
+      String citiesCountStr = "";
+
+      if (request -> hasParam("jsonSize", true)) {
+        jsonSizeStr = request -> getParam("jsonSize", true) -> value();
+      }
+
+      if (request -> hasParam("citiesCount", true)) {
+        citiesCountStr = request -> getParam("citiesCount", true) -> value();
+      }
+
+      if (jsonSizeStr.length() > 0 && citiesCountStr.length() > 0) {
+        fs::File metaFile = LittleFS.open("/cities_meta.txt", "w");
+        if (metaFile) {
+          metaFile.println(jsonSizeStr);
+          metaFile.println(citiesCountStr);
+          metaFile.close();
+
+          Serial.println("Cities metadata saved:");
+          Serial.println("JSON Size: " + jsonSizeStr + " bytes");
+          Serial.println("Cities Count: " + citiesCountStr);
+        }
+      }
+
+      request -> send(200, "application/json", "{\"success\":true}");
+    },
+    [](AsyncWebServerRequest * request, String filename, size_t index, uint8_t * data, size_t len, bool final) {
+      static fs::File uploadFile;
+      static size_t totalSize = 0;
+      static unsigned long uploadStartTime = 0;
+
+      if (index == 0) {
         Serial.println("\n========================================");
-        Serial.println("Simpan Metode");
-        Serial.print("Client IP: ");
-        Serial.println(request->client()->remoteIP().toString());
+        Serial.println("CITIES.JSON UPLOAD STARTED");
         Serial.println("========================================");
+        Serial.printf("Filename: %s\n", filename.c_str());
 
-        if (!request->hasParam("methodId", true) || !request->hasParam("methodName", true)) {
-            Serial.println("ERROR: Missing parameters");
-
-            int params = request->params();
-            Serial.printf("Received parameters (%d):\n", params);
-            for (int i = 0; i < params; i++) {
-                const AsyncWebParameter *p = request->getParam(i);
-                Serial.printf("  %s = %s\n", p->name().c_str(), p->value().c_str());
-            }
-
-            request->send(400, "application/json",
-                          "{\"error\":\"Missing methodId or methodName parameter\"}");
-            return;
+        if (filename != "cities.json") {
+          Serial.printf("Invalid filename: %s (must be cities.json)\n", filename.c_str());
+          return;
         }
 
-        String methodIdStr = request->getParam("methodId", true)->value();
-        String methodName = request->getParam("methodName", true)->value();
-
-        methodIdStr.trim();
-        methodName.trim();
-
-        int methodId = methodIdStr.toInt();
-
-        Serial.println("Received data:");
-        Serial.println("Method ID: " + String(methodId));
-        Serial.println("Method Name: " + methodName);
-
-        if (methodId < 0 || methodId > 20) {
-            Serial.println("ERROR: Invalid method ID");
-            request->send(400, "application/json",
-                          "{\"error\":\"Invalid method ID\"}");
-            return;
+        if (LittleFS.exists("/cities.json")) {
+          LittleFS.remove("/cities.json");
+          Serial.println("Old cities.json deleted");
         }
 
-        if (methodName.length() == 0) {
-            Serial.println("ERROR: Empty method name");
-            request->send(400, "application/json",
-                          "{\"error\":\"Method name cannot be empty\"}");
-            return;
+        uploadFile = LittleFS.open("/cities.json", "w");
+        if (!uploadFile) {
+          Serial.println("Failed to open file for writing");
+          return;
         }
 
-        if (methodName.length() > 100) {
-            Serial.println("ERROR: Method name too long");
-            request->send(400, "application/json",
-                          "{\"error\":\"Method name too long (max 100 chars)\"}");
-            return;
-        }
-
-        Serial.println("Saving to memory...");
-
-        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
-            methodConfig.methodId = methodId;
-            methodConfig.methodName = methodName;
-
-            xSemaphoreGive(settingsMutex);
-            Serial.println("Memory updated");
-            Serial.println("Method ID: " + String(methodConfig.methodId));
-            Serial.println("Method Name: " + methodConfig.methodName);
-        }
-
+        totalSize = 0;
+        uploadStartTime = millis();
         Serial.println("Writing to LittleFS...");
-        saveMethodSelection();
+      }
 
-        bool willFetchPrayerTimes = false;
-
-        if (WiFi.status() == WL_CONNECTED) {
-            if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-                Serial.println("Fetching prayer times with new method...");
-                Serial.println("City: " + prayerConfig.selectedCity);
-                Serial.println("Method: " + methodName);
-                getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
-
-                Serial.println("Prayer times update initiated");
-                willFetchPrayerTimes = true;
-            } else {
-                Serial.println("No coordinates available");
-            }
-        } else {
-            Serial.println("WiFi not connected");
+      if (uploadFile) {
+        size_t written = uploadFile.write(data, len);
+        if (written != len) {
+          Serial.printf("Write mismatch: %d/%d bytes\n", written, len);
         }
+        totalSize += written;
 
-        Serial.println("========================================");
-        Serial.println("SUCCESS: Method saved successfully");
+        if (totalSize % 5120 == 0 || final) {
+          Serial.printf("Progress: %d bytes (%.1f KB)\n",
+            totalSize, totalSize / 1024.0);
+        }
+      }
+
+      if (final) {
+        if (uploadFile) {
+          uploadFile.flush();
+          uploadFile.close();
+
+          unsigned long uploadDuration = millis() - uploadStartTime;
+
+          Serial.println("\nUpload complete");
+          Serial.printf("Total size: %d bytes (%.2f KB)\n",
+            totalSize, totalSize / 1024.0);
+          Serial.printf("Duration: %lu ms\n", uploadDuration);
+
+          vTaskDelay(pdMS_TO_TICKS(100));
+
+          if (LittleFS.exists("/cities.json")) {
+            fs::File verifyFile = LittleFS.open("/cities.json", "r");
+            if (verifyFile) {
+              size_t fileSize = verifyFile.size();
+
+              char buffer[101];
+              size_t bytesRead = verifyFile.readBytes(buffer, 100);
+              buffer[bytesRead] = '\0';
+
+              verifyFile.close();
+
+              Serial.printf("File verified: %d bytes\n", fileSize);
+              Serial.println("First 100 chars:");
+              Serial.println(buffer);
+
+              String preview(buffer);
+              if (preview.indexOf('[') >= 0 && preview.indexOf('{') >= 0) {
+                Serial.println("JSON format looks valid");
+              } else {
+                Serial.println("Warning: File may not be valid JSON");
+              }
+
+              Serial.println("========================================\n");
+            }
+          } else {
+            Serial.println("File verification failed - file not found");
+            Serial.println("========================================\n");
+          }
+        }
+      }
+    }
+  );
+
+  server.on("/getmethod", HTTP_GET, [](AsyncWebServerRequest * request) {
+    String json = "{";
+
+    if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      json += "\"methodId\":" + String(methodConfig.methodId) + ",";
+      json += "\"methodName\":\"" + methodConfig.methodName + "\"";
+      xSemaphoreGive(settingsMutex);
+    } else {
+      json += "\"methodId\":5,";
+      json += "\"methodName\":\"Egyptian General Authority of Survey\"";
+    }
+
+    json += "}";
+
+    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
+    resp -> addHeader("Cache-Control", "no-cache");
+    request -> send(resp);
+  });
+
+  server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest * request) {
+    Serial.println("\n========================================");
+    Serial.println("Simpan Metode");
+    Serial.print("Client IP: ");
+    Serial.println(request -> client() -> remoteIP().toString());
+    Serial.println("========================================");
+
+    if (!request -> hasParam("methodId", true) || !request -> hasParam("methodName", true)) {
+      Serial.println("ERROR: Missing parameters");
+
+      int params = request -> params();
+      Serial.printf("Received parameters (%d):\n", params);
+      for (int i = 0; i < params; i++) {
+        const AsyncWebParameter * p = request -> getParam(i);
+        Serial.printf("  %s = %s\n", p -> name().c_str(), p -> value().c_str());
+      }
+
+      request -> send(400, "application/json",
+        "{\"error\":\"Missing methodId or methodName parameter\"}");
+      return;
+    }
+
+    String methodIdStr = request -> getParam("methodId", true) -> value();
+    String methodName = request -> getParam("methodName", true) -> value();
+
+    methodIdStr.trim();
+    methodName.trim();
+
+    int methodId = methodIdStr.toInt();
+
+    Serial.println("Received data:");
+    Serial.println("Method ID: " + String(methodId));
+    Serial.println("Method Name: " + methodName);
+
+    if (methodId < 0 || methodId > 20) {
+      Serial.println("ERROR: Invalid method ID");
+      request -> send(400, "application/json",
+        "{\"error\":\"Invalid method ID\"}");
+      return;
+    }
+
+    if (methodName.length() == 0) {
+      Serial.println("ERROR: Empty method name");
+      request -> send(400, "application/json",
+        "{\"error\":\"Method name cannot be empty\"}");
+      return;
+    }
+
+    if (methodName.length() > 100) {
+      Serial.println("ERROR: Method name too long");
+      request -> send(400, "application/json",
+        "{\"error\":\"Method name too long (max 100 chars)\"}");
+      return;
+    }
+
+    Serial.println("Saving to memory...");
+
+    if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+      methodConfig.methodId = methodId;
+      methodConfig.methodName = methodName;
+
+      xSemaphoreGive(settingsMutex);
+      Serial.println("Memory updated");
+      Serial.println("Method ID: " + String(methodConfig.methodId));
+      Serial.println("Method Name: " + methodConfig.methodName);
+    }
+
+    Serial.println("Writing to LittleFS...");
+    saveMethodSelection();
+
+    bool willFetchPrayerTimes = false;
+
+    if (WiFi.status() == WL_CONNECTED) {
+      if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
+        Serial.println("Fetching prayer times with new method...");
+        Serial.println("City: " + prayerConfig.selectedCity);
         Serial.println("Method: " + methodName);
-        if (willFetchPrayerTimes) {
-            Serial.println("Prayer times will update shortly...");
-        }
-        Serial.println("========================================\n");
+        getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
 
-        String response = "{";
-        response += "\"success\":true,";
-        response += "\"methodId\":" + String(methodId) + ",";
-        response += "\"methodName\":\"" + methodName + "\",";
-        response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
-        response += "}";
+        Serial.println("Prayer times update initiated");
+        willFetchPrayerTimes = true;
+      } else {
+        Serial.println("No coordinates available");
+      }
+    } else {
+      Serial.println("WiFi not connected");
+    }
 
-        request->send(200, "application/json", response);
-    });
+    Serial.println("========================================");
+    Serial.println("SUCCESS: Method saved successfully");
+    Serial.println("Method: " + methodName);
+    if (willFetchPrayerTimes) {
+      Serial.println("Prayer times will update shortly...");
+    }
+    Serial.println("========================================\n");
 
-    // ========================================
-    // TAB JADWAL - PRAYER TIMES & BUZZER
-    // ========================================
-    server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String json = "{";
-        json += "\"imsak\":\"" + prayerConfig.imsakTime + "\",";
-        json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
-        json += "\"terbit\":\"" + prayerConfig.terbitTime + "\",";
-        json += "\"zuhur\":\"" + prayerConfig.zuhurTime + "\",";
-        json += "\"ashar\":\"" + prayerConfig.asharTime + "\",";
-        json += "\"maghrib\":\"" + prayerConfig.maghribTime + "\",";
-        json += "\"isya\":\"" + prayerConfig.isyaTime + "\"";
-        json += "}";
+    String response = "{";
+    response += "\"success\":true,";
+    response += "\"methodId\":" + String(methodId) + ",";
+    response += "\"methodName\":\"" + methodName + "\",";
+    response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
+    response += "}";
 
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-        resp->addHeader("Cache-Control", "no-cache");
-        request->send(resp);
-    });
+    request -> send(200, "application/json", response);
+  });
 
-    server.on("/getbuzzerconfig", HTTP_GET, [](AsyncWebServerRequest *request) {
-      String json = "{";
-      json += "\"imsak\":" + String(buzzerConfig.imsakEnabled ? "true" : "false") + ",";
-      json += "\"subuh\":" + String(buzzerConfig.subuhEnabled ? "true" : "false") + ",";
-      json += "\"terbit\":" + String(buzzerConfig.terbitEnabled ? "true" : "false") + ",";
-      json += "\"zuhur\":" + String(buzzerConfig.zuhurEnabled ? "true" : "false") + ",";
-      json += "\"ashar\":" + String(buzzerConfig.asharEnabled ? "true" : "false") + ",";
-      json += "\"maghrib\":" + String(buzzerConfig.maghribEnabled ? "true" : "false") + ",";
-      json += "\"isya\":" + String(buzzerConfig.isyaEnabled ? "true" : "false") + ",";
-      json += "\"volume\":" + String(buzzerConfig.volume);
-      json += "}";
-      
-      AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
-      resp->addHeader("Cache-Control", "no-cache");
-      request->send(resp);
-    });
+  // ========================================
+  // TAB JADWAL - PRAYER TIMES & BUZZER
+  // ========================================
+  server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest * request) {
+    String json = "{";
+    json += "\"imsak\":\"" + prayerConfig.imsakTime + "\",";
+    json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
+    json += "\"terbit\":\"" + prayerConfig.terbitTime + "\",";
+    json += "\"zuhur\":\"" + prayerConfig.zuhurTime + "\",";
+    json += "\"ashar\":\"" + prayerConfig.asharTime + "\",";
+    json += "\"maghrib\":\"" + prayerConfig.maghribTime + "\",";
+    json += "\"isya\":\"" + prayerConfig.isyaTime + "\"";
+    json += "}";
+
+    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
+    resp -> addHeader("Cache-Control", "no-cache");
+    request -> send(resp);
+  });
+
+  server.on("/getbuzzerconfig", HTTP_GET, [](AsyncWebServerRequest * request) {
+    String json = "{";
+    json += "\"imsak\":" + String(buzzerConfig.imsakEnabled ? "true" : "false") + ",";
+    json += "\"subuh\":" + String(buzzerConfig.subuhEnabled ? "true" : "false") + ",";
+    json += "\"terbit\":" + String(buzzerConfig.terbitEnabled ? "true" : "false") + ",";
+    json += "\"zuhur\":" + String(buzzerConfig.zuhurEnabled ? "true" : "false") + ",";
+    json += "\"ashar\":" + String(buzzerConfig.asharEnabled ? "true" : "false") + ",";
+    json += "\"maghrib\":" + String(buzzerConfig.maghribEnabled ? "true" : "false") + ",";
+    json += "\"isya\":" + String(buzzerConfig.isyaEnabled ? "true" : "false") + ",";
+    json += "\"volume\":" + String(buzzerConfig.volume);
+    json += "}";
+
+    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
+    resp -> addHeader("Cache-Control", "no-cache");
+    request -> send(resp);
+  });
+
+  server.on("/setbuzzertoggle", HTTP_POST, [](AsyncWebServerRequest * request) {
+    if (!request -> hasParam("prayer", true) || !request -> hasParam("enabled", true)) {
+      request -> send(400, "text/plain", "Missing parameters");
+      return;
+    }
+
+    String prayer = request -> getParam("prayer", true) -> value();
+    bool enabled = request -> getParam("enabled", true) -> value() == "true";
+
+    if (prayer == "imsak") buzzerConfig.imsakEnabled = enabled;
+    else if (prayer == "subuh") buzzerConfig.subuhEnabled = enabled;
+    else if (prayer == "terbit") buzzerConfig.terbitEnabled = enabled;
+    else if (prayer == "zuhur") buzzerConfig.zuhurEnabled = enabled;
+    else if (prayer == "ashar") buzzerConfig.asharEnabled = enabled;
+    else if (prayer == "maghrib") buzzerConfig.maghribEnabled = enabled;
+    else if (prayer == "isya") buzzerConfig.isyaEnabled = enabled;
+
+    saveBuzzerConfig();
+    request -> send(200, "text/plain", "OK");
+  });
+
+  server.on("/setbuzzervolume", HTTP_POST, [](AsyncWebServerRequest * request) {
+    if (!request -> hasParam("volume", true)) {
+      request -> send(400, "text/plain", "Missing volume");
+      return;
+    }
+
+    int volume = request -> getParam("volume", true) -> value().toInt();
+    if (volume < 0) volume = 0;
+    if (volume > 100) volume = 100;
+
+    buzzerConfig.volume = volume;
+    saveBuzzerConfig();
+
+    request -> send(200, "text/plain", "OK");
+  });
+
+  // ========================================
+  // TAB RESET - FACTORY RESET
+  // ========================================
+  server.on("/reset", HTTP_POST, [](AsyncWebServerRequest * request) {
+    Serial.println("\n========================================");
+    Serial.println("FACTORY RESET STARTED");
+    Serial.println("========================================");
+
+    // Hapus semua file konfigurasi
+    if (LittleFS.exists("/wifi_creds.txt")) {
+      LittleFS.remove("/wifi_creds.txt");
+      Serial.println("WiFi creds deleted");
+    }
+
+    if (LittleFS.exists("/prayer_times.txt")) {
+      LittleFS.remove("/prayer_times.txt");
+      Serial.println("Prayer times deleted");
+    }
+
+    if (LittleFS.exists("/ap_creds.txt")) {
+      LittleFS.remove("/ap_creds.txt");
+      Serial.println("AP creds deleted");
+    }
+
+    if (LittleFS.exists("/city_selection.txt")) {
+      LittleFS.remove("/city_selection.txt");
+      Serial.println("City selection deleted");
+    }
+
+    if (LittleFS.exists("/method_selection.txt")) {
+      LittleFS.remove("/method_selection.txt");
+      Serial.println("Method selection deleted");
+    }
+
+    if (LittleFS.exists("/timezone.txt")) {
+      LittleFS.remove("/timezone.txt");
+      Serial.println("Timezone config deleted");
+    }
+
+    if (LittleFS.exists("/buzzer_config.txt")) {
+      LittleFS.remove("/buzzer_config.txt");
+      Serial.println("Buzzer config deleted");
+    }
+
+    if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+      methodConfig.methodId = 5;
+      methodConfig.methodName = "Egyptian General Authority of Survey";
+
+      wifiConfig.routerSSID = "";
+      wifiConfig.routerPassword = "";
+      wifiConfig.isConnected = false;
+
+      prayerConfig.imsakTime = "";
+      prayerConfig.subuhTime = "";
+      prayerConfig.terbitTime = "";
+      prayerConfig.zuhurTime = "";
+      prayerConfig.asharTime = "";
+      prayerConfig.maghribTime = "";
+      prayerConfig.isyaTime = "";
+      prayerConfig.selectedCity = "";
+      prayerConfig.selectedCityName = "";
+      prayerConfig.latitude = "";
+      prayerConfig.longitude = "";
+
+      strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
+      strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
+      wifiConfig.apIP = IPAddress(192, 168, 4, 1);
+      wifiConfig.apGateway = IPAddress(192, 168, 4, 1);
+      wifiConfig.apSubnet = IPAddress(255, 255, 255, 0);
+      WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
+
+      xSemaphoreGive(settingsMutex);
+    }
+
+    timezoneOffset = 7;
+    Serial.println("Settings reset to default");
+
+    Serial.println("\nResetting time to 00:00:00 01/01/2000...");
+
+    if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+      const time_t EPOCH_2000 = 946684800;
+      setTime(0, 0, 0, 1, 1, 2000);
+      timeConfig.currentTime = EPOCH_2000; // Force hardcoded UTC
+      timeConfig.ntpSynced = false;
+      timeConfig.ntpServer = "";
+
+      // Safety check
+      if (timeConfig.currentTime < EPOCH_2000) {
+        timeConfig.currentTime = EPOCH_2000;
+      }
+
+      DisplayUpdate update;
+      update.type = DisplayUpdate::TIME_UPDATE;
+      xQueueSend(displayQueue, & update, 0);
+
+      xSemaphoreGive(timeMutex);
+
+      Serial.printf("Time reset to: %ld (01/01/2000 00:00:00 UTC)\n", EPOCH_2000);
+    }
+
+    if (rtcAvailable) {
+      Serial.println("\nSaving time to RTC hardware...");
+
+      saveTimeToRTC();
+
+      delay(500);
+
+      DateTime rtcNow = rtc.now();
+      Serial.println("RTC Verification:");
+      Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+        rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
+        rtcNow.day(), rtcNow.month(), rtcNow.year());
+
+      bool rtcValid = (
+        rtcNow.year() >= 2000 && rtcNow.year() <= 2100 &&
+        rtcNow.month() >= 1 && rtcNow.month() <= 12 &&
+        rtcNow.day() >= 1 && rtcNow.day() <= 31
+      );
+
+      if (rtcValid) {
+        Serial.println("RTC saved successfully");
+        Serial.println("Time will persist across restarts");
+      } else {
+        Serial.println("RTC save FAILED - time is invalid");
+        Serial.println("Check RTC battery or I2C connection");
+      }
+    } else {
+      Serial.println("\nRTC not available - time will reset on restart");
+    }
+
+    Serial.println("Time reset complete");
+
+    updateCityDisplay();
+    WiFi.disconnect(true);
+
+    Serial.println("\n========================================");
+    Serial.println("FACTORY RESET COMPLETE");
+    Serial.println("Device will restart in 60 seconds...");
+    Serial.println("========================================\n");
     
-    server.on("/setbuzzertoggle", HTTP_POST, [](AsyncWebServerRequest *request) {
-      if (!request->hasParam("prayer", true) || !request->hasParam("enabled", true)) {
-        request->send(400, "text/plain", "Missing parameters");
-        return;
-      }
-      
-      String prayer = request->getParam("prayer", true)->value();
-      bool enabled = request->getParam("enabled", true)->value() == "true";
-      
-      if (prayer == "imsak") buzzerConfig.imsakEnabled = enabled;
-      else if (prayer == "subuh") buzzerConfig.subuhEnabled = enabled;
-      else if (prayer == "terbit") buzzerConfig.terbitEnabled = enabled;
-      else if (prayer == "zuhur") buzzerConfig.zuhurEnabled = enabled;
-      else if (prayer == "ashar") buzzerConfig.asharEnabled = enabled;
-      else if (prayer == "maghrib") buzzerConfig.maghribEnabled = enabled;
-      else if (prayer == "isya") buzzerConfig.isyaEnabled = enabled;
-      
-      saveBuzzerConfig();
-      request->send(200, "text/plain", "OK");
-    });
+    request->send(200, "text/plain", "OK");
+    
+    startCountdown("factory_reset", "Mulai ulang perangkat", 60);
+    xTaskCreate(
+      [](void* param) {
+          for (int i = 60; i > 0; i--) {
+              if (i == 60 || i == 20 || i == 10 || i <= 5) {
+                  Serial.printf("Factory reset restarting in %d seconds...\n", i);
+              }
+              vTaskDelay(pdMS_TO_TICKS(1000));
+          }
+              
+          Serial.println("Restarting NOW...");
+          Serial.flush();
+          delay(100);
+          
+          ESP.restart();
+          vTaskDelete(NULL);
+      },
+      "FactoryResetTask",
+      2048,
+      NULL,
+      1,
+      NULL
+    );
+  });
 
-    server.on("/setbuzzervolume", HTTP_POST, [](AsyncWebServerRequest *request) {
-      if (!request->hasParam("volume", true)) {
-        request->send(400, "text/plain", "Missing volume");
-        return;
-      }
-      
-      int volume = request->getParam("volume", true)->value().toInt();
-      if (volume < 0) volume = 0;
-      if (volume > 100) volume = 100;
-      
-      buzzerConfig.volume = volume;
-      saveBuzzerConfig();
+  // ========================================
+  // API DATA - REAL-TIME ENDPOINT
+  // ========================================
+  server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest * request) {
+    char timeStr[20], dateStr[20], dayStr[15];
 
-      request->send(200, "text/plain", "OK");
-    });
+    time_t now_t;
+    struct tm timeinfo;
 
-    // ========================================
-    // TAB RESET - FACTORY RESET
-    // ========================================
-    server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
-        Serial.println("\n========================================");
-        Serial.println("FACTORY RESET STARTED");
-        Serial.println("========================================");
-        
-        // Hapus semua file konfigurasi
-        if (LittleFS.exists("/wifi_creds.txt")) {
-            LittleFS.remove("/wifi_creds.txt");
-            Serial.println("WiFi creds deleted");
-        }
-        
-        if (LittleFS.exists("/prayer_times.txt")) {
-            LittleFS.remove("/prayer_times.txt");
-            Serial.println("Prayer times deleted");
-        }
+    if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      now_t = timeConfig.currentTime;
+      xSemaphoreGive(timeMutex);
+    } else {
+      time( & now_t);
+    }
 
-        if (LittleFS.exists("/ap_creds.txt")) {
-            LittleFS.remove("/ap_creds.txt");
-            Serial.println("AP creds deleted");
-        }
-        
-        if (LittleFS.exists("/city_selection.txt")) {
-            LittleFS.remove("/city_selection.txt");
-            Serial.println("City selection deleted");
-        }
+    localtime_r( & now_t, & timeinfo);
 
-        if (LittleFS.exists("/method_selection.txt")) {
-            LittleFS.remove("/method_selection.txt");
-            Serial.println("Method selection deleted");
-        }
+    sprintf(timeStr, "%02d:%02d:%02d",
+      timeinfo.tm_hour,
+      timeinfo.tm_min,
+      timeinfo.tm_sec);
 
-        if (LittleFS.exists("/timezone.txt")) {
-            LittleFS.remove("/timezone.txt");
-            Serial.println("Timezone config deleted");
-        }
+    sprintf(dateStr, "%02d/%02d/%04d",
+      timeinfo.tm_mday,
+      timeinfo.tm_mon + 1,
+      timeinfo.tm_year + 1900);
 
-        if (LittleFS.exists("/buzzer_config.txt")) {
-            LittleFS.remove("/buzzer_config.txt");
-            Serial.println("Buzzer config deleted");
-        }
+    const char * dayNames[] = {
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday"
+    };
+    strcpy(dayStr, dayNames[timeinfo.tm_wday]);
 
-        if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
-            methodConfig.methodId = 5;
-            methodConfig.methodName = "Egyptian General Authority of Survey";
-            
-            wifiConfig.routerSSID = "";
-            wifiConfig.routerPassword = "";
-            wifiConfig.isConnected = false;
-            
-            prayerConfig.imsakTime = "";
-            prayerConfig.subuhTime = "";
-            prayerConfig.terbitTime = "";
-            prayerConfig.zuhurTime = "";
-            prayerConfig.asharTime = "";
-            prayerConfig.maghribTime = "";
-            prayerConfig.isyaTime = "";
-            prayerConfig.selectedCity = "";
-            prayerConfig.selectedCityName = "";
-            prayerConfig.latitude = "";
-            prayerConfig.longitude = "";
-            
-            strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
-            strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
-            wifiConfig.apIP = IPAddress(192, 168, 4, 1);
-            wifiConfig.apGateway = IPAddress(192, 168, 4, 1);
-            wifiConfig.apSubnet = IPAddress(255, 255, 255, 0);
-            WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
-            
-            xSemaphoreGive(settingsMutex);
-        }
+    bool isWiFiConnected = (WiFi.status() == WL_CONNECTED && wifiConfig.isConnected);
 
-        timezoneOffset = 7;
-        Serial.println("Settings reset to default");
+    char jsonBuffer[1024];
+    snprintf(jsonBuffer, sizeof(jsonBuffer),
+      "{"
+      "\"time\":\"%s\","
+      "\"date\":\"%s\","
+      "\"day\":\"%s\","
+      "\"timestamp\":%lu,"
+      "\"prayerTimes\":{"
+      "\"imsak\":\"%s\","
+      "\"subuh\":\"%s\","
+      "\"terbit\":\"%s\","
+      "\"zuhur\":\"%s\","
+      "\"ashar\":\"%s\","
+      "\"maghrib\":\"%s\","
+      "\"isya\":\"%s\""
+      "},"
+      "\"location\":{"
+      "\"city\":\"%s\","
+      "\"cityId\":\"%s\","
+      "\"displayName\":\"%s\","
+      "\"latitude\":\"%s\","
+      "\"longitude\":\"%s\""
+      "},"
+      "\"device\":{"
+      "\"wifiConnected\":%s,"
+      "\"apIP\":\"%s\","
+      "\"ntpSynced\":%s,"
+      "\"ntpServer\":\"%s\","
+      "\"freeHeap\":%d,"
+      "\"uptime\":%lu"
+      "}"
+      "}",
+      timeStr, dateStr, dayStr, (unsigned long) now_t,
+      prayerConfig.imsakTime.c_str(),
+      prayerConfig.subuhTime.c_str(),
+      prayerConfig.terbitTime.c_str(),
+      prayerConfig.zuhurTime.c_str(),
+      prayerConfig.asharTime.c_str(),
+      prayerConfig.maghribTime.c_str(),
+      prayerConfig.isyaTime.c_str(),
+      prayerConfig.selectedCity.c_str(),
+      prayerConfig.selectedCity.c_str(),
+      prayerConfig.selectedCityName.c_str(),
+      prayerConfig.latitude.c_str(),
+      prayerConfig.longitude.c_str(),
+      isWiFiConnected ? "true" : "false",
+      WiFi.softAPIP().toString().c_str(),
+      timeConfig.ntpSynced ? "true" : "false",
+      timeConfig.ntpServer.c_str(),
+      ESP.getFreeHeap(),
+      millis() / 1000
+    );
 
-        Serial.println("\nResetting time to 00:00:00 01/01/2000...");
-        
-        if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-            const time_t EPOCH_2000 = 946684800;
-            setTime(0, 0, 0, 1, 1, 2000);
-            timeConfig.currentTime = EPOCH_2000;  // Force hardcoded UTC
-            timeConfig.ntpSynced = false;
-            timeConfig.ntpServer = "";
-            
-            // Safety check
-            if (timeConfig.currentTime < EPOCH_2000) {
-                timeConfig.currentTime = EPOCH_2000;
-            }
-            
-            DisplayUpdate update;
-            update.type = DisplayUpdate::TIME_UPDATE;
-            xQueueSend(displayQueue, &update, 0);
-            
-            xSemaphoreGive(timeMutex);
-            
-            Serial.printf("Time reset to: %ld (01/01/2000 00:00:00 UTC)\n", EPOCH_2000);
-        }
-        
-        if (rtcAvailable) {
-            Serial.println("\nSaving time to RTC hardware...");
-            
-            saveTimeToRTC();
-            
-            delay(500);
-            
-            DateTime rtcNow = rtc.now();
-            Serial.println("RTC Verification:");
-            Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
-                        rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
-                        rtcNow.day(), rtcNow.month(), rtcNow.year());
-            
-            bool rtcValid = (
-                rtcNow.year() >= 2000 && rtcNow.year() <= 2100 &&
-                rtcNow.month() >= 1 && rtcNow.month() <= 12 &&
-                rtcNow.day() >= 1 && rtcNow.day() <= 31
-            );
-            
-            if (rtcValid) {
-                Serial.println("RTC saved successfully");
-                Serial.println("Time will persist across restarts");
-            } else {
-                Serial.println("RTC save FAILED - time is invalid");
-                Serial.println("Check RTC battery or I2C connection");
-            }
-        } else {
-            Serial.println("\nRTC not available - time will reset on restart");
-        }
-        
-        Serial.println("Time reset complete");
-        
-        updateCityDisplay();
-        WiFi.disconnect(true);
-        
-        Serial.println("\n========================================");
-        Serial.println("FACTORY RESET COMPLETE");
-        Serial.println("Device will restart in 60 seconds...");
-        Serial.println("========================================\n");
-        
-        request->send(200, "text/plain", "OK");
-        
-        xTaskCreate(
-            [](void* param) {
-                for (int i = 60; i > 0; i--) {
-                    if (i == 60 || i == 20 || i == 10 || i <= 5) {
-                        Serial.printf("Factory reset restarting in %d seconds...\n", i);
-                    }
-                    vTaskDelay(pdMS_TO_TICKS(1000));
-                }
-                    
-                Serial.println("Restarting NOW...");
-                Serial.flush();
-                delay(100);
-                
-                ESP.restart();
-                vTaskDelete(NULL);
-            },
-            "FactoryResetTask",
-            2048,
-            NULL,
-            1,
-            NULL
-        );
-    });
+    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", jsonBuffer);
+    resp -> addHeader("Cache-Control", "no-cache");
+    resp -> addHeader("Content-Length", String(strlen(jsonBuffer)));
+    request -> send(resp);
+  });
 
-    // ========================================
-    // API DATA - REAL-TIME ENDPOINT
-    // ========================================
-    server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request) {
-        char timeStr[20], dateStr[20], dayStr[15];
-        
-        time_t now_t;
-        struct tm timeinfo;
-        
-        if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            now_t = timeConfig.currentTime;
-            xSemaphoreGive(timeMutex);
-        } else {
-            time(&now_t);
-        }
-        
-        localtime_r(&now_t, &timeinfo);
-        
-        sprintf(timeStr, "%02d:%02d:%02d",
-                timeinfo.tm_hour,
-                timeinfo.tm_min,
-                timeinfo.tm_sec);
+  // ========================================
+  // COUNTDOWN STATUS API
+  // ========================================
+  server.on("/api/countdown", HTTP_GET, [](AsyncWebServerRequest * request) {
+    String json = "{";
 
-        sprintf(dateStr, "%02d/%02d/%04d",
-                timeinfo.tm_mday,
-                timeinfo.tm_mon + 1,
-                timeinfo.tm_year + 1900);
+    if (countdownMutex != NULL && xSemaphoreTake(countdownMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      int remaining = getRemainingSeconds();
 
-        const char *dayNames[] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
-        strcpy(dayStr, dayNames[timeinfo.tm_wday]);
+      json += "\"active\":" + String(countdownState.isActive ? "true" : "false") + ",";
+      json += "\"remaining\":" + String(remaining) + ",";
+      json += "\"total\":" + String(countdownState.totalSeconds) + ",";
+      json += "\"message\":\"" + countdownState.message + "\",";
+      json += "\"reason\":\"" + countdownState.reason + "\"";
 
-        bool isWiFiConnected = (WiFi.status() == WL_CONNECTED && wifiConfig.isConnected);
-        
-        char jsonBuffer[1024];
-        snprintf(jsonBuffer, sizeof(jsonBuffer),
-            "{"
-            "\"time\":\"%s\","
-            "\"date\":\"%s\","
-            "\"day\":\"%s\","
-            "\"timestamp\":%lu,"
-            "\"prayerTimes\":{"
-                "\"imsak\":\"%s\","
-                "\"subuh\":\"%s\","
-                "\"terbit\":\"%s\","
-                "\"zuhur\":\"%s\","
-                "\"ashar\":\"%s\","
-                "\"maghrib\":\"%s\","
-                "\"isya\":\"%s\""
-            "},"
-            "\"location\":{"
-                "\"city\":\"%s\","
-                "\"cityId\":\"%s\","
-                "\"displayName\":\"%s\","
-                "\"latitude\":\"%s\","
-                "\"longitude\":\"%s\""
-            "},"
-            "\"device\":{"
-                "\"wifiConnected\":%s,"
-                "\"apIP\":\"%s\","
-                "\"ntpSynced\":%s,"
-                "\"ntpServer\":\"%s\","
-                "\"freeHeap\":%d,"
-                "\"uptime\":%lu"
-            "}"
-            "}",
-            timeStr, dateStr, dayStr, (unsigned long)now_t,
-            prayerConfig.imsakTime.c_str(),
-            prayerConfig.subuhTime.c_str(),
-            prayerConfig.terbitTime.c_str(),
-            prayerConfig.zuhurTime.c_str(),
-            prayerConfig.asharTime.c_str(),
-            prayerConfig.maghribTime.c_str(),
-            prayerConfig.isyaTime.c_str(),
-            prayerConfig.selectedCity.c_str(),
-            prayerConfig.selectedCity.c_str(),
-            prayerConfig.selectedCityName.c_str(),
-            prayerConfig.latitude.c_str(),
-            prayerConfig.longitude.c_str(),
-            isWiFiConnected ? "true" : "false",
-            WiFi.softAPIP().toString().c_str(),
-            timeConfig.ntpSynced ? "true" : "false",
-            timeConfig.ntpServer.c_str(),
-            ESP.getFreeHeap(),
-            millis() / 1000
-        );
+      xSemaphoreGive(countdownMutex);
+    } else {
+      json += "\"active\":false,";
+      json += "\"remaining\":0,";
+      json += "\"total\":0,";
+      json += "\"message\":\"\",";
+      json += "\"reason\":\"\"";
+    }
 
-        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", jsonBuffer);
-        resp->addHeader("Cache-Control", "no-cache");
-        resp->addHeader("Content-Length", String(strlen(jsonBuffer)));
-        request->send(resp);
-    });
+    json += "}";
 
-    // ========================================
-    // ERROR PAGES - 404 HANDLER
-    // ========================================
-    server.on("/notfound", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String html = "<!DOCTYPE html><html><head>";
-        html += "<meta charset='UTF-8'>";
-        html += "<meta name='viewport' content='width=device-width,initial-scale=1.0'>";
-        html += "<title>404 - Not Found</title>";
-        html += "<style>";
-        html += "body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}";
-        html += ".container{max-width:500px;margin:20px;background:white;padding:50px 40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}";
-        html += ".error-code{font-size:120px;font-weight:800;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0;line-height:1}";
-        html += "h2{color:#333;font-size:28px;margin:20px 0 10px;font-weight:600}";
-        html += "p{color:#666;font-size:16px;line-height:1.6;margin:20px 0 30px}";
-        html += ".btn{display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;text-decoration:none;border-radius:50px;font-weight:600;font-size:16px;transition:all 0.3s;box-shadow:0 4px 15px rgba(102,126,234,0.4)}";
-        html += ".btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(102,126,234,0.6)}";
-        html += ".icon{font-size:80px;margin-bottom:20px}";
-        html += "</style></head><body>";
-        html += "<div class='container'>";
-        html += "<div class='icon'>ðŸ”</div>";
-        html += "<div class='error-code'>404</div>";
-        html += "<h2>Page Not Found</h2>";
-        html += "<p>The page you're looking for doesn't exist or you don't have permission to access it. Please return to the home page.</p>";
-        html += "<a href='/' class='btn'>â† Back to Home</a>";
-        html += "</div></body></html>";
+    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
+    resp -> addHeader("Cache-Control", "no-cache");
+    request -> send(resp);
+  });
 
-        request->send(404, "text/html", html);
-    });
+  // ========================================
+  // ERROR PAGES - 404 HANDLER
+  // ========================================
+  server.on("/notfound", HTTP_GET, [](AsyncWebServerRequest * request) {
+    String html = "<!DOCTYPE html><html><head>";
+    html += "<meta charset='UTF-8'>";
+    html += "<meta name='viewport' content='width=device-width,initial-scale=1.0'>";
+    html += "<title>404 - Not Found</title>";
+    html += "<style>";
+    html += "body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}";
+    html += ".container{max-width:500px;margin:20px;background:white;padding:50px 40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}";
+    html += ".error-code{font-size:120px;font-weight:800;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0;line-height:1}";
+    html += "h2{color:#333;font-size:28px;margin:20px 0 10px;font-weight:600}";
+    html += "p{color:#666;font-size:16px;line-height:1.6;margin:20px 0 30px}";
+    html += ".btn{display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;text-decoration:none;border-radius:50px;font-weight:600;font-size:16px;transition:all 0.3s;box-shadow:0 4px 15px rgba(102,126,234,0.4)}";
+    html += ".btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(102,126,234,0.6)}";
+    html += ".icon{font-size:80px;margin-bottom:20px}";
+    html += "</style></head><body>";
+    html += "<div class='container'>";
+    html += "<div class='icon'>ðŸ”</div>";
+    html += "<div class='error-code'>404</div>";
+    html += "<h2>Page Not Found</h2>";
+    html += "<p>The page you're looking for doesn't exist or you don't have permission to access it. Please return to the home page.</p>";
+    html += "<a href='/' class='btn'>â† Back to Home</a>";
+    html += "</div></body></html>";
 
-    server.onNotFound([](AsyncWebServerRequest *request) {
-        String url = request->url();
-        IPAddress clientIP = request->client()->remoteIP();
+    request -> send(404, "text/html", html);
+  });
 
-        Serial.printf("\n[404] Client: %s | URL: %s\n",
-                      clientIP.toString().c_str(), url.c_str());
+  server.onNotFound([](AsyncWebServerRequest * request) {
+    String url = request -> url();
+    IPAddress clientIP = request -> client() -> remoteIP();
 
-        if (url.startsWith("/assets/") || url.endsWith(".css") || url.endsWith(".js") || 
-            url.endsWith(".png") || url.endsWith(".jpg") || url.endsWith(".jpeg") || 
-            url.endsWith(".gif") || url.endsWith(".ico") || url.endsWith(".svg") || 
-            url.endsWith(".woff") || url.endsWith(".woff2") || url.endsWith(".ttf")) {
+    Serial.printf("\n[404] Client: %s | URL: %s\n",
+      clientIP.toString().c_str(), url.c_str());
 
-            request->send(404, "text/plain", "File not found");
-            return;
-        }
+    if (url.startsWith("/assets/") || url.endsWith(".css") || url.endsWith(".js") ||
+      url.endsWith(".png") || url.endsWith(".jpg") || url.endsWith(".jpeg") ||
+      url.endsWith(".gif") || url.endsWith(".ico") || url.endsWith(".svg") ||
+      url.endsWith(".woff") || url.endsWith(".woff2") || url.endsWith(".ttf")) {
 
-        Serial.println("Invalid URL, redirecting to /notfound");
-        request->redirect("/notfound");
-    });
+      request -> send(404, "text/plain", "File not found");
+      return;
+    }
+
+    Serial.println("Invalid URL, redirecting to /notfound");
+    request -> redirect("/notfound");
+  });
 }
 
 // ============================================
@@ -4152,27 +4258,9 @@ void restartWiFiTask(void *parameter) {
     vTaskDelete(NULL);
 }
 
+// ============================================
+// WiFi & AP Restart Tasks
 void restartAPTask(void *parameter) {
-    // ============================================
-    // DEBOUNCING CHECK
-    // ============================================
-    unsigned long now = millis();
-    if (now - lastAPRestartRequest < RESTART_DEBOUNCE_MS) {
-        unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastAPRestartRequest);
-        
-        Serial.println("\n========================================");
-        Serial.println("AP RESTART REQUEST REJECTED");
-        Serial.println("========================================");
-        Serial.println("Reason: Too fast (debouncing active)");
-        Serial.printf("Wait time: %lu ms\n", waitTime);
-        Serial.println("========================================\n");
-        
-        vTaskDelete(NULL);
-        return;
-    }
-    
-    lastAPRestartRequest = now;
-    
     // ============================================
     // LOCK - PREVENT CONCURRENT RESTARTS
     // ============================================
@@ -4212,6 +4300,27 @@ void restartAPTask(void *parameter) {
     
     apRestartInProgress = true;
     
+    // ============================================
+    // COUNTDOWN DI SINI (SETELAH LOCK BERHASIL)
+    // ============================================
+    Serial.println("\n========================================");
+    Serial.println("STARTING COUNTDOWN - AP RESTART");
+    Serial.println("========================================");
+    
+    startCountdown("ap_restart", "Mulai konfigurasi Access Point", 60);
+    
+    Serial.println("Countdown started: 60 seconds");
+    Serial.println("Reason: ap_restart");
+    Serial.println("Message: Mulai konfigurasi Access Point");
+    Serial.println("========================================\n");
+    
+    // ============================================
+    // DELAY 2 DETIK - BIARKAN WEB DETECT COUNTDOWN
+    // ============================================
+    Serial.println("Waiting 2 seconds before AP restart...");
+    Serial.println("Purpose: Allow web polling to detect countdown");
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    
     Serial.println("\n========================================");
     Serial.println("SAFE AP RESTART SEQUENCE STARTED");
     Serial.println("========================================");
@@ -4220,8 +4329,6 @@ void restartAPTask(void *parameter) {
     Serial.println("Strategy: 30-second blackout before new SSID");
     Serial.println("Reason: Ensure complete client disconnection");
     Serial.println("========================================\n");
-    
-    vTaskDelay(pdMS_TO_TICKS(2000));
     
     // ============================================
     // SAVE CURRENT AP CREDENTIALS & SETTINGS
@@ -4345,10 +4452,9 @@ void restartAPTask(void *parameter) {
     Serial.println("========================================\n");
     
     // COUNTDOWN DENGAN PROGRESS DETAIL
-    for (int i = 60; i > 0; i--) {
+    for (int i = 30; i > 0; i--) {
         // Log setiap 5 detik, plus detik terakhir
-        if (i == 60 || i % 5 == 0 || i <= 3) {
-            Serial.println("â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€");
+        if (i == 30 || i % 5 == 0 || i <= 3) {
             Serial.printf("Blackout countdown: %d seconds remaining\n", i);
             Serial.println("   Status: AP still OFFLINE");
             Serial.println("   Old SSID: \"" + oldSSID + "\" (disabled)");
@@ -4370,7 +4476,7 @@ void restartAPTask(void *parameter) {
                 Serial.println("   Clients: 0 (all disconnected)");
             }
             
-            Serial.println("â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\n");
+            Serial.println("");
         }
         
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -4447,7 +4553,7 @@ void restartAPTask(void *parameter) {
         Serial.println("Password: " + String(strlen(savedPassword) > 0 ? "Protected" : "Open"));
         Serial.println("");
         Serial.println("Network Configuration:");
-        Serial.println("   AP IP: " + newAPIP.toString() + (ipMatches ? " âœ“" : " MISMATCH"));
+        Serial.println("   AP IP: " + newAPIP.toString() + (ipMatches ? " ✓" : " ✗ MISMATCH"));
         Serial.println("   Gateway: " + savedGateway.toString());
         Serial.println("   Subnet: " + savedSubnet.toString());
         Serial.println("   MAC: " + WiFi.softAPmacAddress());
