@@ -1799,6 +1799,12 @@
 							btn.disabled = false;
 							btn.textContent = originalText;
 						}, 6000);
+						setTimeout(() => {
+							showToast('Halaman akan di muat ulang otomatis...', 'warning');
+							setTimeout(() => {
+								window.location.reload();
+							}, 2000);
+						}, 18000);
 					} else {
 						return response.text().then(text => { throw new Error(text); });
 					}
