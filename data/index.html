@@ -1985,10 +1985,6 @@
 						setTimeout(() => loadWiFiConfig(), 1000);
 
 						setTimeout(() => {
-							showToast(`Sambungkan ke ${networkMsg} untuk mengakses`, 'warning');
-						}, 3500);
-
-						setTimeout(() => {
 							btn.disabled = false;
 							btn.textContent = originalText;
 						}, 6000);
