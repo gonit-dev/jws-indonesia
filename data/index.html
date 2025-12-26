@@ -2122,13 +2122,14 @@
 					setTimeout(() => loadWiFiConfig(), 1000);
 
 					setTimeout(() => {
-						startCountdownPolling();
-					}, 500);
-
-					setTimeout(() => {
 						btn.disabled = false;
 						btn.textContent = originalText;
-					}, 3000);
+					}, 6000);
+
+					setTimeout(() => {
+						startCountdownPolling();
+					}, 7000);
+
 				} else {
 					return response.text().then(text => { throw new Error(text); });
 				}
@@ -2181,13 +2182,13 @@
 					setTimeout(() => loadWiFiConfig(), 1000);
 
 					setTimeout(() => {
-						startCountdownPolling();
-					}, 500);
-
-					setTimeout(() => {
 						btn.disabled = false;
 						btn.textContent = originalText;
-					}, 3000);
+					}, 6000);
+
+					setTimeout(() => {
+						startCountdownPolling();
+					}, 7000);
 				} else {
 					return response.text().then(text => { throw new Error(text); });
 				}
