@@ -1697,20 +1697,9 @@ void setupServerRoutes() {
             return;
         }
 
-        // ============================================
-        // DETECT WHAT CHANGED
-        // ============================================
-        bool ssidChanged = false;
-        bool passwordChanged = false;
-        bool ipChanged = false;
-        
-        if (String(wifiConfig.apSSID) != ssid) {
-            ssidChanged = true;
-        }
-        
-        if (String(wifiConfig.apPassword) != pass) {
-            passwordChanged = true;
-        }
+        Serial.println("\n========================================");
+        Serial.println("SIMPAN AP CONFIGURATION");
+        Serial.println("========================================");
 
         // ============================================
         // LOAD IP SETTINGS (ALWAYS)
@@ -1725,11 +1714,13 @@ void setupServerRoutes() {
             
             IPAddress tempIP;
             if (tempIP.fromString(ipStr)) {
-                if (tempIP != wifiConfig.apIP) {
-                    ipChanged = true;
-                }
                 newAPIP = tempIP;
+                Serial.println("New IP: " + newAPIP.toString());
+            } else {
+                Serial.println("Invalid IP format, keeping: " + newAPIP.toString());
             }
+        } else {
+            Serial.println("No IP param, keeping: " + newAPIP.toString());
         }
         
         if (request->hasParam("gateway", true)) {
@@ -1738,11 +1729,13 @@ void setupServerRoutes() {
             
             IPAddress tempGW;
             if (tempGW.fromString(gwStr)) {
-                if (tempGW != wifiConfig.apGateway) {
-                    ipChanged = true;
-                }
                 newGateway = tempGW;
+                Serial.println("New Gateway: " + newGateway.toString());
+            } else {
+                Serial.println("Invalid Gateway, keeping: " + newGateway.toString());
             }
+        } else {
+            Serial.println("No Gateway param, keeping: " + newGateway.toString());
         }
         
         if (request->hasParam("subnet", true)) {
@@ -1751,52 +1744,16 @@ void setupServerRoutes() {
             
             IPAddress tempSN;
             if (tempSN.fromString(snStr)) {
-                if (tempSN != wifiConfig.apSubnet) {
-                    ipChanged = true;
-                }
                 newSubnet = tempSN;
+                Serial.println("New Subnet: " + newSubnet.toString());
+            } else {
+                Serial.println("Invalid Subnet, keeping: " + newSubnet.toString());
             }
+        } else {
+            Serial.println("No Subnet param, keeping: " + newSubnet.toString());
         }
 
-        // ============================================
-        // LOG CHANGES
-        // ============================================
-        Serial.println("\n========================================");
-        Serial.println("AP CONFIGURATION CHANGE DETECTED");
         Serial.println("========================================");
-        
-        if (ssidChanged) {
-            Serial.println("SSID changed:");
-            Serial.println("   Old: " + String(wifiConfig.apSSID));
-            Serial.println("   New: " + ssid);
-        }
-        
-        if (passwordChanged) {
-            Serial.println("Password changed");
-        }
-        
-        if (ipChanged) {
-            Serial.println("Network config changed:");
-            Serial.println("   Old IP: " + wifiConfig.apIP.toString());
-            Serial.println("   New IP: " + newAPIP.toString());
-            Serial.println("   Old GW: " + wifiConfig.apGateway.toString());
-            Serial.println("   New GW: " + newGateway.toString());
-            Serial.println("   Old SN: " + wifiConfig.apSubnet.toString());
-            Serial.println("   New SN: " + newSubnet.toString());
-        }
-        
-        if (!ssidChanged && !passwordChanged && !ipChanged) {
-            Serial.println("⚠ WARNING: No changes detected");
-            Serial.println("   Request will be processed but AP won't restart");
-            Serial.println("========================================\n");
-            request->send(200, "text/plain", "No changes detected");
-            return;
-        }
-        
-        Serial.println("");
-        Serial.println("Action: AP will restart with new settings");
-        Serial.println("Effect: ALL clients will be disconnected");
-        Serial.println("========================================\n");
 
         // ============================================
         // SAVE TO CONFIG (ALWAYS)
@@ -1809,22 +1766,17 @@ void setupServerRoutes() {
         
         saveAPCredentials();
 
-        Serial.println("New configuration saved to LittleFS");
-        Serial.println("Triggering AP restart task...");
+        Serial.println("SAVED CONFIG:");
+        Serial.println("  SSID: " + String(wifiConfig.apSSID));
+        Serial.println("  IP: " + newAPIP.toString());
+        Serial.println("========================================\n");
 
         request->send(200, "text/plain", "OK");
 
         // ============================================
-        // ALWAYS TRIGGER RESTART (FIX!)
+        // ALWAYS TRIGGER AP RESTART
         // ============================================
-        xTaskCreate(
-            restartAPTask, 
-            "APRestart", 
-            4096, 
-            NULL, 
-            1, 
-            NULL
-        );
+        xTaskCreate(restartAPTask, "APRestart", 4096, NULL, 1, NULL);
     });
 
     // ========================================
@@ -4396,7 +4348,7 @@ void restartAPTask(void *parameter) {
         Serial.println("Password: " + String(strlen(savedPassword) > 0 ? "Protected" : "Open"));
         Serial.println("");
         Serial.println("Network Configuration:");
-        Serial.println("   AP IP: " + newAPIP.toString() + (ipMatches ? " ✓" : " ⚠ MISMATCH"));
+        Serial.println("   AP IP: " + newAPIP.toString() + (ipMatches ? " ✓" : " MISMATCH"));
         Serial.println("   Gateway: " + savedGateway.toString());
         Serial.println("   Subnet: " + savedSubnet.toString());
         Serial.println("   MAC: " + WiFi.softAPmacAddress());
