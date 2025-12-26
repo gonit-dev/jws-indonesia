@@ -1455,7 +1455,7 @@ void saveTimeToRTC() {
 // ============================================
 void setupServerRoutes() {
     // ========================================
-    // 1. HALAMAN UTAMA & ASSETS
+    // HALAMAN UTAMA & ASSETS
     // ========================================
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (!LittleFS.exists("/index.html")) {
@@ -1491,7 +1491,7 @@ void setupServerRoutes() {
 
 
     // ========================================
-    // 2. TAB BERANDA - DEVICE STATUS
+    // TAB BERANDA - DEVICE STATUS
     // ========================================
     server.on("/devicestatus", HTTP_GET, [](AsyncWebServerRequest *request) {
         char timeStr[20];
@@ -1568,7 +1568,7 @@ void setupServerRoutes() {
     });
 
     // ========================================
-    // 3. TAB WIFI - ROUTER & AP CONFIG
+    // TAB WIFI - ROUTER & AP CONFIG
     // ========================================
     server.on("/getwificonfig", HTTP_GET, [](AsyncWebServerRequest *request) {
       String json = "{";
@@ -1779,8 +1779,41 @@ void setupServerRoutes() {
         xTaskCreate(restartAPTask, "APRestart", 4096, NULL, 1, NULL);
     });
 
+    server.on("/api/connection-type", HTTP_GET, [](AsyncWebServerRequest *request) {
+        IPAddress clientIP = request->client()->remoteIP();
+        IPAddress apIP = WiFi.softAPIP();
+        IPAddress apSubnet = WiFi.softAPSubnetMask();
+        
+        IPAddress apNetwork(
+            apIP[0] & apSubnet[0],
+            apIP[1] & apSubnet[1],
+            apIP[2] & apSubnet[2],
+            apIP[3] & apSubnet[3]
+        );
+        
+        IPAddress clientNetwork(
+            clientIP[0] & apSubnet[0],
+            clientIP[1] & apSubnet[1],
+            clientIP[2] & apSubnet[2],
+            clientIP[3] & apSubnet[3]
+        );
+        
+        bool isLocalAP = (apNetwork == clientNetwork);
+        
+        String json = "{";
+        json += "\"isLocalAP\":" + String(isLocalAP ? "true" : "false") + ",";
+        json += "\"clientIP\":\"" + clientIP.toString() + "\",";
+        json += "\"apIP\":\"" + apIP.toString() + "\",";
+        json += "\"apSubnet\":\"" + apSubnet.toString() + "\"";
+        json += "}";
+        
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+        resp->addHeader("Cache-Control", "no-cache");
+        request->send(resp);
+    });
+
     // ========================================
-    // 4. TAB WAKTU - TIME SYNC & TIMEZONE
+    // TAB WAKTU - TIME SYNC & TIMEZONE
     // ========================================
     server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (request->hasParam("y", true) && 
@@ -1976,7 +2009,7 @@ void setupServerRoutes() {
     });
 
     // ========================================
-    // 5. TAB LOKASI - CITY & METHOD
+    // TAB LOKASI - CITY & METHOD
     // ========================================
     server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (!LittleFS.exists("/cities.json")) {
@@ -2330,7 +2363,7 @@ void setupServerRoutes() {
     });
 
     // ========================================
-    // 6. TAB JADWAL - PRAYER TIMES & BUZZER
+    // TAB JADWAL - PRAYER TIMES & BUZZER
     // ========================================
     server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest *request) {
         String json = "{";
@@ -2403,7 +2436,7 @@ void setupServerRoutes() {
     });
 
     // ========================================
-    // 7. TAB RESET - FACTORY RESET
+    // TAB RESET - FACTORY RESET
     // ========================================
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
         Serial.println("\n========================================");
@@ -2564,7 +2597,7 @@ void setupServerRoutes() {
     });
 
     // ========================================
-    // 8. API DATA - REAL-TIME ENDPOINT
+    // API DATA - REAL-TIME ENDPOINT
     // ========================================
     server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request) {
         char timeStr[20], dateStr[20], dayStr[15];
@@ -2656,7 +2689,7 @@ void setupServerRoutes() {
     });
 
     // ========================================
-    // 9. ERROR PAGES - 404 HANDLER
+    // ERROR PAGES - 404 HANDLER
     // ========================================
     server.on("/notfound", HTTP_GET, [](AsyncWebServerRequest *request) {
         String html = "<!DOCTYPE html><html><head>";
