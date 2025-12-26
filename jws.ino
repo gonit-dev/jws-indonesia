@@ -1564,7 +1564,7 @@ void setupServerRoutes() {
 
         request->send(200, "text/plain", "OK");
 
-        scheduleRestart(5);
+        scheduleRestart(60);
     });
 
     // ========================================
@@ -1617,7 +1617,7 @@ void setupServerRoutes() {
         if (now - lastWiFiRestartRequest < RESTART_DEBOUNCE_MS) {
             unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastWiFiRestartRequest);
             
-            String msg = "⏳ Please wait " + 
+            String msg = "Please wait " + 
                         String(waitTime / 1000) + 
                         " seconds before next WiFi restart";
             
@@ -1677,7 +1677,7 @@ void setupServerRoutes() {
         unsigned long now = millis();
         if (now - lastAPRestartRequest < RESTART_DEBOUNCE_MS) {
             unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastAPRestartRequest);
-            request->send(429, "text/plain", "⏳ Please wait " + String(waitTime / 1000) + " seconds");
+            request->send(429, "text/plain", "Please wait " + String(waitTime / 1000) + " seconds");
             return;
         }
         
@@ -2579,8 +2579,13 @@ void setupServerRoutes() {
         
         xTaskCreate(
             [](void* param) {
-                vTaskDelay(pdMS_TO_TICKS(3000)); // 3 detik delay
-                
+                for (int i = 60; i > 0; i--) {
+                    if (i == 60 || i == 20 || i == 10 || i <= 5) {
+                        Serial.printf("Factory reset restarting in %d seconds...\n", i);
+                    }
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+                }
+                    
                 Serial.println("Restarting NOW...");
                 Serial.flush();
                 delay(100);
@@ -3187,7 +3192,7 @@ void wifiTask(void *parameter) {
             // Monitoring log setiap 60 detik
             if (millis() - lastMonitor > 60000) {
                 lastMonitor = millis();
-                Serial.printf("📊 WiFi: Connected | RSSI: %d dBm | IP: %s\n",
+                Serial.printf("WiFi: Connected | RSSI: %d dBm | IP: %s\n",
                             WiFi.RSSI(),
                             WiFi.localIP().toString().c_str());
             }
@@ -4212,7 +4217,8 @@ void restartAPTask(void *parameter) {
     Serial.println("========================================");
     Serial.println("Protection: Debouncing + Mutex Lock Active");
     Serial.println("Mode: FORCE DISCONNECT ALL CLIENTS");
-    Serial.println("Reason: IP/SSID/Password changed");
+    Serial.println("Strategy: 30-second blackout before new SSID");
+    Serial.println("Reason: Ensure complete client disconnection");
     Serial.println("========================================\n");
     
     vTaskDelay(pdMS_TO_TICKS(2000));
@@ -4228,6 +4234,12 @@ void restartAPTask(void *parameter) {
     IPAddress savedGateway;
     IPAddress savedSubnet;
     
+    // SIMPAN SSID LAMA UNTUK LOGGING
+    String oldSSID = WiFi.softAPSSID();
+    if (oldSSID.length() == 0 || oldSSID == "null") {
+        oldSSID = String(wifiConfig.apSSID);
+    }
+    
     if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
         strncpy(savedSSID, wifiConfig.apSSID, sizeof(savedSSID));
         strncpy(savedPassword, wifiConfig.apPassword, sizeof(savedPassword));
@@ -4238,9 +4250,11 @@ void restartAPTask(void *parameter) {
         xSemaphoreGive(settingsMutex);
         
         Serial.println("   AP Configuration loaded:");
-        Serial.println("   SSID: " + String(savedSSID));
+        Serial.println("   OLD SSID: " + oldSSID);
+        Serial.println("   NEW SSID: " + String(savedSSID));
         Serial.println("   Password length: " + String(strlen(savedPassword)));
-        Serial.println("   IP: " + savedAPIP.toString());
+        Serial.println("   OLD IP: " + WiFi.softAPIP().toString());
+        Serial.println("   NEW IP: " + savedAPIP.toString());
         Serial.println("   Gateway: " + savedGateway.toString());
         Serial.println("   Subnet: " + savedSubnet.toString());
     } else {
@@ -4255,7 +4269,7 @@ void restartAPTask(void *parameter) {
     }
     
     // ============================================
-    // FORCE DISCONNECT ALL AP CLIENTS - IMPROVED
+    // FORCE DISCONNECT ALL AP CLIENTS
     // ============================================
     Serial.println("\n========================================");
     Serial.println("FORCE DISCONNECTING ALL AP CLIENTS");
@@ -4268,14 +4282,14 @@ void restartAPTask(void *parameter) {
     Serial.printf("Clients connected before: %d\n", clientsBefore);
     
     if (clientsBefore > 0) {
-        Serial.println("\nStep 1/4: Sending deauth frames (most effective)...");
+        Serial.println("\nStep 1/3: Sending deauth frames (most effective)...");
         esp_wifi_deauth_sta(0);
         vTaskDelay(pdMS_TO_TICKS(1000));
         
         int afterDeauth = WiFi.softAPgetStationNum();
         Serial.printf("   After deauth: %d clients\n", afterDeauth);
         
-        Serial.println("\nStep 2/4: Soft AP disconnect with erase...");
+        Serial.println("\nStep 2/3: Soft AP disconnect with erase...");
         WiFi.softAPdisconnect(true);
         vTaskDelay(pdMS_TO_TICKS(1500));
         
@@ -4283,7 +4297,7 @@ void restartAPTask(void *parameter) {
         Serial.printf("   After soft disconnect: %d clients\n", afterSoftDisconnect);
         
         if (afterSoftDisconnect > 0) {
-            Serial.println("\nStep 3/4: Hard AP reset (nuclear option)...");
+            Serial.println("\nStep 3/3: Hard AP reset (nuclear option)...");
             Serial.println("   WARNING: Stubborn clients detected");
             
             WiFi.mode(WIFI_STA);
@@ -4296,29 +4310,77 @@ void restartAPTask(void *parameter) {
             Serial.printf("   After hard reset: %d clients\n", afterHardReset);
         }
         
-        // ============================================
-        // EXTENDED WAIT FOR AUTO-RECONNECT
-        // ============================================
-        Serial.println("\nStep 4/4: Extended wait to prevent auto-reconnect...");
-        Serial.println("   Reason: Some devices reconnect in < 1 second");
-        Serial.println("   Action: Wait 3 seconds before starting new AP");
-        
-        vTaskDelay(pdMS_TO_TICKS(3000)); 
-        
         int finalCount = WiFi.softAPgetStationNum();
         if (finalCount > 0) {
             Serial.printf("   WARNING: %d clients still connected (impossible?)\n", finalCount);
-            Serial.println("   This should never happen after 4 methods");
+            Serial.println("   This should never happen after 3 methods");
         } else {
             Serial.println("All clients successfully disconnected");
         }
         
     } else {
         Serial.println("No clients connected - skipping force disconnect");
-        WiFi.softAPdisconnect(false);
+        WiFi.softAPdisconnect(true);
         vTaskDelay(pdMS_TO_TICKS(800));
     }
     
+    Serial.println("========================================\n");
+    
+    // ============================================
+    // 30-SECOND BLACKOUT PERIOD
+    // ============================================
+    Serial.println("\n========================================");
+    Serial.println("30-SECOND AP BLACKOUT PERIOD");
+    Serial.println("========================================");
+    Serial.println("Old SSID: \"" + oldSSID + "\" - NOW OFFLINE");
+    Serial.println("New SSID: \"" + String(savedSSID) + "\" - NOT BROADCASTING YET");
+    Serial.println("");
+    Serial.println("Purpose:");
+    Serial.println("  1. Ensure all clients detect AP as offline");
+    Serial.println("  2. Force clients to forget connection state");
+    Serial.println("  3. Prevent auto-reconnect to old SSID");
+    Serial.println("  4. Clear any cached network information");
+    Serial.println("");
+    Serial.println("Status: AP is completely OFFLINE");
+    Serial.println("========================================\n");
+    
+    // COUNTDOWN DENGAN PROGRESS DETAIL
+    for (int i = 60; i > 0; i--) {
+        // Log setiap 5 detik, plus detik terakhir
+        if (i == 60 || i % 5 == 0 || i <= 3) {
+            Serial.println("──────────────────────────────────────");
+            Serial.printf("Blackout countdown: %d seconds remaining\n", i);
+            Serial.println("   Status: AP still OFFLINE");
+            Serial.println("   Old SSID: \"" + oldSSID + "\" (disabled)");
+            Serial.println("   New SSID: \"" + String(savedSSID) + "\" (pending)");
+            
+            // Verify bahwa AP benar-benar mati
+            IPAddress currentIP = WiFi.softAPIP();
+            int currentClients = WiFi.softAPgetStationNum();
+            
+            if (currentIP != IPAddress(0, 0, 0, 0)) {
+                Serial.println("   WARNING: AP IP still active: " + currentIP.toString());
+            } else {
+                Serial.println("   AP IP: 0.0.0.0 (correctly disabled)");
+            }
+            
+            if (currentClients > 0) {
+                Serial.printf("   WARNING: %d clients still detected\n", currentClients);
+            } else {
+                Serial.println("   Clients: 0 (all disconnected)");
+            }
+            
+            Serial.println("──────────────────────────────────────\n");
+        }
+        
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+    
+    Serial.println("========================================");
+    Serial.println("BLACKOUT PERIOD COMPLETED");
+    Serial.println("========================================");
+    Serial.println("Access Point waiting - ready to start new AP");
+    Serial.println("Old clients should now be fully disconnected");
     Serial.println("========================================\n");
     
     // ============================================
@@ -4353,13 +4415,17 @@ void restartAPTask(void *parameter) {
     vTaskDelay(pdMS_TO_TICKS(800));
     
     // ============================================
-    // START AP WITH NEW SETTINGS
+    // START AP WITH NEW SSID - NOW BROADCASTING
     // ============================================
-    Serial.println("\nStarting new AP...");
-    Serial.println("   SSID: " + String(savedSSID));
-    Serial.println("   Password: " + String(strlen(savedPassword) > 0 ? "***" : "(none)"));
-    Serial.println("   Channel: 1 (default)");
-    Serial.println("   Max Connections: 4 (default)");
+    Serial.println("\n========================================");
+    Serial.println("STARTING NEW ACCESS POINT");
+    Serial.println("========================================");
+    Serial.println("New SSID: \"" + String(savedSSID) + "\" (NOW BROADCASTING)");
+    Serial.println("Password: " + String(strlen(savedPassword) > 0 ? "Protected (***)" : "Open"));
+    Serial.println("IP Address: " + savedAPIP.toString());
+    Serial.println("Channel: 1 (default)");
+    Serial.println("Max Connections: 4 (default)");
+    Serial.println("========================================");
     
     bool apStarted = WiFi.softAP(savedSSID, savedPassword);
     
@@ -4377,7 +4443,7 @@ void restartAPTask(void *parameter) {
         Serial.println("\n========================================");
         Serial.println("AP RESTART SUCCESS");
         Serial.println("========================================");
-        Serial.println("SSID: " + currentSSID);
+        Serial.println("SSID: \"" + currentSSID + "\" (ACTIVE & BROADCASTING)");
         Serial.println("Password: " + String(strlen(savedPassword) > 0 ? "Protected" : "Open"));
         Serial.println("");
         Serial.println("Network Configuration:");
@@ -4394,17 +4460,22 @@ void restartAPTask(void *parameter) {
         }
         
         Serial.println("========================================");
-        Serial.println("IMPORTANT: ALL OLD CLIENTS DISCONNECTED");
+        Serial.println("IMPORTANT: CLIENT RECONNECTION REQUIRED");
         Serial.println("========================================");
-        Serial.println("Old clients MUST reconnect manually because:");
+        Serial.println("Old SSID: \"" + oldSSID + "\" (OFFLINE after 30s blackout)");
+        Serial.println("New SSID: \"" + currentSSID + "\" (NOW ONLINE)");
+        Serial.println("");
+        Serial.println("Why clients were fully disconnected:");
         Serial.println("   1. Deauth frames sent (forced disconnect)");
-        Serial.println("   2. AP restarted with new settings");
-        Serial.println("   3. Network config changed (IP/Gateway/Subnet)");
+        Serial.println("   2. AP stopped for 30 seconds (blackout)");
+        Serial.println("   3. AP restarted with new settings");
+        Serial.println("   4. Network config changed (IP/Gateway/Subnet)");
         Serial.println("");
         Serial.println("Action required from users:");
-        Serial.println("   1. Forget WiFi network on device");
-        Serial.println("   2. Reconnect to: " + currentSSID);
-        Serial.println("   3. Browser: http://" + newAPIP.toString());
+        Serial.println("   1. Forget old WiFi network on device (if SSID changed)");
+        Serial.println("   2. Search for new WiFi: \"" + currentSSID + "\"");
+        Serial.println("   3. Connect with password");
+        Serial.println("   4. Open browser: http://" + newAPIP.toString());
         Serial.println("========================================\n");
         
     } else {
@@ -4447,9 +4518,9 @@ void restartAPTask(void *parameter) {
     }
     
     // ============================================
-    // FINAL STABILIZATION WAIT
+    // FINAL STABILIZATION & VERIFICATION
     // ============================================
-    Serial.println("Waiting for AP to stabilize...");
+    Serial.println("Waiting for AP to fully stabilize...");
     vTaskDelay(pdMS_TO_TICKS(3000));
     
     IPAddress finalIP = WiFi.softAPIP();
@@ -4460,19 +4531,22 @@ void restartAPTask(void *parameter) {
     Serial.println("========================================");
     
     if (finalIP != IPAddress(0, 0, 0, 0)) {
-        Serial.println("AP Status: ACTIVE ✓");
+        Serial.println("AP Status: ACTIVE & BROADCASTING");
+        Serial.println("   SSID: \"" + WiFi.softAPSSID() + "\"");
         Serial.println("   IP: " + finalIP.toString());
         Serial.println("   Connected Clients: " + String(finalClients));
         
         if (finalClients > 0) {
             Serial.println("");
-            Serial.println("WARNING: Clients already reconnected!");
+            Serial.println("NOTICE: Clients already reconnected!");
             Serial.println("   " + String(finalClients) + " device(s) reconnected automatically");
             Serial.println("   This is NORMAL for devices with saved WiFi");
-            Serial.println("   They will get NEW IP from new subnet");
+            Serial.println("   They successfully reconnected after 30s blackout");
         } else {
-            Serial.println("   Status: Clean start - no clients connected");
-            Serial.println("   All old clients successfully disconnected");
+            Serial.println("");
+            Serial.println("   Status: Clean start - no clients connected yet");
+            Serial.println("   All old clients fully disconnected during blackout");
+            Serial.println("   Waiting for manual reconnection...");
         }
     } else {
         Serial.println("CRITICAL ERROR: AP IP is 0.0.0.0");
@@ -4488,7 +4562,10 @@ void restartAPTask(void *parameter) {
     apRestartInProgress = false;
     xSemaphoreGive(wifiRestartMutex);
     
-    Serial.println("AP restart sequence completed");
+    Serial.println("========================================");
+    Serial.println("AP RESTART SEQUENCE COMPLETED");
+    Serial.println("========================================");
+    Serial.println("Total time: ~35 seconds (30s blackout + 5s setup)");
     Serial.println("Lock released - system ready for next request");
     Serial.println("========================================\n");
     

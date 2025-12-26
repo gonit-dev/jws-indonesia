@@ -1305,6 +1305,92 @@
 			}, 4000);
 		}
 		// ================================
+		// COUNTDOWN TOAST LOADING (30 DETIK)
+		// ================================
+		let countdownInterval = null;
+		let isCountdownActive = false;
+
+		function showCountdownToast(message, totalSeconds = 30, callback = null) {
+			// Prevent multiple countdowns
+			if (isCountdownActive) {
+				console.warn('Countdown already active, ignoring new request');
+				return;
+			}
+			
+			isCountdownActive = true;
+			
+			// Disable all interactions
+			const overlay = document.createElement('div');
+			overlay.id = 'countdownOverlay';
+			overlay.style.cssText = `
+				position: fixed;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+				background: rgba(0, 0, 0, 0.7);
+				z-index: 9998;
+				cursor: not-allowed;
+			`;
+			document.body.appendChild(overlay);
+			
+			// Disable body scroll
+			document.body.style.overflow = 'hidden';
+			
+			const toast = document.getElementById('toast');
+			let remainingSeconds = totalSeconds;
+			
+			// Initial toast
+			toast.textContent = `${message} - ${remainingSeconds} detik`;
+			toast.className = 'toast callout warning show';
+			toast.style.zIndex = '9999';
+			
+			// Clear any existing interval
+			if (countdownInterval) {
+				clearInterval(countdownInterval);
+			}
+			
+			countdownInterval = setInterval(() => {
+				remainingSeconds--;
+				
+				if (remainingSeconds > 0) {
+					// Update countdown
+					toast.textContent = `${message} - ${remainingSeconds} detik`;
+					
+					// Change color based on remaining time
+					if (remainingSeconds <= 10) {
+						toast.className = 'toast callout alert show';
+					} else if (remainingSeconds <= 20) {
+						toast.className = 'toast callout warning show';
+					}
+				} else {
+					// Countdown finished
+					clearInterval(countdownInterval);
+					countdownInterval = null;
+					
+					// Remove overlay
+					const overlayElement = document.getElementById('countdownOverlay');
+					if (overlayElement) {
+						overlayElement.remove();
+					}
+					
+					// Re-enable scroll
+					document.body.style.overflow = '';
+					
+					// Hide toast
+					toast.classList.remove('show');
+					toast.style.zIndex = '';
+					
+					isCountdownActive = false;
+					
+					// Execute callback if provided
+					if (callback && typeof callback === 'function') {
+						callback();
+					}
+				}
+			}, 1000);
+		}		
+		// ================================
 		// PEMBARUAN STATUS PERANGKAT
 		// ================================
 		async function updateDeviceStatus() {
@@ -1921,15 +2007,16 @@
 							btn.textContent = originalText;
 						}, 6000);
 
+						// COUNTDOWN TOAST 30 DETIK
 						if (isUserLocalAP) {
 							setTimeout(() => {
-								showToast('Halaman akan dimuat ulang otomatis...', 'warning');
-								setTimeout(() => {
-									window.location.reload();
-								}, 2000);
-							}, 18000);
-						} else {
-
+								showCountdownToast('Memproses konfigurasi Access Point', 60, () => {
+									showToast('Halaman akan dimuat ulang otomatis...', 'warning');
+									setTimeout(() => {
+										window.location.reload();
+									}, 2000);
+								});
+							}, 6000);
 						}
 					} else {
 						return response.text().then(text => { throw new Error(text); });
@@ -1987,17 +2074,16 @@
 							btn.textContent = originalText;
 						}, 6000);
 
+						// COUNTDOWN TOAST 30 DETIK
 						if (isUserLocalAP) {
 							setTimeout(() => {
-								showToast('Halaman akan dimuat ulang otomatis...', 'warning');
-								setTimeout(() => {
-									window.location.href = `http://${networkMsg}`;
-								}, 2000);
-							}, 18000);
-						} else {
-							setTimeout(() => {
-
-							}, 3000);
+								showCountdownToast('Memproses konfigurasi jaringan Access Point', 60, () => {
+									showToast('Halaman akan dimuat ulang otomatis...', 'warning');
+									setTimeout(() => {
+										window.location.href = `http://${networkMsg}`;
+									}, 2000);
+								});
+							}, 6000);
 						}
 					} else {
 						return response.text().then(text => { throw new Error(text); });
@@ -2087,12 +2173,15 @@
 							btn.textContent = originalText;
 						}, 6000);
 
+						// COUNTDOWN TOAST 30 DETIK
 						setTimeout(() => {
-							showToast('Halaman akan di muat ulang otomatis...', 'warning');
-							setTimeout(() => {
-								window.location.href = 'http://192.168.4.1';
-							}, 2000);
-						}, 18000);
+							showCountdownToast('Memproses hapus data perangkat', 60, () => {
+								showToast('Halaman akan dimuat ulang otomatis...', 'warning');
+								setTimeout(() => {
+									window.location.href = 'http://192.168.4.1';
+								}, 2000);
+							});
+						}, 6000);
 					} else {
 						throw new Error('Pengaturan ulang gagal');
 					}
@@ -2568,11 +2657,13 @@
 					}, 6000);
 
 					setTimeout(() => {
-						showToast('Halaman akan di muat ulang otomatis...', 'warning');
-						setTimeout(() => {
-							window.location.reload();
-						}, 2000);
-					}, 18000);
+						showCountdownToast('Memproses mulai ulang perangkat', 60, () => {
+							showToast('Halaman akan dimuat ulang otomatis...', 'warning');
+							setTimeout(() => {
+								window.location.reload();
+							}, 2000);
+						});
+					}, 6000);
 				} else {
 					throw new Error('Perintah mulai ulang gagal');
 				}
