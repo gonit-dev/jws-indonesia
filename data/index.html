@@ -1779,6 +1779,7 @@
 				const formData = new URLSearchParams();
 				formData.append('ssid', ssid);
 				formData.append('password', password);
+				formData.append('updateNetworkConfig', 'false');
 
 				fetch('/setap', {
 					method: 'POST',
@@ -1809,7 +1810,6 @@
 				});
 			}
 
-			// Fungsi BARU untuk menyimpan konfigurasi jaringan (IP, Gateway, Subnet)
 			function setAPNetwork() {
 				const apIP = document.getElementById('apIP').value.trim();
 				const gateway = document.getElementById('gatewayIP').value.trim();
@@ -1827,12 +1827,12 @@
 
 				const formData = new URLSearchParams();
 				
-				// Ambil SSID dan password yang sudah tersimpan
 				const ssid = document.getElementById('apSSID').value.trim();
 				const password = document.getElementById('apPassword').value;
 				
 				formData.append('ssid', ssid);
 				formData.append('password', password);
+				formData.append('updateNetworkConfig', 'true');
 				
 				if (apIP) formData.append('apIP', apIP);
 				if (gateway) formData.append('gateway', gateway);

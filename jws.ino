@@ -1671,132 +1671,132 @@ void setupServerRoutes() {
     });
 
     server.on("/setap", HTTP_POST, [](AsyncWebServerRequest *request) {
-      // ============================================
-      // DEBOUNCING CHECK
-      // ============================================
-      unsigned long now = millis();
-      if (now - lastAPRestartRequest < RESTART_DEBOUNCE_MS) {
-        unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastAPRestartRequest);
-        String msg = "⏳ Please wait " + String(waitTime / 1000) + " seconds before next AP restart";
-        request->send(429, "text/plain", msg);
-        return;
-      }
-      
-      // ============================================
-      // VALIDATE REQUIRED PARAMETERS
-      // ============================================
-      if (!request->hasParam("ssid", true) || !request->hasParam("password", true)) {
-        request->send(400, "text/plain", "Missing ssid or password");
-        return;
-      }
-
-      String ssid = request->getParam("ssid", true)->value();
-      String pass = request->getParam("password", true)->value();
-
-      if (pass.length() > 0 && pass.length() < 8) {
-        request->send(400, "text/plain", "Password minimal 8 karakter");
-        return;
-      }
-
-      Serial.println("\n========================================");
-      Serial.println("SIMPAN AP CONFIGURATION (ALL SETTINGS)");
-      Serial.println("========================================");
-      Serial.println("SSID: " + ssid);
-      
-      // ============================================
-      // PARSE ALL OPTIONAL PARAMETERS
-      // ============================================
-      
-      IPAddress apIP(192, 168, 4, 1);
-      IPAddress apGateway(192, 168, 4, 1);
-      IPAddress apSubnet(255, 255, 255, 0);
-      
-      bool hasCustomNetwork = false;
-      
-      // Parse AP IP
-      if (request->hasParam("apIP", true)) {
-        String apIPStr = request->getParam("apIP", true)->value();
-        apIPStr.trim();
-        
-        if (apIP.fromString(apIPStr)) {
-          hasCustomNetwork = true;
-          Serial.println("Custom AP IP: " + apIP.toString());
-        } else {
-          Serial.println("Invalid AP IP format, using default: 192.168.4.1");
-          apIP = IPAddress(192, 168, 4, 1);
+        // ============================================
+        // DEBOUNCING CHECK
+        // ============================================
+        unsigned long now = millis();
+        if (now - lastAPRestartRequest < RESTART_DEBOUNCE_MS) {
+            unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastAPRestartRequest);
+            request->send(429, "text/plain", "⏳ Please wait " + String(waitTime / 1000) + " seconds");
+            return;
         }
-      } else {
-        Serial.println("AP IP: 192.168.4.1 (default)");
-      }
-      
-      // Parse Gateway
-      if (request->hasParam("gateway", true)) {
-        String gwStr = request->getParam("gateway", true)->value();
-        gwStr.trim();
         
-        if (apGateway.fromString(gwStr)) {
-          hasCustomNetwork = true;
-          Serial.println("Custom Gateway: " + apGateway.toString());
-        } else {
-          Serial.println("Invalid Gateway format, using default: 192.168.4.1");
-          apGateway = IPAddress(192, 168, 4, 1);
+        // ============================================
+        // VALIDATE PARAMETERS
+        // ============================================
+        if (!request->hasParam("ssid", true) || !request->hasParam("password", true)) {
+            request->send(400, "text/plain", "Missing ssid or password");
+            return;
         }
-      } else {
-        Serial.println("Gateway: 192.168.4.1 (default)");
-      }
-      
-      // Parse Subnet
-      if (request->hasParam("subnet", true)) {
-        String snStr = request->getParam("subnet", true)->value();
-        snStr.trim();
+
+        String ssid = request->getParam("ssid", true)->value();
+        String pass = request->getParam("password", true)->value();
+
+        if (pass.length() > 0 && pass.length() < 8) {
+            request->send(400, "text/plain", "Password minimal 8 karakter");
+            return;
+        }
+
+        // ============================================
+        // Update network atau tidak?
+        // ============================================
+        bool updateNetwork = false;
+        if (request->hasParam("updateNetworkConfig", true)) {
+            updateNetwork = (request->getParam("updateNetworkConfig", true)->value() == "true");
+        }
+
+        Serial.println("\n========================================");
+        Serial.println("SIMPAN AP: " + ssid);
+        Serial.println("Update Network: " + String(updateNetwork ? "YES" : "NO"));
         
-        if (apSubnet.fromString(snStr)) {
-          hasCustomNetwork = true;
-          Serial.println("Custom Subnet: " + apSubnet.toString());
+        // ============================================
+        // LOAD IP SETTINGS
+        // ============================================
+        IPAddress apIP, apGateway, apSubnet;
+        
+        if (updateNetwork) {
+            apIP = wifiConfig.apIP;
+            apGateway = wifiConfig.apGateway;
+            apSubnet = wifiConfig.apSubnet;
+            
+            if (request->hasParam("apIP", true)) {
+                String ipStr = request->getParam("apIP", true)->value();
+                ipStr.trim();
+                
+                IPAddress tempIP;
+                if (tempIP.fromString(ipStr)) {
+                    apIP = tempIP;
+                    Serial.println("New IP: " + apIP.toString());
+                } else {
+                    Serial.println("Invalid IP format, keeping: " + apIP.toString());
+                }
+            } else {
+                Serial.println("No IP param, keeping: " + apIP.toString());
+            }
+            
+            if (request->hasParam("gateway", true)) {
+                String gwStr = request->getParam("gateway", true)->value();
+                gwStr.trim();
+                
+                IPAddress tempGW;
+                if (tempGW.fromString(gwStr)) {
+                    apGateway = tempGW;
+                    Serial.println("New Gateway: " + apGateway.toString());
+                } else {
+                    Serial.println("Invalid Gateway, keeping: " + apGateway.toString());
+                }
+            } else {
+                Serial.println("No Gateway param, keeping: " + apGateway.toString());
+            }
+            
+            if (request->hasParam("subnet", true)) {
+                String snStr = request->getParam("subnet", true)->value();
+                snStr.trim();
+                
+                IPAddress tempSN;
+                if (tempSN.fromString(snStr)) {
+                    apSubnet = tempSN;
+                    Serial.println("New Subnet: " + apSubnet.toString());
+                } else {
+                    Serial.println("Invalid Subnet, keeping: " + apSubnet.toString());
+                }
+            } else {
+                Serial.println("No Subnet param, keeping: " + apSubnet.toString());
+            }
+            
         } else {
-          Serial.println("Invalid Subnet format, using default: 255.255.255.0");
-          apSubnet = IPAddress(255, 255, 255, 0);
+            apIP = wifiConfig.apIP;
+            apGateway = wifiConfig.apGateway;
+            apSubnet = wifiConfig.apSubnet;
+            
+            Serial.println("Network PRESERVED:");
+            Serial.println("  IP: " + apIP.toString());
+            Serial.println("  Gateway: " + apGateway.toString());
+            Serial.println("  Subnet: " + apSubnet.toString());
         }
-      } else {
-        Serial.println("Subnet: 255.255.255.0 (default)");
-      }
 
-      // ============================================
-      // SAVE TO GLOBAL CONFIG
-      // ============================================
-      ssid.toCharArray(wifiConfig.apSSID, 33);
-      pass.toCharArray(wifiConfig.apPassword, 65);
-      wifiConfig.apIP = apIP;
-      wifiConfig.apGateway = apGateway;
-      wifiConfig.apSubnet = apSubnet;
-      
-      // Save to LittleFS
-      saveAPCredentials();
+        Serial.println("========================================");
 
-      Serial.println("\n========================================");
-      Serial.println("CONFIGURATION SUMMARY");
-      Serial.println("========================================");
-      Serial.println("SSID: " + String(wifiConfig.apSSID));
-      Serial.println("Password: " + String(strlen(wifiConfig.apPassword) > 0 ? "***" : "(none)"));
-      Serial.println("IP: " + wifiConfig.apIP.toString());
-      Serial.println("Gateway: " + wifiConfig.apGateway.toString());
-      Serial.println("Subnet: " + wifiConfig.apSubnet.toString());
-      Serial.println("========================================");
-      Serial.println("Credentials saved to LittleFS");
-      Serial.println("AP will restart in 3 seconds...");
-      Serial.println("========================================\n");
+        // ============================================
+        // SAVE TO CONFIG
+        // ============================================
+        ssid.toCharArray(wifiConfig.apSSID, 33);
+        pass.toCharArray(wifiConfig.apPassword, 65);
+        wifiConfig.apIP = apIP;
+        wifiConfig.apGateway = apGateway;
+        wifiConfig.apSubnet = apSubnet;
+        
+        saveAPCredentials();
 
-      request->send(200, "text/plain", "OK");
+        Serial.println("SAVED CONFIG:");
+        Serial.println("  SSID: " + String(wifiConfig.apSSID));
+        Serial.println("  IP: " + apIP.toString());
+        Serial.println("========================================\n");
 
-      // Trigger AP restart
-      xTaskCreate(
-        restartAPTask,
-        "APRestart",
-        4096,
-        NULL,
-        1,
-        NULL
-      );
+        request->send(200, "text/plain", "OK");
+
+        // Trigger AP restart
+        xTaskCreate(restartAPTask, "APRestart", 4096, NULL, 1, NULL);
     });
 
     // ========================================
