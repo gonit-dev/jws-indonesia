@@ -1929,9 +1929,7 @@
 								}, 2000);
 							}, 18000);
 						} else {
-							setTimeout(() => {
-								showToast('Muat ulang manual diperlukan', 'warning');
-							}, 3000);
+
 						}
 					} else {
 						return response.text().then(text => { throw new Error(text); });
