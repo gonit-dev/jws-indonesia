@@ -140,6 +140,46 @@
 			margin-top: 10px;
 		}
 
+		/* Toast Loading Overlay - Fixed Position */
+		#countdownOverlay {
+			position: fixed !important;
+			top: 0 !important;
+			left: 0 !important;
+			width: 100vw !important;
+			height: 100vh !important;
+			background: rgba(0, 0, 0, 0.85) !important;
+			z-index: 999998 !important;
+			cursor: not-allowed !important;
+			overflow: hidden !important;
+		}
+
+		/* Toast with Higher Z-Index */
+		.toast {
+			position: fixed;
+			top: -100px;
+			left: 50%;
+			transform: translateX(-50%);
+			z-index: 999999; /* Higher than overlay */
+			min-width: 300px;
+			max-width: 90vw;
+			text-align: center;
+			transition: top 0.5s ease-in-out;
+		}
+
+		.toast.show {
+			top: 30px;
+		}
+
+		/* Body Lock - Prevent Scroll & Height Issues */
+		body.countdown-active {
+			overflow: hidden !important;
+			position: fixed !important;
+			width: 100% !important;
+			height: 100vh !important;
+			top: 0 !important;
+			left: 0 !important;
+		}
+
 		/* Timezone inline edit styling */
 		#timezoneInput {
 			font-family: monospace;
@@ -1311,7 +1351,6 @@
 		let isCountdownActive = false;
 
 		function showCountdownToast(message, totalSeconds = 30, callback = null) {
-			// Prevent multiple countdowns
 			if (isCountdownActive) {
 				console.warn('Countdown already active, ignoring new request');
 				return;
@@ -1319,33 +1358,32 @@
 			
 			isCountdownActive = true;
 			
-			// Disable all interactions
+			// Lock body scroll dengan class
+			document.body.classList.add('countdown-active');
+			
+			// Create overlay
 			const overlay = document.createElement('div');
 			overlay.id = 'countdownOverlay';
 			overlay.style.cssText = `
-				position: fixed;
-				top: 0;
-				left: 0;
-				width: 100%;
-				height: 100%;
-				background: rgba(0, 0, 0, 0.7);
-				z-index: 9998;
-				cursor: not-allowed;
+				position: fixed !important;
+				top: 0 !important;
+				left: 0 !important;
+				width: 100vw !important;
+				height: 100vh !important;
+				background: rgba(0, 0, 0, 0.85) !important;
+				z-index: 999998 !important;
+				cursor: not-allowed !important;
+				overflow: hidden !important;
 			`;
 			document.body.appendChild(overlay);
-			
-			// Disable body scroll
-			document.body.style.overflow = 'hidden';
 			
 			const toast = document.getElementById('toast');
 			let remainingSeconds = totalSeconds;
 			
-			// Initial toast
 			toast.textContent = `${message} - ${remainingSeconds} detik`;
 			toast.className = 'toast callout warning show';
-			toast.style.zIndex = '9999';
+			toast.style.zIndex = '999999';
 			
-			// Clear any existing interval
 			if (countdownInterval) {
 				clearInterval(countdownInterval);
 			}
@@ -1354,42 +1392,36 @@
 				remainingSeconds--;
 				
 				if (remainingSeconds > 0) {
-					// Update countdown
 					toast.textContent = `${message} - ${remainingSeconds} detik`;
 					
-					// Change color based on remaining time
 					if (remainingSeconds <= 10) {
 						toast.className = 'toast callout alert show';
 					} else if (remainingSeconds <= 20) {
 						toast.className = 'toast callout warning show';
 					}
 				} else {
-					// Countdown finished
 					clearInterval(countdownInterval);
 					countdownInterval = null;
 					
-					// Remove overlay
+					// Remove overlay & unlock body
 					const overlayElement = document.getElementById('countdownOverlay');
 					if (overlayElement) {
 						overlayElement.remove();
 					}
 					
-					// Re-enable scroll
-					document.body.style.overflow = '';
+					document.body.classList.remove('countdown-active');
 					
-					// Hide toast
 					toast.classList.remove('show');
 					toast.style.zIndex = '';
 					
 					isCountdownActive = false;
 					
-					// Execute callback if provided
 					if (callback && typeof callback === 'function') {
 						callback();
 					}
 				}
 			}, 1000);
-		}		
+		}
 		// ================================
 		// PEMBARUAN STATUS PERANGKAT
 		// ================================
@@ -2010,7 +2042,7 @@
 						// COUNTDOWN TOAST 30 DETIK
 						if (isUserLocalAP) {
 							setTimeout(() => {
-								showCountdownToast('Memproses konfigurasi Access Point', 60, () => {
+								showCountdownToast('Mulai konfigurasi Access Point', 60, () => {
 									showToast('Halaman akan dimuat ulang otomatis...', 'warning');
 									setTimeout(() => {
 										window.location.reload();
@@ -2077,7 +2109,7 @@
 						// COUNTDOWN TOAST 30 DETIK
 						if (isUserLocalAP) {
 							setTimeout(() => {
-								showCountdownToast('Memproses konfigurasi jaringan Access Point', 60, () => {
+								showCountdownToast('Mulai konfigurasi jaringan Access Point', 60, () => {
 									showToast('Halaman akan dimuat ulang otomatis...', 'warning');
 									setTimeout(() => {
 										window.location.href = `http://${networkMsg}`;
@@ -2161,21 +2193,12 @@
 						showToast('Perangkat berhasil direset', 'success');
 
 						setTimeout(() => {
-							showToast('Perangkat akan dimulai ulang dalam 5 detik...', 'warning');
-						}, 1500);
-
-						setTimeout(() => {
-							showToast('Sambungkan kembali ke Access Point: JWS Indonesia', 'warning');
-						}, 3500);
-
-						setTimeout(() => {
 							btn.disabled = false;
 							btn.textContent = originalText;
 						}, 6000);
 
-						// COUNTDOWN TOAST 30 DETIK
 						setTimeout(() => {
-							showCountdownToast('Memproses hapus data perangkat', 60, () => {
+							showCountdownToast('Mulai ulang perangkat', 60, () => {
 								showToast('Halaman akan dimuat ulang otomatis...', 'warning');
 								setTimeout(() => {
 									window.location.href = 'http://192.168.4.1';
@@ -2657,7 +2680,7 @@
 					}, 6000);
 
 					setTimeout(() => {
-						showCountdownToast('Memproses mulai ulang perangkat', 60, () => {
+						showCountdownToast('Mulai ulang perangkat', 60, () => {
 							showToast('Halaman akan dimuat ulang otomatis...', 'warning');
 							setTimeout(() => {
 								window.location.reload();

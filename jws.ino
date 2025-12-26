@@ -1307,7 +1307,7 @@ bool initRTC() {
         Serial.println("\n*** RTC HARDWARE FAILURE ***");
         Serial.println("DS3231 chip is defective!");
         Serial.println("Time registers return garbage data");
-        Serial.println("Temperature sensor works: " + String(rtc.getTemperature()) + "Â°C");
+        Serial.println("Temperature sensor works: " + String(rtc.getTemperature()) + "Ã‚Â°C");
         Serial.println("\nPossible causes:");
         Serial.println("  1. Counterfeit/clone DS3231 chip");
         Serial.println("  2. Crystal oscillator failure");
@@ -1559,7 +1559,7 @@ void setupServerRoutes() {
         Serial.println("\n========================================");
         Serial.println("MANUAL RESTART REQUESTED");
         Serial.println("========================================");
-        Serial.println("Device will restart in 5 seconds...");
+        Serial.println("Device will restart in 60 seconds...");
         Serial.println("========================================\n");
 
         request->send(200, "text/plain", "OK");
@@ -2572,7 +2572,7 @@ void setupServerRoutes() {
         
         Serial.println("\n========================================");
         Serial.println("FACTORY RESET COMPLETE");
-        Serial.println("Device will restart in 3 seconds...");
+        Serial.println("Device will restart in 60 seconds...");
         Serial.println("========================================\n");
         
         request->send(200, "text/plain", "OK");
@@ -2712,11 +2712,11 @@ void setupServerRoutes() {
         html += ".icon{font-size:80px;margin-bottom:20px}";
         html += "</style></head><body>";
         html += "<div class='container'>";
-        html += "<div class='icon'>🔍</div>";
+        html += "<div class='icon'>ðŸ”</div>";
         html += "<div class='error-code'>404</div>";
         html += "<h2>Page Not Found</h2>";
         html += "<p>The page you're looking for doesn't exist or you don't have permission to access it. Please return to the home page.</p>";
-        html += "<a href='/' class='btn'>← Back to Home</a>";
+        html += "<a href='/' class='btn'>â† Back to Home</a>";
         html += "</div></body></html>";
 
         request->send(404, "text/html", html);
@@ -3410,7 +3410,7 @@ void ntpTask(void *parameter) {
                         Serial.println("   Status: RTC saved successfully");
                         Serial.println("   Time will persist across restarts");
                     } else {
-                        Serial.println("   Status: ✗ RTC save FAILED");
+                        Serial.println("   Status: âœ— RTC save FAILED");
                         Serial.println("   RTC hardware may be faulty");
                     }
                 } else {
@@ -4348,7 +4348,7 @@ void restartAPTask(void *parameter) {
     for (int i = 60; i > 0; i--) {
         // Log setiap 5 detik, plus detik terakhir
         if (i == 60 || i % 5 == 0 || i <= 3) {
-            Serial.println("──────────────────────────────────────");
+            Serial.println("â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€");
             Serial.printf("Blackout countdown: %d seconds remaining\n", i);
             Serial.println("   Status: AP still OFFLINE");
             Serial.println("   Old SSID: \"" + oldSSID + "\" (disabled)");
@@ -4370,7 +4370,7 @@ void restartAPTask(void *parameter) {
                 Serial.println("   Clients: 0 (all disconnected)");
             }
             
-            Serial.println("──────────────────────────────────────\n");
+            Serial.println("â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\n");
         }
         
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -4447,7 +4447,7 @@ void restartAPTask(void *parameter) {
         Serial.println("Password: " + String(strlen(savedPassword) > 0 ? "Protected" : "Open"));
         Serial.println("");
         Serial.println("Network Configuration:");
-        Serial.println("   AP IP: " + newAPIP.toString() + (ipMatches ? " ✓" : " MISMATCH"));
+        Serial.println("   AP IP: " + newAPIP.toString() + (ipMatches ? " âœ“" : " MISMATCH"));
         Serial.println("   Gateway: " + savedGateway.toString());
         Serial.println("   Subnet: " + savedSubnet.toString());
         Serial.println("   MAC: " + WiFi.softAPmacAddress());
