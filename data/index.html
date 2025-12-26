@@ -2079,16 +2079,20 @@
 			loadWiFiConfig();
 		}
 
+		// ================================
+		// PENGATURAN WIFI & AP
+		// ================================
+
 		function setAP() {
 			const ssid = document.getElementById('apSSID').value.trim();
-			const password = document.getElementById('apPassword').value;
+			const pass = document.getElementById('apPassword').value;
 
 			if (!ssid) {
 				showToast('SSID Access Point tidak boleh kosong', 'error');
 				return;
 			}
 
-			if (password.length > 0 && password.length < 8) {
+			if (pass.length > 0 && pass.length < 8) {
 				showToast('Password minimal 8 karakter', 'error');
 				return;
 			}
@@ -2100,10 +2104,8 @@
 
 			const formData = new URLSearchParams();
 			formData.append('ssid', ssid);
-			formData.append('password', password);
+			formData.append('password', pass);
 			formData.append('updateNetworkConfig', 'false');
-
-			startCountdownPolling();
 
 			fetch('/setap', {
 				method: 'POST',
@@ -2113,17 +2115,20 @@
 			.then(response => {
 				if (response.ok) {
 					savedWiFiConfig.apSSID = ssid;
-					if (password) savedWiFiConfig.apPassword = password;
+					if (pass) savedWiFiConfig.apPassword = pass;
 
 					showToast(`Pengaturan Access Point "${ssid}" berhasil disimpan`, 'success');
 
 					setTimeout(() => loadWiFiConfig(), 1000);
 
 					setTimeout(() => {
+						startCountdownPolling();
+					}, 500);
+
+					setTimeout(() => {
 						btn.disabled = false;
 						btn.textContent = originalText;
 					}, 3000);
-
 				} else {
 					return response.text().then(text => { throw new Error(text); });
 				}
@@ -2132,8 +2137,6 @@
 				showToast('Gagal menyimpan Access Point: ' + error.message, 'error');
 				btn.disabled = false;
 				btn.textContent = originalText;
-				
-				stopCountdownPolling();
 			});
 		}
 
@@ -2165,8 +2168,6 @@
 			if (gateway) formData.append('gateway', gateway);
 			if (subnet) formData.append('subnet', subnet);
 
-			startCountdownPolling();
-
 			fetch('/setap', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -2180,10 +2181,13 @@
 					setTimeout(() => loadWiFiConfig(), 1000);
 
 					setTimeout(() => {
+						startCountdownPolling();
+					}, 500);
+
+					setTimeout(() => {
 						btn.disabled = false;
 						btn.textContent = originalText;
 					}, 3000);
-
 				} else {
 					return response.text().then(text => { throw new Error(text); });
 				}
@@ -2192,8 +2196,6 @@
 				showToast('Gagal menyimpan konfigurasi: ' + error.message, 'error');
 				btn.disabled = false;
 				btn.textContent = originalText;
-				
-				stopCountdownPolling();
 			});
 		}
 
@@ -2266,7 +2268,6 @@
 							btn.textContent = originalText;
 						}, 6000);
 
-						// GANTI: Start polling dari server
 						setTimeout(() => {
 							startCountdownPolling();
 						}, 6000);
