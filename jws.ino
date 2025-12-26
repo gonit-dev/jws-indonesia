@@ -1698,105 +1698,133 @@ void setupServerRoutes() {
         }
 
         // ============================================
-        // Update network atau tidak?
+        // DETECT WHAT CHANGED
         // ============================================
-        bool updateNetwork = false;
-        if (request->hasParam("updateNetworkConfig", true)) {
-            updateNetwork = (request->getParam("updateNetworkConfig", true)->value() == "true");
+        bool ssidChanged = false;
+        bool passwordChanged = false;
+        bool ipChanged = false;
+        
+        if (String(wifiConfig.apSSID) != ssid) {
+            ssidChanged = true;
+        }
+        
+        if (String(wifiConfig.apPassword) != pass) {
+            passwordChanged = true;
         }
 
+        // ============================================
+        // LOAD IP SETTINGS (ALWAYS)
+        // ============================================
+        IPAddress newAPIP = wifiConfig.apIP;
+        IPAddress newGateway = wifiConfig.apGateway;
+        IPAddress newSubnet = wifiConfig.apSubnet;
+        
+        if (request->hasParam("apIP", true)) {
+            String ipStr = request->getParam("apIP", true)->value();
+            ipStr.trim();
+            
+            IPAddress tempIP;
+            if (tempIP.fromString(ipStr)) {
+                if (tempIP != wifiConfig.apIP) {
+                    ipChanged = true;
+                }
+                newAPIP = tempIP;
+            }
+        }
+        
+        if (request->hasParam("gateway", true)) {
+            String gwStr = request->getParam("gateway", true)->value();
+            gwStr.trim();
+            
+            IPAddress tempGW;
+            if (tempGW.fromString(gwStr)) {
+                if (tempGW != wifiConfig.apGateway) {
+                    ipChanged = true;
+                }
+                newGateway = tempGW;
+            }
+        }
+        
+        if (request->hasParam("subnet", true)) {
+            String snStr = request->getParam("subnet", true)->value();
+            snStr.trim();
+            
+            IPAddress tempSN;
+            if (tempSN.fromString(snStr)) {
+                if (tempSN != wifiConfig.apSubnet) {
+                    ipChanged = true;
+                }
+                newSubnet = tempSN;
+            }
+        }
+
+        // ============================================
+        // LOG CHANGES
+        // ============================================
         Serial.println("\n========================================");
-        Serial.println("SIMPAN AP: " + ssid);
-        Serial.println("Update Network: " + String(updateNetwork ? "YES" : "NO"));
-        
-        // ============================================
-        // LOAD IP SETTINGS
-        // ============================================
-        IPAddress apIP, apGateway, apSubnet;
-        
-        if (updateNetwork) {
-            apIP = wifiConfig.apIP;
-            apGateway = wifiConfig.apGateway;
-            apSubnet = wifiConfig.apSubnet;
-            
-            if (request->hasParam("apIP", true)) {
-                String ipStr = request->getParam("apIP", true)->value();
-                ipStr.trim();
-                
-                IPAddress tempIP;
-                if (tempIP.fromString(ipStr)) {
-                    apIP = tempIP;
-                    Serial.println("New IP: " + apIP.toString());
-                } else {
-                    Serial.println("Invalid IP format, keeping: " + apIP.toString());
-                }
-            } else {
-                Serial.println("No IP param, keeping: " + apIP.toString());
-            }
-            
-            if (request->hasParam("gateway", true)) {
-                String gwStr = request->getParam("gateway", true)->value();
-                gwStr.trim();
-                
-                IPAddress tempGW;
-                if (tempGW.fromString(gwStr)) {
-                    apGateway = tempGW;
-                    Serial.println("New Gateway: " + apGateway.toString());
-                } else {
-                    Serial.println("Invalid Gateway, keeping: " + apGateway.toString());
-                }
-            } else {
-                Serial.println("No Gateway param, keeping: " + apGateway.toString());
-            }
-            
-            if (request->hasParam("subnet", true)) {
-                String snStr = request->getParam("subnet", true)->value();
-                snStr.trim();
-                
-                IPAddress tempSN;
-                if (tempSN.fromString(snStr)) {
-                    apSubnet = tempSN;
-                    Serial.println("New Subnet: " + apSubnet.toString());
-                } else {
-                    Serial.println("Invalid Subnet, keeping: " + apSubnet.toString());
-                }
-            } else {
-                Serial.println("No Subnet param, keeping: " + apSubnet.toString());
-            }
-            
-        } else {
-            apIP = wifiConfig.apIP;
-            apGateway = wifiConfig.apGateway;
-            apSubnet = wifiConfig.apSubnet;
-            
-            Serial.println("Network PRESERVED:");
-            Serial.println("  IP: " + apIP.toString());
-            Serial.println("  Gateway: " + apGateway.toString());
-            Serial.println("  Subnet: " + apSubnet.toString());
-        }
-
+        Serial.println("AP CONFIGURATION CHANGE DETECTED");
         Serial.println("========================================");
+        
+        if (ssidChanged) {
+            Serial.println("SSID changed:");
+            Serial.println("   Old: " + String(wifiConfig.apSSID));
+            Serial.println("   New: " + ssid);
+        }
+        
+        if (passwordChanged) {
+            Serial.println("Password changed");
+        }
+        
+        if (ipChanged) {
+            Serial.println("Network config changed:");
+            Serial.println("   Old IP: " + wifiConfig.apIP.toString());
+            Serial.println("   New IP: " + newAPIP.toString());
+            Serial.println("   Old GW: " + wifiConfig.apGateway.toString());
+            Serial.println("   New GW: " + newGateway.toString());
+            Serial.println("   Old SN: " + wifiConfig.apSubnet.toString());
+            Serial.println("   New SN: " + newSubnet.toString());
+        }
+        
+        if (!ssidChanged && !passwordChanged && !ipChanged) {
+            Serial.println("⚠ WARNING: No changes detected");
+            Serial.println("   Request will be processed but AP won't restart");
+            Serial.println("========================================\n");
+            request->send(200, "text/plain", "No changes detected");
+            return;
+        }
+        
+        Serial.println("");
+        Serial.println("Action: AP will restart with new settings");
+        Serial.println("Effect: ALL clients will be disconnected");
+        Serial.println("========================================\n");
 
         // ============================================
-        // SAVE TO CONFIG
+        // SAVE TO CONFIG (ALWAYS)
         // ============================================
         ssid.toCharArray(wifiConfig.apSSID, 33);
         pass.toCharArray(wifiConfig.apPassword, 65);
-        wifiConfig.apIP = apIP;
-        wifiConfig.apGateway = apGateway;
-        wifiConfig.apSubnet = apSubnet;
+        wifiConfig.apIP = newAPIP;
+        wifiConfig.apGateway = newGateway;
+        wifiConfig.apSubnet = newSubnet;
         
         saveAPCredentials();
 
-        Serial.println("SAVED CONFIG:");
-        Serial.println("  SSID: " + String(wifiConfig.apSSID));
-        Serial.println("  IP: " + apIP.toString());
-        Serial.println("========================================\n");
+        Serial.println("New configuration saved to LittleFS");
+        Serial.println("Triggering AP restart task...");
 
         request->send(200, "text/plain", "OK");
 
-        // Trigger AP restart
-        xTaskCreate(restartAPTask, "APRestart", 4096, NULL, 1, NULL);
+        // ============================================
+        // ALWAYS TRIGGER RESTART (FIX!)
+        // ============================================
+        xTaskCreate(
+            restartAPTask, 
+            "APRestart", 
+            4096, 
+            NULL, 
+            1, 
+            NULL
+        );
     });
 
     // ========================================
@@ -3389,7 +3417,7 @@ void ntpTask(void *parameter) {
                                 rtcNow.day(), rtcNow.month(), rtcNow.year());
                     
                     if (isRTCTimeValid(rtcNow)) {
-                        Serial.println("   Status: ✓ RTC saved successfully");
+                        Serial.println("   Status: RTC saved successfully");
                         Serial.println("   Time will persist across restarts");
                     } else {
                         Serial.println("   Status: ✗ RTC save FAILED");
