@@ -1460,49 +1460,70 @@
 				const response = await fetch('/api/countdown');
 				const data = await response.json();
 				
-				let message = 'Halaman akan dimuat ulang otomatis...';
+				let message = '';
+				let shouldRedirect = false;
 				let redirectUrl = null;
 				
-				// Tentukan pesan berdasarkan reason
-				switch(data.reason) {
-					case 'ap_restart':
-						const apIPInput = document.getElementById('apIP');
-						if (apIPInput && apIPInput.value.trim()) {
-							redirectUrl = `http://${apIPInput.value.trim()}`;
-							message = `Mengarahkan ke ${redirectUrl}...`;
-						} else {
-							message = 'Halaman akan dimuat ulang otomatis...';
-						}
-						break;
-						
-					case 'factory_reset':
-						redirectUrl = 'http://192.168.4.1';
-						message = 'Mengarahkan ke http://192.168.4.1...';
-						break;
-						
-					case 'device_restart':
-						message = 'Halaman akan dimuat ulang otomatis...';
-						break;
-						
-					default:
-						message = 'Halaman akan dimuat ulang otomatis...';
+				if (data.reason === 'device_restart') {
+					message = 'Mulai ulang...';
+					shouldRedirect = true;
+					redirectUrl = window.location.href;
 				}
 				
-				showToast(message, 'warning');
+				else if (data.reason === 'factory_reset') {
+					message = 'Mulai ulang...';
+					shouldRedirect = true;
+					redirectUrl = 'http://192.168.4.1';
+				}
 				
-				setTimeout(() => {
-					if (redirectUrl) {
-						window.location.href = redirectUrl;
-					} else {
-						window.location.reload();
+				else if (data.reason === 'ap_restart') {                    
+					try {
+						const connType = await fetch('/api/connection-type')
+							.then(r => {
+								if (!r.ok) throw new Error('HTTP ' + r.status);
+								return r.json();
+							});
+						
+						if (connType && connType.isLocalAP) {
+							const newIP = document.getElementById('apIP')?.value.trim() || '192.168.4.1';
+							const currentIP = window.location.hostname;
+							
+							if (currentIP === newIP) {
+								message = 'Access Point mulai ulang...';
+								shouldRedirect = true;
+								redirectUrl = window.location.href;
+							} else {
+								message = 'Access Point mulai ulang...';
+								shouldRedirect = true;
+								redirectUrl = `http://${newIP}`;
+							}
+						} else {
+							message = 'Access Point berhasil';
+							shouldRedirect = false;
+							showToast('Access Point berhasil', 'warning');
+						}
+						
+					} catch (error) {
+						message = 'Gagal mendeteksi lokasi';
+						shouldRedirect = false;
+						showToast(' Gagal mendeteksi lokasi, halaman tidak dimuat ulang', 'warning');
 					}
-				}, 2000);
+				}
+				
+				if (shouldRedirect) {
+					showToast(message, 'warning');
+					setTimeout(() => {
+						if (redirectUrl) {
+							window.location.href = redirectUrl;
+						} else {
+							window.location.reload();
+						}
+					}, 2000);
+				}
 				
 			} catch (error) {
-				showToast('Halaman akan dimuat ulang otomatis...', 'warning');
-				setTimeout(() => {
-					window.location.reload();
-				}, 2000);
+				console.error('[Countdown] Error:', error);
+				showToast('Terjadi kesalahan. Silakan muat ulang halaman secara manual', 'error');
 			}
 		}
 		// ================================
