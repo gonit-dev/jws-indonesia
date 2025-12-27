@@ -2755,11 +2755,7 @@
 				});
 
 				if (response.ok) {
-					showToast('Perintah mulai ulang terkirim', 'success');
-
-					setTimeout(() => {
-						showToast('Perangkat akan dimulai ulang', 'warning');
-					}, 1500);
+					showToast('Mulai ulang', 'success');
 
 					setTimeout(() => {
 						btn.disabled = false;
@@ -2771,7 +2767,7 @@
 						startCountdownPolling();
 					}, 7000);
 				} else {
-					throw new Error('Perintah mulai ulang gagal');
+					throw new Error('Mulai ulang gagal');
 				}
 			} catch (error) {
 				showToast('Gagal memulai ulang perangkat', 'error');
