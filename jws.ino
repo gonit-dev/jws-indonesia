@@ -1654,10 +1654,10 @@ void setupServerRoutes() {
       Serial.println("Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
 
       if (isLocalAP) {
-          startCountdown("device_restart", "Mulai ulang perangkat", 60);
+          startCountdown("device_restart", "Memulai ulang perangkat", 60);
           Serial.println("Countdown started (local AP client)");
       } else {
-          startCountdown("device_restart", "Mulai ulang perangkat", 60);
+          startCountdown("device_restart", "Memulai ulang perangkat", 60);
       }
       Serial.println("========================================\n");
       
@@ -1891,7 +1891,7 @@ void setupServerRoutes() {
       bool isLocalAP = (apNetwork == clientNetwork);
       
       if (isLocalAP) {
-          startCountdown("ap_restart", "Mulai konfigurasi Access Point", 60);
+          startCountdown("ap_restart", "Memulai ulang Access Point", 60);
           Serial.println("Countdown started (client is on local AP)");
       } else {
           Serial.println("Client is on router network - no countdown needed");
@@ -2729,7 +2729,7 @@ void setupServerRoutes() {
       Serial.println("Client IP: " + clientIP.toString());
       Serial.println("Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
 
-      startCountdown("factory_reset", "Mulai ulang perangkat", 60);
+      startCountdown("factory_reset", "Pengaturan ulang perangkat", 60);
       
       if (isLocalAP) {
           Serial.println("Countdown started (client will see countdown)");
