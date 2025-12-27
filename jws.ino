@@ -2755,7 +2755,7 @@ void setupServerRoutes() {
                   
               Serial.println("Restarting NOW...");
               Serial.flush();
-              delay(100);
+              delay(200);
               
               ESP.restart();
               vTaskDelete(NULL);
@@ -2978,7 +2978,7 @@ void delayedRestart(void *parameter) {
   Serial.println("Restarting NOW");
 
   Serial.flush();
-  delay(100);
+  delay(200);
 
   ESP.restart();
   vTaskDelete(NULL);
@@ -4397,6 +4397,8 @@ void restartAPTask(void *parameter) {
     Serial.println("\n========================================");
     Serial.println("COUNTDOWN COMPLETED - RESTARTING AP NOW");
     Serial.println("========================================\n");
+
+    delay(200);
     
     // ============================================
     // FORCE DISCONNECT ALL CLIENTS - AGGRESSIVE MODE

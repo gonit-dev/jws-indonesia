@@ -1452,7 +1452,9 @@
 			toast.style.zIndex = '';
 			
 			isCountdownActive = false;
-			detectCountdownTypeAndReload();
+			setTimeout(() => {
+				detectCountdownTypeAndReload();
+			}, 100);
 		}
 		async function detectCountdownTypeAndReload() {
 			try {
@@ -1464,15 +1466,53 @@
 				let redirectUrl = null;
 				
 				if (data.reason === 'device_restart') {
-					message = 'Perangkat sedang diatur ulang…';
-					shouldRedirect = true;
-					redirectUrl = window.location.href;
+					try {
+						const connType = await fetch('/api/connection-type')
+							.then(r => {
+								if (!r.ok) throw new Error('HTTP ' + r.status);
+								return r.json();
+							});
+						
+						if (connType && connType.isLocalAP) {
+							message = 'Perangkat sedang memulai ulang…';
+							shouldRedirect = true;
+							redirectUrl = window.location.href;
+						} else {
+							message = 'Perangkat sedang memulai ulang…';
+							shouldRedirect = true;
+							redirectUrl = window.location.href;
+						}
+						
+					} catch (error) {
+						message = 'Gagal mulai ulang perangkat';
+						shouldRedirect = false;
+						showToast(message, 'warning');
+					}
 				}
 				
 				else if (data.reason === 'factory_reset') {
-					message = 'Perangkat sedang diatur ulang…';
-					shouldRedirect = true;
-					redirectUrl = 'http://192.168.4.1';
+					try {
+						const connType = await fetch('/api/connection-type')
+							.then(r => {
+								if (!r.ok) throw new Error('HTTP ' + r.status);
+								return r.json();
+							});
+						
+						if (connType && connType.isLocalAP) {
+							message = 'Perangkat sedang memulai ulang…';
+							shouldRedirect = true;
+							redirectUrl = 'http://192.168.4.1';
+						} else {
+							message = 'Perangkat sedang memulai ulang…';
+							shouldRedirect = true;
+							redirectUrl = window.location.href;
+						}
+						
+					} catch (error) {
+						message = 'Gagal mulai ulang perangkat';
+						shouldRedirect = false;
+						showToast(message, 'warning');
+					}
 				}
 				
 				else if (data.reason === 'ap_restart') {                    
@@ -1505,7 +1545,7 @@
 					} catch (error) {
 						message = 'Gagal mendeteksi lokasi perangkat';
 						shouldRedirect = false;
-						showToast(' Gagal mendeteksi lokasi, halaman tidak dimuat ulang', 'warning');
+						showToast(message, 'warning');
 					}
 				}
 				
@@ -1521,7 +1561,6 @@
 				}
 				
 			} catch (error) {
-				console.error('[Countdown] Error:', error);
 				showToast('Terjadi kesalahan. Silakan muat ulang halaman secara manual', 'error');
 			}
 		}
