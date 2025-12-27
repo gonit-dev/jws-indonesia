@@ -756,7 +756,7 @@
 														<p class="progress-meter-text">0%</p>
 													</div>
 												</div>
-												<p id="uploadStatus" class="help-text"> Memulai mengunggah… </p>
+												<p id="uploadStatus" class="help-text"> Mulai mengunggah… </p>
 											</div>
 											<div class="grid-x grid-margin-x">
 												<div class="medium-12 small-12 large-12 cell">
@@ -1375,7 +1375,7 @@
 				
 				if (data.active && data.remaining > 0) {
 					if (!isCountdownActive) {
-						// Countdown baru dimulai atau web baru di-refresh
+						// Countdown baru memulai atau web baru di-refresh
 						startCountdownDisplay(data);
 					} else {
 						// Update countdown yang sudah jalan
@@ -1484,7 +1484,7 @@
 						}
 						
 					} catch (error) {
-						message = 'Gagal mulai ulang perangkat';
+						message = 'Gagal memulai ulang perangkat';
 						shouldRedirect = false;
 						showToast(message, 'warning');
 					}
@@ -1507,9 +1507,8 @@
 							shouldRedirect = true;
 							redirectUrl = window.location.href;
 						}
-						
 					} catch (error) {
-						message = 'Gagal mulai ulang perangkat';
+						message = 'Gagal pengaturan ulang perangkat';
 						shouldRedirect = false;
 						showToast(message, 'warning');
 					}
@@ -1528,16 +1527,16 @@
 							const currentIP = window.location.hostname;
 							
 							if (currentIP === newIP) {
-								message = 'Access Point sedang dimulai ulang…';
+								message = 'Access Point sedang memulai ulang…';
 								shouldRedirect = true;
 								redirectUrl = window.location.href;
 							} else {
-								message = 'Access Point sedang dimulai ulang…';
+								message = 'Access Point sedang memulai ulang…';
 								shouldRedirect = true;
 								redirectUrl = `http://${newIP}`;
 							}
 						} else {
-							message = 'Access Point berhasil dimulai ulang';
+							message = 'Access Point berhasil memulai ulang';
 							shouldRedirect = false;
 							showToast(message, 'success');
 						}
@@ -2308,7 +2307,7 @@
 		// RESET PABRIK
 		// ================================
 		function resetSettings() {
-			if (!confirm('Yakin ingin mereset seluruh pengaturan ke setelan ulang? Perangkat akan dimulai ulang dan kembali ke pengaturan ulang.')) {
+			if (!confirm('Yakin ingin mereset seluruh pengaturan ke setelan ulang? Perangkat akan memulai ulang dan kembali ke pengaturan ulang.')) {
 				return;
 			}
 
@@ -2533,7 +2532,7 @@
 			progressDiv.classList.remove('hide');
 			progressBar.style.width = '0%';
 			progressBar.querySelector('.progress-meter-text').textContent = '0%';
-			statusText.textContent = 'Memulai mengunggah...';
+			statusText.textContent = 'Mulai mengunggah...';
 
 			try {
 				const formData = new FormData();
@@ -2775,14 +2774,14 @@
 		}
 
 		async function restartDevice() {
-			if (!confirm('🔄 Yakin ingin memulai ulang perangkat?')) {
+			if (!confirm('🔄 Yakin ingin mulai ulang perangkat?')) {
 				return;
 			}
 
 			const btn = event.target;
 			const originalText = btn.textContent;
 			btn.disabled = true;
-			btn.textContent = 'Memulai ulang...';
+			btn.textContent = 'Mulsi ulang...';
 
 			try {
 				const response = await fetch('/restart', {
@@ -2793,7 +2792,7 @@
 				});
 
 				if (response.ok) {
-					showToast('Perangkat sedang dimulai ulang', 'success');
+					showToast('Perangkat sedang memulai ulang', 'success');
 
 					setTimeout(() => {
 						btn.disabled = false;
@@ -2808,7 +2807,7 @@
 					throw new Error('Mulai ulang gagal');
 				}
 			} catch (error) {
-				showToast('Gagal memulai ulang perangkat', 'error');
+				showToast('Gagal mulai ulang perangkat', 'error');
 				btn.disabled = false;
 				btn.textContent = originalText;
 			}
