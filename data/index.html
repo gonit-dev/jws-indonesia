@@ -1461,7 +1461,6 @@
 				const response = await fetch('/api/countdown');
 				const data = await response.json();
 				
-				let message = '';
 				let shouldRedirect = false;
 				let redirectUrl = null;
 				
@@ -1474,19 +1473,15 @@
 							});
 						
 						if (connType && connType.isLocalAP) {
-							message = 'Perangkat sedang memulai ulang…';
 							shouldRedirect = true;
 							redirectUrl = window.location.href;
 						} else {
-							message = 'Perangkat sedang memulai ulang…';
 							shouldRedirect = true;
 							redirectUrl = window.location.href;
 						}
 						
 					} catch (error) {
-						message = 'Gagal memulai ulang perangkat';
-						shouldRedirect = false;
-						showToast(message, 'warning');
+						showToast('Gagal memulai ulang perangkat', 'warning');
 					}
 				}
 				
@@ -1499,18 +1494,14 @@
 							});
 						
 						if (connType && connType.isLocalAP) {
-							message = 'Perangkat sedang memulai ulang…';
 							shouldRedirect = true;
 							redirectUrl = 'http://192.168.4.1';
 						} else {
-							message = 'Perangkat sedang memulai ulang…';
 							shouldRedirect = true;
 							redirectUrl = window.location.href;
 						}
 					} catch (error) {
-						message = 'Gagal pengaturan ulang perangkat';
-						shouldRedirect = false;
-						showToast(message, 'warning');
+						showToast('Gagal pengaturan ulang perangkat', 'warning');
 					}
 				}
 				
@@ -1527,36 +1518,28 @@
 							const currentIP = window.location.hostname;
 							
 							if (currentIP === newIP) {
-								message = 'Access Point sedang memulai ulang…';
 								shouldRedirect = true;
 								redirectUrl = window.location.href;
 							} else {
-								message = 'Access Point sedang memulai ulang…';
 								shouldRedirect = true;
 								redirectUrl = `http://${newIP}`;
 							}
 						} else {
-							message = 'Access Point berhasil memulai ulang';
-							shouldRedirect = false;
-							showToast(message, 'success');
+							showToast('Access Point berhasil memulai ulang', 'success');
 						}
 						
 					} catch (error) {
-						message = 'Gagal mendeteksi lokasi perangkat';
-						shouldRedirect = false;
-						showToast(message, 'warning');
+						showToast('Gagal mendeteksi lokasi perangkat', 'warning');
 					}
 				}
 				
+				// Redirect tanpa toast
 				if (shouldRedirect) {
-					showToast(message, 'warning');
-					setTimeout(() => {
-						if (redirectUrl) {
-							window.location.href = redirectUrl;
-						} else {
-							window.location.reload();
-						}
-					}, 2000);
+					if (redirectUrl) {
+						window.location.href = redirectUrl;
+					} else {
+						window.location.reload();
+					}
 				}
 				
 			} catch (error) {
