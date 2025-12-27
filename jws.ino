@@ -1624,15 +1624,45 @@ void setupServerRoutes() {
   });
 
   server.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
+      // ============================================
+      // DETEKSI TIPE AKSES
+      // ============================================
+      IPAddress clientIP = request->client()->remoteIP();
+      IPAddress apIP = WiFi.softAPIP();
+      IPAddress apSubnet = WiFi.softAPSubnetMask();
+      
+      IPAddress apNetwork(
+          apIP[0] & apSubnet[0],
+          apIP[1] & apSubnet[1],
+          apIP[2] & apSubnet[2],
+          apIP[3] & apSubnet[3]
+      );
+      
+      IPAddress clientNetwork(
+          clientIP[0] & apSubnet[0],
+          clientIP[1] & apSubnet[1],
+          clientIP[2] & apSubnet[2],
+          clientIP[3] & apSubnet[3]
+      );
+      
+      bool isLocalAP = (apNetwork == clientNetwork);
+      
       Serial.println("\n========================================");
-      Serial.println("MANUAL RESTART REQUESTED");
+      Serial.println("RESTART REQUEST RECEIVED");
       Serial.println("========================================");
-      Serial.println("Device will restart in 60 seconds...");
+      Serial.println("Client IP: " + clientIP.toString());
+      Serial.println("Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
+
+      if (isLocalAP) {
+          startCountdown("device_restart", "Mulai ulang perangkat", 60);
+          Serial.println("Countdown started (local AP client)");
+      } else {
+          startCountdown("device_restart", "Mulai ulang perangkat", 60);
+      }
       Serial.println("========================================\n");
-
+      
       request->send(200, "text/plain", "OK");
-
-      startCountdown("device_restart", "Mulai ulang perangkat", 60);
+      
       scheduleRestart(60);
   });
 
@@ -1840,9 +1870,6 @@ void setupServerRoutes() {
       Serial.println("  IP: " + newAPIP.toString());
       Serial.println("========================================\n");
 
-      // ============================================
-      // **PENTING: START COUNTDOWN DULU SEBELUM RESPONSE**
-      // ============================================
       IPAddress clientIP = request->client()->remoteIP();
       IPAddress apIP = WiFi.softAPIP();
       IPAddress apSubnet = WiFi.softAPSubnetMask();
@@ -2535,167 +2562,210 @@ void setupServerRoutes() {
   // TAB RESET - FACTORY RESET
   // ========================================
   server.on("/reset", HTTP_POST, [](AsyncWebServerRequest * request) {
-    Serial.println("\n========================================");
-    Serial.println("FACTORY RESET STARTED");
-    Serial.println("========================================");
+      Serial.println("\n========================================");
+      Serial.println("FACTORY RESET STARTED");
+      Serial.println("========================================");
 
-    // Hapus semua file konfigurasi
-    if (LittleFS.exists("/wifi_creds.txt")) {
-      LittleFS.remove("/wifi_creds.txt");
-      Serial.println("WiFi creds deleted");
-    }
-
-    if (LittleFS.exists("/prayer_times.txt")) {
-      LittleFS.remove("/prayer_times.txt");
-      Serial.println("Prayer times deleted");
-    }
-
-    if (LittleFS.exists("/ap_creds.txt")) {
-      LittleFS.remove("/ap_creds.txt");
-      Serial.println("AP creds deleted");
-    }
-
-    if (LittleFS.exists("/city_selection.txt")) {
-      LittleFS.remove("/city_selection.txt");
-      Serial.println("City selection deleted");
-    }
-
-    if (LittleFS.exists("/method_selection.txt")) {
-      LittleFS.remove("/method_selection.txt");
-      Serial.println("Method selection deleted");
-    }
-
-    if (LittleFS.exists("/timezone.txt")) {
-      LittleFS.remove("/timezone.txt");
-      Serial.println("Timezone config deleted");
-    }
-
-    if (LittleFS.exists("/buzzer_config.txt")) {
-      LittleFS.remove("/buzzer_config.txt");
-      Serial.println("Buzzer config deleted");
-    }
-
-    if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
-      methodConfig.methodId = 5;
-      methodConfig.methodName = "Egyptian General Authority of Survey";
-
-      wifiConfig.routerSSID = "";
-      wifiConfig.routerPassword = "";
-      wifiConfig.isConnected = false;
-
-      prayerConfig.imsakTime = "";
-      prayerConfig.subuhTime = "";
-      prayerConfig.terbitTime = "";
-      prayerConfig.zuhurTime = "";
-      prayerConfig.asharTime = "";
-      prayerConfig.maghribTime = "";
-      prayerConfig.isyaTime = "";
-      prayerConfig.selectedCity = "";
-      prayerConfig.selectedCityName = "";
-      prayerConfig.latitude = "";
-      prayerConfig.longitude = "";
-
-      strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
-      strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
-      wifiConfig.apIP = IPAddress(192, 168, 4, 1);
-      wifiConfig.apGateway = IPAddress(192, 168, 4, 1);
-      wifiConfig.apSubnet = IPAddress(255, 255, 255, 0);
-      WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
-
-      xSemaphoreGive(settingsMutex);
-    }
-
-    timezoneOffset = 7;
-    Serial.println("Settings reset to default");
-
-    Serial.println("\nResetting time to 00:00:00 01/01/2000...");
-
-    if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-      const time_t EPOCH_2000 = 946684800;
-      setTime(0, 0, 0, 1, 1, 2000);
-      timeConfig.currentTime = EPOCH_2000; // Force hardcoded UTC
-      timeConfig.ntpSynced = false;
-      timeConfig.ntpServer = "";
-
-      // Safety check
-      if (timeConfig.currentTime < EPOCH_2000) {
-        timeConfig.currentTime = EPOCH_2000;
+      // ============================================
+      // HAPUS SEMUA FILE KONFIGURASI
+      // ============================================
+      if (LittleFS.exists("/wifi_creds.txt")) {
+          LittleFS.remove("/wifi_creds.txt");
+          Serial.println("WiFi creds deleted");
       }
 
-      DisplayUpdate update;
-      update.type = DisplayUpdate::TIME_UPDATE;
-      xQueueSend(displayQueue, & update, 0);
-
-      xSemaphoreGive(timeMutex);
-
-      Serial.printf("Time reset to: %ld (01/01/2000 00:00:00 UTC)\n", EPOCH_2000);
-    }
-
-    if (rtcAvailable) {
-      Serial.println("\nSaving time to RTC hardware...");
-
-      saveTimeToRTC();
-
-      delay(500);
-
-      DateTime rtcNow = rtc.now();
-      Serial.println("RTC Verification:");
-      Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
-        rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
-        rtcNow.day(), rtcNow.month(), rtcNow.year());
-
-      bool rtcValid = (
-        rtcNow.year() >= 2000 && rtcNow.year() <= 2100 &&
-        rtcNow.month() >= 1 && rtcNow.month() <= 12 &&
-        rtcNow.day() >= 1 && rtcNow.day() <= 31
-      );
-
-      if (rtcValid) {
-        Serial.println("RTC saved successfully");
-        Serial.println("Time will persist across restarts");
-      } else {
-        Serial.println("RTC save FAILED - time is invalid");
-        Serial.println("Check RTC battery or I2C connection");
+      if (LittleFS.exists("/prayer_times.txt")) {
+          LittleFS.remove("/prayer_times.txt");
+          Serial.println("Prayer times deleted");
       }
-    } else {
-      Serial.println("\nRTC not available - time will reset on restart");
-    }
 
-    Serial.println("Time reset complete");
+      if (LittleFS.exists("/ap_creds.txt")) {
+          LittleFS.remove("/ap_creds.txt");
+          Serial.println("AP creds deleted");
+      }
 
-    updateCityDisplay();
-    WiFi.disconnect(true);
+      if (LittleFS.exists("/city_selection.txt")) {
+          LittleFS.remove("/city_selection.txt");
+          Serial.println("City selection deleted");
+      }
 
-    Serial.println("\n========================================");
-    Serial.println("FACTORY RESET COMPLETE");
-    Serial.println("Device will restart in 60 seconds...");
-    Serial.println("========================================\n");
-    
-    request->send(200, "text/plain", "OK");
-    
-    startCountdown("factory_reset", "Mulai ulang perangkat", 60);
-    xTaskCreate(
-      [](void* param) {
-          for (int i = 60; i > 0; i--) {
-              if (i == 60 || i == 20 || i == 10 || i <= 5) {
-                  Serial.printf("Factory reset restarting in %d seconds...\n", i);
-              }
-              vTaskDelay(pdMS_TO_TICKS(1000));
+      if (LittleFS.exists("/method_selection.txt")) {
+          LittleFS.remove("/method_selection.txt");
+          Serial.println("Method selection deleted");
+      }
+
+      if (LittleFS.exists("/timezone.txt")) {
+          LittleFS.remove("/timezone.txt");
+          Serial.println("Timezone config deleted");
+      }
+
+      if (LittleFS.exists("/buzzer_config.txt")) {
+          LittleFS.remove("/buzzer_config.txt");
+          Serial.println("Buzzer config deleted");
+      }
+
+      // ============================================
+      // RESET MEMORY SETTINGS
+      // ============================================
+      if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+          methodConfig.methodId = 5;
+          methodConfig.methodName = "Egyptian General Authority of Survey";
+
+          wifiConfig.routerSSID = "";
+          wifiConfig.routerPassword = "";
+          wifiConfig.isConnected = false;
+
+          prayerConfig.imsakTime = "";
+          prayerConfig.subuhTime = "";
+          prayerConfig.terbitTime = "";
+          prayerConfig.zuhurTime = "";
+          prayerConfig.asharTime = "";
+          prayerConfig.maghribTime = "";
+          prayerConfig.isyaTime = "";
+          prayerConfig.selectedCity = "";
+          prayerConfig.selectedCityName = "";
+          prayerConfig.latitude = "";
+          prayerConfig.longitude = "";
+
+          strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
+          strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
+          wifiConfig.apIP = IPAddress(192, 168, 4, 1);
+          wifiConfig.apGateway = IPAddress(192, 168, 4, 1);
+          wifiConfig.apSubnet = IPAddress(255, 255, 255, 0);
+
+          xSemaphoreGive(settingsMutex);
+      }
+
+      timezoneOffset = 7;
+      Serial.println("Settings reset to default");
+
+      // ============================================
+      // RESET TIME TO 01/01/2000
+      // ============================================
+      Serial.println("\nResetting time to 00:00:00 01/01/2000...");
+
+      if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+          const time_t EPOCH_2000 = 946684800;
+          setTime(0, 0, 0, 1, 1, 2000);
+          timeConfig.currentTime = EPOCH_2000;
+          timeConfig.ntpSynced = false;
+          timeConfig.ntpServer = "";
+
+          if (timeConfig.currentTime < EPOCH_2000) {
+              timeConfig.currentTime = EPOCH_2000;
           }
-              
-          Serial.println("Restarting NOW...");
-          Serial.flush();
-          delay(100);
+
+          DisplayUpdate update;
+          update.type = DisplayUpdate::TIME_UPDATE;
+          xQueueSend(displayQueue, &update, 0);
+
+          xSemaphoreGive(timeMutex);
           
-          ESP.restart();
-          vTaskDelete(NULL);
-      },
-      "FactoryResetTask",
-      2048,
-      NULL,
-      1,
-      NULL
-    );
+          Serial.printf("Time reset to: %ld (01/01/2000 00:00:00 UTC)\n", EPOCH_2000);
+      }
+
+      // ============================================
+      // SAVE TO RTC IF AVAILABLE
+      // ============================================
+      if (rtcAvailable) {
+          Serial.println("\nSaving time to RTC hardware...");
+          saveTimeToRTC();
+          
+          delay(500);
+          
+          DateTime rtcNow = rtc.now();
+          Serial.println("RTC Verification:");
+          Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+                      rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
+                      rtcNow.day(), rtcNow.month(), rtcNow.year());
+          
+          bool rtcValid = (
+              rtcNow.year() >= 2000 && rtcNow.year() <= 2100 &&
+              rtcNow.month() >= 1 && rtcNow.month() <= 12 &&
+              rtcNow.day() >= 1 && rtcNow.day() <= 31
+          );
+          
+          if (rtcValid) {
+              Serial.println("RTC saved successfully");
+          } else {
+              Serial.println("RTC save FAILED");
+          }
+      }
+
+      Serial.println("Time reset complete");
+
+      // ============================================
+      // UPDATE DISPLAY & DISCONNECT WIFI
+      // ============================================
+      updateCityDisplay();
+      WiFi.disconnect(true);
+
+      // ============================================
+      // DETEKSI TIPE AKSES (Local AP vs Remote)
+      // ============================================
+      IPAddress clientIP = request->client()->remoteIP();
+      IPAddress apIP = WiFi.softAPIP();
+      IPAddress apSubnet = WiFi.softAPSubnetMask();
+      
+      IPAddress apNetwork(
+          apIP[0] & apSubnet[0],
+          apIP[1] & apSubnet[1],
+          apIP[2] & apSubnet[2],
+          apIP[3] & apSubnet[3]
+      );
+      
+      IPAddress clientNetwork(
+          clientIP[0] & apSubnet[0],
+          clientIP[1] & apSubnet[1],
+          clientIP[2] & apSubnet[2],
+          clientIP[3] & apSubnet[3]
+      );
+      
+      bool isLocalAP = (apNetwork == clientNetwork);
+
+      Serial.println("\n========================================");
+      Serial.println("FACTORY RESET COMPLETE");
+      Serial.println("========================================");
+      Serial.println("Client IP: " + clientIP.toString());
+      Serial.println("Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
+
+      startCountdown("factory_reset", "Mulai ulang perangkat", 60);
+      
+      if (isLocalAP) {
+          Serial.println("Countdown started (client will see countdown)");
+      } else {
+          Serial.println("Countdown started (remote client will lose connection)");
+      }
+      Serial.println("Device will restart in 60 seconds...");
+      Serial.println("========================================\n");
+      
+      request->send(200, "text/plain", "OK");
+      
+      // ============================================
+      // SCHEDULE RESTART TASK
+      // ============================================
+      xTaskCreate(
+          [](void* param) {
+              for (int i = 60; i > 0; i--) {
+                  if (i == 60 || i == 20 || i == 10 || i <= 5) {
+                      Serial.printf("Factory reset restarting in %d seconds...\n", i);
+                  }
+                  vTaskDelay(pdMS_TO_TICKS(1000));
+              }
+                  
+              Serial.println("Restarting NOW...");
+              Serial.flush();
+              delay(100);
+              
+              ESP.restart();
+              vTaskDelete(NULL);
+          },
+          "FactoryResetTask",
+          2048,
+          NULL,
+          1,
+          NULL
+      );
   });
 
   // ========================================
