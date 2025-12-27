@@ -381,8 +381,6 @@ void setupServerRoutes();
 // ============================================
 // Utility Functions
 // ============================================
-void scheduleRestart(int delaySeconds);
-void delayedRestart(void *parameter);
 bool init_littlefs();
 void printStackReport();
 
@@ -1624,47 +1622,62 @@ void setupServerRoutes() {
   });
 
   server.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
-      // ============================================
-      // DETEKSI TIPE AKSES
-      // ============================================
-      IPAddress clientIP = request->client()->remoteIP();
-      IPAddress apIP = WiFi.softAPIP();
-      IPAddress apSubnet = WiFi.softAPSubnetMask();
-      
-      IPAddress apNetwork(
-          apIP[0] & apSubnet[0],
-          apIP[1] & apSubnet[1],
-          apIP[2] & apSubnet[2],
-          apIP[3] & apSubnet[3]
+    IPAddress clientIP = request->client()->remoteIP();
+    IPAddress apIP = WiFi.softAPIP();
+    IPAddress apSubnet = WiFi.softAPSubnetMask();
+    
+    IPAddress apNetwork(
+        apIP[0] & apSubnet[0],
+        apIP[1] & apSubnet[1],
+        apIP[2] & apSubnet[2],
+        apIP[3] & apSubnet[3]
+    );
+    
+    IPAddress clientNetwork(
+        clientIP[0] & apSubnet[0],
+        clientIP[1] & apSubnet[1],
+        clientIP[2] & apSubnet[2],
+        clientIP[3] & apSubnet[3]
+    );
+    
+    bool isLocalAP = (apNetwork == clientNetwork);
+    
+    Serial.println("\n========================================");
+    Serial.println("RESTART REQUEST RECEIVED");
+    Serial.println("========================================");
+    Serial.println("Client IP: " + clientIP.toString());
+    Serial.println("Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
+    
+    startCountdown("device_restart", "Memulai ulang perangkat", 60);
+    
+    Serial.println("Countdown started");
+    Serial.println("========================================\n");
+    
+    request->send(200, "text/plain", "OK");
+    
+    xTaskCreate(
+        [](void* param) {
+            for (int i = 60; i > 0; i--) {
+                if (i == 60 || i == 20 || i == 10 || i <= 5) {
+                    Serial.printf("Restarting in %d seconds...\n", i);
+                }
+                vTaskDelay(pdMS_TO_TICKS(1000));
+            }
+            
+            Serial.println("Restarting NOW...");
+            Serial.flush();
+            delay(1000);
+            
+            ESP.restart();
+            vTaskDelete(NULL);
+        },
+        "DeviceRestartTask",
+        2048,
+        NULL,
+        1,
+        NULL
       );
-      
-      IPAddress clientNetwork(
-          clientIP[0] & apSubnet[0],
-          clientIP[1] & apSubnet[1],
-          clientIP[2] & apSubnet[2],
-          clientIP[3] & apSubnet[3]
-      );
-      
-      bool isLocalAP = (apNetwork == clientNetwork);
-      
-      Serial.println("\n========================================");
-      Serial.println("RESTART REQUEST RECEIVED");
-      Serial.println("========================================");
-      Serial.println("Client IP: " + clientIP.toString());
-      Serial.println("Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
-
-      if (isLocalAP) {
-          startCountdown("device_restart", "Memulai ulang perangkat", 60);
-          Serial.println("Countdown started (local AP client)");
-      } else {
-          startCountdown("device_restart", "Memulai ulang perangkat", 60);
-      }
-      Serial.println("========================================\n");
-      
-      request->send(200, "text/plain", "OK");
-      
-      scheduleRestart(60);
-  });
+   });
 
   // ========================================
   // TAB WIFI - ROUTER & AP CONFIG
@@ -2952,38 +2965,6 @@ void setupServerRoutes() {
 // ============================================
 // Utility Functions
 // ============================================
-void scheduleRestart(int delaySeconds) {
-  static int delay = delaySeconds;
-  xTaskCreate(
-    delayedRestart,
-    "RestartTask",
-    2048,
-    &delay,
-    1,
-    NULL);
-}
-
-void delayedRestart(void *parameter) {
-  int delaySeconds = *((int *)parameter);
-
-  Serial.printf("Restarting in %d seconds...\n", delaySeconds);
-
-  vTaskDelay(pdMS_TO_TICKS(500));
-
-  for (int i = delaySeconds; i > 0; i--) {
-    Serial.printf("Restart in %d...\n", i);
-    vTaskDelay(pdMS_TO_TICKS(1000));
-  }
-
-  Serial.println("Restarting NOW");
-
-  Serial.flush();
-  delay(1000);
-
-  ESP.restart();
-  vTaskDelete(NULL);
-}
-
 bool init_littlefs() {
   Serial.println("Initializing LittleFS...");
   if (!LittleFS.begin(true)) {
