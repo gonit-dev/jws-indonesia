@@ -1452,8 +1452,9 @@
 			toast.style.zIndex = '';
 			
 			isCountdownActive = false;
-			
-			detectCountdownTypeAndReload();
+			setTimeout(() => {
+				detectCountdownTypeAndReload();
+			}, 2000);
 		}
 		async function detectCountdownTypeAndReload() {
 			try {

@@ -2755,7 +2755,7 @@ void setupServerRoutes() {
                   
               Serial.println("Restarting NOW...");
               Serial.flush();
-              delay(3000);
+              delay(100);
               
               ESP.restart();
               vTaskDelete(NULL);
@@ -2978,7 +2978,7 @@ void delayedRestart(void *parameter) {
   Serial.println("Restarting NOW");
 
   Serial.flush();
-  delay(3000);
+  delay(100);
 
   ESP.restart();
   vTaskDelete(NULL);
