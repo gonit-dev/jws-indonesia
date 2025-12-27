@@ -1437,7 +1437,7 @@
 		}
 		function stopCountdownDisplay() {
 			if (!isCountdownActive) return;
-			
+					
 			stopCountdownPolling();
 			
 			const overlay = document.getElementById('countdownOverlay');
@@ -1452,10 +1452,8 @@
 			toast.style.zIndex = '';
 			
 			isCountdownActive = false;
-
-			setTimeout(() => {
-				detectCountdownTypeAndReload();
-			}, 2000);
+			
+			detectCountdownTypeAndReload();
 		}
 		async function detectCountdownTypeAndReload() {
 			try {
@@ -1521,7 +1519,6 @@
 				}
 
 			} catch (error) {
-				console.error('[Countdown] Error:', error);
 				showToast(
 					'Terjadi kesalahan. Silakan muat ulang halaman secara manual.',
 					'error'
@@ -3032,8 +3029,6 @@
 					const countdownData = await countdownCheck.json();
 					
 					if (countdownData.active && countdownData.remaining > 0) {
-						console.log('Countdown detected during page load');
-						console.log('Remaining:', countdownData.remaining, 'seconds');
 						
 						await updateProgress(100, countdownData.message + '...');
 						
