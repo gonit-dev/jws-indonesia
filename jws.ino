@@ -70,7 +70,7 @@
 #define WIFI_TASK_STACK_SIZE 4608      // Event-driven
 #define NTP_TASK_STACK_SIZE 5120       // Built-in NTP
 #define WEB_TASK_STACK_SIZE 4096       // AsyncWebServer + file handling
-#define PRAYER_TASK_STACK_SIZE 2560    // HTTP + JSON
+#define PRAYER_TASK_STACK_SIZE 1536    // HTTP + JSON
 #define RTC_TASK_STACK_SIZE 2048       // Simple I2C
 #define CLOCK_TASK_STACK_SIZE 2048     // Simple time increment
 
