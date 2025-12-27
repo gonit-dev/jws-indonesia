@@ -1452,78 +1452,77 @@
 			toast.style.zIndex = '';
 			
 			isCountdownActive = false;
-			setTimeout(() => {
-				detectCountdownTypeAndReload();
-			}, 2000);
+			detectCountdownTypeAndReload();
 		}
 		async function detectCountdownTypeAndReload() {
 			try {
 				const response = await fetch('/api/countdown');
 				const data = await response.json();
-
+				
 				let message = '';
 				let shouldRedirect = false;
 				let redirectUrl = null;
-
+				
 				if (data.reason === 'device_restart') {
-					message = 'Perangkat sedang dimulai ulang…';
+					message = 'Perangkat sedang diatur ulang…';
 					shouldRedirect = true;
 					redirectUrl = window.location.href;
 				}
-
+				
 				else if (data.reason === 'factory_reset') {
 					message = 'Perangkat sedang diatur ulang…';
 					shouldRedirect = true;
 					redirectUrl = 'http://192.168.4.1';
 				}
-
-				else if (data.reason === 'ap_restart') {
+				
+				else if (data.reason === 'ap_restart') {                    
 					try {
 						const connType = await fetch('/api/connection-type')
 							.then(r => {
 								if (!r.ok) throw new Error('HTTP ' + r.status);
 								return r.json();
 							});
-
+						
 						if (connType && connType.isLocalAP) {
 							const newIP = document.getElementById('apIP')?.value.trim() || '192.168.4.1';
 							const currentIP = window.location.hostname;
-
-							message = 'Access Point sedang dimulai ulang…';
-							shouldRedirect = true;
-							redirectUrl = currentIP === newIP
-								? window.location.href
-								: `http://${newIP}`;
+							
+							if (currentIP === newIP) {
+								message = 'Access Point sedang dimulai ulang…';
+								shouldRedirect = true;
+								redirectUrl = window.location.href;
+							} else {
+								message = 'Access Point sedang dimulai ulang…';
+								shouldRedirect = true;
+								redirectUrl = `http://${newIP}`;
+							}
 						} else {
 							message = 'Access Point berhasil dimulai ulang';
 							shouldRedirect = false;
 							showToast(message, 'success');
 						}
-
+						
 					} catch (error) {
 						message = 'Gagal mendeteksi lokasi perangkat';
 						shouldRedirect = false;
-						showToast(
-							'Gagal mendeteksi lokasi perangkat. Halaman tidak dimuat ulang.',
-							'warning'
-						);
+						showToast(' Gagal mendeteksi lokasi, halaman tidak dimuat ulang', 'warning');
 					}
 				}
-
+				
 				if (shouldRedirect) {
 					showToast(message, 'warning');
 					setTimeout(() => {
-						redirectUrl
-							? window.location.href = redirectUrl
-							: window.location.reload();
+						if (redirectUrl) {
+							window.location.href = redirectUrl;
+						} else {
+							window.location.reload();
+						}
 					}, 2000);
 				}
-
+				
 			} catch (error) {
-				showToast(
-					'Terjadi kesalahan. Silakan muat ulang halaman secara manual.',
-					'error'
-				);
+				console.error('[Countdown] Error:', error);
+				showToast('Terjadi kesalahan. Silakan muat ulang halaman secara manual', 'error');
 			}
 		}
 		// ================================
