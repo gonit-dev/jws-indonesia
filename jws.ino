@@ -66,11 +66,12 @@
 // RTOS CONFIGURATION
 // ================================
 // Task Stack Sizes (in bytes)
+// Task Stack Sizes (in bytes)
 #define UI_TASK_STACK_SIZE 12288       // LVGL + EEZ rendering
-#define WIFI_TASK_STACK_SIZE 4608      // Event-driven
-#define NTP_TASK_STACK_SIZE 6144       // Built-in NTP
-#define WEB_TASK_STACK_SIZE 4096       // AsyncWebServer + file handling
-#define PRAYER_TASK_STACK_SIZE 4096    // HTTP + JSON
+#define WIFI_TASK_STACK_SIZE 5120      // Event-driven + reconnect (small headroom)
+#define NTP_TASK_STACK_SIZE 6144       // NTP + Prayer API (HTTP/JSON in heap)
+#define WEB_TASK_STACK_SIZE 5120       // AsyncWebServer + concurrent requests
+#define PRAYER_TASK_STACK_SIZE 6144    // HTTP + JSON parsing (in heap)
 #define RTC_TASK_STACK_SIZE 2048       // Simple I2C
 #define CLOCK_TASK_STACK_SIZE 2048     // Simple time increment
 
