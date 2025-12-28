@@ -63,17 +63,16 @@
 #define TS_MAX_Y 3600
 
 // ================================
-// RTOS CONFIGURATION - OPTIMIZED
+// RTOS CONFIGURATION
 // ================================
-
 // Task Stack Sizes (in bytes)
-#define UI_TASK_STACK_SIZE 12288       // 12 KB - OK (LVGL + EEZ rendering)
-#define WIFI_TASK_STACK_SIZE 6144      // 6 KB  ← NAIKKAN dari 4608
-#define NTP_TASK_STACK_SIZE 10240      // 10 KB ← NAIKKAN dari 6144 (HTTP + JSON inside)
-#define WEB_TASK_STACK_SIZE 8192       // 8 KB  ← NAIKKAN dari 4096 (CRITICAL!)
-#define PRAYER_TASK_STACK_SIZE 10240   // 10 KB ← NAIKKAN dari 4096 (HTTP + JSON)
-#define RTC_TASK_STACK_SIZE 2048       // 2 KB  - OK (Simple I2C)
-#define CLOCK_TASK_STACK_SIZE 2048     // 2 KB  - OK (Simple time increment)
+#define UI_TASK_STACK_SIZE 12288       // LVGL + EEZ rendering
+#define WIFI_TASK_STACK_SIZE 4608      // Event-driven
+#define NTP_TASK_STACK_SIZE 6144       // Built-in NTP
+#define WEB_TASK_STACK_SIZE 4096       // AsyncWebServer + file handling
+#define PRAYER_TASK_STACK_SIZE 4096    // HTTP + JSON
+#define RTC_TASK_STACK_SIZE 2048       // Simple I2C
+#define CLOCK_TASK_STACK_SIZE 2048     // Simple time increment
 
 // Task Priorities (0 = lowest, higher number = higher priority)
 #define UI_TASK_PRIORITY 3             // Highest (display responsiveness)
