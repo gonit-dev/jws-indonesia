@@ -1373,16 +1373,33 @@
 		// ================================
 		// COUNTDOWN MANAGER - SERVER-DRIVEN
 		// ================================
-		let countdownCheckInterval = null;
 		let isCountdownActive = false;
+		let countdownEndTime = 0; // Timestamp kapan countdown selesai
+		let countdownReason = ""; // Reason dari server
+		let countdownMessage = ""; // Message dari server
+		let countdownTotalSeconds = 0; // Total durasi countdown
+		let countdownCheckInterval = null;
+		let lastKnownCountdownState = null;
+		let lastSuccessfulPoll = Date.now();
+		const POLL_TIMEOUT_MS = 10000;
 
 		// Start polling countdown status
 		function startCountdownPolling() {
 			if (countdownCheckInterval) {
 				clearInterval(countdownCheckInterval);
 			}
+			
+			lastSuccessfulPoll = Date.now();
 			checkCountdownStatus();
-			countdownCheckInterval = setInterval(checkCountdownStatus, 1000);
+			
+			countdownCheckInterval = setInterval(() => {
+				checkCountdownStatus();
+				
+				const timeSinceLastPoll = Date.now() - lastSuccessfulPoll;
+				
+				if (timeSinceLastPoll > POLL_TIMEOUT_MS && isCountdownActive) {
+				}
+			}, 1000);
 		}
 		function stopCountdownPolling() {
 			if (countdownCheckInterval) {
@@ -1392,21 +1409,67 @@
 		}
 		async function checkCountdownStatus() {
 			try {
-				const response = await fetch('/api/countdown');
+				const controller = new AbortController();
+				const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 detik timeout
+				
+				const response = await fetch('/api/countdown', {
+					signal: controller.signal,
+					cache: 'no-cache'
+				});
+				
+				clearTimeout(timeoutId);
+				
+				if (!response.ok) {
+					throw new Error(`HTTP ${response.status}`);
+				}
+				
 				const data = await response.json();
 				
+				lastSuccessfulPoll = Date.now();
+				
+				// Server mengatakan countdown aktif
 				if (data.active && data.remaining > 0) {
+					lastKnownCountdownState = data;
+					
 					if (!isCountdownActive) {
+						const clientNow = Date.now();
+						const bufferSeconds = 2;
+						countdownEndTime = clientNow + ((data.remaining + bufferSeconds) * 1000);
+						
+						countdownReason = data.reason;
+						countdownMessage = data.message;
+						countdownTotalSeconds = data.total || data.remaining;
+						
 						startCountdownDisplay(data);
-					} else {
-						updateCountdownDisplay(data.remaining, data.message);
 					}
-				} else if (isCountdownActive) {
+				} 
+				else if (data.active === false && isCountdownActive) {
 					stopCountdownDisplay();
-				} else if (!data.active) {
-					stopCountdownPolling();
+					return;
 				}
+				
 			} catch (error) {
+				
+				const timeSinceLastPoll = Date.now() - lastSuccessfulPoll;
+				
+				if (timeSinceLastPoll > POLL_TIMEOUT_MS) {
+				}
+				
+				if (error.name === 'AbortError') {
+				} else {
+				}
+			}
+			
+			if (isCountdownActive && countdownEndTime > 0) {
+				const now = Date.now();
+				const remaining = Math.max(0, Math.floor((countdownEndTime - now) / 1000));
+				
+				// Update display
+				updateCountdownDisplay(remaining, countdownMessage);
+				
+				if (remaining <= 0) {
+					stopCountdownDisplay();
+				}
 			}
 		}
 		function startCountdownDisplay(data) {
@@ -1442,20 +1505,33 @@
 		function updateCountdownDisplay(remaining, message) {
 			const toast = document.getElementById('toast');
 			
+			if (!toast) return;
+			
 			if (remaining > 0) {
-				toast.textContent = `${message} - ${remaining} detik`;
+				const timeSinceLastPoll = Date.now() - lastSuccessfulPoll;
+				const isOffline = timeSinceLastPoll > 5000;
 				
-				// Change color based on remaining time
+				let displayMessage = `${message} - ${remaining} detik`;
+				
+				if (isOffline) {
+				}
+				
+				toast.textContent = displayMessage;
+				
 				if (remaining <= 10) {
 					toast.className = 'toast callout alert show';
 				} else if (remaining <= 20) {
 					toast.className = 'toast callout warning show';
+				} else {
+					toast.className = 'toast callout warning show';
 				}
+				
+				toast.style.zIndex = '999999';
 			}
 		}
 		function stopCountdownDisplay() {
 			if (!isCountdownActive) return;
-					
+			
 			stopCountdownPolling();
 			
 			const overlay = document.getElementById('countdownOverlay');
@@ -1466,103 +1542,59 @@
 			document.body.classList.remove('countdown-active');
 			
 			const toast = document.getElementById('toast');
-			toast.classList.remove('show');
-			toast.style.zIndex = '';
+			toast.textContent = 'Mengarahkan ulang...';
+			toast.className = 'toast callout success show';
+			toast.style.zIndex = '999999';
 			
 			isCountdownActive = false;
-			setTimeout(() => {
-				detectCountdownTypeAndReload();
-			}, 100);
-		}
-		async function detectCountdownTypeAndReload() {
-			try {
-				const response = await fetch('/api/countdown');
-				const data = await response.json();
-				
-				let shouldRedirect = false;
-				let redirectUrl = null;
-				
-				if (data.reason === 'device_restart') {
-					try {
-						const connType = await fetch('/api/connection-type')
-							.then(r => {
-								if (!r.ok) throw new Error('HTTP ' + r.status);
-								return r.json();
-							});
-						
-						if (connType && connType.isLocalAP) {
-							shouldRedirect = true;
-							redirectUrl = window.location.href;
-						} else {
-							shouldRedirect = true;
-							redirectUrl = window.location.href;
-						}
-						
-					} catch (error) {
-						showToast('Gagal memulai ulang perangkat', 'warning');
-					}
-				}
-				
-				else if (data.reason === 'factory_reset') {
-					try {
-						const connType = await fetch('/api/connection-type')
-							.then(r => {
-								if (!r.ok) throw new Error('HTTP ' + r.status);
-								return r.json();
-							});
-						
-						if (connType && connType.isLocalAP) {
-							shouldRedirect = true;
-							redirectUrl = 'http://192.168.4.1';
-						} else {
-							shouldRedirect = true;
-							redirectUrl = window.location.href;
-						}
-					} catch (error) {
-						showToast('Gagal pengaturan ulang perangkat', 'warning');
-					}
-				}
-				
-				else if (data.reason === 'ap_restart') {                    
-					try {
-						const connType = await fetch('/api/connection-type')
-							.then(r => {
-								if (!r.ok) throw new Error('HTTP ' + r.status);
-								return r.json();
-							});
-						
-						if (connType && connType.isLocalAP) {
-							const newIP = document.getElementById('apIP')?.value.trim() || '192.168.4.1';
-							const currentIP = window.location.hostname;
-							
-							if (currentIP === newIP) {
-								shouldRedirect = true;
-								redirectUrl = window.location.href;
-							} else {
-								shouldRedirect = true;
-								redirectUrl = `http://${newIP}`;
-							}
-						} else {
-							showToast('Access Point berhasil memulai ulang', 'success');
-						}
-						
-					} catch (error) {
-						showToast('Gagal mendeteksi lokasi perangkat', 'warning');
-					}
-				}
-				
-				// Redirect tanpa toast
-				if (shouldRedirect) {
-					if (redirectUrl) {
-						window.location.href = redirectUrl;
-					} else {
-						window.location.reload();
-					}
-				}
-				
-			} catch (error) {
-				showToast('Terjadi kesalahan. Silakan muat ulang halaman secara manual', 'error');
+			
+			if (document.body.classList.contains('loading')) {
+				console.log('Still in loading state, skipping redirect');
+				return;
 			}
+			
+			setTimeout(() => {
+				forceRedirect();
+			}, 1000);
+		}
+		// ================================
+		// FORCE REDIRECT - MERCUSYS STYLE
+		// ================================
+		function forceRedirect() {
+			let targetURL = window.location.href;
+			
+			const currentIP = window.location.hostname;
+			const isLocalAP = (currentIP.startsWith('192.168.4.') || currentIP === '192.168.4.1');
+						
+			// ================================
+			// TENTUKAN URL BERDASARKAN REASON
+			// ================================
+			if (countdownReason === 'factory_reset') {
+				if (isLocalAP) {
+					targetURL = 'http://192.168.4.1';
+				} else {
+					targetURL = window.location.href;
+				}
+				
+			} else if (countdownReason === 'ap_restart') {
+				if (isLocalAP) {
+					const newIPInput = document.getElementById('apIP');
+					const newIP = newIPInput ? newIPInput.value.trim() : '';
+					
+					if (newIP && newIP !== currentIP) {
+						targetURL = `http://${newIP}`;
+					} else {
+						targetURL = window.location.href;
+					}
+				} else {
+					targetURL = window.location.href;
+				}
+				
+			} else if (countdownReason === 'device_restart') {
+				targetURL = window.location.href;				
+			} else {
+			}
+			window.location.href = targetURL;
 		}
 		// ================================
 		// PEMBARUAN STATUS PERANGKAT
@@ -3512,15 +3544,12 @@
 			// ONLINE/OFFLINE DETECTION
 			// ================================
 			window.addEventListener('online', function () {
-				showToast('Koneksi internet tersambung', 'success');
-
 				setTimeout(() => {
 					updateDeviceStatus();
 				}, 1000);
 			}, 1000);
 
 			window.addEventListener('offline', function () {
-				showToast('Tidak ada koneksi internet', 'warning');
 			});
 		});
 	</script>
