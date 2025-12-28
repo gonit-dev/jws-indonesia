@@ -4349,7 +4349,6 @@ void restartWiFiTask(void *parameter) {
 // WiFi & AP Restart Tasks
 // ============================================
 void restartAPTask(void *parameter) {
-    // Lock check (tetap)
     if (wifiRestartMutex == NULL) {
         wifiRestartMutex = xSemaphoreCreateMutex();
     }
@@ -4374,7 +4373,6 @@ void restartAPTask(void *parameter) {
     Serial.println("Waiting for countdown to complete (60 seconds)...");
     Serial.println("========================================\n");
     
-    // TUNGGU 60 DETIK
     for (int i = 60; i > 0; i--) {
         if (i % 10 == 0 || i <= 5) {
             Serial.printf("Countdown: %d seconds remaining...\n", i);
@@ -4388,72 +4386,66 @@ void restartAPTask(void *parameter) {
 
     delay(1000);
     
-    // ============================================
-    // FORCE DISCONNECT ALL CLIENTS - AGGRESSIVE MODE
-    // ============================================
-    Serial.println("Force disconnecting all AP clients...");
+    Serial.println("Phase 1: Gentle client disconnection...");
     
     int clientsBefore = WiFi.softAPgetStationNum();
     Serial.printf("Clients connected: %d\n", clientsBefore);
     
     if (clientsBefore > 0) {
-        Serial.println("\n: Sending deauth frames to all clients...");
-        esp_wifi_deauth_sta(0);  // 0 = broadcast to all clients
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        Serial.println("\nSending deauth frames (3x)...");
+        for (int i = 0; i < 3; i++) {
+            esp_wifi_deauth_sta(0);
+            Serial.printf("  Deauth sent #%d\n", i + 1);
+            vTaskDelay(pdMS_TO_TICKS(1500));
+        }
         
         int afterDeauth = WiFi.softAPgetStationNum();
-        Serial.printf("After deauth: %d clients\n", afterDeauth);
+        Serial.printf("After 3x deauth: %d clients remaining\n", afterDeauth);
         
-        Serial.println("\n: Soft disconnect AP...");
-        WiFi.softAPdisconnect(true);
-        vTaskDelay(pdMS_TO_TICKS(1500));
+        Serial.println("\nSoft disconnect AP...");
+        WiFi.softAPdisconnect(false);
+        vTaskDelay(pdMS_TO_TICKS(3000));
         
         int afterSoftDisconnect = WiFi.softAPgetStationNum();
         Serial.printf("After soft disconnect: %d clients\n", afterSoftDisconnect);
         
         if (afterSoftDisconnect > 0) {
-            Serial.println("\n: Hard reset - WiFi mode switch...");
+            Serial.println("\nHard disconnect (without mode switch)...");
             Serial.printf("%d stubborn clients detected\n", afterSoftDisconnect);
             
-            // Mode switch untuk force reset
-            WiFi.mode(WIFI_STA);
-            vTaskDelay(pdMS_TO_TICKS(1000));
+            WiFi.softAPdisconnect(true);
+            vTaskDelay(pdMS_TO_TICKS(2000));
             
-            int afterModeSwitch = WiFi.softAPgetStationNum();
-            Serial.printf("After mode switch: %d clients\n", afterModeSwitch);
-            
-            WiFi.mode(WIFI_AP_STA);
-            vTaskDelay(pdMS_TO_TICKS(1000));
+            int afterHardDisconnect = WiFi.softAPgetStationNum();
+            Serial.printf("After hard disconnect: %d clients\n", afterHardDisconnect);
         }
         
-        Serial.println("\n: Final verification...");
+        Serial.println("\nFinal verification...");
         int finalCheck = WiFi.softAPgetStationNum();
         Serial.printf("Final client count: %d\n", finalCheck);
         
         if (finalCheck > 0) {
             Serial.println("\nWARNING: Some clients still detected");
-            Serial.println("This is normal - ghost entries will clear");
-            Serial.println("Proceeding with AP restart...");
+            Serial.println("These are ghost entries - will clear on AP restart");
         } else {
-            Serial.println("\nSUCCESS: All clients disconnected");
+            Serial.println("\nSUCCESS: All clients disconnected cleanly");
         }
         
     } else {
         Serial.println("No clients connected - quick disconnect");
-        WiFi.softAPdisconnect(true);
-        vTaskDelay(pdMS_TO_TICKS(800));
+        WiFi.softAPdisconnect(false);
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
     
     Serial.println("\n========================================");
     Serial.println("AP SHUTDOWN COMPLETE");
     Serial.println("========================================");
-    Serial.println("Old AP is now offline");
     Serial.println("All clients forcefully disconnected");
+    Serial.println("Ready to start new AP");
     Serial.println("========================================\n");
     
-    // ============================================
-    // LOAD NEW CONFIGURATION
-    // ============================================
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    
     char savedSSID[33];
     char savedPassword[65];
     IPAddress savedAPIP, savedGateway, savedSubnet;
@@ -4478,9 +4470,6 @@ void restartAPTask(void *parameter) {
         savedSubnet = IPAddress(255, 255, 255, 0);
     }
     
-    // ============================================
-    // START NEW AP
-    // ============================================
     Serial.println("\nConfiguring new AP network...");
     bool configSuccess = WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
     
@@ -4496,11 +4485,8 @@ void restartAPTask(void *parameter) {
     
     Serial.println("Starting new AP broadcast...");
     bool apStarted = WiFi.softAP(savedSSID, savedPassword);
-    vTaskDelay(pdMS_TO_TICKS(1500));
+    vTaskDelay(pdMS_TO_TICKS(2000));
     
-    // ============================================
-    // VERIFY NEW AP
-    // ============================================
     if (apStarted) {
         IPAddress newAPIP = WiFi.softAPIP();
         String currentSSID = WiFi.softAPSSID();
@@ -4534,17 +4520,14 @@ void restartAPTask(void *parameter) {
         vTaskDelay(pdMS_TO_TICKS(500));
         
         WiFi.softAP(savedSSID, savedPassword);
-        vTaskDelay(pdMS_TO_TICKS(1500));
+        vTaskDelay(pdMS_TO_TICKS(2000));
         
         Serial.println("Rollback to: " + String(savedSSID));
         Serial.println("========================================\n");
     }
     
-    // ============================================
-    // FINAL STABILIZATION
-    // ============================================
     Serial.println("Waiting for AP to stabilize...");
-    vTaskDelay(pdMS_TO_TICKS(2000));
+    vTaskDelay(pdMS_TO_TICKS(3000));
     
     IPAddress finalIP = WiFi.softAPIP();
     int finalClients = WiFi.softAPgetStationNum();
@@ -4552,7 +4535,7 @@ void restartAPTask(void *parameter) {
     Serial.println("\n========================================");
     Serial.println("FINAL VERIFICATION");
     Serial.println("========================================");
-    Serial.println("AP Status: " + String(finalIP != IPAddress(0,0,0,0) ? "ACTIVE ✅" : "DEAD ❌"));
+    Serial.println("AP Status: " + String(finalIP != IPAddress(0,0,0,0) ? "ACTIVE" : "DEAD"));
     Serial.println("SSID: " + WiFi.softAPSSID());
     Serial.println("IP: " + finalIP.toString());
     Serial.println("Connected Clients: " + String(finalClients));
@@ -4561,12 +4544,10 @@ void restartAPTask(void *parameter) {
         Serial.println("\n" + String(finalClients) + " client(s) auto-reconnected!");
     } else {
         Serial.println("\nNo clients yet - waiting for manual reconnection");
+        Serial.println("Mobile devices may need manual WiFi toggle");
     }
     Serial.println("========================================\n");
     
-    // ============================================
-    // CLEANUP
-    // ============================================
     apRestartInProgress = false;
     xSemaphoreGive(wifiRestartMutex);
     
