@@ -1381,11 +1381,7 @@
 			if (countdownCheckInterval) {
 				clearInterval(countdownCheckInterval);
 			}
-			
-			// Check immediately
 			checkCountdownStatus();
-			
-			// Then check every second
 			countdownCheckInterval = setInterval(checkCountdownStatus, 1000);
 		}
 		function stopCountdownPolling() {
@@ -1401,17 +1397,13 @@
 				
 				if (data.active && data.remaining > 0) {
 					if (!isCountdownActive) {
-						// Countdown baru memulai atau web baru di-refresh
 						startCountdownDisplay(data);
 					} else {
-						// Update countdown yang sudah jalan
 						updateCountdownDisplay(data.remaining, data.message);
 					}
 				} else if (isCountdownActive) {
-					// Countdown selesai
 					stopCountdownDisplay();
 				} else if (!data.active) {
-					// Tidak ada countdown aktif, stop polling
 					stopCountdownPolling();
 				}
 			} catch (error) {
