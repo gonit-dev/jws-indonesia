@@ -575,14 +575,14 @@
 														</div>
 														<div class="medium-12 small-12 large-12 cell">
 															<p class="help-text"> 🔄 Perbarui otomatis setiap 1 jam <br>
-																🗄️ Beberapa server cadangan <br> 🌐 Timezone: UTC <span
+																🗄️ Beberapa server cadangan <br> 🌐 Zona waktu: UTC <span
 																	id="timezoneDisplayText">+7</span>
 																<input type="text" id="timezoneInput" value="+7"
 																	style="display: none; width: 60px; height: 25px; padding: 2px 5px; margin: 0 5px; text-align: center; font-weight: bold;"
 																	pattern="^[+-]?\d+$" maxlength="3">
 																<button id="timezoneBtn" onclick="toggleTimezoneEdit()"
 																	style="margin-left: -5px; padding: 5px 10px; line-height: 1;"
-																	title="Edit Timezone"> 🕐 </button>
+																	title="Edit Zona Waktu"> 🕐 </button>
 																<button id="timezoneCancelBtn"
 																	onclick="cancelTimezoneEdit()"
 																	style="display: none; margin-left: -5px; padding: 5px 10px; line-height: 1;"
@@ -2840,7 +2840,7 @@
 				input.focus();
 				input.select();
 				btn.textContent = '💾';
-				btn.title = 'Simpan Timezone';
+				btn.title = 'Simpan Zona Waktu';
 				cancelBtn.style.display = 'inline-block';
 				isEditingTimezone = true;
 			} else {
@@ -2857,7 +2857,7 @@
 			displayText.style.display = 'inline';
 			input.style.display = 'none';
 			btn.textContent = '🕐';
-			btn.title = 'Edit Timezone';
+			btn.title = 'Edit Zona Waktu';
 			cancelBtn.style.display = 'none';
 			isEditingTimezone = false;
 
@@ -2919,7 +2919,7 @@
 			let offsetStr = input.value.trim();
 
 			if (!offsetStr) {
-				showToast('Timezone offset tidak boleh kosong', 'error');
+				showToast('Zona Waktu offset tidak boleh kosong', 'error');
 				input.focus();
 				return;
 			}
@@ -2972,23 +2972,23 @@
 					displayText.style.display = 'inline';
 					input.style.display = 'none';
 					btn.textContent = '🕐';
-					btn.title = 'Edit Timezone';
+					btn.title = 'Edit Zona Waktu';
 					btn.disabled = false;
 					isEditingTimezone = false;
 					cancelBtn.style.display = 'none';
 
-					showToast('Timezone berhasil disimpan', 'success');
+					showToast('Zona waktu berhasil disimpan', 'success');
 
 					setTimeout(() => {
 						showToast('NTP akan melakukan perbarui ulang dengan zona waktu baru...', 'warning');
 					}, 1500);
 
 				} else {
-					throw new Error('Gagal menyimpan timezone');
+					throw new Error('Gagal menyimpan zona waktu');
 				}
 
 			} catch (error) {
-				showToast('Gagal menyimpan timezone', 'error');
+				showToast('Gagal menyimpan zona waktu', 'error');
 
 				btn.textContent = '💾';
 				btn.disabled = false;
@@ -3509,7 +3509,7 @@
 			window.addEventListener('beforeunload', function (e) {
 				if (isEditingTimezone) {
 					e.preventDefault();
-					e.returnValue = 'Anda sedang mengedit timezone. Yakin ingin meninggalkan halaman?';
+					e.returnValue = 'Anda sedang mengedit zona waktu. Yakin ingin meninggalkan halaman?';
 					return e.returnValue;
 				}
 

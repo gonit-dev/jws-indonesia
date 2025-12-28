@@ -317,9 +317,9 @@ static unsigned long lastWiFiRestartRequest = 0;
 static unsigned long lastAPRestartRequest = 0;
 const unsigned long RESTART_DEBOUNCE_MS = 3000; // 3 detik minimum antar restart
 
-// ================================
+// ============================================
 // FORWARD DECLARATIONS
-// ================================
+// ============================================
 
 // ============================================
 // Display & UI Functions
@@ -329,6 +329,13 @@ void updateTimeDisplay();
 void updatePrayerDisplay();
 void hideAllUIElements();
 void showAllUIElements();
+
+// ============================================
+// Countdown Helper Functions
+// ============================================
+void startCountdown(String reason, String message, int seconds);
+void stopCountdown();
+int getRemainingSeconds();
 
 // ============================================
 // Prayer Time Blink Functions
@@ -461,6 +468,42 @@ void updateTimeDisplay() {
   }
 }
 
+void updatePrayerDisplay() {
+  if (objects.imsak_time) lv_label_set_text(objects.imsak_time, prayerConfig.imsakTime.c_str());
+  if (objects.subuh_time) lv_label_set_text(objects.subuh_time, prayerConfig.subuhTime.c_str());
+  if (objects.terbit_time) lv_label_set_text(objects.terbit_time, prayerConfig.terbitTime.c_str());
+  if (objects.zuhur_time) lv_label_set_text(objects.zuhur_time, prayerConfig.zuhurTime.c_str());
+  if (objects.ashar_time) lv_label_set_text(objects.ashar_time, prayerConfig.asharTime.c_str());
+  if (objects.maghrib_time) lv_label_set_text(objects.maghrib_time, prayerConfig.maghribTime.c_str());
+  if (objects.isya_time) lv_label_set_text(objects.isya_time, prayerConfig.isyaTime.c_str());
+}
+
+void hideAllUIElements() {
+  if (objects.time_now) lv_obj_add_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
+  if (objects.date_now) lv_obj_add_flag(objects.date_now, LV_OBJ_FLAG_HIDDEN);
+  if (objects.city_time) lv_obj_add_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.imsak_time) lv_obj_add_flag(objects.imsak_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.subuh_time) lv_obj_add_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.terbit_time) lv_obj_add_flag(objects.terbit_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.zuhur_time) lv_obj_add_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.ashar_time) lv_obj_add_flag(objects.ashar_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.maghrib_time) lv_obj_add_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.isya_time) lv_obj_add_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
+}
+
+void showAllUIElements() {
+  if (objects.time_now) lv_obj_clear_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
+  if (objects.date_now) lv_obj_clear_flag(objects.date_now, LV_OBJ_FLAG_HIDDEN);
+  if (objects.city_time) lv_obj_clear_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.imsak_time) lv_obj_clear_flag(objects.imsak_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.subuh_time) lv_obj_clear_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.terbit_time) lv_obj_clear_flag(objects.terbit_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.zuhur_time) lv_obj_clear_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.ashar_time) lv_obj_clear_flag(objects.ashar_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.maghrib_time) lv_obj_clear_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
+  if (objects.isya_time) lv_obj_clear_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
+}
+
 // ============================================
 // Countdown Helper Functions
 // ============================================
@@ -509,42 +552,6 @@ int getRemainingSeconds() {
   }
   
   return remaining;
-}
-
-void updatePrayerDisplay() {
-  if (objects.imsak_time) lv_label_set_text(objects.imsak_time, prayerConfig.imsakTime.c_str());
-  if (objects.subuh_time) lv_label_set_text(objects.subuh_time, prayerConfig.subuhTime.c_str());
-  if (objects.terbit_time) lv_label_set_text(objects.terbit_time, prayerConfig.terbitTime.c_str());
-  if (objects.zuhur_time) lv_label_set_text(objects.zuhur_time, prayerConfig.zuhurTime.c_str());
-  if (objects.ashar_time) lv_label_set_text(objects.ashar_time, prayerConfig.asharTime.c_str());
-  if (objects.maghrib_time) lv_label_set_text(objects.maghrib_time, prayerConfig.maghribTime.c_str());
-  if (objects.isya_time) lv_label_set_text(objects.isya_time, prayerConfig.isyaTime.c_str());
-}
-
-void hideAllUIElements() {
-  if (objects.time_now) lv_obj_add_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
-  if (objects.date_now) lv_obj_add_flag(objects.date_now, LV_OBJ_FLAG_HIDDEN);
-  if (objects.city_time) lv_obj_add_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.imsak_time) lv_obj_add_flag(objects.imsak_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.subuh_time) lv_obj_add_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.terbit_time) lv_obj_add_flag(objects.terbit_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.zuhur_time) lv_obj_add_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.ashar_time) lv_obj_add_flag(objects.ashar_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.maghrib_time) lv_obj_add_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.isya_time) lv_obj_add_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
-}
-
-void showAllUIElements() {
-  if (objects.time_now) lv_obj_clear_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
-  if (objects.date_now) lv_obj_clear_flag(objects.date_now, LV_OBJ_FLAG_HIDDEN);
-  if (objects.city_time) lv_obj_clear_flag(objects.city_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.imsak_time) lv_obj_clear_flag(objects.imsak_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.subuh_time) lv_obj_clear_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.terbit_time) lv_obj_clear_flag(objects.terbit_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.zuhur_time) lv_obj_clear_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.ashar_time) lv_obj_clear_flag(objects.ashar_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.maghrib_time) lv_obj_clear_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
-  if (objects.isya_time) lv_obj_clear_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
 }
 
 // ============================================
@@ -596,10 +603,10 @@ void startBlinking(String prayerName) {
   upperName.toUpperCase();
   
   Serial.println("\n========================================");
-  Serial.print("WAKTU SHALAT MASUK: ");
+  Serial.print("PRAYER TIME ENTER: ");
   Serial.println(upperName);
   Serial.println("========================================");
-  Serial.println("Memulai kedip selama 1 menit...");
+  Serial.println("Starting to blink for 1 minute...");
   Serial.println("========================================\n");
 }
 
@@ -619,7 +626,7 @@ void stopBlinking() {
       xSemaphoreGive(displayMutex);
     }
     
-    Serial.println("Kedip selesai - semua waktu shalat terlihat normal");
+    Serial.println("Flashing finished - all prayer times appear normal");
   }
 }
 
@@ -678,7 +685,7 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
   }
 
   // ============================================
-  // VALIDASI WAKTU SEBELUM REQUEST API
+  // TIME VALIDATION BEFORE API REQUEST
   // ============================================
   time_t now_t;
   if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
@@ -1350,7 +1357,6 @@ bool initRTC() {
     
     Serial.println("DS3231 detected on I2C");
     
-    // Test apakah RTC bisa menyimpan waktu
     Serial.println("Testing RTC functionality...");
     rtc.adjust(DateTime(2024, 12, 16, 10, 30, 0));
     delay(2000); // Tunggu 2 detik
@@ -1374,7 +1380,7 @@ bool initRTC() {
         Serial.println("\n*** RTC HARDWARE FAILURE ***");
         Serial.println("DS3231 chip is defective!");
         Serial.println("Time registers return garbage data");
-        Serial.println("Temperature sensor works: " + String(rtc.getTemperature()) + "Ã‚Â°C");
+        Serial.println("Temperature sensor works: " + String(rtc.getTemperature()) + "°C");
         Serial.println("\nPossible causes:");
         Serial.println("  1. Counterfeit/clone DS3231 chip");
         Serial.println("  2. Crystal oscillator failure");
@@ -1749,7 +1755,7 @@ void setupServerRoutes() {
       String newPassword = request -> getParam("password", true) -> value();
 
       Serial.println("\n========================================");
-      Serial.println("Simpan WiFi Credentials");
+      Serial.println("Save WiFi Credentials");
       Serial.println("========================================");
       Serial.println("New SSID: " + newSSID);
 
@@ -1810,7 +1816,7 @@ void setupServerRoutes() {
       }
 
       Serial.println("\n========================================");
-      Serial.println("SIMPAN AP CONFIGURATION");
+      Serial.println("Save AP Configuration");
       Serial.println("========================================");
 
       // ============================================
@@ -2042,7 +2048,7 @@ void setupServerRoutes() {
 
   server.on("/settimezone", HTTP_POST, [](AsyncWebServerRequest * request) {
     Serial.println("\n========================================");
-    Serial.println("Simpan Timezone");
+    Serial.println("Save Timezone");
     Serial.println("========================================");
 
     if (!request -> hasParam("offset", true)) {
@@ -2195,7 +2201,7 @@ void setupServerRoutes() {
 
   server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest * request) {
     Serial.println("\n========================================");
-    Serial.println("Simpan City/Distric");
+    Serial.println("Save City/District");
     Serial.println("========================================");
 
     if (!request -> hasParam("city", true)) {
@@ -2394,7 +2400,7 @@ void setupServerRoutes() {
 
   server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest * request) {
     Serial.println("\n========================================");
-    Serial.println("Simpan Metode");
+    Serial.println("Save Calculation Method");
     Serial.print("Client IP: ");
     Serial.println(request -> client() -> remoteIP().toString());
     Serial.println("========================================");
@@ -2580,7 +2586,7 @@ void setupServerRoutes() {
     Serial.println("========================================");
 
     // ============================================
-    // HAPUS SEMUA FILE KONFIGURASI
+    // DELETE ALL CONFIGURATION FILES
     // ============================================
     if (LittleFS.exists("/wifi_creds.txt")) {
         LittleFS.remove("/wifi_creds.txt");
@@ -3014,12 +3020,12 @@ void printStackReport() {
       Serial.printf("%-10s: %5d/%5d (%5.1f%%) [Free: %5d] ",
                     tasks[i].name, used, tasks[i].size, percent, free);
 
-      if (percent < 40) Serial.println("BOROS - bisa dikurangi");
+      if (percent < 40) Serial.println("WASTEFUL - can be reduced");
       else if (percent < 60) Serial.println("OPTIMAL");
-      else if (percent < 75) Serial.println("PAS");
-      else if (percent < 90) Serial.println("TINGGI - monitor terus");
-      else if (percent < 95) Serial.println("BAHAYA - harus dinaikkan");
-      else Serial.println("KRITIS - segera naikkan");
+      else if (percent < 75) Serial.println("FIT");
+      else if (percent < 90) Serial.println("HIGH - monitor continuously");
+      else if (percent < 95) Serial.println("DANGER - must be increased");
+      else Serial.println("CRITICAL - increase immediately");
     } else {
       Serial.printf("%-10s: TASK NOT RUNNING\n", tasks[i].name);
     }
@@ -3266,7 +3272,7 @@ void wifiTask(void *parameter) {
         if (bits & WIFI_GOT_IP_BIT) {
             if (!autoUpdateDone && wifiConfig.isConnected) {
                 // ============================================
-                // TUNGGU NTP SYNC START
+                // WAIT FOR NTP SYNC START
                 // ============================================
                 if (!ntpSyncInProgress && !ntpSyncCompleted) {
                     vTaskDelay(pdMS_TO_TICKS(1000));
@@ -3279,7 +3285,7 @@ void wifiTask(void *parameter) {
                 }
 
                 // ============================================
-                // TUNGGU NTP SYNC SELESAI
+                // WAIT FOR NTP SYNC TO COMPLETE
                 // ============================================
                 if (ntpSyncInProgress) {
                     int ntpWaitCounter = 0;
@@ -3306,7 +3312,7 @@ void wifiTask(void *parameter) {
                 }
 
                 // ============================================
-                // NTP SELESAI, UPDATE PRAYER TIMES
+                // NTP COMPLETE, UPDATE PRAYER TIMES
                 // ============================================
                 if (ntpSyncCompleted && timeConfig.ntpSynced) {
                     Serial.println("\n========================================");
@@ -3430,9 +3436,9 @@ void ntpTask(void *parameter) {
         String usedServer = "";
         
         // ============================================
-        // STEP 1: SYNC WITH UTC+0 FIRST (NO TIMEZONE)
+        // SYNC WITH UTC+0 FIRST (NO TIMEZONE)
         // ============================================
-        Serial.println("Step 1: Syncing with NTP servers (UTC+0)...");
+        Serial.println("Syncing with NTP servers (UTC+0)...");
         Serial.println("Reason: Get raw UTC time first, apply timezone AFTER success");
         Serial.println("");
         
@@ -3443,7 +3449,7 @@ void ntpTask(void *parameter) {
                      ntpServers[2]);
         
         // ============================================
-        // STEP 2: WAIT FOR NTP SYNC (UTC TIME ONLY)
+        // WAIT FOR NTP SYNC (UTC TIME ONLY)
         // ============================================
         time_t now = 0;
         struct tm timeinfo = {0};
@@ -3471,7 +3477,7 @@ void ntpTask(void *parameter) {
             usedServer = String(ntpServers[0]);
             
             Serial.println("\n========================================");
-            Serial.println("STEP 1 SUCCESS: NTP SYNC COMPLETED (UTC)");
+            Serial.println("NTP SYNC COMPLETED (UTC)");
             Serial.println("========================================");
             Serial.printf("UTC Time: %02d:%02d:%02d %02d/%02d/%04d\n",
                         timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec,
@@ -3481,10 +3487,10 @@ void ntpTask(void *parameter) {
             Serial.println("========================================");
             
             // ============================================
-            // STEP 3: APPLY TIMEZONE OFFSET (AFTER SUCCESS)
+            // APPLY TIMEZONE OFFSET (AFTER SUCCESS)
             // ============================================
             Serial.println("\n========================================");
-            Serial.println("STEP 2: APPLYING TIMEZONE OFFSET");
+            Serial.println("APPLYING TIMEZONE OFFSET");
             Serial.println("========================================");
             
             int currentOffset;
@@ -3537,11 +3543,11 @@ void ntpTask(void *parameter) {
         }
         
         // ============================================
-        // STEP 4: SAVE TIME TO SYSTEM (IF SUCCESS)
+        // SAVE TIME TO SYSTEM (IF SUCCESS)
         // ============================================
         if (syncSuccess) {
             Serial.println("\n========================================");
-            Serial.println("STEP 3: SAVING TIME TO SYSTEM");
+            Serial.println("SAVING TIME TO SYSTEM");
             Serial.println("========================================");
             
             if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -3567,11 +3573,11 @@ void ntpTask(void *parameter) {
         }
         
         // ============================================
-        // STEP 5: SAVE TO RTC (IF AVAILABLE & SUCCESS)
+        // SAVE TO RTC (IF AVAILABLE & SUCCESS)
         // ============================================
         if (rtcAvailable && syncSuccess) {
             Serial.println("\n========================================");
-            Serial.println("STEP 4: SAVING TIME TO RTC HARDWARE");
+            Serial.println("SAVING TIME TO RTC HARDWARE");
             Serial.println("========================================");
             
             if (isRTCValid()) {
@@ -3597,7 +3603,7 @@ void ntpTask(void *parameter) {
                         Serial.println("   Status: RTC saved successfully");
                         Serial.println("   Time will persist across restarts");
                     } else {
-                        Serial.println("   Status: âœ— RTC save FAILED");
+                        Serial.println("   Status: RTC save FAILED");
                         Serial.println("   RTC hardware may be faulty");
                     }
                 } else {
@@ -3626,11 +3632,11 @@ void ntpTask(void *parameter) {
         }
 
         // ============================================
-        // STEP 6: AUTO PRAYER TIMES UPDATE
+        // AUTO PRAYER TIMES UPDATE
         // ============================================
         if (syncSuccess && wifiConfig.isConnected) {
             Serial.println("\n========================================");
-            Serial.println("STEP 5: AUTO PRAYER TIMES UPDATE");
+            Serial.println("AUTO PRAYER TIMES UPDATE");
             Serial.println("========================================");
             Serial.println("Reason: NTP sync completed successfully");
             Serial.println("");
@@ -3853,15 +3859,15 @@ void prayerTask(void *parameter) {
                 Serial.println("\n========================================");
                 Serial.println("MIDNIGHT DETECTED - STARTING SEQUENCE");
                 Serial.println("========================================");
-                Serial.printf("Waktu: %02d:%02d:%02d\n", currentHour, currentMinute, second(timeConfig.currentTime));
-                Serial.printf("Tanggal Sekarang: %02d/%02d/%04d\n", currentDay, month(timeConfig.currentTime), currentYear);
+                Serial.printf("Time: %02d:%02d:%02d\n", currentHour, currentMinute, second(timeConfig.currentTime));
+                Serial.printf("Date NOw: %02d/%02d/%04d\n", currentDay, month(timeConfig.currentTime), currentYear);
                 Serial.println("");
                 
                 // ================================
                 // TRIGGER NTP SYNC DULU
                 // ================================
                 Serial.println("Triggering NTP Sync...");
-                Serial.println("Alasan: Memastikan waktu akurat sebelum update");
+                Serial.println("Reason: Ensuring time is accurate before updating");
                 
                 if (ntpTaskHandle != NULL) {
                     ntpSyncInProgress = false;
@@ -3873,7 +3879,7 @@ void prayerTask(void *parameter) {
                     midnightNTPStartTime = millis();
                     
                     Serial.println("NTP sync triggered successfully");
-                    Serial.println("Menunggu NTP sync selesai...");
+                    Serial.println("Waiting for NTP sync to complete...");
                     Serial.println("========================================\n");
                 } else {
                     Serial.println("ERROR: NTP Task handle NULL");
@@ -3905,8 +3911,8 @@ void prayerTask(void *parameter) {
                         int currentSecond = second(timeConfig.currentTime);
                         xSemaphoreGive(timeMutex);
                         
-                        Serial.printf("Waktu Baru: %02d:%02d:%02d\n", currentHour, currentMinute, currentSecond);
-                        Serial.printf("Tanggal Baru: %02d/%02d/%04d\n", currentDay, currentMonth, currentYear);
+                        Serial.printf("New Time: %02d:%02d:%02d\n", currentHour, currentMinute, currentSecond);
+                        Serial.printf("New Date: %02d/%02d/%04d\n", currentDay, currentMonth, currentYear);
                         Serial.printf("Timestamp: %ld\n", currentTimestamp);
                         Serial.println("");
                     }
@@ -3919,9 +3925,9 @@ void prayerTask(void *parameter) {
                         
                         if (currentYear >= 2024 && currentTimestamp >= 946684800) {
                             Serial.println("Updating Prayer Times...");
-                            Serial.println("Status Waktu: VALID");
-                            Serial.println("Kota: " + prayerConfig.selectedCity);
-                            Serial.println("Koordinat: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
+                            Serial.println("Time Status: VALID");
+                            Serial.println("City: " + prayerConfig.selectedCity);
+                            Serial.println("Coordinate: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
                             Serial.println("");
                             
                             esp_task_wdt_reset();
@@ -3933,14 +3939,14 @@ void prayerTask(void *parameter) {
                             
                             Serial.println("\nMidnight update sequence COMPLETED");
                         } else {
-                            Serial.println("WARNING: Waktu masih invalid setelah NTP");
-                            Serial.printf("   Tahun: %d (min: 2024)\n", currentYear);
+                            Serial.println("WARNING: Time is still invalid after NTP");
+                            Serial.printf("   Year: %d (min: 2024)\n", currentYear);
                             Serial.printf("   Timestamp: %ld (min: 946684800)\n", currentTimestamp);
-                            Serial.println("   Menggunakan waktu sholat yang sudah ada");
+                            Serial.println("   Using existing prayer times");
                         }
                     } else {
-                        Serial.println("WARNING: Tidak ada koordinat kota");
-                        Serial.println("   Menggunakan waktu sholat yang sudah ada");
+                        Serial.println("WARNING: No city coordinates");
+                        Serial.println("   Using existing prayer times");
                     }
                     
                     Serial.println("========================================\n");
@@ -3952,13 +3958,13 @@ void prayerTask(void *parameter) {
                     Serial.println("\n========================================");
                     Serial.println("NTP SYNC TIMEOUT");
                     Serial.println("========================================");
-                    Serial.printf("Waktu tunggu: %lu ms (max: %lu ms)\n", waitTime, MAX_WAIT_TIME);
-                    Serial.println("Status NTP:");
+                    Serial.printf("Waiting time: %lu ms (max: %lu ms)\n", waitTime, MAX_WAIT_TIME);
+                    Serial.println("NTP Status:");
                     Serial.printf("   ntpSyncInProgress: %s\n", ntpSyncInProgress ? "true" : "false");
                     Serial.printf("   ntpSyncCompleted: %s\n", ntpSyncCompleted ? "false" : "false");
                     Serial.println("");
-                    Serial.println("Keputusan: Menggunakan waktu sholat yang sudah ada");
-                    Serial.println("Tidak melakukan update (waktu mungkin tidak akurat)");
+                    Serial.println("Decision: Use existing prayer times");
+                    Serial.println("Do not update (times may be inaccurate)");
                     Serial.println("========================================\n");
                     
                     waitingForMidnightNTP = false;
@@ -3966,7 +3972,7 @@ void prayerTask(void *parameter) {
                     
                 } else {
                     if (waitTime % 5000 < 1000) {
-                        Serial.printf("Menunggu NTP sync... (%lu/%lu ms)\n", 
+                        Serial.printf("Waiting for NTP sync... (%lu/%lu ms)\n",
                                      waitTime, MAX_WAIT_TIME);
                     }
                 }
@@ -4239,7 +4245,7 @@ void restartWiFiTask(void *parameter) {
     vTaskDelay(pdMS_TO_TICKS(3000));
     
     // ============================================
-    // SIMPAN KREDENSIAL DULU
+    // SAVE CREDENTIALS FIRST
     // ============================================
     Serial.println("Preparing for reconnect...");
     
@@ -4264,7 +4270,7 @@ void restartWiFiTask(void *parameter) {
     }
     
     // ============================================
-    // DISCONNECT DENGAN AMAN
+    // DISCONNECT SAFELY
     // ============================================
     Serial.println("\nDisconnecting old WiFi...");
     WiFi.disconnect(false, false); // Keep config, don't erase
@@ -4272,7 +4278,7 @@ void restartWiFiTask(void *parameter) {
     Serial.println("   Disconnected (config preserved)");
     
     // ============================================
-    // CEK & RESTORE AP JIKA MATI
+    // CHECK & RESTORE AP IF DEAD
     // ============================================
     Serial.println("\nVerifying AP status...");
     
@@ -4341,6 +4347,7 @@ void restartWiFiTask(void *parameter) {
 
 // ============================================
 // WiFi & AP Restart Tasks
+// ============================================
 void restartAPTask(void *parameter) {
     // Lock check (tetap)
     if (wifiRestartMutex == NULL) {
@@ -4379,7 +4386,7 @@ void restartAPTask(void *parameter) {
     Serial.println("COUNTDOWN COMPLETED - RESTARTING AP NOW");
     Serial.println("========================================\n");
 
-    delay(500);
+    delay(1000);
     
     // ============================================
     // FORCE DISCONNECT ALL CLIENTS - AGGRESSIVE MODE
@@ -4390,14 +4397,14 @@ void restartAPTask(void *parameter) {
     Serial.printf("Clients connected: %d\n", clientsBefore);
     
     if (clientsBefore > 0) {
-        Serial.println("\nStep 1/4: Sending deauth frames to all clients...");
+        Serial.println("\n: Sending deauth frames to all clients...");
         esp_wifi_deauth_sta(0);  // 0 = broadcast to all clients
         vTaskDelay(pdMS_TO_TICKS(1000));
         
         int afterDeauth = WiFi.softAPgetStationNum();
         Serial.printf("After deauth: %d clients\n", afterDeauth);
         
-        Serial.println("\nStep 2/4: Soft disconnect AP...");
+        Serial.println("\n: Soft disconnect AP...");
         WiFi.softAPdisconnect(true);
         vTaskDelay(pdMS_TO_TICKS(1500));
         
@@ -4405,7 +4412,7 @@ void restartAPTask(void *parameter) {
         Serial.printf("After soft disconnect: %d clients\n", afterSoftDisconnect);
         
         if (afterSoftDisconnect > 0) {
-            Serial.println("\nStep 3/4: Hard reset - WiFi mode switch...");
+            Serial.println("\n: Hard reset - WiFi mode switch...");
             Serial.printf("%d stubborn clients detected\n", afterSoftDisconnect);
             
             // Mode switch untuk force reset
@@ -4419,7 +4426,7 @@ void restartAPTask(void *parameter) {
             vTaskDelay(pdMS_TO_TICKS(1000));
         }
         
-        Serial.println("\nStep 4/4: Final verification...");
+        Serial.println("\n: Final verification...");
         int finalCheck = WiFi.softAPgetStationNum();
         Serial.printf("Final client count: %d\n", finalCheck);
         
