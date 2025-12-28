@@ -4448,7 +4448,7 @@ void restartAPTask(void *parameter) {
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
-    delay(500);
+    delay(1000);
     
     Serial.println("\n========================================");
     Serial.println("COUNTDOWN COMPLETED - SHUTTING DOWN AP NOW");
