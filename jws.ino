@@ -4396,7 +4396,7 @@ void restartAPTask(void *parameter) {
         for (int i = 0; i < 3; i++) {
             esp_wifi_deauth_sta(0);
             Serial.printf("  Deauth sent #%d\n", i + 1);
-            vTaskDelay(pdMS_TO_TICKS(1500));
+            vTaskDelay(pdMS_TO_TICKS(1000));
         }
         
         int afterDeauth = WiFi.softAPgetStationNum();
@@ -4404,7 +4404,7 @@ void restartAPTask(void *parameter) {
         
         Serial.println("\nSoft disconnect AP...");
         WiFi.softAPdisconnect(false);
-        vTaskDelay(pdMS_TO_TICKS(3000));
+        vTaskDelay(pdMS_TO_TICKS(2000));
         
         int afterSoftDisconnect = WiFi.softAPgetStationNum();
         Serial.printf("After soft disconnect: %d clients\n", afterSoftDisconnect);
@@ -4414,7 +4414,7 @@ void restartAPTask(void *parameter) {
             Serial.printf("%d stubborn clients detected\n", afterSoftDisconnect);
             
             WiFi.softAPdisconnect(true);
-            vTaskDelay(pdMS_TO_TICKS(2000));
+            vTaskDelay(pdMS_TO_TICKS(1000));
             
             int afterHardDisconnect = WiFi.softAPgetStationNum();
             Serial.printf("After hard disconnect: %d clients\n", afterHardDisconnect);
@@ -4444,7 +4444,7 @@ void restartAPTask(void *parameter) {
     Serial.println("Ready to start new AP");
     Serial.println("========================================\n");
     
-    vTaskDelay(pdMS_TO_TICKS(2000));
+    vTaskDelay(pdMS_TO_TICKS(1000));
     
     char savedSSID[33];
     char savedPassword[65];
@@ -4485,7 +4485,7 @@ void restartAPTask(void *parameter) {
     
     Serial.println("Starting new AP broadcast...");
     bool apStarted = WiFi.softAP(savedSSID, savedPassword);
-    vTaskDelay(pdMS_TO_TICKS(2000));
+    vTaskDelay(pdMS_TO_TICKS(1500));
     
     if (apStarted) {
         IPAddress newAPIP = WiFi.softAPIP();
@@ -4520,14 +4520,14 @@ void restartAPTask(void *parameter) {
         vTaskDelay(pdMS_TO_TICKS(500));
         
         WiFi.softAP(savedSSID, savedPassword);
-        vTaskDelay(pdMS_TO_TICKS(2000));
+        vTaskDelay(pdMS_TO_TICKS(1500));
         
         Serial.println("Rollback to: " + String(savedSSID));
         Serial.println("========================================\n");
     }
     
     Serial.println("Waiting for AP to stabilize...");
-    vTaskDelay(pdMS_TO_TICKS(3000));
+    vTaskDelay(pdMS_TO_TICKS(2000));
     
     IPAddress finalIP = WiFi.softAPIP();
     int finalClients = WiFi.softAPgetStationNum();
