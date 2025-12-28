@@ -2223,12 +2223,7 @@
 			btn.textContent = 'Menyimpan...';
 
 			const formData = new URLSearchParams();
-
-			const ssid = document.getElementById('apSSID').value.trim();
-			const password = document.getElementById('apPassword').value;
-
-			formData.append('ssid', ssid);
-			formData.append('password', password);
+			
 			formData.append('updateNetworkConfig', 'true');
 
 			if (apIP) formData.append('apIP', apIP);

@@ -1789,104 +1789,130 @@ void setupServerRoutes() {
   });
 
   server.on("/setap", HTTP_POST, [](AsyncWebServerRequest * request) {
-      // ============================================
-      // DEBOUNCING CHECK
-      // ============================================
       unsigned long now = millis();
       if (now - lastAPRestartRequest < RESTART_DEBOUNCE_MS) {
           unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastAPRestartRequest);
-          request -> send(429, "text/plain", "Please wait " + String(waitTime / 1000) + " seconds");
+          request->send(429, "text/plain", "Please wait " + String(waitTime / 1000) + " seconds");
           return;
       }
 
-      // ============================================
-      // VALIDATE PARAMETERS
-      // ============================================
-      if (!request -> hasParam("ssid", true) || !request -> hasParam("password", true)) {
-          request -> send(400, "text/plain", "Missing ssid or password");
-          return;
-      }
-
-      String ssid = request -> getParam("ssid", true) -> value();
-      String pass = request -> getParam("password", true) -> value();
-
-      if (pass.length() > 0 && pass.length() < 8) {
-          request -> send(400, "text/plain", "Password minimal 8 karakter");
-          return;
+      bool updateNetworkConfig = false;
+      if (request->hasParam("updateNetworkConfig", true)) {
+          String mode = request->getParam("updateNetworkConfig", true)->value();
+          updateNetworkConfig = (mode == "true");
       }
 
       Serial.println("\n========================================");
-      Serial.println("Save AP Configuration");
+      Serial.println(updateNetworkConfig ? "UPDATE AP NETWORK CONFIG" : "UPDATE AP SSID/PASSWORD");
       Serial.println("========================================");
 
-      // ============================================
-      // LOAD IP SETTINGS (ALWAYS)
-      // ============================================
-      IPAddress newAPIP = wifiConfig.apIP;
-      IPAddress newGateway = wifiConfig.apGateway;
-      IPAddress newSubnet = wifiConfig.apSubnet;
+      if (updateNetworkConfig) {
+          Serial.println("Mode: Network configuration only");
+          Serial.println("SSID/Password will remain unchanged");
+          
+          IPAddress newAPIP = wifiConfig.apIP;
+          IPAddress newGateway = wifiConfig.apGateway;
+          IPAddress newSubnet = wifiConfig.apSubnet;
 
-      if (request -> hasParam("apIP", true)) {
-          String ipStr = request -> getParam("apIP", true) -> value();
-          ipStr.trim();
-
-          IPAddress tempIP;
-          if (tempIP.fromString(ipStr)) {
-              newAPIP = tempIP;
-              Serial.println("New IP: " + newAPIP.toString());
-          } else {
-              Serial.println("Invalid IP format, keeping: " + newAPIP.toString());
+          if (request->hasParam("apIP", true)) {
+              String ipStr = request->getParam("apIP", true)->value();
+              ipStr.trim();
+              
+              if (ipStr.length() > 0) {
+                  IPAddress tempIP;
+                  if (tempIP.fromString(ipStr)) {
+                      newAPIP = tempIP;
+                      Serial.println("New AP IP: " + newAPIP.toString());
+                  } else {
+                      Serial.println("Invalid IP format, keeping: " + newAPIP.toString());
+                  }
+              }
           }
+
+          if (request->hasParam("gateway", true)) {
+              String gwStr = request->getParam("gateway", true)->value();
+              gwStr.trim();
+              
+              if (gwStr.length() > 0) {
+                  IPAddress tempGW;
+                  if (tempGW.fromString(gwStr)) {
+                      newGateway = tempGW;
+                      Serial.println("New Gateway: " + newGateway.toString());
+                  } else {
+                      Serial.println("Invalid Gateway, keeping: " + newGateway.toString());
+                  }
+              }
+          }
+
+          if (request->hasParam("subnet", true)) {
+              String snStr = request->getParam("subnet", true)->value();
+              snStr.trim();
+              
+              if (snStr.length() > 0) {
+                  IPAddress tempSN;
+                  if (tempSN.fromString(snStr)) {
+                      newSubnet = tempSN;
+                      Serial.println("New Subnet: " + newSubnet.toString());
+                  } else {
+                      Serial.println("Invalid Subnet, keeping: " + newSubnet.toString());
+                  }
+              }
+          }
+
+          wifiConfig.apIP = newAPIP;
+          wifiConfig.apGateway = newGateway;
+          wifiConfig.apSubnet = newSubnet;
+          
+          saveAPCredentials();
+
+          Serial.println("\nCONFIG SAVED:");
+          Serial.println("  SSID: " + String(wifiConfig.apSSID) + " (unchanged)");
+          Serial.println("  Password: ******** (unchanged)");
+          Serial.println("  IP: " + newAPIP.toString() + " (updated)");
+          Serial.println("  Gateway: " + newGateway.toString() + " (updated)");
+          Serial.println("  Subnet: " + newSubnet.toString() + " (updated)");
+
       } else {
-          Serial.println("No IP param, keeping: " + newAPIP.toString());
+          Serial.println("Mode: SSID/Password only");
+          Serial.println("Network config will remain unchanged");
+          
+          if (!request->hasParam("ssid", true) || !request->hasParam("password", true)) {
+              Serial.println("ERROR: Missing SSID or password");
+              request->send(400, "text/plain", "Missing ssid or password");
+              return;
+          }
+
+          String newSSID = request->getParam("ssid", true)->value();
+          String newPass = request->getParam("password", true)->value();
+          
+          newSSID.trim();
+          newPass.trim();
+
+          if (newSSID.length() == 0) {
+              Serial.println("ERROR: SSID cannot be empty");
+              request->send(400, "text/plain", "SSID cannot be empty");
+              return;
+          }
+
+          if (newPass.length() > 0 && newPass.length() < 8) {
+              Serial.println("ERROR: Password must be at least 8 characters");
+              request->send(400, "text/plain", "Password minimal 8 karakter");
+              return;
+          }
+
+          newSSID.toCharArray(wifiConfig.apSSID, 33);
+          newPass.toCharArray(wifiConfig.apPassword, 65);
+          
+          saveAPCredentials();
+
+          Serial.println("\nCONFIG SAVED:");
+          Serial.println("  SSID: " + String(wifiConfig.apSSID) + " (updated)");
+          Serial.println("  Password: ******** (updated)");
+          Serial.println("  IP: " + wifiConfig.apIP.toString() + " (unchanged)");
+          Serial.println("  Gateway: " + wifiConfig.apGateway.toString() + " (unchanged)");
+          Serial.println("  Subnet: " + wifiConfig.apSubnet.toString() + " (unchanged)");
       }
 
-      if (request -> hasParam("gateway", true)) {
-          String gwStr = request -> getParam("gateway", true) -> value();
-          gwStr.trim();
-
-          IPAddress tempGW;
-          if (tempGW.fromString(gwStr)) {
-              newGateway = tempGW;
-              Serial.println("New Gateway: " + newGateway.toString());
-          } else {
-              Serial.println("Invalid Gateway, keeping: " + newGateway.toString());
-          }
-      } else {
-          Serial.println("No Gateway param, keeping: " + newGateway.toString());
-      }
-
-      if (request -> hasParam("subnet", true)) {
-          String snStr = request -> getParam("subnet", true) -> value();
-          snStr.trim();
-
-          IPAddress tempSN;
-          if (tempSN.fromString(snStr)) {
-              newSubnet = tempSN;
-              Serial.println("New Subnet: " + newSubnet.toString());
-          } else {
-              Serial.println("Invalid Subnet, keeping: " + newSubnet.toString());
-          }
-      } else {
-          Serial.println("No Subnet param, keeping: " + newSubnet.toString());
-      }
-
-      Serial.println("========================================");
-
-      // ============================================
-      // SAVE TO CONFIG (ALWAYS)
-      // ============================================
-      ssid.toCharArray(wifiConfig.apSSID, 33);
-      pass.toCharArray(wifiConfig.apPassword, 65);
-      wifiConfig.apIP = newAPIP;
-      wifiConfig.apGateway = newGateway;
-      wifiConfig.apSubnet = newSubnet;
-
-      saveAPCredentials();
-
-      Serial.println("SAVED CONFIG:");
-      Serial.println("  SSID: " + String(wifiConfig.apSSID));
-      Serial.println("  IP: " + newAPIP.toString());
       Serial.println("========================================\n");
 
       IPAddress clientIP = request->client()->remoteIP();
@@ -1909,12 +1935,18 @@ void setupServerRoutes() {
       
       bool isLocalAP = (apNetwork == clientNetwork);
       
+      Serial.println("CLIENT INFO:");
+      Serial.println("  IP: " + clientIP.toString());
+      Serial.println("  Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
+
       if (isLocalAP) {
           startCountdown("ap_restart", "Memulai ulang Access Point", 60);
-          Serial.println("Countdown started (client is on local AP)");
+          Serial.println("Countdown started (client on local AP)");
       } else {
-          Serial.println("Client is on router network - no countdown needed");
+          Serial.println("Client on remote network - no countdown needed");
       }
+
+      Serial.println("========================================\n");
 
       request->send(200, "text/plain", "OK");
 
@@ -4349,17 +4381,53 @@ void restartWiFiTask(void *parameter) {
 // WiFi & AP Restart Tasks
 // ============================================
 void restartAPTask(void *parameter) {
+    unsigned long now = millis();
+    if (now - lastAPRestartRequest < RESTART_DEBOUNCE_MS) {
+        unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastAPRestartRequest);
+        
+        Serial.println("\n========================================");
+        Serial.println("AP RESTART REJECTED - TOO FAST");
+        Serial.println("========================================");
+        Serial.printf("Reason: Last restart was %lu ms ago\n", now - lastAPRestartRequest);
+        Serial.printf("Minimum interval: %lu ms\n", RESTART_DEBOUNCE_MS);
+        Serial.printf("Please wait: %lu ms (%.1f seconds)\n", waitTime, waitTime / 1000.0);
+        Serial.println("========================================\n");
+        
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    lastAPRestartRequest = now;
+    
     if (wifiRestartMutex == NULL) {
         wifiRestartMutex = xSemaphoreCreateMutex();
+        if (wifiRestartMutex == NULL) {
+            Serial.println("ERROR: Failed to create wifiRestartMutex");
+            vTaskDelete(NULL);
+            return;
+        }
     }
     
     if (xSemaphoreTake(wifiRestartMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+        Serial.println("\n========================================");
         Serial.println("AP RESTART BLOCKED");
+        Serial.println("========================================");
+        Serial.println("Reason: Another WiFi/AP restart in progress");
+        Serial.println("Action: Request ignored for safety");
+        Serial.println("========================================\n");
+        
         vTaskDelete(NULL);
         return;
     }
     
     if (apRestartInProgress || wifiRestartInProgress) {
+        Serial.println("\n========================================");
+        Serial.println("AP RESTART ABORTED");
+        Serial.println("========================================");
+        Serial.printf("WiFi restart in progress: %s\n", wifiRestartInProgress ? "YES" : "NO");
+        Serial.printf("AP restart in progress: %s\n", apRestartInProgress ? "YES" : "NO");
+        Serial.println("========================================\n");
+        
         xSemaphoreGive(wifiRestartMutex);
         vTaskDelete(NULL);
         return;
@@ -4370,69 +4438,43 @@ void restartAPTask(void *parameter) {
     Serial.println("\n========================================");
     Serial.println("AP RESTART TASK STARTED");
     Serial.println("========================================");
-    Serial.println("Waiting for countdown to complete (60 seconds)...");
+    Serial.println("Countdown before AP shutdown");
     Serial.println("========================================\n");
     
     for (int i = 60; i > 0; i--) {
         if (i % 10 == 0 || i <= 5) {
-            Serial.printf("Countdown: %d seconds remaining...\n", i);
+            Serial.printf("AP will shutdown in %d seconds...\n", i);
         }
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
+
+    delay(500);
     
     Serial.println("\n========================================");
-    Serial.println("COUNTDOWN COMPLETED - RESTARTING AP NOW");
+    Serial.println("COUNTDOWN COMPLETED - SHUTTING DOWN AP NOW");
     Serial.println("========================================\n");
-
-    delay(1000);
-    
-    Serial.println("Phase 1: Gentle client disconnection...");
     
     int clientsBefore = WiFi.softAPgetStationNum();
     Serial.printf("Clients connected: %d\n", clientsBefore);
     
     if (clientsBefore > 0) {
-        Serial.println("\nSending deauth frames (3x)...");
-        for (int i = 0; i < 3; i++) {
+        Serial.println("\nDisconnecting clients...");
+        for (int i = 0; i < 1; i++) {
             esp_wifi_deauth_sta(0);
-            Serial.printf("  Deauth sent #%d\n", i + 1);
-            vTaskDelay(pdMS_TO_TICKS(1500));
+            vTaskDelay(pdMS_TO_TICKS(1000));
         }
         
-        int afterDeauth = WiFi.softAPgetStationNum();
-        Serial.printf("After 3x deauth: %d clients remaining\n", afterDeauth);
-        
-        Serial.println("\nSoft disconnect AP...");
         WiFi.softAPdisconnect(false);
         vTaskDelay(pdMS_TO_TICKS(3000));
         
         int afterSoftDisconnect = WiFi.softAPgetStationNum();
-        Serial.printf("After soft disconnect: %d clients\n", afterSoftDisconnect);
         
         if (afterSoftDisconnect > 0) {
-            Serial.println("\nHard disconnect (without mode switch)...");
-            Serial.printf("%d stubborn clients detected\n", afterSoftDisconnect);
-            
             WiFi.softAPdisconnect(true);
             vTaskDelay(pdMS_TO_TICKS(2000));
-            
-            int afterHardDisconnect = WiFi.softAPgetStationNum();
-            Serial.printf("After hard disconnect: %d clients\n", afterHardDisconnect);
-        }
-        
-        Serial.println("\nFinal verification...");
-        int finalCheck = WiFi.softAPgetStationNum();
-        Serial.printf("Final client count: %d\n", finalCheck);
-        
-        if (finalCheck > 0) {
-            Serial.println("\nWARNING: Some clients still detected");
-            Serial.println("These are ghost entries - will clear on AP restart");
-        } else {
-            Serial.println("\nSUCCESS: All clients disconnected cleanly");
         }
         
     } else {
-        Serial.println("No clients connected - quick disconnect");
         WiFi.softAPdisconnect(false);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
@@ -4440,11 +4482,18 @@ void restartAPTask(void *parameter) {
     Serial.println("\n========================================");
     Serial.println("AP SHUTDOWN COMPLETE");
     Serial.println("========================================");
-    Serial.println("All clients forcefully disconnected");
-    Serial.println("Ready to start new AP");
+    Serial.println("AP is now OFF");
     Serial.println("========================================\n");
     
-    vTaskDelay(pdMS_TO_TICKS(2000));
+    Serial.println("Countdown before starting new AP");
+    for (int i = 10; i > 0; i--) {
+        Serial.printf("AP will start in %d seconds...\n", i);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+    
+    Serial.println("\n========================================");
+    Serial.println("COUNTDOWN COMPLETED - STARTING NEW AP NOW");
+    Serial.println("========================================\n");
     
     char savedSSID[33];
     char savedPassword[65];
@@ -4471,16 +4520,7 @@ void restartAPTask(void *parameter) {
     }
     
     Serial.println("\nConfiguring new AP network...");
-    bool configSuccess = WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
-    
-    if (!configSuccess) {
-        Serial.println("WARNING: softAPConfig failed - using defaults");
-        savedAPIP = IPAddress(192, 168, 4, 1);
-        savedGateway = IPAddress(192, 168, 4, 1);
-        savedSubnet = IPAddress(255, 255, 255, 0);
-        WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
-    }
-    
+    WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
     vTaskDelay(pdMS_TO_TICKS(500));
     
     Serial.println("Starting new AP broadcast...");
@@ -4525,28 +4565,6 @@ void restartAPTask(void *parameter) {
         Serial.println("Rollback to: " + String(savedSSID));
         Serial.println("========================================\n");
     }
-    
-    Serial.println("Waiting for AP to stabilize...");
-    vTaskDelay(pdMS_TO_TICKS(3000));
-    
-    IPAddress finalIP = WiFi.softAPIP();
-    int finalClients = WiFi.softAPgetStationNum();
-    
-    Serial.println("\n========================================");
-    Serial.println("FINAL VERIFICATION");
-    Serial.println("========================================");
-    Serial.println("AP Status: " + String(finalIP != IPAddress(0,0,0,0) ? "ACTIVE" : "DEAD"));
-    Serial.println("SSID: " + WiFi.softAPSSID());
-    Serial.println("IP: " + finalIP.toString());
-    Serial.println("Connected Clients: " + String(finalClients));
-    
-    if (finalClients > 0) {
-        Serial.println("\n" + String(finalClients) + " client(s) auto-reconnected!");
-    } else {
-        Serial.println("\nNo clients yet - waiting for manual reconnection");
-        Serial.println("Mobile devices may need manual WiFi toggle");
-    }
-    Serial.println("========================================\n");
     
     apRestartInProgress = false;
     xSemaphoreGive(wifiRestartMutex);
