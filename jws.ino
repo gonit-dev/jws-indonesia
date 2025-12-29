@@ -1523,6 +1523,13 @@ void saveTimeToRTC() {
     }
 }
 
+void sendJSONResponse(AsyncWebServerRequest *request, const String &json) {
+    AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", json);
+    resp->addHeader("Content-Length", String(json.length()));
+    resp->addHeader("Connection", "keep-alive");
+    resp->addHeader("Cache-Control", "no-cache");
+    request->send(resp);
+}
 
 // ============================================
 // Web Server Functions
@@ -1622,10 +1629,7 @@ void setupServerRoutes() {
       ESP.getFreeHeap()
     );
 
-    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", jsonBuffer);
-    resp -> addHeader("Cache-Control", "no-cache");
-    resp -> addHeader("Content-Length", String(strlen(jsonBuffer)));
-    request -> send(resp);
+    sendJSONResponse(request, String(jsonBuffer));
   });
 
   server.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -1736,9 +1740,7 @@ void setupServerRoutes() {
 
     json += "}";
 
-    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
-    resp -> addHeader("Cache-Control", "no-cache");
-    request -> send(resp);
+    sendJSONResponse(request, json);
   });
 
   server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest * request) {
@@ -1992,9 +1994,7 @@ void setupServerRoutes() {
     json += "\"apSubnet\":\"" + apSubnet.toString() + "\"";
     json += "}";
 
-    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
-    resp -> addHeader("Cache-Control", "no-cache");
-    request -> send(resp);
+    sendJSONResponse(request, json);
   });
 
   // ========================================
@@ -2084,9 +2084,7 @@ void setupServerRoutes() {
 
     json += "}";
 
-    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
-    resp -> addHeader("Cache-Control", "no-cache");
-    request -> send(resp);
+    sendJSONResponse(request, json);
   });
 
   server.on("/settimezone", HTTP_POST, [](AsyncWebServerRequest * request) {
@@ -2237,9 +2235,7 @@ void setupServerRoutes() {
 
     json += "}";
 
-    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
-    resp -> addHeader("Cache-Control", "no-cache");
-    request -> send(resp);
+    sendJSONResponse(request, json);
   });
 
   server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest * request) {
@@ -2441,9 +2437,7 @@ void setupServerRoutes() {
 
     json += "}";
 
-    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
-    resp -> addHeader("Cache-Control", "no-cache");
-    request -> send(resp);
+    sendJSONResponse(request, json);
   });
 
   server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest * request) {
@@ -2577,9 +2571,7 @@ void setupServerRoutes() {
     json += "\"isya\":\"" + prayerConfig.isyaTime + "\"";
     json += "}";
 
-    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
-    resp -> addHeader("Cache-Control", "no-cache");
-    request -> send(resp);
+    sendJSONResponse(request, json);
   });
 
   server.on("/getbuzzerconfig", HTTP_GET, [](AsyncWebServerRequest * request) {
@@ -2594,9 +2586,7 @@ void setupServerRoutes() {
     json += "\"volume\":" + String(buzzerConfig.volume);
     json += "}";
 
-    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
-    resp -> addHeader("Cache-Control", "no-cache");
-    request -> send(resp);
+    sendJSONResponse(request, json);
   });
 
   server.on("/setbuzzertoggle", HTTP_POST, [](AsyncWebServerRequest * request) {
@@ -2953,10 +2943,7 @@ void setupServerRoutes() {
       millis() / 1000
     );
 
-    AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", jsonBuffer);
-    resp -> addHeader("Cache-Control", "no-cache");
-    resp -> addHeader("Content-Length", String(strlen(jsonBuffer)));
-    request -> send(resp);
+    sendJSONResponse(request, String(jsonBuffer));
   });
 
   // ========================================
@@ -2989,9 +2976,7 @@ void setupServerRoutes() {
 
       json += "}";
 
-      AsyncWebServerResponse * resp = request -> beginResponse(200, "application/json", json);
-      resp -> addHeader("Cache-Control", "no-cache");
-      request -> send(resp);
+      sendJSONResponse(request, json);
     });
 
     // ========================================
@@ -4827,7 +4812,7 @@ void setup() {
   Serial.printf("Backlight ON: %d/255\n", TFT_BL_BRIGHTNESS);
 
   // ================================
-  // WIFI CONFIGURATION
+  // WIFI CONFIGURATION - UPDATED!
   // ================================
   Serial.println("\n========================================");
   Serial.println("WIFI CONFIGURATION");
@@ -4836,6 +4821,17 @@ void setup() {
   setupWiFiEvents();
   WiFi.mode(WIFI_AP_STA);
   delay(100);
+
+  // ✅ TAMBAHAN BARU - WiFi Optimization untuk Router
+  Serial.println("Applying WiFi optimizations for router access...");
+  
+  esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
+  esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT40);
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);
+  
+  Serial.println("  Protocol: 802.11 b/g/n");
+  Serial.println("  Bandwidth: 40MHz (HT40)");
+  Serial.println("  TX Power: 19.5dBm (max)");
 
   // ================================
   // SET HOSTNAME SEBELUM OPERASI WIFI LAINNYA
@@ -4846,20 +4842,17 @@ void setup() {
   Serial.println(WiFi.getHostname());
 
   WiFi.setSleep(WIFI_PS_NONE);
-
   esp_wifi_set_ps(WIFI_PS_NONE);
 
-  WiFi.setTxPower(WIFI_POWER_19_5dBm);
   esp_wifi_set_max_tx_power(78);
 
   WiFi.setAutoReconnect(true);
-
   WiFi.persistent(false);
 
   Serial.println("WiFi Mode: AP + STA");
   Serial.println("WiFi Sleep: DOUBLE DISABLED");
-  Serial.println("Arduino: WIFI_PS_NONE");
-  Serial.println("ESP-IDF: WIFI_PS_NONE");
+  Serial.println("  Arduino: WIFI_PS_NONE");
+  Serial.println("  ESP-IDF: WIFI_PS_NONE");
   Serial.println("WiFi Power: Maximum (19.5dBm)");
   Serial.println("Auto Reconnect: Enabled");
   Serial.println("Persistent: Disabled");
@@ -4986,7 +4979,7 @@ void setup() {
 
   if (prayerTaskHandle) {
       esp_task_wdt_add(prayerTaskHandle);
-      Serial.print("Prayer Task WDT registered");
+      Serial.println("Prayer Task WDT registered");
   }
 
   xTaskCreatePinnedToCore(
@@ -5043,8 +5036,9 @@ void setup() {
   Serial.println("========================================");
   Serial.println("SYSTEM READY");
   Serial.println("========================================");
-  Serial.println(" Multi-client concurrent access enabled");
-  Serial.println(" WiFi sleep disabled for better response");
+  Serial.println("✓ Multi-client concurrent access enabled");
+  Serial.println("✓ WiFi sleep disabled for better response");
+  Serial.println("✓ Router optimization active (keep-alive)");
   Serial.println("========================================\n");
 
   if (wifiConfig.routerSSID.length() > 0) {
