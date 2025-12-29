@@ -1665,6 +1665,19 @@ void setupServerRoutes() {
     xTaskCreate(
       [](void* param) {
           for (int i = 60; i > 0; i--) {
+              if (i == 30) {
+                  Serial.println("\n========================================");
+                  Serial.println("SHUTTING DOWN WiFi (10 seconds left)");
+                  Serial.println("========================================");
+                  
+                  WiFi.mode(WIFI_OFF);
+                  delay(500);
+                  
+                  Serial.println("WiFi: FULLY DISABLED");
+                  Serial.println("All connections terminated");
+                  Serial.println("========================================\n");
+              }
+              
               if (i == 60 || i == 20 || i == 10 || i <= 5) {
                   Serial.printf("Restarting in %d seconds...\n", i);
               }
@@ -2799,6 +2812,19 @@ void setupServerRoutes() {
     xTaskCreate(
       [](void* param) {
           for (int i = 60; i > 0; i--) {
+              if (i == 30) {
+                  Serial.println("\n========================================");
+                  Serial.println("SHUTTING DOWN WiFi (10 seconds left)");
+                  Serial.println("========================================");
+                
+                  WiFi.mode(WIFI_OFF);
+                  delay(500);
+                  
+                  Serial.println("WiFi: FULLY DISABLED");
+                  Serial.println("All connections terminated");
+                  Serial.println("========================================\n");
+              }
+              
               if (i == 60 || i == 20 || i == 10 || i <= 5) {
                   Serial.printf("Factory reset restarting in %d seconds...\n", i);
               }
@@ -4446,60 +4472,55 @@ void restartAPTask(void *parameter) {
     Serial.println("Countdown before AP shutdown");
     Serial.println("========================================\n");
     
+    // ================================
+    // COUNTDOWN 60 DETIK
+    // ================================
     for (int i = 60; i > 0; i--) {
+        if (i == 30) {
+            Serial.println("\n========================================");
+            Serial.println("SHUTTING DOWN AP (10 seconds left)");
+            Serial.println("========================================");
+            
+            int clientsBefore = WiFi.softAPgetStationNum();
+            Serial.printf("Clients connected: %d\n", clientsBefore);
+            
+            if (clientsBefore > 0) {
+                Serial.println("Disconnecting clients...");
+                esp_wifi_deauth_sta(0);
+                vTaskDelay(pdMS_TO_TICKS(1000));
+            }
+            
+            wifi_mode_t currentMode;
+            esp_wifi_get_mode(&currentMode);
+            
+            if (currentMode == WIFI_MODE_APSTA) {
+                WiFi.mode(WIFI_MODE_STA);
+                Serial.println("Mode changed: APSTA -> STA");
+                Serial.println("AP: OFF");
+                Serial.println("STA: STILL RUNNING (WiFi connection preserved)");
+            } else if (currentMode == WIFI_MODE_AP) {
+                WiFi.mode(WIFI_OFF);
+                Serial.println("Mode changed: AP -> OFF");
+                Serial.println("AP: OFF");
+            }
+            
+            vTaskDelay(pdMS_TO_TICKS(500));
+            
+            Serial.println("AP shutdown complete");
+            Serial.println("All clients disconnected");
+            Serial.println("========================================\n");
+        }
+        
         if (i % 10 == 0 || i <= 5) {
-            Serial.printf("AP will shutdown in %d seconds...\n", i);
+            Serial.printf("AP will restart in %d seconds...\n", i);
         }
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
-    delay(1000);
-    
-    Serial.println("\n========================================");
-    Serial.println("COUNTDOWN COMPLETED - SHUTTING DOWN AP NOW");
-    Serial.println("========================================\n");
-    
-    int clientsBefore = WiFi.softAPgetStationNum();
-    Serial.printf("Clients connected: %d\n", clientsBefore);
-    
-    if (clientsBefore > 0) {
-        Serial.println("\nDisconnecting clients...");
-        for (int i = 0; i < 1; i++) {
-            esp_wifi_deauth_sta(0);
-            vTaskDelay(pdMS_TO_TICKS(1000));
-        }
-        
-        WiFi.softAPdisconnect(false);
-        vTaskDelay(pdMS_TO_TICKS(3000));
-        
-        int afterSoftDisconnect = WiFi.softAPgetStationNum();
-        
-        if (afterSoftDisconnect > 0) {
-            WiFi.softAPdisconnect(true);
-            vTaskDelay(pdMS_TO_TICKS(2000));
-        }
-        
-    } else {
-        WiFi.softAPdisconnect(false);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-    
-    Serial.println("\n========================================");
-    Serial.println("AP SHUTDOWN COMPLETE");
-    Serial.println("========================================");
-    Serial.println("AP is now OFF");
-    Serial.println("========================================\n");
-    
-    Serial.println("Countdown before starting new AP");
-    for (int i = 10; i > 0; i--) {
-        Serial.printf("AP will start in %d seconds...\n", i);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-    
     Serial.println("\n========================================");
     Serial.println("COUNTDOWN COMPLETED - STARTING NEW AP NOW");
     Serial.println("========================================\n");
-    
+  
     char savedSSID[33];
     char savedPassword[65];
     IPAddress savedAPIP, savedGateway, savedSubnet;
@@ -4523,6 +4544,19 @@ void restartAPTask(void *parameter) {
         savedGateway = IPAddress(192, 168, 4, 1);
         savedSubnet = IPAddress(255, 255, 255, 0);
     }
+
+    wifi_mode_t currentMode;
+    esp_wifi_get_mode(&currentMode);
+    
+    if (currentMode == WIFI_MODE_STA) {
+        WiFi.mode(WIFI_MODE_APSTA);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        Serial.println("Mode restored: STA -> APSTA");
+    } else if (currentMode == WIFI_MODE_NULL) {
+        WiFi.mode(WIFI_MODE_AP);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        Serial.println("Mode set: OFF -> AP");
+    }
     
     Serial.println("\nConfiguring new AP network...");
     WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
@@ -4542,6 +4576,14 @@ void restartAPTask(void *parameter) {
         Serial.println("SSID: \"" + currentSSID + "\" (ACTIVE)");
         Serial.println("IP: " + newAPIP.toString());
         Serial.println("MAC: " + WiFi.softAPmacAddress());
+        
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.println("");
+            Serial.println("WiFi Connection: PRESERVED");
+            Serial.println("Router SSID: " + WiFi.SSID());
+            Serial.println("Router IP: " + WiFi.localIP().toString());
+        }
+        
         Serial.println("");
         Serial.println("CLIENT ACTION REQUIRED:");
         Serial.println("  1. Search for: \"" + currentSSID + "\"");
