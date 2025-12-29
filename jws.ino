@@ -4821,7 +4821,6 @@ void setup() {
   WiFi.mode(WIFI_AP_STA);
   delay(100);
 
-  // ✅ TAMBAHAN BARU - WiFi Optimization untuk Router
   Serial.println("Applying WiFi optimizations for router access...");
   
   esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
@@ -5035,9 +5034,9 @@ void setup() {
   Serial.println("========================================");
   Serial.println("SYSTEM READY");
   Serial.println("========================================");
-  Serial.println("✓ Multi-client concurrent access enabled");
-  Serial.println("✓ WiFi sleep disabled for better response");
-  Serial.println("✓ Router optimization active (keep-alive)");
+  Serial.println("Multi-client concurrent access enabled");
+  Serial.println("WiFi sleep disabled for better response");
+  Serial.println("Router optimization active (keep-alive)");
   Serial.println("========================================\n");
 
   if (wifiConfig.routerSSID.length() > 0) {
