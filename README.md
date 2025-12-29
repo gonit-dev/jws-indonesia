@@ -1,6 +1,6 @@
 # 🕌 ESP32 Islamic Prayer Clock
 
-> Jam digital otomatis untuk waktu sholat dengan web interface dan RTC backup
+> Jam digital otomatis untuk waktu sholat dengan antarmuka web dan backup RTC
 
 [![Version](https://img.shields.io/badge/version-2.1-blue)](https://github.com/gonit-dev/jws-indonesia) [![LVGL](https://img.shields.io/badge/LVGL-9.2.0-green)](https://lvgl.io/) [![Platform](https://img.shields.io/badge/platform-ESP32-red)](https://www.espressif.com/) [![License](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 
@@ -11,15 +11,10 @@
 <div align="center">
 
 <img src="https://github.com/user-attachments/assets/d0e64d2a-2a00-4a62-b92b-9aa36d95f4b8" alt="Home" width="200">
-
 <img src="https://github.com/user-attachments/assets/55d84d62-d986-460a-b2b2-3ac4d2b4aaf1" alt="WiFi" width="200">
-
 <img src="https://github.com/user-attachments/assets/b9f1db1c-83f2-4492-aef8-7b62997da9a9" alt="Time" width="200">
-
 <img src="https://github.com/user-attachments/assets/84408e8e-ef1b-4ee5-aa42-9c0f965bb031" alt="City" width="200">
-
 <img src="https://github.com/user-attachments/assets/6479dfd9-99b9-4034-a0d2-29453d6c46d9" alt="Coords" width="200">
-
 <img src="https://github.com/user-attachments/assets/1f105d28-80a6-490c-a4a9-d7f8174a3c3e" alt="Prayer" width="200">
 
 </div>
@@ -28,61 +23,61 @@
 
 ## ✨ Fitur Utama
 
-### 🕌 Prayer Times
-- **Jadwal Sholat Otomatis** - Update otomatis tengah malam via Aladhan API
-- **Visual Notification** - Blinking waktu sholat selama 1 menit saat masuk waktu
+### 🕌 Waktu Sholat
+- **Jadwal Sholat Otomatis** - Pembaruan otomatis tengah malam via Aladhan API
+- **Notifikasi Visual** - Tampilan berkedip selama 1 menit saat masuk waktu sholat
 - **8 Metode Kalkulasi** - Kemenag, MWL, Egyptian, ISNA, Shia, Karachi, Makkah, Tehran
-- **500+ Kota** - Database kota Indonesia dengan koordinat GPS akurat
-- **Manual Coordinates** - Edit koordinat GPS dengan validasi real-time
+- **500+ Kota Indonesia** - Database kota dengan koordinat GPS akurat
+- **Koordinat Manual** - Edit koordinat GPS dengan validasi real-time
 
-### ⏰ Time Management
-- **NTP Auto-Sync** - Sinkronisasi jam otomatis setiap 1 jam
-- **Multiple NTP Servers** - Fallback ke pool.ntp.org, time.google.com, time.windows.com
-- **RTC DS3231 Backup** - Jam tetap akurat saat mati lampu (battery backup)
-- **Timezone Support** - UTC-12 hingga UTC+14 dengan validasi
-- **Manual Sync** - Sync waktu dari browser client
+### ⏰ Manajemen Waktu
+- **Sinkronisasi NTP Otomatis** - Sinkronisasi jam otomatis setiap 1 jam
+- **Multiple NTP Server** - Fallback ke pool.ntp.org, time.google.com, time.windows.com
+- **Backup RTC DS3231** - Jam tetap akurat saat mati lampu (backup baterai)
+- **Dukungan Zona Waktu** - UTC-12 hingga UTC+14 dengan validasi
+- **Sinkronisasi Manual** - Sinkronisasi waktu dari browser
 
-### 🌐 Network Features
-- **Dual Mode WiFi** - AP (Access Point) + STA (Station) concurrent
-- **Event-Driven Connection** - Auto-reconnect cepat tanpa polling
-- **Custom AP Settings** - SSID, Password, IP, Gateway, Subnet configurable
-- **Connection Monitor** - Real-time WiFi status dan RSSI display
-- **Fast Reconnect** - Auto-reconnect dalam 3-5 detik
+### 🌐 Fitur Jaringan
+- **WiFi Mode Ganda** - AP (Access Point) + STA (Station) bersamaan
+- **Koneksi Event-Driven** - Auto-reconnect cepat tanpa polling
+- **Pengaturan AP Custom** - SSID, Password, IP, Gateway, Subnet dapat dikonfigurasi
+- **Monitor Koneksi** - Tampilan status WiFi dan RSSI secara real-time
+- **Reconnect Cepat** - Auto-reconnect dalam 3-5 detik
 
-### 🖥️ User Interface
-- **LVGL 9.2.0** - Smooth touchscreen UI @ 20 FPS
-- **EEZ Studio Design** - Professional UI layout
-- **Responsive Web** - Mobile-friendly interface dengan Foundation CSS
-- **Real-Time Display** - Clock, date, prayer times update otomatis
-- **Loading Manager** - Progressive loading dengan status feedback
+### 🖥️ Antarmuka Pengguna
+- **LVGL 9.2.0** - UI touchscreen yang smooth @ 20 FPS
+- **Desain EEZ Studio** - Layout UI profesional
+- **Web Responsif** - Antarmuka mobile-friendly dengan Foundation CSS
+- **Tampilan Real-Time** - Jam, tanggal, waktu sholat update otomatis
+- **Loading Manager** - Progressive loading dengan feedback status
 
-### 🔊 Buzzer Control
-- **Per-Prayer Toggle** - Enable/disable buzzer untuk setiap waktu sholat
-- **Volume Control** - 0-100% adjustable dengan live preview
-- **PWM Output** - Smooth buzzer sound via GPIO26
-- **Automatic Alert** - Buzzer ON/OFF sync dengan blinking display
+### 🔊 Kontrol Buzzer
+- **Toggle Per-Sholat** - Enable/disable buzzer untuk setiap waktu sholat
+- **Kontrol Volume** - 0-100% dapat diatur dengan preview langsung
+- **Output PWM** - Suara buzzer smooth via GPIO26
+- **Alert Otomatis** - Buzzer ON/OFF sinkron dengan tampilan berkedip
 
-### 💾 Data Persistence
+### 💾 Penyimpanan Data
 - **LittleFS Storage** - Semua konfigurasi tersimpan di flash
 - **Auto-Save** - Konfigurasi tersimpan otomatis setelah perubahan
-- **Factory Reset** - Reset ke default settings dengan countdown safety
+- **Factory Reset** - Reset ke pengaturan default dengan countdown safety
 
-### 🔄 Smart Updates
-- **Midnight Auto-Update** - Prayer times update otomatis tengah malam dengan NTP sync
-- **On-Demand Update** - Manual update via web interface
-- **Background Processing** - Non-blocking updates tanpa freeze UI
-- **Time Validation** - Validasi timestamp sebelum API request
+### 🔄 Pembaruan Pintar
+- **Auto-Update Tengah Malam** - Waktu sholat update otomatis tengah malam dengan sinkronisasi NTP
+- **Update On-Demand** - Pembaruan manual via antarmuka web
+- **Pemrosesan Background** - Pembaruan non-blocking tanpa freeze UI
+- **Validasi Waktu** - Validasi timestamp sebelum request API
 
-### 🛡️ Safety Features
-- **Countdown System** - 60 detik countdown sebelum restart/reset
-- **Debouncing Protection** - Prevent multiple rapid restarts (3 detik min interval)
-- **Mutex Locking** - Thread-safe operations untuk semua tasks
-- **Watchdog Timer** - 60 detik timeout dengan auto-recovery
-- **Connection Type Detection** - Smart redirect berdasarkan akses (Local AP vs Remote)
+### 🛡️ Fitur Keamanan
+- **Sistem Countdown** - Countdown 60 detik sebelum restart/reset
+- **Proteksi Debouncing** - Mencegah multiple restart cepat (interval min 3 detik)
+- **Mutex Locking** - Operasi thread-safe untuk semua task
+- **Watchdog Timer** - Timeout 60 detik dengan auto-recovery
+- **Deteksi Tipe Koneksi** - Redirect pintar berdasarkan akses (Local AP vs Remote)
 
 ---
 
-## 🔧 Hardware Requirements
+## 🔧 Kebutuhan Hardware
 
 ### Board: ESP32-2432S024
 - **MCU:** ESP32 Dual-Core @ 240MHz
@@ -90,8 +85,8 @@
 - **Flash:** 4MB (3MB APP + 1MB SPIFFS)
 - **Display:** ILI9341 2.4" TFT (320x240)
 - **Touch:** XPT2046 Resistive
-- **WiFi:** 802.11 b/g/n (2.4GHz only)
-- **Power:** 5V USB (min 2A recommended)
+- **WiFi:** 802.11 b/g/n (2.4GHz saja)
+- **Power:** 5V USB (minimal 2A disarankan)
 
 ### Pinout
 ```
@@ -110,7 +105,7 @@ Buzzer:
 - BUZZER_PIN → GPIO 26 (PWM)
 ```
 
-### RTC DS3231 (Opsional - Highly Recommended)
+### RTC DS3231 (Opsional - Sangat Disarankan)
 ```
 DS3231       ESP32
 VCC     →    3.3V
@@ -119,29 +114,29 @@ SDA     →    GPIO 21
 SCL     →    GPIO 22
 ```
 
-**RTC Features:**
-- Battery backup (CR2032) untuk time persistence
-- Automatic leap year compensation
-- Temperature compensated crystal oscillator (±2ppm accuracy)
-- Hardware validation untuk detect faulty module
+**Fitur RTC:**
+- Backup baterai (CR2032) untuk persistensi waktu
+- Kompensasi tahun kabisat otomatis
+- Temperature compensated crystal oscillator (akurasi ±2ppm)
+- Validasi hardware untuk deteksi modul rusak
 
 ---
 
 ## 📦 Instalasi
 
-### 1. Requirements
+### 1. Kebutuhan
 
 | Komponen | Versi | Wajib | Catatan |
 |----------|-------|-------|---------|
-| ESP32 Board | v3.0.7 | ✅ | `ledcAttach()` requires v3.x |
-| LVGL | 9.2.0 | ✅ | v8.x tidak compatible |
+| ESP32 Board | v3.0.7 | ✅ | `ledcAttach()` memerlukan v3.x |
+| LVGL | 9.2.0 | ✅ | v8.x tidak kompatibel |
 | TFT_eSPI | 2.5.0+ | ✅ | |
 | XPT2046_Touchscreen | 1.4+ | ✅ | |
-| ArduinoJson | 6.21.0+ | ✅ | v7.x compatible |
+| ArduinoJson | 6.21.0+ | ✅ | v7.x kompatibel |
 | ESPAsyncWebServer | 1.2.3+ | ✅ | |
 | AsyncTCP | 1.1.1+ | ✅ | |
 | TimeLib | 1.6.1+ | ✅ | |
-| RTClib | 2.1.1+ | ✅ | Adafruit version |
+| RTClib | 2.1.1+ | ✅ | Versi Adafruit |
 | Arduino IDE | 2.x+ | - | |
 
 ### 2. Install ESP32 Board
@@ -151,35 +146,35 @@ SCL     →    GPIO 22
 File → Preferences → Additional Boards Manager URLs:
 https://espressif.github.io/arduino-esp32/package_esp32_index.json
 
-Tools → Board → Boards Manager → Search: "esp32"
+Tools → Board → Boards Manager → Cari: "esp32"
 Install: esp32 by Espressif Systems v3.0.7
 ```
 
-### 3. Install Libraries
+### 3. Install Library
 
 Via Library Manager (Sketch → Include Library → Manage Libraries):
 
 ```
-✅ LVGL                   9.2.0      (by LVGL)
-✅ TFT_eSPI               2.5.0+     (by Bodmer)
-✅ XPT2046_Touchscreen    1.4+       (by Paul Stoffregen)
-✅ ArduinoJson            6.21.0+    (by Benoit Blanchon)
-✅ ESPAsyncWebServer      1.2.3+     (by me-no-dev)
-✅ AsyncTCP               1.1.1+     (by me-no-dev)
-✅ TimeLib                1.6.1+     (by Michael Margolis)
-✅ RTClib                 2.1.1+     (by Adafruit)
+✅ LVGL                   9.2.0      (oleh LVGL)
+✅ TFT_eSPI               2.5.0+     (oleh Bodmer)
+✅ XPT2046_Touchscreen    1.4+       (oleh Paul Stoffregen)
+✅ ArduinoJson            6.21.0+    (oleh Benoit Blanchon)
+✅ ESPAsyncWebServer      1.2.3+     (oleh me-no-dev)
+✅ AsyncTCP               1.1.1+     (oleh me-no-dev)
+✅ TimeLib                1.6.1+     (oleh Michael Margolis)
+✅ RTClib                 2.1.1+     (oleh Adafruit)
 ```
 
-### 4. Configure TFT_eSPI
+### 4. Konfigurasi TFT_eSPI
 
-**Location:** `Arduino/libraries/TFT_eSPI/User_Setup_Select.h`
+**Lokasi:** `Arduino/libraries/TFT_eSPI/User_Setup_Select.h`
 
 Comment default, uncomment:
 ```cpp
 #include <User_Setups/Setup24_ST7789.h>  // atau sesuaikan dengan board
 ```
 
-**Or create custom:** `User_Setup.h`
+**Atau buat custom:** `User_Setup.h`
 ```cpp
 #define ILI9341_DRIVER
 #define TFT_WIDTH  240
@@ -194,14 +189,14 @@ Comment default, uncomment:
 git clone https://github.com/gonit-dev/jws-indonesia.git
 cd jws-indonesia
 
-# Upload filesystem (data/ folder)
+# Upload filesystem (folder data/)
 Tools → ESP32 Sketch Data Upload
 
-# Upload code
+# Upload kode
 Sketch → Upload (Ctrl+U)
 ```
 
-**Board Settings:**
+**Pengaturan Board:**
 ```
 Board: ESP32 Dev Module
 Upload Speed: 921600
@@ -209,22 +204,22 @@ Flash Frequency: 80MHz
 Flash Mode: QIO
 Flash Size: 4MB (3MB APP / 1MB SPIFFS)
 Partition Scheme: Default 4MB with spiffs
-Core Debug Level: None (for production)
+Core Debug Level: None (untuk produksi)
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Panduan Cepat
 
-### Step 1: First Boot
+### Langkah 1: Boot Pertama
 ```
 📶 AP SSID: "JWS Indonesia"
 🔐 Password: "12345678"
-🌐 IP Address: http://192.168.4.1
-⏰ Initial Time: 01/01/2000 00:00:00 (waiting NTP sync)
+🌐 Alamat IP: http://192.168.4.1
+⏰ Waktu Awal: 01/01/2000 00:00:00 (menunggu sinkronisasi NTP)
 ```
 
-**Serial Monitor Output:**
+**Output Serial Monitor:**
 ```
 ========================================
 ESP32 Islamic Prayer Clock
@@ -239,159 +234,159 @@ System Ready
 ========================================
 ```
 
-### Step 2: Konfigurasi WiFi
-1. **Connect to AP**
+### Langkah 2: Konfigurasi WiFi
+1. **Sambungkan ke AP**
    - SSID: "JWS Indonesia"
    - Password: "12345678"
 
-2. **Open Browser**
+2. **Buka Browser**
    - URL: `http://192.168.4.1`
-   - Mobile responsive (works on phone)
+   - Responsif mobile (berfungsi di ponsel)
 
-3. **Configure WiFi Router**
-   - Tab **WIFI** → Section "WiFi Router"
+3. **Konfigurasi WiFi Router**
+   - Tab **WIFI** → Bagian "WiFi Router"
    - Masukkan SSID WiFi rumah (case-sensitive)
-   - Masukkan Password (min 8 karakter)
+   - Masukkan Password (minimal 8 karakter)
    - Klik **Simpan**
 
-4. **Wait for Connection**
-   - Device akan auto-connect (~15 detik)
-   - Check serial monitor untuk IP address
-   - Access via: `http://<IP-ESP32>`
+4. **Tunggu Koneksi**
+   - Perangkat akan auto-connect (~15 detik)
+   - Cek serial monitor untuk alamat IP
+   - Akses via: `http://<IP-ESP32>`
 
-### Step 3: Set Lokasi & Metode
-1. **Select City**
+### Langkah 3: Atur Lokasi & Metode
+1. **Pilih Kota**
    - Tab **LOKASI** → Dropdown "Pilih Lokasi"
    - Pilih dari 500+ kota Indonesia
-   - Auto-grouping by province
+   - Auto-grouping berdasarkan provinsi
 
-2. **Verify/Edit Coordinates** (Optional)
+2. **Verifikasi/Edit Koordinat** (Opsional)
    - Koordinat muncul otomatis
    - Edit manual jika perlu koreksi
    - Format: -6.2088 (latitude), 106.8456 (longitude)
-   - Validasi: lat (-90 to 90), lon (-180 to 180)
+   - Validasi: lat (-90 hingga 90), lon (-180 hingga 180)
 
-3. **Select Calculation Method**
+3. **Pilih Metode Kalkulasi**
    - Default: Egyptian General Authority of Survey
-   - Options: Kemenag, MWL, ISNA, Shia, Karachi, Makkah, Tehran
+   - Pilihan: Kemenag, MWL, ISNA, Shia, Karachi, Makkah, Tehran
    - Klik **Simpan**
 
 4. **Auto-Update**
-   - Prayer times akan auto-fetch dari API
+   - Waktu sholat akan otomatis diambil dari API
    - Display update dalam 3-5 detik
-   - Check serial monitor untuk logs
+   - Cek serial monitor untuk logs
 
-### Step 4: Timezone Configuration
+### Langkah 4: Konfigurasi Zona Waktu
 ```
 Default: UTC+7 (WIB - Waktu Indonesia Barat)
 
-Indonesia Timezones:
+Zona Waktu Indonesia:
 - WIB:  +7  (Jawa, Sumatera, Kalimantan Barat)
 - WITA: +8  (Kalimantan Tengah/Timur, Sulawesi, Bali, NTB, NTT)
 - WIT:  +9  (Papua, Maluku)
 ```
 
-**Set Timezone:**
+**Atur Zona Waktu:**
 1. Tab **WAKTU**
-2. Klik **🕐** (edit icon)
-3. Input: +7, +8, +9, atau -12 to +14
-4. Klik **💾** (save) atau Enter
-5. NTP akan auto re-sync dengan timezone baru
+2. Klik **🕐** (ikon edit)
+3. Input: +7, +8, +9, atau -12 hingga +14
+4. Klik **💾** (simpan) atau Enter
+5. NTP akan auto re-sync dengan zona waktu baru
 
-### Step 5: Buzzer Configuration
+### Langkah 5: Konfigurasi Buzzer
 1. Tab **JADWAL**
 2. Toggle ON/OFF untuk setiap waktu sholat
-3. Adjust volume slider (0-100%)
+3. Atur slider volume (0-100%)
 4. Auto-save setiap perubahan
 
 ---
 
-## 🌐 Web Interface
+## 🌐 Antarmuka Web
 
-### Access Methods
+### Metode Akses
 
-**AP Mode (Default):**
+**Mode AP (Default):**
 ```
 URL: http://192.168.4.1
 Network: JWS Indonesia
-No internet required
+Tidak memerlukan internet
 ```
 
-**STA Mode (After WiFi config):**
+**Mode STA (Setelah konfigurasi WiFi):**
 ```
 URL: http://<IP-ESP32>
-Check serial monitor for IP
-Internet connection available
+Cek serial monitor untuk IP
+Koneksi internet tersedia
 ```
 
-**Dual Access:**
+**Akses Ganda:**
 ```
 Akses via AP: http://192.168.4.1
 Akses via WiFi: http://192.168.x.x
-Both work simultaneously
+Keduanya berfungsi bersamaan
 ```
 
-### Tab Overview
+### Gambaran Tab
 
 #### 🏠 BERANDA
 **Status Perangkat:**
 - Jaringan WiFi (SSID yang terhubung)
-- Alamat IP (Local IP dari router)
-- Internet Status (Connected/Disconnected badge)
+- Alamat IP (IP lokal dari router)
+- Status Internet (Badge Connected/Disconnected)
 - Status NTP (Tersinkron/Belum tersinkron)
 - Server NTP (pool.ntp.org, time.google.com, dll)
 - Waktu Real-Time (update setiap detik)
-- Tanggal (DD/MM/YYYY format)
+- Tanggal (format DD/MM/YYYY)
 - Uptime (HH:MM:SS atau Dhari HH:MM:SS)
 
-**Actions:**
-- **Mulai Ulang Perangkat** - Safe restart dengan 60 detik countdown
+**Aksi:**
+- **Mulai Ulang Perangkat** - Restart aman dengan countdown 60 detik
 
 #### 📡 WIFI
-**WiFi Router Configuration:**
-- SSID Input (text, required)
-- Password Input (text, min 8 chars)
+**Konfigurasi WiFi Router:**
+- Input SSID (text, wajib)
+- Input Password (text, minimal 8 karakter)
 - Simpan → Trigger reconnect dengan countdown
-- Batal → Restore saved values
+- Batal → Kembalikan nilai tersimpan
 
-**Access Point Configuration:**
-- SSID AP (text, required, custom name)
-- Password AP (text, min 8 chars)
+**Konfigurasi Access Point:**
+- SSID AP (text, wajib, nama custom)
+- Password AP (text, minimal 8 karakter)
 - Simpan → Restart AP dengan countdown
-- Batal → Restore saved values
+- Batal → Kembalikan nilai tersimpan
 
 **Konfigurasi Jaringan AP:**
-- IP Address (format xxx.xxx.xxx.xxx)
+- Alamat IP (format xxx.xxx.xxx.xxx)
 - Gateway (format xxx.xxx.xxx.xxx)
 - Subnet Mask (format xxx.xxx.xxx.xxx)
-- Real-time validation
-- Simpan → Apply dan restart AP
+- Validasi real-time
+- Simpan → Terapkan dan restart AP
 
-**Safety Features:**
-- Connection type detection (Local AP vs Remote)
-- Smart countdown hanya untuk local AP users
-- Debouncing protection (3 detik minimum)
+**Fitur Keamanan:**
+- Deteksi tipe koneksi (Local AP vs Remote)
+- Countdown pintar hanya untuk pengguna local AP
+- Proteksi debouncing (minimal 3 detik)
 
 #### ⏰ WAKTU
 **Pembaruan Manual:**
-- Button "Perbarui Waktu"
-- Sync waktu dari browser client
+- Tombol "Perbarui Waktu"
+- Sinkronisasi waktu dari browser
 - Update display dan RTC
 
 **Pembaruan Otomatis (NTP):**
 - Auto-sync setiap 1 jam
-- Fallback ke multiple servers
-- Status display (Tersinkron/Belum)
+- Fallback ke multiple server
+- Tampilan status (Tersinkron/Belum)
 - Server yang digunakan
 
 **Zona Waktu:**
-- Inline editing (click 🕐 icon)
-- Input UTC offset (-12 to +14)
-- Validation real-time
+- Inline editing (klik ikon 🕐)
+- Input offset UTC (-12 hingga +14)
+- Validasi real-time
 - Auto NTP re-sync setelah save
-- Prayer times auto-update dengan timezone baru
+- Waktu sholat auto-update dengan zona waktu baru
 
-**Timezone Shortcuts:**
+**Shortcut Zona Waktu:**
 - 🇮🇩 WIB = +7
 - 🇮🇩 WITA = +8
 - 🇮🇩 WIT = +9
@@ -399,76 +394,76 @@ Both work simultaneously
 #### 🕌 LOKASI
 **Pilih Lokasi:**
 - Dropdown 500+ kota Indonesia
-- Grouped by province
-- Search functionality
-- Koordinat display otomatis
+- Dikelompokkan berdasarkan provinsi
+- Fungsi pencarian
+- Tampilan koordinat otomatis
 
 **Ubah Koordinat:**
-- Latitude input (-90 to 90)
-- Longitude input (-180 to 180)
-- Default coordinates dari JSON
-- Reset button ke coordinates original
-- Batal button restore saved values
-- Real-time validation
+- Input Latitude (-90 hingga 90)
+- Input Longitude (-180 hingga 180)
+- Koordinat default dari JSON
+- Tombol Reset ke koordinat original
+- Tombol Batal kembalikan nilai tersimpan
+- Validasi real-time
 
-**Location Type Display:**
-- 🏙️ City (Kota)
-- 🏞️ District (Kabupaten)
-- 🏘️ Sub-District (Kecamatan)
-- 🏡 Village (Kelurahan/Desa)
+**Tampilan Tipe Lokasi:**
+- 🏙️ Kota
+- 🏞️ Kabupaten
+- 🏘️ Kecamatan
+- 🏡 Kelurahan/Desa
 
 **Metode Kalkulasi:**
-- 8 calculation methods
+- 8 metode kalkulasi
 - Default: Egyptian General Authority
-- Auto-update prayer times setelah change
-- Current method display di 2 locations
+- Auto-update waktu sholat setelah perubahan
+- Tampilan metode saat ini di 2 lokasi
 
 **Perbarui Lokasi (Upload cities.json):**
-- File input dengan drag & drop support
-- Validation: filename must be "cities.json"
-- Max size: 1MB
-- JSON format validation
-- GPS coordinates validation
-- ArduinoJson size calculation
-- Progress bar dengan percentage
-- Auto-reload dropdown setelah success
+- Input file dengan dukungan drag & drop
+- Validasi: nama file harus "cities.json"
+- Ukuran maksimal: 1MB
+- Validasi format JSON
+- Validasi koordinat GPS
+- Kalkulasi ukuran ArduinoJson
+- Progress bar dengan persentase
+- Auto-reload dropdown setelah berhasil
 
 #### 🙏 JADWAL
-**Prayer Times Display:**
+**Tampilan Waktu Sholat:**
 - Imsak, Subuh, Terbit, Zuhur, Ashar, Maghrib, Isya
-- Format: HH:MM (24-hour)
+- Format: HH:MM (24-jam)
 - Auto-update dari server
 
-**Buzzer Toggle Switches:**
-- Individual ON/OFF untuk setiap waktu
-- Visual switch (Foundation CSS)
-- Auto-save on change
+**Tombol Toggle Buzzer:**
+- ON/OFF individual untuk setiap waktu
+- Switch visual (Foundation CSS)
+- Auto-save saat perubahan
 
-**Volume Control:**
-- HTML5 range slider (0-100%)
-- Real-time percentage display
-- PWM control via GPIO26
+**Kontrol Volume:**
+- Slider HTML5 range (0-100%)
+- Tampilan persentase real-time
+- Kontrol PWM via GPIO26
 - Debounced save (500ms)
 
-**Current Method Display:**
-- Show selected calculation method
-- Update on method change
+**Tampilan Metode Saat Ini:**
+- Menampilkan metode kalkulasi terpilih
+- Update saat metode berubah
 
-**Auto-Update Info:**
-- Tengah malam automatic update
-- NTP sync before update
-- Background processing
+**Info Auto-Update:**
+- Update otomatis tengah malam
+- Sinkronisasi NTP sebelum update
+- Pemrosesan background
 
 #### ⚠️ RESET
 **Factory Reset:**
-- Delete all configuration files
-- Reset to default AP settings
-- Reset time to 01/01/2000
-- Device auto-restart dengan countdown
-- Confirmation dialog
-- 60 detik countdown dengan UI lock
+- Hapus semua file konfigurasi
+- Reset ke pengaturan AP default
+- Reset waktu ke 01/01/2000
+- Auto-restart perangkat dengan countdown
+- Dialog konfirmasi
+- Countdown 60 detik dengan UI terkunci
 
-**Files Deleted:**
+**File yang Dihapus:**
 ```
 /wifi_creds.txt
 /ap_creds.txt
@@ -479,458 +474,458 @@ Both work simultaneously
 /buzzer_config.txt
 ```
 
-**Default Values:**
+**Nilai Default:**
 ```
 AP SSID: JWS Indonesia
 AP Password: 12345678
 AP IP: 192.168.4.1
-Method: Egyptian (ID 5)
-Timezone: UTC+7
+Metode: Egyptian (ID 5)
+Zona Waktu: UTC+7
 ```
 
-### Countdown System
+### Sistem Countdown
 
-**Visual Feedback:**
-- Toast notification (top center)
-- Full-screen overlay (prevent interaction)
-- Real-time countdown display
-- Color changes:
-  - Yellow warning (60-20 detik)
-  - Orange alert (20-10 detik)
-  - Red critical (10-0 detik)
+**Feedback Visual:**
+- Notifikasi toast (atas tengah)
+- Overlay layar penuh (cegah interaksi)
+- Tampilan countdown real-time
+- Perubahan warna:
+  - Peringatan kuning (60-20 detik)
+  - Alert oranye (20-10 detik)
+  - Kritis merah (10-0 detik)
 
 **Server-Driven:**
 - Polling setiap 1 detik dari `/api/countdown`
-- Auto-sync dengan server time
-- Graceful handling jika connection lost
-- Auto-redirect setelah countdown complete
+- Auto-sync dengan waktu server
+- Penanganan graceful jika koneksi terputus
+- Auto-redirect setelah countdown selesai
 
-**Smart Redirect:**
-- Local AP users: redirect to new AP IP
-- Remote users: redirect to current URL
-- Auto-detect connection type
+**Redirect Pintar:**
+- Pengguna local AP: redirect ke IP AP baru
+- Pengguna remote: redirect ke URL saat ini
+- Auto-deteksi tipe koneksi
 
 ---
 
-## 📊 System Architecture
+## 📊 Arsitektur Sistem
 
-### FreeRTOS Tasks
+### Task FreeRTOS
 
-| Task | Core | Priority | Stack | Interval | Function |
+| Task | Core | Priority | Stack | Interval | Fungsi |
 |------|------|----------|-------|----------|----------|
-| **UI Task** | 1 | 3 (Highest) | 12KB | 50ms | LVGL rendering, touch handling, blink animation |
-| **WiFi Task** | 0 | 2 (High) | 5KB | Event-driven | Connection management, auto-reconnect |
-| **NTP Task** | 0 | 2 (High) | 6KB | On-demand | Time sync dengan multiple servers |
-| **Web Task** | 0 | 1 (Low) | 5KB | 5s monitor | AsyncWebServer, connection cleanup |
-| **Prayer Task** | 0 | 1 (Low) | 6KB | 1s check | Midnight update, background processing |
-| **Clock Task** | 0 | 2 (High) | 2KB | 1s tick | System time increment, auto NTP sync |
-| **RTC Sync** | 0 | 1 (Low) | 2KB | 60s | Bidirectional RTC ↔ System sync |
+| **UI Task** | 1 | 3 (Tertinggi) | 12KB | 50ms | Rendering LVGL, penanganan touch, animasi blink |
+| **WiFi Task** | 0 | 2 (Tinggi) | 5KB | Event-driven | Manajemen koneksi, auto-reconnect |
+| **NTP Task** | 0 | 2 (Tinggi) | 6KB | On-demand | Sinkronisasi waktu dengan multiple server |
+| **Web Task** | 0 | 1 (Rendah) | 5KB | Monitor 5s | AsyncWebServer, pembersihan koneksi |
+| **Prayer Task** | 0 | 1 (Rendah) | 6KB | Cek 1s | Update tengah malam, pemrosesan background |
+| **Clock Task** | 0 | 2 (Tinggi) | 2KB | Tick 1s | Increment waktu sistem, auto NTP sync |
+| **RTC Sync** | 0 | 1 (Rendah) | 2KB | 60s | Sinkronisasi bidirectional RTC ↔ Sistem |
 
-### Synchronization
+### Sinkronisasi
 
-**Semaphores/Mutexes:**
+**Semaphore/Mutex:**
 ```cpp
-displayMutex     → LVGL operations (UI Task)
-timeMutex        → Time config (All tasks)
-wifiMutex        → WiFi config (WiFi/Web tasks)
-settingsMutex    → All config files (Multiple tasks)
+displayMutex     → Operasi LVGL (UI Task)
+timeMutex        → Konfigurasi waktu (Semua task)
+wifiMutex        → Konfigurasi WiFi (Task WiFi/Web)
+settingsMutex    → Semua file konfigurasi (Multiple task)
 spiMutex         → TFT/Touch SPI bus (UI Task)
 i2cMutex         → RTC I2C bus (RTC Sync Task)
-wifiRestartMutex → Restart protection (Web Task)
-countdownMutex   → Countdown state (Web Task)
+wifiRestartMutex → Proteksi restart (Web Task)
+countdownMutex   → Status countdown (Web Task)
 ```
 
 **Queue:**
 ```cpp
-displayQueue → Push display updates from any task to UI Task
+displayQueue → Push update display dari task mana pun ke UI Task
 ```
 
-### Auto-Update System
+### Sistem Auto-Update
 
-**Midnight Prayer Update Flow:**
+**Alur Update Sholat Tengah Malam:**
 ```
-00:00-00:05 Detected
+Terdeteksi 00:00-00:05
     ↓
 Trigger NTP Sync Task
     ↓
-Wait for NTP Complete (max 30s)
+Tunggu NTP Complete (maks 30s)
     ↓
-Validate Timestamp (> 01/01/2000)
+Validasi Timestamp (> 01/01/2000)
     ↓
 Fetch Prayer Times API
     ↓
-Save to LittleFS
+Simpan ke LittleFS
     ↓
 Queue Display Update
 ```
 
-**Hourly NTP Sync:**
+**Sinkronisasi NTP Per Jam:**
 ```
-Clock Task Counter = 3600 seconds
+Clock Task Counter = 3600 detik
     ↓
 Trigger NTP Sync Task
     ↓
-Sync dengan NTP servers (fallback)
+Sync dengan NTP server (fallback)
     ↓
-Update System Time
+Update Waktu Sistem
     ↓
-Save to RTC (if available)
+Simpan ke RTC (jika tersedia)
     ↓
 Queue Display Update
 ```
 
-**RTC Sync Logic:**
+**Logika Sinkronisasi RTC:**
 ```
-Every 60 seconds:
-    Check RTC validity
+Setiap 60 detik:
+    Cek validitas RTC
         ↓
-    Compare RTC vs System time
+    Bandingkan RTC vs Waktu Sistem
         ↓
-    If NTP not synced → Use RTC time
-    If NTP synced & System newer → Keep System time
-    If RTC newer → Update System from RTC
+    Jika NTP belum sync → Gunakan waktu RTC
+    Jika NTP sync & Sistem lebih baru → Pertahankan waktu Sistem
+    Jika RTC lebih baru → Update Sistem dari RTC
 ```
 
-### Event-Driven WiFi
+### WiFi Event-Driven
 
-**No Polling Design:**
+**Desain Tanpa Polling:**
 ```cpp
-WiFi.onEvent() → Set event bits → Tasks wait with timeout
+WiFi.onEvent() → Set event bits → Task menunggu dengan timeout
 ```
 
-**Events:**
+**Event:**
 ```cpp
-WIFI_CONNECTED_BIT    → STA connected to router
-WIFI_GOT_IP_BIT       → Got IP address, trigger NTP
-WIFI_DISCONNECTED_BIT → Connection lost, trigger reconnect
+WIFI_CONNECTED_BIT    → STA terhubung ke router
+WIFI_GOT_IP_BIT       → Dapat alamat IP, trigger NTP
+WIFI_DISCONNECTED_BIT → Koneksi terputus, trigger reconnect
 ```
 
-**Benefits:**
-- CPU idle saat stable
-- Fast response (<10ms)
-- Auto-reconnect tanpa user intervention
+**Keuntungan:**
+- CPU idle saat stabil
+- Respons cepat (<10ms)
+- Auto-reconnect tanpa intervensi pengguna
 - AP tetap hidup saat STA disconnect
 
 ---
 
-## 🔍 Troubleshooting
+## 🔍 Pemecahan Masalah
 
-### Compile Errors
+### Error Kompilasi
 
 **`ledcAttach() not declared in this scope`**
 ```
-Root Cause: ESP32 Board v2.x (old API)
-Solution: Install ESP32 Board v3.0.7
-Location: Tools → Board → Boards Manager → esp32
+Penyebab: ESP32 Board v2.x (API lama)
+Solusi: Install ESP32 Board v3.0.7
+Lokasi: Tools → Board → Boards Manager → esp32
 
-Verification:
+Verifikasi:
 Tools → Board → ESP32 Dev Module
-Help → About Arduino IDE → Check installed version
+Help → About Arduino IDE → Cek versi terinstal
 ```
 
-**LVGL function errors (lv_xxx not declared)**
+**Error fungsi LVGL (lv_xxx not declared)**
 ```
-Root Cause: LVGL v8.x installed (old API)
-Solution: Install LVGL v9.2.0
-Location: Sketch → Include Library → Manage Libraries → LVGL
+Penyebab: LVGL v8.x terinstal (API lama)
+Solusi: Install LVGL v9.2.0
+Lokasi: Sketch → Include Library → Manage Libraries → LVGL
 
-Verification:
-Check: Arduino/libraries/lvgl/library.properties
-Should show: version=9.2.0
+Verifikasi:
+Cek: Arduino/libraries/lvgl/library.properties
+Harus menampilkan: version=9.2.0
 ```
 
 **`AsyncWebServer.h: No such file or directory`**
 ```
-Root Cause: Missing ESPAsyncWebServer library
-Solution: Install via Library Manager
+Penyebab: Library ESPAsyncWebServer tidak ada
+Solusi: Install via Library Manager
 
-Dependencies:
+Dependensi:
 1. ESPAsyncWebServer by me-no-dev (v1.2.3+)
 2. AsyncTCP by me-no-dev (v1.1.1+)
 
-Note: Install AsyncTCP FIRST, then ESPAsyncWebServer
+Catatan: Install AsyncTCP DULU, kemudian ESPAsyncWebServer
 ```
 
 **`RTClib.h: No such file or directory`**
 ```
-Root Cause: Missing Adafruit RTClib
-Solution: Install Adafruit RTClib v2.1.1+
+Penyebab: Adafruit RTClib tidak ada
+Solusi: Install Adafruit RTClib v2.1.1+
 
-Location: Library Manager → Search "RTClib"
-Select: RTClib by Adafruit (NOT other forks)
+Lokasi: Library Manager → Cari "RTClib"
+Pilih: RTClib by Adafruit (BUKAN fork lain)
 ```
 
-### Upload Errors
+### Error Upload
 
 **`A fatal error occurred: Timed out waiting for packet header`**
 ```
-Solutions (Try in order):
+Solusi (Coba berurutan):
 
-1. Hardware Method:
+1. Metode Hardware:
    - Tekan & tahan tombol BOOT
    - Klik Upload di Arduino IDE
    - Tahan BOOT sampai "Connecting..." muncul
    - Lepas BOOT saat upload dimulai
 
-2. Software Method:
+2. Metode Software:
    - Kurangi Upload Speed
-   - Tools → Upload Speed → 115200 (from 921600)
-   - Retry upload
+   - Tools → Upload Speed → 115200 (dari 921600)
+   - Coba upload lagi
 
-3. Cable & Driver:
+3. Kabel & Driver:
    - Ganti kabel USB (pastikan data+power, bukan charge-only)
    - Install driver CH340/CP2102
-   - Windows: Check Device Manager
+   - Windows: Cek Device Manager
    - Mac: Install driver dari manufacturer
 
-4. Port Selection:
-   - Tools → Port → Select correct COM port
-   - Disconnect other USB devices
-   - Try different USB port on computer
+4. Pemilihan Port:
+   - Tools → Port → Pilih port COM yang benar
+   - Lepas perangkat USB lain
+   - Coba port USB berbeda di komputer
 ```
 
 **`Sketch too big: Program size exceeds available space`**
 ```
-Solution: Change Partition Scheme
+Solusi: Ganti Partition Scheme
 Tools → Partition Scheme → Default 4MB with spiffs (1.2MB APP)
 
-If still too big:
-1. Remove unused libraries from #include
-2. Reduce LVGL buffer size
-3. Disable debug Serial.println() statements
+Jika masih terlalu besar:
+1. Hapus library yang tidak digunakan dari #include
+2. Kurangi ukuran buffer LVGL
+3. Nonaktifkan statement debug Serial.println()
 ```
 
 **`SPIFFS Upload Failed: Not Enough Space`**
 ```
-Check:
-1. data/ folder size must be < 1MB
-2. Large files: index.html, foundation.min.css, cities.json
+Cek:
+1. Ukuran folder data/ harus < 1MB
+2. File besar: index.html, foundation.min.css, cities.json
 
-Optimization:
+Optimasi:
 - Minify HTML/CSS
-- Compress cities.json (remove whitespace)
-- Remove unused assets
+- Kompres cities.json (hapus whitespace)
+- Hapus aset yang tidak digunakan
 ```
 
-### Runtime Issues
+### Masalah Runtime
 
 **WiFi tidak connect / auto-disconnect**
 ```
-Checks:
-✅ SSID/Password case-sensitive (check typo)
+Pemeriksaan:
+✅ SSID/Password case-sensitive (cek typo)
 ✅ Router harus 2.4GHz (ESP32 tidak support 5GHz)
-✅ Check router MAC filtering / whitelist
-✅ Check router DHCP pool (available IP?)
-✅ Distance ke router (signal strength)
+✅ Cek MAC filtering / whitelist router
+✅ Cek DHCP pool router (IP tersedia?)
+✅ Jarak ke router (kekuatan sinyal)
 
 Debug:
-Serial monitor → Check RSSI value
-RSSI > -50 dBm: Excellent
-RSSI -50 to -70 dBm: Good
-RSSI < -70 dBm: Weak (too far)
+Serial monitor → Cek nilai RSSI
+RSSI > -50 dBm: Sangat baik
+RSSI -50 hingga -70 dBm: Baik
+RSSI < -70 dBm: Lemah (terlalu jauh)
 
-Solutions:
-1. Factory reset → Reconfigure WiFi
+Solusi:
+1. Factory reset → Konfigurasi ulang WiFi
 2. Restart router
-3. Try mobile hotspot for testing
-4. Check router logs
+3. Coba hotspot mobile untuk testing
+4. Cek log router
 ```
 
 **Jadwal sholat tidak akurat / selisih beberapa menit**
 ```
-Root Cause: GPS coordinates tidak akurat
+Penyebab: Koordinat GPS tidak akurat
 
-Solutions:
+Solusi:
 1. Edit koordinat GPS manual
    - Buka Google Maps
-   - Klik exact location (rumah/masjid)
-   - Copy latitude & longitude
-   - Paste ke web interface
+   - Klik lokasi yang tepat (rumah/masjid)
+   - Salin latitude & longitude
+   - Tempel ke antarmuka web
 
 2. Ganti metode kalkulasi
    - Tab LOKASI → Dropdown "Metode Kalkulasi"
-   - Try: Kemenag Indonesia (Method 20)
-   - Or: Egyptian General Authority (Method 5)
+   - Coba: Kemenag Indonesia (Metode 20)
+   - Atau: Egyptian General Authority (Metode 5)
 
-3. Verify city selection
-   - Pastikan city selected sesuai dengan lokasi fisik
+3. Verifikasi pemilihan kota
+   - Pastikan kota yang dipilih sesuai dengan lokasi fisik
    - Bukan koordinat provinsi/pusat kota
 
-Validation:
-- Check via https://aladhan.com/prayer-times-api
-- Compare dengan jadwal sholat masjid terdekat
+Validasi:
+- Cek via https://aladhan.com/prayer-times-api
+- Bandingkan dengan jadwal sholat masjid terdekat
 ```
 
 **Jam reset ke 01/01/2000 setelah mati lampu**
 ```
 Status: NORMAL jika:
-- Belum ada NTP sync
+- Belum ada sinkronisasi NTP
 - RTC DS3231 tidak terpasang
-- RTC battery (CR2032) habis
+- Baterai RTC (CR2032) habis
 
-Solutions:
-1. Install RTC DS3231 module
-   - Wiring: SDA→GPIO21, SCL→GPIO22
-   - Insert CR2032 battery (3V)
-   - Power cycle device
+Solusi:
+1. Pasang modul RTC DS3231
+   - Kabel: SDA→GPIO21, SCL→GPIO22
+   - Masukkan baterai CR2032 (3V)
+   - Power cycle perangkat
 
-2. Connect ke WiFi
-   - Device akan auto NTP sync
-   - Time akan accurate dalam 10-30 detik
+2. Sambungkan ke WiFi
+   - Perangkat akan auto NTP sync
+   - Waktu akan akurat dalam 10-30 detik
 
-3. Check RTC status
-   - Serial monitor → Look for:
+3. Cek status RTC
+   - Serial monitor → Cari:
      "DS3231 detected" (OK)
-     "DS3231 not found" (Module issue)
+     "DS3231 not found" (Masalah modul)
      "RTC hardware test PASSED" (OK)
-     "RTC HARDWARE FAILURE" (Faulty module)
+     "RTC HARDWARE FAILURE" (Modul rusak)
 
-4. Replace faulty RTC
-   - Symptom: Time returns garbage data
-   - Temperature sensor works but time invalid
-   - Solution: Buy new genuine DS3231 module
+4. Ganti RTC yang rusak
+   - Gejala: Waktu mengembalikan data sampah
+   - Sensor suhu berfungsi tapi waktu tidak valid
+   - Solusi: Beli modul DS3231 asli yang baru
 ```
 
-**Prayer times tidak update otomatis tengah malam**
+**Waktu sholat tidak update otomatis tengah malam**
 ```
-Checks:
-✅ WiFi connected (need internet untuk API)
-✅ NTP synced (time harus accurate)
-✅ City & coordinates selected
-✅ Serial monitor → Check "MIDNIGHT DETECTED" log
+Pemeriksaan:
+✅ WiFi terhubung (perlu internet untuk API)
+✅ NTP tersinkronisasi (waktu harus akurat)
+✅ Kota & koordinat dipilih
+✅ Serial monitor → Cek log "MIDNIGHT DETECTED"
 
-Debug Logs:
-00:00-00:05 → Should see:
+Log Debug:
+00:00-00:05 → Harus melihat:
 "MIDNIGHT DETECTED - STARTING SEQUENCE"
 "Triggering NTP Sync..."
 "NTP SYNC COMPLETED"
 "Updating Prayer Times..."
 
-If stuck:
-1. Manual update via web interface (Tab LOKASI → Save)
-2. Check internet connection
-3. Try different NTP server
-4. Factory reset if persistent
+Jika stuck:
+1. Update manual via antarmuka web (Tab LOKASI → Simpan)
+2. Cek koneksi internet
+3. Coba server NTP berbeda
+4. Factory reset jika persisten
 ```
 
-**Web interface loading sangat lambat / timeout**
+**Antarmuka web loading sangat lambat / timeout**
 ```
-Possible Causes:
-1. WiFi sleep enabled (should be disabled)
-2. Weak signal (RSSI < -70 dBm)
-3. Multiple clients simultaneously
-4. Browser cache issue
+Kemungkinan Penyebab:
+1. WiFi sleep diaktifkan (harus dinonaktifkan)
+2. Sinyal lemah (RSSI < -70 dBm)
+3. Multiple client secara bersamaan
+4. Masalah cache browser
 
-Solutions:
-1. Check WiFi sleep status
-   Serial → Should see:
+Solusi:
+1. Cek status WiFi sleep
+   Serial → Harus melihat:
    "WiFi Sleep: DOUBLE DISABLED"
    
-2. Move closer to device
-3. Clear browser cache
+2. Pindah lebih dekat ke perangkat
+3. Hapus cache browser
    - Ctrl+Shift+Delete (Chrome/Firefox)
-   - Select "Cached images and files"
+   - Pilih "Cached images and files"
    
-4. Try incognito/private mode
-5. Use different browser
-6. Restart device
+4. Coba mode incognito/private
+5. Gunakan browser berbeda
+6. Restart perangkat
 ```
 
-**Touch tidak responsif / coordinate salah**
+**Touch tidak responsif / koordinat salah**
 ```
-Calibration:
-1. Check constants di code:
+Kalibrasi:
+1. Cek konstanta di kode:
    #define TS_MIN_X 370
    #define TS_MAX_X 3700
    #define TS_MIN_Y 470
    #define TS_MAX_Y 3600
 
-2. Test touch corners
-   - Top-left should register (0,0)
-   - Bottom-right should register (320,240)
+2. Test sudut touch
+   - Kiri-atas harus register (0,0)
+   - Kanan-bawah harus register (320,240)
 
-3. Adjust values if needed
-   - Serial monitor → Check touch coordinates
-   - Calculate new MIN/MAX values
+3. Sesuaikan nilai jika perlu
+   - Serial monitor → Cek koordinat touch
+   - Hitung nilai MIN/MAX baru
    - Recompile & upload
 
-4. Clean touchscreen
-   - Fingerprint oil affects accuracy
-   - Use microfiber cloth
+4. Bersihkan layar sentuh
+   - Minyak sidik jari mempengaruhi akurasi
+   - Gunakan kain microfiber
 ```
 
 **Display flicker / tearing**
 ```
-Causes:
-1. Insufficient power supply (< 2A)
-2. Bad USB cable (voltage drop)
-3. SPI speed too high/low
+Penyebab:
+1. Power supply tidak cukup (< 2A)
+2. Kabel USB buruk (voltage drop)
+3. Kecepatan SPI terlalu tinggi/rendah
 
-Solutions:
-1. Use 5V 2A+ power adapter
-2. Shorter USB cable (< 1 meter)
-3. Check TFT_eSPI SPI frequency settings
-4. Add capacitor 100-470µF near power input
+Solusi:
+1. Gunakan adaptor 5V 2A+
+2. Kabel USB lebih pendek (< 1 meter)
+3. Cek pengaturan frekuensi SPI TFT_eSPI
+4. Tambahkan kapasitor 100-470µF dekat input power
 ```
 
 **Buzzer tidak bunyi saat waktu sholat**
 ```
-Checks:
-✅ Buzzer toggle enabled (Tab JADWAL)
+Pemeriksaan:
+✅ Toggle buzzer diaktifkan (Tab JADWAL)
 ✅ Volume tidak 0% 
-✅ GPIO26 connection (check wiring)
-✅ PWM channel initialized
+✅ Koneksi GPIO26 (cek kabel)
+✅ PWM channel diinisialisasi
 
 Debug:
 Serial monitor → Saat waktu sholat:
 "PRAYER TIME ENTER: SUBUH"
 "Starting to blink for 1 minute..."
 
-Solutions:
+Solusi:
 1. Test buzzer manual
    - Set volume 50%
-   - Enable toggle untuk waktu sholat terdekat
+   - Aktifkan toggle untuk waktu sholat terdekat
    
-2. Check GPIO26
-   - Use multimeter/oscilloscope
-   - Should see PWM signal saat blinking
+2. Cek GPIO26
+   - Gunakan multimeter/oscilloscope
+   - Harus melihat sinyal PWM saat blinking
    
-3. Replace buzzer if faulty
+3. Ganti buzzer jika rusak
    - Test dengan buzzer lain
-   - Pastikan 3.3V compatible
+   - Pastikan kompatibel 3.3V
 ```
 
-**Memory leaks / device hang setelah lama berjalan**
+**Memory leak / perangkat hang setelah lama berjalan**
 ```
 Monitoring:
-Serial → Check stack report (every 2 minutes):
+Serial → Cek laporan stack (setiap 2 menit):
 "STACK USAGE ANALYSIS"
-"CRITICAL TASKS: ..." (if any > 90%)
+"CRITICAL TASKS: ..." (jika ada > 90%)
 
 "MEMORY STATUS"
-"Lost: XXX bytes" (should be < 20KB)
+"Lost: XXX bytes" (harus < 20KB)
 
-Solutions:
-1. Increase stack size jika critical
+Solusi:
+1. Tingkatkan ukuran stack jika kritis
    - Edit: #define UI_TASK_STACK_SIZE 12288
-   - Increase by 2048 increments
+   - Tingkatkan dengan increment 2048
    
-2. Reduce heap fragmentation
+2. Kurangi fragmentasi heap
    - Factory reset
-   - Restart device periodically
+   - Restart perangkat secara berkala
    
-3. Watchdog protection
-   - Device auto-restart jika hang
-   - Check serial for watchdog triggers
+3. Proteksi watchdog
+   - Perangkat auto-restart jika hang
+   - Cek serial untuk watchdog trigger
 ```
 
 ---
 
 ## 🌐 API Endpoints
 
-### GET `/api/data` - IoT Integration
+### GET `/api/data` - Integrasi IoT
 
-**Description:** Real-time system data untuk external integration (Node-RED, Home Assistant, MQTT bridge, dll)
+**Deskripsi:** Data sistem real-time untuk integrasi eksternal (Node-RED, Home Assistant, MQTT bridge, dll)
 
 **Request:**
 ```bash
@@ -971,23 +966,23 @@ curl http://192.168.4.1/api/data
 }
 ```
 
-**Fields:**
-- `time` - Current time (HH:MM:SS)
-- `date` - Current date (DD/MM/YYYY)
-- `day` - Day name (English)
-- `timestamp` - Unix timestamp (seconds)
-- `prayerTimes` - All prayer times (HH:MM format)
-- `location` - City info + GPS coordinates
-- `device.wifiConnected` - WiFi status (boolean)
-- `device.ntpSynced` - NTP sync status (boolean)
-- `device.freeHeap` - Available RAM (bytes)
-- `device.uptime` - Device uptime (seconds)
+**Field:**
+- `time` - Waktu saat ini (HH:MM:SS)
+- `date` - Tanggal saat ini (DD/MM/YYYY)
+- `day` - Nama hari (English)
+- `timestamp` - Unix timestamp (detik)
+- `prayerTimes` - Semua waktu sholat (format HH:MM)
+- `location` - Info kota + koordinat GPS
+- `device.wifiConnected` - Status WiFi (boolean)
+- `device.ntpSynced` - Status sinkronisasi NTP (boolean)
+- `device.freeHeap` - RAM tersedia (bytes)
+- `device.uptime` - Uptime perangkat (detik)
 
-**Use Cases:**
+**Contoh Penggunaan:**
 ```javascript
 // Node-RED: HTTP Request node
 GET http://192.168.4.1/api/data
-Parse JSON → Extract prayerTimes → Send notification
+Parse JSON → Extract prayerTimes → Kirim notifikasi
 
 // Home Assistant: REST Sensor
 sensor:
@@ -1006,16 +1001,16 @@ data = response.json()
 next_prayer = data['prayerTimes']['subuh']
 ```
 
-### GET `/api/countdown` - Countdown Status
+### GET `/api/countdown` - Status Countdown
 
-**Description:** Server-driven countdown untuk restart/reset operations
+**Deskripsi:** Countdown yang dikendalikan server untuk operasi restart/reset
 
 **Request:**
 ```bash
 curl http://192.168.4.1/api/countdown
 ```
 
-**Response (Active):**
+**Response (Aktif):**
 ```json
 {
   "active": true,
@@ -1027,7 +1022,7 @@ curl http://192.168.4.1/api/countdown
 }
 ```
 
-**Response (Inactive):**
+**Response (Tidak Aktif):**
 ```json
 {
   "active": false,
@@ -1039,29 +1034,29 @@ curl http://192.168.4.1/api/countdown
 }
 ```
 
-**Reason Types:**
-- `ap_restart` - Access Point restart
-- `device_restart` - Full device restart
-- `factory_reset` - Factory reset operation
+**Tipe Reason:**
+- `ap_restart` - Restart Access Point
+- `device_restart` - Restart perangkat penuh
+- `factory_reset` - Operasi factory reset
 
-**Frontend Implementation:**
+**Implementasi Frontend:**
 ```javascript
-// Poll every 1 second
+// Polling setiap 1 detik
 setInterval(async () => {
   const response = await fetch('/api/countdown');
   const data = await response.json();
   
   if (data.active) {
-    // Show countdown overlay
+    // Tampilkan overlay countdown
     updateCountdownDisplay(data.remaining, data.message);
   } else {
-    // Hide overlay, redirect if needed
+    // Sembunyikan overlay, redirect jika perlu
     handleCountdownComplete(data.reason);
   }
 }, 1000);
 ```
 
-### GET `/devicestatus` - Device Status
+### GET `/devicestatus` - Status Perangkat
 
 **Request:**
 ```bash
@@ -1083,7 +1078,7 @@ curl http://192.168.4.1/devicestatus
 }
 ```
 
-### GET `/getprayertimes` - Prayer Times
+### GET `/getprayertimes` - Waktu Sholat
 
 **Response:**
 ```json
@@ -1098,7 +1093,7 @@ curl http://192.168.4.1/devicestatus
 }
 ```
 
-### GET `/getcityinfo` - Current City
+### GET `/getcityinfo` - Kota Saat Ini
 
 **Response:**
 ```json
@@ -1111,7 +1106,7 @@ curl http://192.168.4.1/devicestatus
 }
 ```
 
-### GET `/getmethod` - Calculation Method
+### GET `/getmethod` - Metode Kalkulasi
 
 **Response:**
 ```json
@@ -1121,7 +1116,7 @@ curl http://192.168.4.1/devicestatus
 }
 ```
 
-### GET `/gettimezone` - Timezone Offset
+### GET `/gettimezone` - Offset Zona Waktu
 
 **Response:**
 ```json
@@ -1130,16 +1125,16 @@ curl http://192.168.4.1/devicestatus
 }
 ```
 
-### POST `/setwifi` - Configure WiFi
+### POST `/setwifi` - Konfigurasi WiFi
 
 **Body:**
 ```
 ssid=MyWiFi&password=MyPassword123
 ```
 
-**Response:** `200 OK` or `400 Bad Request`
+**Response:** `200 OK` atau `400 Bad Request`
 
-### POST `/setcity` - Set City
+### POST `/setcity` - Atur Kota
 
 **Body:**
 ```
@@ -1155,7 +1150,7 @@ city=jakarta&cityName=Jakarta&lat=-6.175392&lon=106.827153
 }
 ```
 
-### POST `/setmethod` - Set Calculation Method
+### POST `/setmethod` - Atur Metode Kalkulasi
 
 **Body:**
 ```
@@ -1172,202 +1167,202 @@ methodId=20&methodName=Kementerian Agama Indonesia
 }
 ```
 
-### POST `/synctime` - Manual Time Sync
+### POST `/synctime` - Sinkronisasi Waktu Manual
 
 **Body:**
 ```
 y=2024&m=12&d=19&h=14&i=35&s=22
 ```
 
-**Response:** `200 OK` with success message
+**Response:** `200 OK` dengan pesan sukses
 
 ---
 
-## 🚀 Performance Optimizations
+## 🚀 Optimasi Performa
 
-### WiFi Optimizations
+### Optimasi WiFi
 
 **1. Sleep Mode DOUBLE-DISABLED**
 ```cpp
 WiFi.setSleep(WIFI_PS_NONE);           // Arduino API
 esp_wifi_set_ps(WIFI_PS_NONE);        // ESP-IDF API
 ```
-**Impact:** Response time < 10ms (was 100-500ms)
+**Dampak:** Waktu respons < 10ms (sebelumnya 100-500ms)
 
-**2. Event-Driven Connection**
+**2. Koneksi Event-Driven**
 ```cpp
 WiFi.onEvent() → FreeRTOS Event Groups
-No polling loops → CPU idle when stable
+Tidak ada polling loop → CPU idle saat stabil
 ```
-**Impact:** 0% CPU usage saat WiFi stable
+**Dampak:** 0% penggunaan CPU saat WiFi stabil
 
-**3. TX Power Maximum**
+**3. TX Power Maksimum**
 ```cpp
 WiFi.setTxPower(WIFI_POWER_19_5dBm);
 esp_wifi_set_max_tx_power(78);
 ```
-**Impact:** Better range & stability
+**Dampak:** Jangkauan & stabilitas lebih baik
 
 **4. Auto-Reconnect**
 ```cpp
 WiFi.setAutoReconnect(true);
 ```
-**Impact:** No manual intervention needed
+**Dampak:** Tidak perlu intervensi manual
 
-### Web Server Optimizations
+### Optimasi Web Server
 
-**1. Pre-allocated Buffers**
+**1. Buffer Pre-allocated**
 ```cpp
-char jsonBuffer[512];  // Stack allocation
+char jsonBuffer[512];  // Alokasi stack
 snprintf(jsonBuffer, sizeof(jsonBuffer), ...);
 ```
-**Impact:** No malloc/free overhead
+**Dampak:** Tidak ada overhead malloc/free
 
-**2. Browser Caching**
+**2. Caching Browser**
 ```cpp
 response->addHeader("Cache-Control", "public, max-age=3600");
 ```
-**Impact:** CSS loads once, subsequent loads instant
+**Dampak:** CSS dimuat sekali, loading berikutnya instan
 
-**3. Content-Length Header**
+**3. Header Content-Length**
 ```cpp
 response->setContentLength(LittleFS.open("/file").size());
 ```
-**Impact:** Browser can show accurate progress
+**Dampak:** Browser dapat menampilkan progress akurat
 
-**4. Async Operations**
+**4. Operasi Async**
 ```cpp
 ESPAsyncWebServer → Non-blocking
-Multiple clients simultaneously
+Multiple client secara bersamaan
 ```
-**Impact:** No request blocking
+**Dampak:** Tidak ada blocking request
 
-### UI Optimizations
+### Optimasi UI
 
-**1. Partial Rendering**
+**1. Rendering Parsial**
 ```cpp
 lv_display_set_buffers(display, buf, NULL, 
                        sizeof(buf), 
                        LV_DISPLAY_RENDER_MODE_PARTIAL);
 ```
-**Impact:** Smooth 20 FPS dengan 10-line buffer
+**Dampak:** Smooth 20 FPS dengan buffer 10-line
 
-**2. Touch Debouncing**
+**2. Debouncing Touch**
 ```cpp
-if (now - lastTouchTime < 50) return;  // Skip rapid reads
+if (now - lastTouchTime < 50) return;  // Skip pembacaan cepat
 ```
-**Impact:** CPU tidak overload dengan touch events
+**Dampak:** CPU tidak overload dengan event touch
 
-**3. SPI Mutex**
+**3. Mutex SPI**
 ```cpp
-xSemaphoreTake(spiMutex, ...) → Exclusive access
+xSemaphoreTake(spiMutex, ...) → Akses eksklusif
 ```
-**Impact:** No TFT/Touch SPI collisions
+**Dampak:** Tidak ada collision SPI TFT/Touch
 
-### Memory Optimizations
+### Optimasi Memori
 
 **1. Stack vs Heap**
 ```cpp
-// Prefer stack (fast, no fragmentation)
-char buffer[256];  // Good
+// Lebih suka stack (cepat, tidak ada fragmentasi)
+char buffer[256];  // Bagus
 
-// Avoid heap (slow, fragmentation)
-char* buffer = malloc(256);  // Avoid if possible
+// Hindari heap (lambat, fragmentasi)
+char* buffer = malloc(256);  // Hindari jika memungkinkan
 ```
 
-**2. String Optimization**
+**2. Optimasi String**
 ```cpp
-// Use String only when necessary
-String city = "Jakarta";  // OK for config
+// Gunakan String hanya jika perlu
+String city = "Jakarta";  // OK untuk config
 
-// Use char[] for temporary
-char timeStr[10];  // Better for display
+// Gunakan char[] untuk temporary
+char timeStr[10];  // Lebih baik untuk display
 sprintf(timeStr, "%02d:%02d", h, m);
 ```
 
-**3. JSON Memory Management**
+**3. Manajemen Memori JSON**
 ```cpp
-JsonDocument doc;  // Stack allocation
+JsonDocument doc;  // Alokasi stack
 deserializeJson(doc, payload);  // Parse in-place
-// No manual memory management needed
+// Tidak perlu manajemen memori manual
 ```
 
-### Task Optimizations
+### Optimasi Task
 
-**1. Priority Tuning**
+**1. Tuning Priority**
 ```
-UI (3)    → Highest (visual responsiveness)
-WiFi (2)  → High (network stability)
-Web (1)   → Low (background processing)
+UI (3)    → Tertinggi (responsivitas visual)
+WiFi (2)  → Tinggi (stabilitas jaringan)
+Web (1)   → Rendah (pemrosesan background)
 ```
 
-**2. Stack Size Optimization**
+**2. Optimasi Ukuran Stack**
 ```
 Monitor via printStackReport():
-- Usage < 60%: Optimal
-- Usage 60-75%: Good fit
-- Usage > 90%: Increase size!
+- Penggunaan < 60%: Optimal
+- Penggunaan 60-75%: Pas
+- Penggunaan > 90%: Tingkatkan ukuran!
 ```
 
-**3. Watchdog Integration**
+**3. Integrasi Watchdog**
 ```cpp
-esp_task_wdt_add(taskHandle);  // Each task
-esp_task_wdt_reset();          // Every loop
+esp_task_wdt_add(taskHandle);  // Setiap task
+esp_task_wdt_reset();          // Setiap loop
 ```
-**Impact:** Auto-recovery dari hang
+**Dampak:** Auto-recovery dari hang
 
-### Result Metrics
+### Metrik Hasil
 
-**Before Optimizations:**
-- Page load: 2-5 seconds
-- WiFi response: 100-500ms
-- Touch lag: noticeable
-- Memory leaks: yes
+**Sebelum Optimasi:**
+- Loading halaman: 2-5 detik
+- Respons WiFi: 100-500ms
+- Lag touch: terasa
+- Memory leak: ada
 
-**After Optimizations:**
-- Page load: 200-500ms (10x faster!)
-- WiFi response: < 10ms (50x faster!)
-- Touch lag: none (smooth 20 FPS)
-- Memory leaks: none (stable for days)
+**Setelah Optimasi:**
+- Loading halaman: 200-500ms (10x lebih cepat!)
+- Respons WiFi: < 10ms (50x lebih cepat!)
+- Lag touch: tidak ada (smooth 20 FPS)
+- Memory leak: tidak ada (stabil berhari-hari)
 
 ---
 
-## 📁 File Structure
+## 📁 Struktur File
 
 ```
 jws-indonesia/
-├── jws.ino                          # Main program
-│   ├── Pin definitions              # GPIO, PWM, SPI config
-│   ├── Task configurations          # Stack sizes, priorities
-│   ├── Global structures            # WiFiConfig, TimeConfig, etc
-│   ├── Function declarations        # Forward declarations
-│   ├── Implementation               # All functions
-│   └── setup() & loop()             # Arduino entry points
+├── jws.ino                          # Program utama
+│   ├── Definisi pin                 # GPIO, PWM, config SPI
+│   ├── Konfigurasi task             # Ukuran stack, prioritas
+│   ├── Struktur global              # WiFiConfig, TimeConfig, dll
+│   ├── Deklarasi fungsi             # Forward declarations
+│   ├── Implementasi                 # Semua fungsi
+│   └── setup() & loop()             # Entry point Arduino
 │
 ├── src/                             # EEZ Studio UI (auto-generated)
-│   ├── ui.h                         # LVGL UI initialization
-│   ├── ui.cpp                       # UI implementation
-│   ├── screens.h                    # Screen objects
-│   ├── screens.cpp                  # Screen handlers
-│   ├── images.h                     # Image declarations
-│   ├── images.cpp                   # Image data (binary)
-│   ├── fonts.h                      # Font declarations
-│   └── fonts.cpp                    # Font data (binary)
+│   ├── ui.h                         # Inisialisasi LVGL UI
+│   ├── ui.cpp                       # Implementasi UI
+│   ├── screens.h                    # Objek screen
+│   ├── screens.cpp                  # Handler screen
+│   ├── images.h                     # Deklarasi gambar
+│   ├── images.cpp                   # Data gambar (binary)
+│   ├── fonts.h                      # Deklarasi font
+│   └── fonts.cpp                    # Data font (binary)
 │
-├── data/                            # LittleFS filesystem
-│   ├── index.html                   # Web interface (50KB)
-│   │   ├── Foundation CSS framework
-│   │   ├── Loading manager
-│   │   ├── Tab navigation
-│   │   ├── Form validation
-│   │   ├── Countdown system
-│   │   └── API integration
+├── data/                            # Filesystem LittleFS
+│   ├── index.html                   # Antarmuka web (50KB)
+│   │   ├── Framework Foundation CSS
+│   │   ├── Manager loading
+│   │   ├── Navigasi tab
+│   │   ├── Validasi form
+│   │   ├── Sistem countdown
+│   │   └── Integrasi API
 │   │
 │   ├── assets/
 │   │   └── css/
-│   │       └── foundation.min.css  # CSS framework (70KB)
+│   │       └── foundation.min.css  # Framework CSS (70KB)
 │   │
-│   └── cities.json                  # 500+ cities (150KB)
+│   └── cities.json                  # 500+ kota (150KB)
 │       └── Format:
 │           [{
 │             "api": "jakarta",
@@ -1377,145 +1372,145 @@ jws-indonesia/
 │             "lon": "106.827153"
 │           }, ...]
 │
-└── README.md                        # This file
+└── README.md                        # File ini
 ```
 
-**Runtime Files (Auto-created in LittleFS):**
+**File Runtime (Dibuat otomatis di LittleFS):**
 ```
-/wifi_creds.txt          → WiFi Router SSID & Password
-/ap_creds.txt            → AP SSID, Password, IP, Gateway, Subnet
-/prayer_times.txt        → Cached prayer times (7 lines + city)
-/city_selection.txt      → Selected city + GPS coordinates
-/method_selection.txt    → Calculation method ID & name
-/timezone.txt            → UTC offset (-12 to +14)
-/buzzer_config.txt       → Toggle states + volume (8 lines)
+/wifi_creds.txt          → SSID & Password WiFi Router
+/ap_creds.txt            → SSID, Password, IP, Gateway, Subnet AP
+/prayer_times.txt        → Cache waktu sholat (7 baris + kota)
+/city_selection.txt      → Kota terpilih + koordinat GPS
+/method_selection.txt    → ID & nama metode kalkulasi
+/timezone.txt            → Offset UTC (-12 hingga +14)
+/buzzer_config.txt       → Status toggle + volume (8 baris)
 ```
 
-**File Access Patterns:**
-- **Read:** On boot (all config files)
-- **Write:** On user action via web interface
-- **Update:** Prayer times (midnight automatic)
+**Pola Akses File:**
+- **Read:** Saat boot (semua file config)
+- **Write:** Saat aksi pengguna via antarmuka web
+- **Update:** Waktu sholat (otomatis tengah malam)
 
 ---
 
-## 🛡️ Security Recommendations
+## 🛡️ Rekomendasi Keamanan
 
-### Default Credentials
+### Kredensial Default
 ```
-⚠️ CHANGE THESE IMMEDIATELY AFTER FIRST BOOT ⚠️
+⚠️ SEGERA GANTI SETELAH BOOT PERTAMA ⚠️
 
 AP SSID:     JWS Indonesia
 AP Password: 12345678
 AP IP:       192.168.4.1
 ```
 
-### Best Practices
+### Praktik Terbaik
 
-**1. Change AP Credentials**
+**1. Ganti Kredensial AP**
 ```
-Web Interface → Tab WIFI → Section "Access Point"
-- Set strong SSID (unique name)
-- Set strong password (min 12 chars, mix of A-Z, a-z, 0-9, symbols)
-- Click Simpan
-```
-
-**2. Secure WiFi Router**
-```
-✅ WPA2/WPA3 encryption
-✅ Strong password (20+ chars)
-✅ Disable WPS
-✅ Enable MAC filtering (optional)
-✅ Hide SSID broadcast (optional)
+Antarmuka Web → Tab WIFI → Bagian "Access Point"
+- Set SSID kuat (nama unik)
+- Set password kuat (min 12 karakter, campuran A-Z, a-z, 0-9, simbol)
+- Klik Simpan
 ```
 
-**3. Network Isolation**
+**2. Amankan WiFi Router**
 ```
-⚠️ DO NOT expose to public internet
-✅ Access only from trusted local network
-✅ Consider separate IoT VLAN
-✅ Enable router firewall
-```
-
-**4. Physical Security**
-```
-✅ Device in secure location
-✅ No exposed USB port (prevent firmware tampering)
-✅ Monitor for unauthorized physical access
+✅ Enkripsi WPA2/WPA3
+✅ Password kuat (20+ karakter)
+✅ Nonaktifkan WPS
+✅ Aktifkan MAC filtering (opsional)
+✅ Sembunyikan SSID broadcast (opsional)
 ```
 
-**5. Regular Updates**
+**3. Isolasi Jaringan**
 ```
-✅ Check for firmware updates
-✅ Update cities.json when available
-✅ Monitor security advisories
+⚠️ JANGAN ekspos ke internet publik
+✅ Akses hanya dari jaringan lokal terpercaya
+✅ Pertimbangkan VLAN IoT terpisah
+✅ Aktifkan firewall router
 ```
 
-### Known Limitations
+**4. Keamanan Fisik**
+```
+✅ Perangkat di lokasi aman
+✅ Tidak ada port USB terbuka (cegah tampering firmware)
+✅ Monitor akses fisik tidak sah
+```
 
-**No Authentication:**
-- Web interface tidak memiliki login/password
-- Anyone dengan network access dapat mengubah settings
-- Mitigasi: Network isolation & physical security
+**5. Update Berkala**
+```
+✅ Cek update firmware
+✅ Update cities.json saat tersedia
+✅ Monitor advisory keamanan
+```
 
-**HTTP Only:**
-- No HTTPS/SSL encryption
-- Data transmitted in plain text
-- Mitigasi: Use only on trusted local network
+### Keterbatasan yang Diketahui
 
-**No OTA:**
-- No Over-The-Air firmware updates
-- Requires physical USB access untuk update
-- Mitigasi: Plan maintenance windows
+**Tidak Ada Autentikasi:**
+- Antarmuka web tidak memiliki login/password
+- Siapa pun dengan akses jaringan dapat mengubah pengaturan
+- Mitigasi: Isolasi jaringan & keamanan fisik
+
+**HTTP Saja:**
+- Tidak ada enkripsi HTTPS/SSL
+- Data dikirim dalam teks biasa
+- Mitigasi: Gunakan hanya di jaringan lokal terpercaya
+
+**Tidak Ada OTA:**
+- Tidak ada update firmware Over-The-Air
+- Memerlukan akses USB fisik untuk update
+- Mitigasi: Rencanakan jendela maintenance
 
 ---
 
-## 🔧 Advanced Configuration
+## 🔧 Konfigurasi Lanjutan
 
-### Custom Cities JSON
+### Cities JSON Custom
 
-**Format Requirements:**
+**Persyaratan Format:**
 ```json
 [
   {
-    "api": "city_id",           // Required: lowercase, no spaces
-    "display": "City Name",      // Required: display text
-    "province": "Province Name", // Required: for grouping
-    "lat": "-6.175392",         // Required: GPS latitude
-    "lon": "106.827153"         // Required: GPS longitude
+    "api": "city_id",           // Wajib: lowercase, tanpa spasi
+    "display": "City Name",      // Wajib: teks display
+    "province": "Province Name", // Wajib: untuk grouping
+    "lat": "-6.175392",         // Wajib: GPS latitude
+    "lon": "106.827153"         // Wajib: GPS longitude
   }
 ]
 ```
 
-**Validation Rules:**
-1. JSON must be valid array
-2. All fields required (api, display, province, lat, lon)
-3. Coordinates must be valid numbers
-   - Latitude: -90 to 90
-   - Longitude: -180 to 180
-4. Max file size: 1MB
-5. Max ArduinoJson size: 320KB (calculated)
+**Aturan Validasi:**
+1. JSON harus array valid
+2. Semua field wajib (api, display, province, lat, lon)
+3. Koordinat harus angka valid
+   - Latitude: -90 hingga 90
+   - Longitude: -180 hingga 180
+4. Ukuran file maks: 1MB
+5. Ukuran ArduinoJson maks: 320KB (dihitung)
 
-**Adding Custom City:**
+**Menambahkan Kota Custom:**
 ```json
 {
-  "api": "my_location",
-  "display": "My Custom Location (Kota)",
-  "province": "My Province",
+  "api": "lokasi_saya",
+  "display": "Lokasi Custom Saya (Kota)",
+  "province": "Provinsi Saya",
   "lat": "-6.123456",
   "lon": "106.789012"
 }
 ```
 
 **Testing:**
-1. Upload via web interface
-2. Check serial monitor for validation
-3. Dropdown should auto-reload
-4. Select custom city → Save
-5. Verify prayer times accuracy
+1. Upload via antarmuka web
+2. Cek serial monitor untuk validasi
+3. Dropdown harus auto-reload
+4. Pilih kota custom → Simpan
+5. Verifikasi akurasi waktu sholat
 
-### Custom NTP Servers
+### Server NTP Custom
 
-**Edit in code:**
+**Edit di kode:**
 ```cpp
 const char *ntpServers[] = {
   "pool.ntp.org",        // Default: Global pool
@@ -1524,31 +1519,31 @@ const char *ntpServers[] = {
 };
 ```
 
-**Add Indonesia-specific:**
+**Tambahkan khusus Indonesia:**
 ```cpp
 const char *ntpServers[] = {
-  "id.pool.ntp.org",     // Indonesia pool
-  "time.bmkg.go.id",     // BMKG (if available)
-  "pool.ntp.org"         // Global fallback
+  "id.pool.ntp.org",     // Pool Indonesia
+  "time.bmkg.go.id",     // BMKG (jika tersedia)
+  "pool.ntp.org"         // Fallback global
 };
 ```
 
-### Custom Backlight Brightness
+### Kecerahan Backlight Custom
 
-**Edit in code:**
+**Edit di kode:**
 ```cpp
 #define TFT_BL_BRIGHTNESS 180  // 0-255 (180 = ~70%)
 ```
 
-**PWM Options:**
-- 0: Off (black screen)
-- 128: ~50% brightness
-- 180: ~70% brightness (default)
-- 255: 100% brightness (max)
+**Opsi PWM:**
+- 0: Mati (layar hitam)
+- 128: ~50% kecerahan
+- 180: ~70% kecerahan (default)
+- 255: 100% kecerahan (maks)
 
-### Custom Touch Calibration
+### Kalibrasi Touch Custom
 
-**If touch coordinates salah:**
+**Jika koordinat touch salah:**
 ```cpp
 #define TS_MIN_X 370
 #define TS_MAX_X 3700
@@ -1556,34 +1551,34 @@ const char *ntpServers[] = {
 #define TS_MAX_Y 3600
 ```
 
-**Calibration Procedure:**
-1. Enable debug: Uncomment `Serial.printf()` in `my_touchpad_read()`
-2. Touch 4 corners, note coordinates
-3. Calculate MIN/MAX values
-4. Update constants
+**Prosedur Kalibrasi:**
+1. Aktifkan debug: Uncomment `Serial.printf()` di `my_touchpad_read()`
+2. Touch 4 sudut, catat koordinat
+3. Hitung nilai MIN/MAX
+4. Update konstanta
 5. Recompile & upload
 
-### Custom Stack Sizes
+### Ukuran Stack Custom
 
-**If task crashes (Stack Overflow):**
+**Jika task crash (Stack Overflow):**
 ```cpp
-#define UI_TASK_STACK_SIZE 12288    // Increase if needed
-#define WEB_TASK_STACK_SIZE 5120    // Increase for large requests
+#define UI_TASK_STACK_SIZE 12288    // Tingkatkan jika perlu
+#define WEB_TASK_STACK_SIZE 5120    // Tingkatkan untuk request besar
 ```
 
 **Monitor via:**
 ```cpp
-printStackReport();  // Called every 2 minutes in webTask
+printStackReport();  // Dipanggil setiap 2 menit di webTask
 ```
 
-**Rules:**
-- Increase by 2048 (2KB) increments
-- Keep total < 200KB (RAM limit)
-- Monitor for weeks to ensure stability
+**Aturan:**
+- Tingkatkan dengan increment 2048 (2KB)
+- Jaga total < 200KB (batas RAM)
+- Monitor selama berminggu-minggu untuk memastikan stabilitas
 
 ---
 
-## 📚 External APIs
+## 📚 API Eksternal
 
 ### Aladhan Prayer Times API
 
@@ -1595,7 +1590,7 @@ http://api.aladhan.com/v1/timings/{date}
   &method={method_id}
 ```
 
-**Method IDs:**
+**ID Metode:**
 - `0` - Shia Ithna-Ashari
 - `1` - University of Islamic Sciences, Karachi
 - `2` - Islamic Society of North America (ISNA)
@@ -1605,7 +1600,7 @@ http://api.aladhan.com/v1/timings/{date}
 - `7` - Institute of Geophysics, University of Tehran
 - `20` - Kementerian Agama Indonesia (Kemenag)
 
-**Response Format:**
+**Format Response:**
 ```json
 {
   "data": {
@@ -1622,104 +1617,41 @@ http://api.aladhan.com/v1/timings/{date}
 }
 ```
 
-**Rate Limits:**
-- No official limit mentioned
-- Recommended: Max 1 request per minute
-- Auto-update: Once per day (midnight)
+**Rate Limit:**
+- Tidak ada limit resmi disebutkan
+- Disarankan: Maks 1 request per menit
+- Auto-update: Sekali per hari (tengah malam)
 
-**Documentation:**
+**Dokumentasi:**
 https://aladhan.com/prayer-times-api
 
 ---
 
-## 🤝 Contributing
+## 🤝 Kontribusi
 
-Contributions are welcome! Please follow these guidelines:
+Kontribusi sangat diterima! Silakan ikuti panduan berikut:
 
-### Reporting Bugs
+### Melaporkan Bug
 
-1. Check existing issues first
-2. Provide detailed information:
-   - ESP32 board version
-   - Arduino IDE version
-   - Library versions
-   - Serial monitor output
-   - Steps to reproduce
+1. Cek issue yang sudah ada terlebih dahulu
+2. Berikan informasi detail:
+   - Versi board ESP32
+   - Versi Arduino IDE
+   - Versi library
+   - Output serial monitor
+   - Langkah untuk mereproduksi
 
-### Suggesting Features
+### Menyarankan Fitur
 
-1. Check if already requested
-2. Explain use case clearly
-3. Provide mockups if UI-related
+1. Cek apakah sudah diminta sebelumnya
+2. Jelaskan use case dengan jelas
+3. Berikan mockup jika terkait UI
 
-### Pull Requests
+### Pull Request
 
 1. Fork repository
-2. Create feature branch
-3. Follow existing code style
-4. Test thoroughly
-5. Update documentation
-6. Submit PR with clear description
-
-### Code Style
-
-```cpp
-// Constants: UPPER_CASE
-#define MAX_ATTEMPTS 5
-
-// Variables: camelCase
-int reconnectAttempts = 0;
-
-// Functions: camelCase
-void updatePrayerDisplay() { }
-
-// Structs: PascalCase
-struct WiFiConfig { };
-
-// Comments: Clear & concise
-// Check if WiFi connected before API request
-if (WiFi.status() == WL_CONNECTED) {
-  // ...
-}
-```
-
----
-
-## 🙏 Acknowledgments
-
-### Libraries & Frameworks
-- **LVGL** - Light and Versatile Graphics Library
-- **TFT_eSPI** - Bodmer's excellent TFT library
-- **ESPAsyncWebServer** - Asynchronous web server
-- **ArduinoJson** - Efficient JSON parsing
-- **RTClib** - Adafruit RTC library
-- **Foundation CSS** - Responsive framework
-
-### APIs & Services
-- **Aladhan API** - Prayer times calculation
-- **NTP Pool** - Network time synchronization
-
-### Tools
-- **EEZ Studio** - UI design tool
-- **Arduino IDE** - Development environment
-- **Espressif ESP32** - Amazing microcontroller
-
----
-
-## 📞 Support
-
-### Community
-- **GitHub Issues**: [Report bugs & request features](https://github.com/gonit-dev/jws-indonesia/issues)
-- **Discussions**: [Ask questions & share ideas](https://github.com/gonit-dev/jws-indonesia/discussions)
-
-### Documentation
-- **Aladhan API Docs**: https://aladhan.com/prayer-times-api
-- **LVGL Docs**: https://docs.lvgl.io/
-- **ESP32 Docs**: https://docs.espressif.com/
-
-### Useful Links
-- **TFT_eSPI Setup**: https://github.com/Bodmer/TFT_eSPI
-- **ESP32 Arduino**: https://github.com/espressif/arduino-esp32
-- **Foundation CSS**: https://get.foundation/
-
----
+2. Buat feature branch
+3. Ikuti style kode yang ada
+4. Test secara menyeluruh
+5. Update dokumentasi
+6. Submit PR dengan deskripsi jelas
