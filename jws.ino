@@ -66,7 +66,6 @@
 // RTOS CONFIGURATION
 // ================================
 // Task Stack Sizes (in bytes)
-// Task Stack Sizes (in bytes)
 #define UI_TASK_STACK_SIZE 12288       // LVGL + EEZ rendering
 #define WIFI_TASK_STACK_SIZE 3072      // Event-driven + reconnect (small headroom)
 #define NTP_TASK_STACK_SIZE 4096       // Hanya NTP sync
