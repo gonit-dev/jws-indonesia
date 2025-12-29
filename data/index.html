@@ -481,12 +481,17 @@
 											<div class="grid-x grid-margin-x">
 												<div class="medium-12 small-12 large-12 cell">
 													<label>SSID Access Point</label>
-													<input type="text" id="apSSID" placeholder="Masukkan SSID AP">
+													<input type="text" id="apSSID" 
+														placeholder="Masukkan SSID AP"
+														autocomplete="off"
+														data-form="ap-credentials">
 												</div>
 												<div class="medium-12 small-12 large-12 cell">
 													<label>Password Access Point</label>
 													<input type="password" id="apPassword"
-														placeholder="Masukkan password AP (minimal 8 karakter)">
+														placeholder="Masukkan password AP (minimal 8 karakter)"
+														autocomplete="new-password"
+														data-form="ap-credentials">
 												</div>
 												<div class="medium-6 small-6 large-6 cell">
 													<button class="button secondary expanded" onclick="setAP()"> Simpan
@@ -509,15 +514,24 @@
 											<div class="grid-x grid-margin-x">
 												<div class="medium-12 small-12 large-12 cell">
 													<label>IP Address Access Point</label>
-													<input type="text" id="apIP" placeholder="192.168.4.1">
+													<input type="text" id="apIP" 
+														placeholder="192.168.4.1"
+														autocomplete="off"
+														data-form="network-config">
 												</div>
 												<div class="medium-12 small-12 large-12 cell">
 													<label>Gateway</label>
-													<input type="text" id="gatewayIP" placeholder="192.168.4.1">
+													<input type="text" id="gatewayIP" 
+														placeholder="192.168.4.1"
+														autocomplete="off"
+														data-form="network-config">
 												</div>
 												<div class="medium-12 small-12 large-12 cell">
 													<label>Subnet Mask</label>
-													<input type="text" id="subnetMask" placeholder="255.255.255.0">
+													<input type="text" id="subnetMask" 
+														placeholder="255.255.255.0"
+														autocomplete="off"
+														data-form="network-config">
 												</div>
 												<div class="medium-6 small-6 large-6 cell">
 													<button class="button secondary expanded"
@@ -1549,7 +1563,6 @@
 			isCountdownActive = false;
 			
 			if (document.body.classList.contains('loading')) {
-				console.log('Still in loading state, skipping redirect');
 				return;
 			}
 			
@@ -2173,8 +2186,20 @@
 		// ================================
 		// PENGATURAN WIFI & AP
 		// ================================
-
 		function setAP() {
+			if (event && event.target) {
+				const buttonText = event.target.textContent.trim();
+				
+				if (buttonText !== 'Simpan') {
+					return;
+				}
+				
+				const isAPCredButton = event.target.closest('.grid-x')?.querySelector('#apSSID') !== null;
+				if (!isAPCredButton) {
+					return;
+				}
+			}
+
 			const ssid = document.getElementById('apSSID').value.trim();
 			const pass = document.getElementById('apPassword').value;
 
@@ -2232,6 +2257,19 @@
 		}
 
 		function setAPNetwork() {
+			if (event && event.target) {
+				const buttonText = event.target.textContent.trim();
+				
+				if (buttonText !== 'Simpan') {
+					return;
+				}
+				
+				const isNetworkConfigButton = event.target.closest('.grid-x')?.querySelector('#apIP') !== null;
+				if (!isNetworkConfigButton) {
+					return;
+				}
+			}
+
 			const apIP = document.getElementById('apIP').value.trim();
 			const gateway = document.getElementById('gatewayIP').value.trim();
 			const subnet = document.getElementById('subnetMask').value.trim();
@@ -2262,7 +2300,7 @@
 			.then(response => {
 				if (response.ok) {
 					const networkMsg = apIP ? apIP : '192.168.4.1';
-					showToast(`Konfigurasi jaringan berhasil disimpan di ${networkMsg}`, 'success');
+					showToast(`Konfigurasi jaringan berhasil disimpan (IP: ${networkMsg})`, 'success');
 
 					setTimeout(() => loadWiFiConfig(), 1000);
 
@@ -3158,9 +3196,21 @@
 				handleTabClick('home');
 			}, 500);
 
-			// ================================
-			// Toggle switches
-			// ================================
+			const apCredInputs = document.querySelectorAll('input[data-form="ap-credentials"]');
+			const networkConfigInputs = document.querySelectorAll('input[data-form="network-config"]');
+			
+			apCredInputs.forEach(input => {
+				input.addEventListener('change', function(e) {
+					e.stopPropagation();
+				});
+			});
+			
+			networkConfigInputs.forEach(input => {
+				input.addEventListener('change', function(e) {
+					e.stopPropagation();
+				});
+			});
+
 			document.querySelectorAll('.buzzer-toggle').forEach(toggle => {
 				toggle.addEventListener('change', function () {
 					const prayer = this.getAttribute('data-prayer');
@@ -3169,9 +3219,6 @@
 				});
 			});
 
-			// ================================
-			// Volume slider
-			// ================================
 			const volumeSlider = document.getElementById('volumeSlider');
 			const volumeValue = document.getElementById('volumeValue');
 

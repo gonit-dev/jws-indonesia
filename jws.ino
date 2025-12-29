@@ -1822,7 +1822,6 @@ void setupServerRoutes() {
 
       if (updateNetworkConfig) {
           Serial.println("Mode: Network configuration only");
-          Serial.println("SSID/Password will remain unchanged");
           
           IPAddress newAPIP = wifiConfig.apIP;
           IPAddress newGateway = wifiConfig.apGateway;
@@ -1880,8 +1879,6 @@ void setupServerRoutes() {
           saveAPCredentials();
 
           Serial.println("\nCONFIG SAVED:");
-          Serial.println("  SSID: " + String(wifiConfig.apSSID) + " (unchanged)");
-          Serial.println("  Password: ******** (unchanged)");
           Serial.println("  IP: " + newAPIP.toString() + " (updated)");
           Serial.println("  Gateway: " + newGateway.toString() + " (updated)");
           Serial.println("  Subnet: " + newSubnet.toString() + " (updated)");
