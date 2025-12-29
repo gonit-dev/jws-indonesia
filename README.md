@@ -1330,15 +1330,7 @@ esp_task_wdt_reset();          // Setiap loop
 ## 📁 Struktur File
 
 ```
-jws-indonesia/
 ├── jws.ino                          # Program utama
-│   ├── Definisi pin                 # GPIO, PWM, config SPI
-│   ├── Konfigurasi task             # Ukuran stack, prioritas
-│   ├── Struktur global              # WiFiConfig, TimeConfig, dll
-│   ├── Deklarasi fungsi             # Forward declarations
-│   ├── Implementasi                 # Semua fungsi
-│   └── setup() & loop()             # Entry point Arduino
-│
 ├── src/                             # EEZ Studio UI (auto-generated)
 │   ├── ui.h                         # Inisialisasi LVGL UI
 │   ├── ui.cpp                       # Implementasi UI
@@ -1348,31 +1340,12 @@ jws-indonesia/
 │   ├── images.cpp                   # Data gambar (binary)
 │   ├── fonts.h                      # Deklarasi font
 │   └── fonts.cpp                    # Data font (binary)
-│
 ├── data/                            # Filesystem LittleFS
 │   ├── index.html                   # Antarmuka web (50KB)
-│   │   ├── Framework Foundation CSS
-│   │   ├── Manager loading
-│   │   ├── Navigasi tab
-│   │   ├── Validasi form
-│   │   ├── Sistem countdown
-│   │   └── Integrasi API
-│   │
 │   ├── assets/
 │   │   └── css/
 │   │       └── foundation.min.css  # Framework CSS (70KB)
-│   │
 │   └── cities.json                  # 500+ kota (150KB)
-│       └── Format:
-│           [{
-│             "api": "jakarta",
-│             "display": "Jakarta (Kota)",
-│             "province": "DKI Jakarta",
-│             "lat": "-6.175392",
-│             "lon": "106.827153"
-│           }, ...]
-│
-└── README.md                        # File ini
 ```
 
 **File Runtime (Dibuat otomatis di LittleFS):**
