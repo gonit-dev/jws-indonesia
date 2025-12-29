@@ -3842,13 +3842,25 @@ void webTask(void *parameter) {
     if (now - lastAPCheck > 5000) {
       lastAPCheck = now;
 
+      if (apRestartInProgress) {
+        continue;
+      }
+      
+      if (wifiRestartInProgress) {
+        continue;
+      }
+
       wifi_mode_t mode;
       esp_wifi_get_mode(&mode);
 
       if (mode != WIFI_MODE_APSTA) {
-        Serial.println("\nCRITICAL: WiFi mode changed");
+        Serial.println("\n========================================");
+        Serial.println("CRITICAL: WiFi mode changed unexpectedly");
+        Serial.println("========================================");
         Serial.printf("Current mode: %d (should be %d)\n", mode, WIFI_MODE_APSTA);
-        Serial.println("Forcing back to AP_STA...");
+        Serial.println("Reason: Unknown (not from restart task)");
+        Serial.println("Action: Forcing back to AP_STA mode...");
+        Serial.println("========================================\n");
 
         WiFi.mode(WIFI_AP_STA);
         delay(100);
@@ -3858,6 +3870,7 @@ void webTask(void *parameter) {
         delay(100);
 
         Serial.println("AP restored: " + String(wifiConfig.apSSID));
+        Serial.println("Mode corrected to AP+STA\n");
       }
     }
   }
@@ -4472,9 +4485,6 @@ void restartAPTask(void *parameter) {
     Serial.println("Countdown before AP shutdown");
     Serial.println("========================================\n");
     
-    // ================================
-    // COUNTDOWN 60 DETIK
-    // ================================
     for (int i = 60; i > 0; i--) {
         if (i == 30) {
             Serial.println("\n========================================");
@@ -4589,8 +4599,17 @@ void restartAPTask(void *parameter) {
         Serial.println("========================================\n");
     }
     
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    
     apRestartInProgress = false;
     xSemaphoreGive(wifiRestartMutex);
+    
+    Serial.println("\n========================================");
+    Serial.println("AP RESTART PROTECTION RELEASED");
+    Serial.println("========================================");
+    Serial.println("apRestartInProgress: false");
+    Serial.println("webTask monitoring: ACTIVE again");
+    Serial.println("========================================\n");
     
     Serial.println("AP restart task completed\n");
     vTaskDelete(NULL);
