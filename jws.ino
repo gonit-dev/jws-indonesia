@@ -4472,15 +4472,29 @@ void restartAPTask(void *parameter) {
     Serial.println("Countdown before AP shutdown");
     Serial.println("========================================\n");
     
+    // ================================
+    // COUNTDOWN 60 DETIK
+    // ================================
     for (int i = 60; i > 0; i--) {
         if (i == 30) {
             Serial.println("\n========================================");
-            Serial.println("SHUTTING DOWN AP NOW");
+            Serial.println("SHUTTING DOWN AP (10 seconds left)");
             Serial.println("========================================");
             
+            int clientsBefore = WiFi.softAPgetStationNum();
+            Serial.printf("Clients connected: %d\n", clientsBefore);
+            
+            if (clientsBefore > 0) {
+                Serial.println("Disconnecting clients...");
+                esp_wifi_deauth_sta(0);
+                vTaskDelay(pdMS_TO_TICKS(1000));
+            }
+
+            WiFi.mode(WIFI_MODE_STA);
             WiFi.softAPdisconnect(true);
             
-            Serial.println("AP: OFF");
+            Serial.println("AP shutdown complete");
+            Serial.println("All clients disconnected");
             Serial.println("========================================\n");
         }
         
@@ -4518,6 +4532,8 @@ void restartAPTask(void *parameter) {
         savedSubnet = IPAddress(255, 255, 255, 0);
     }
 
+    WiFi.mode(WIFI_MODE_APSTA);
+    
     Serial.println("\nConfiguring new AP network...");
     WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
     vTaskDelay(pdMS_TO_TICKS(500));
