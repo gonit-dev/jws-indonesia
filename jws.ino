@@ -68,10 +68,10 @@
 // Task Stack Sizes (in bytes)
 // Task Stack Sizes (in bytes)
 #define UI_TASK_STACK_SIZE 12288       // LVGL + EEZ rendering
-#define WIFI_TASK_STACK_SIZE 5120      // Event-driven + reconnect (small headroom)
-#define NTP_TASK_STACK_SIZE 6144       // NTP + Prayer API (HTTP/JSON in heap)
+#define WIFI_TASK_STACK_SIZE 3072      // Event-driven + reconnect (small headroom)
+#define NTP_TASK_STACK_SIZE 4096       // Hanya NTP sync
 #define WEB_TASK_STACK_SIZE 5120       // AsyncWebServer + concurrent requests
-#define PRAYER_TASK_STACK_SIZE 6144    // HTTP + JSON parsing (in heap)
+#define PRAYER_TASK_STACK_SIZE 6144    // HTTP + JSON parsing
 #define RTC_TASK_STACK_SIZE 2048       // Simple I2C
 #define CLOCK_TASK_STACK_SIZE 2048     // Simple time increment
 
@@ -2243,62 +2243,67 @@ void setupServerRoutes() {
   });
 
   server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest * request) {
-    Serial.println("\n========================================");
-    Serial.println("Save City/District");
-    Serial.println("========================================");
+      Serial.println("\n========================================");
+      Serial.println("Save City/District");
+      Serial.println("========================================");
 
-    if (!request -> hasParam("city", true)) {
-      request -> send(400, "application/json", "{\"error\":\"Missing city parameter\"}");
-      return;
-    }
-
-    String cityApi = request -> getParam("city", true) -> value();
-    String cityName = request -> hasParam("cityName", true) ? request -> getParam("cityName", true) -> value() : cityApi;
-    String lat = request -> hasParam("lat", true) ? request -> getParam("lat", true) -> value() : "";
-    String lon = request -> hasParam("lon", true) ? request -> getParam("lon", true) -> value() : "";
-
-    cityApi.trim();
-    cityName.trim();
-    lat.trim();
-    lon.trim();
-
-    Serial.println("City: " + cityApi);
-    Serial.println("Lat: " + lat + ", Lon: " + lon);
-
-    if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-      prayerConfig.selectedCity = cityApi;
-      prayerConfig.selectedCityName = cityName;
-      prayerConfig.latitude = lat;
-      prayerConfig.longitude = lon;
-      xSemaphoreGive(settingsMutex);
-    }
-
-    saveCitySelection();
-    updateCityDisplay();
-
-    bool willUpdate = (WiFi.status() == WL_CONNECTED && lat.length() > 0 && lon.length() > 0);
-
-    char responseBuffer[256];
-    snprintf(responseBuffer, sizeof(responseBuffer),
-      "{\"success\":true,\"city\":\"%s\",\"updating\":%s}",
-      cityName.c_str(),
-      willUpdate ? "true" : "false"
-    );
-
-    request -> send(200, "application/json", responseBuffer);
-
-    if (willUpdate) {
-      Serial.println("Triggering background prayer times update...");
-      pendingPrayerLat = lat;
-      pendingPrayerLon = lon;
-      needPrayerUpdate = true;
-
-      if (prayerTaskHandle != NULL) {
-        xTaskNotifyGive(prayerTaskHandle);
+      if (!request -> hasParam("city", true)) {
+          request -> send(400, "application/json", "{\"error\":\"Missing city parameter\"}");
+          return;
       }
-    }
 
-    Serial.println("========================================\n");
+      String cityApi = request -> getParam("city", true) -> value();
+      String cityName = request -> hasParam("cityName", true) ? request -> getParam("cityName", true) -> value() : cityApi;
+      String lat = request -> hasParam("lat", true) ? request -> getParam("lat", true) -> value() : "";
+      String lon = request -> hasParam("lon", true) ? request -> getParam("lon", true) -> value() : "";
+
+      cityApi.trim();
+      cityName.trim();
+      lat.trim();
+      lon.trim();
+
+      Serial.println("City: " + cityApi);
+      Serial.println("Lat: " + lat + ", Lon: " + lon);
+
+      if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+          prayerConfig.selectedCity = cityApi;
+          prayerConfig.selectedCityName = cityName;
+          prayerConfig.latitude = lat;
+          prayerConfig.longitude = lon;
+          xSemaphoreGive(settingsMutex);
+      }
+
+      saveCitySelection();
+      updateCityDisplay();
+
+      bool willUpdate = (WiFi.status() == WL_CONNECTED && lat.length() > 0 && lon.length() > 0);
+
+      char responseBuffer[256];
+      snprintf(responseBuffer, sizeof(responseBuffer),
+          "{\"success\":true,\"city\":\"%s\",\"updating\":%s}",
+          cityName.c_str(),
+          willUpdate ? "true" : "false"
+      );
+
+      request -> send(200, "application/json", responseBuffer);
+
+      if (willUpdate) {
+          Serial.println("Triggering background prayer times update...");
+          
+          if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+              needPrayerUpdate = true;
+              pendingPrayerLat = lat;
+              pendingPrayerLon = lon;
+              xSemaphoreGive(settingsMutex);
+              
+              if (prayerTaskHandle != NULL) {
+                  xTaskNotifyGive(prayerTaskHandle);
+                  Serial.println("Prayer Task notified");
+              }
+          }
+      }
+
+      Serial.println("========================================\n");
   });
 
   server.on(
@@ -2514,19 +2519,30 @@ void setupServerRoutes() {
     bool willFetchPrayerTimes = false;
 
     if (WiFi.status() == WL_CONNECTED) {
-      if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-        Serial.println("Fetching prayer times with new method...");
-        Serial.println("City: " + prayerConfig.selectedCity);
-        Serial.println("Method: " + methodName);
-        getPrayerTimesByCoordinates(prayerConfig.latitude, prayerConfig.longitude);
+        if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
+            Serial.println("Triggering prayer times update with new method...");
+            Serial.println("City: " + prayerConfig.selectedCity);
+            Serial.println("Method: " + methodName);
+            
+            if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                needPrayerUpdate = true;
+                pendingPrayerLat = prayerConfig.latitude;
+                pendingPrayerLon = prayerConfig.longitude;
+                xSemaphoreGive(settingsMutex);
+                
+                if (prayerTaskHandle != NULL) {
+                    xTaskNotifyGive(prayerTaskHandle);
+                    Serial.println("Prayer Task triggered for method change");
+                }
+            }
 
-        Serial.println("Prayer times update initiated");
-        willFetchPrayerTimes = true;
-      } else {
-        Serial.println("No coordinates available");
-      }
+            Serial.println("Prayer times update initiated");
+            willFetchPrayerTimes = true;
+        } else {
+            Serial.println("No coordinates available");
+        }
     } else {
-      Serial.println("WiFi not connected");
+        Serial.println("WiFi not connected");
     }
 
     Serial.println("========================================");
@@ -3376,7 +3392,7 @@ void wifiTask(void *parameter) {
                 // ============================================
                 if (ntpSyncCompleted && timeConfig.ntpSynced) {
                     Serial.println("\n========================================");
-                    Serial.println("NTP SYNC COMPLETED - UPDATING PRAYER TIMES");
+                    Serial.println("NTP SYNC COMPLETED - TRIGGER PRAYER UPDATE");
                     Serial.println("========================================");
 
                     vTaskDelay(pdMS_TO_TICKS(2000));
@@ -3410,19 +3426,23 @@ void wifiTask(void *parameter) {
                         Serial.println("Verified Date: " + String(dateStr));
                         
                         if (timeinfo.tm_year + 1900 >= 2024) {
-                            Serial.println("Time is valid - fetching prayer times...");
+                            Serial.println("Time is valid - triggering prayer times update...");
                             Serial.println("City: " + prayerConfig.selectedCity);
                             Serial.println("Coordinates: " + prayerConfig.latitude + 
                                         ", " + prayerConfig.longitude);
                             Serial.println("");
-
-                            esp_task_wdt_reset();
                             
-                            getPrayerTimesByCoordinates(
-                                prayerConfig.latitude,
-                                prayerConfig.longitude);
-
-                            Serial.println("Prayer times update completed");
+                            if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                                needPrayerUpdate = true;
+                                pendingPrayerLat = prayerConfig.latitude;
+                                pendingPrayerLon = prayerConfig.longitude;
+                                xSemaphoreGive(settingsMutex);
+                                
+                                if (prayerTaskHandle != NULL) {
+                                    xTaskNotifyGive(prayerTaskHandle);
+                                    Serial.println("Prayer Task triggered - will update in background");
+                                }
+                            }
                         } else {
                             Serial.println("ERROR: Time still invalid (year < 2024)");
                             Serial.println("Skipping prayer times update");
@@ -3696,7 +3716,7 @@ void ntpTask(void *parameter) {
         // ============================================
         if (syncSuccess && wifiConfig.isConnected) {
             Serial.println("\n========================================");
-            Serial.println("AUTO PRAYER TIMES UPDATE");
+            Serial.println("AUTO PRAYER TIMES UPDATE - TRIGGER");
             Serial.println("========================================");
             Serial.println("Reason: NTP sync completed successfully");
             Serial.println("");
@@ -3709,36 +3729,27 @@ void ntpTask(void *parameter) {
                 Serial.println("   Latitude: " + prayerConfig.latitude);
                 Serial.println("   Longitude: " + prayerConfig.longitude);
                 Serial.println("");
-                Serial.println("Starting prayer times API request...");
                 
-                esp_task_wdt_reset();
+                if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                    needPrayerUpdate = true;
+                    pendingPrayerLat = prayerConfig.latitude;
+                    pendingPrayerLon = prayerConfig.longitude;
+                    xSemaphoreGive(settingsMutex);
+                    
+                    Serial.println("Triggering Prayer Task for update...");
+                    
+                    if (prayerTaskHandle != NULL) {
+                        xTaskNotifyGive(prayerTaskHandle);
+                        Serial.println("Prayer Task notified - will update in background");
+                    } else {
+                        Serial.println("ERROR: Prayer Task handle NULL");
+                    }
+                }
                 
-                // Call prayer times API
-                getPrayerTimesByCoordinates(
-                    prayerConfig.latitude,
-                    prayerConfig.longitude
-                );
-                
-                esp_task_wdt_reset();
-                
-                Serial.println("Prayer times updated successfully");
                 Serial.println("========================================");
                 
             } else {
                 Serial.println("SKIPPED: No city coordinates available");
-                
-                if (prayerConfig.latitude.length() == 0) {
-                    Serial.println("   - Latitude is empty");
-                }
-                if (prayerConfig.longitude.length() == 0) {
-                    Serial.println("   - Longitude is empty");
-                }
-                
-                Serial.println("");
-                Serial.println("Action required:");
-                Serial.println("   1. Open web interface");
-                Serial.println("   2. Navigate to Settings");
-                Serial.println("   3. Select your city");
                 Serial.println("========================================");
             }
         } else if (syncSuccess && !wifiConfig.isConnected) {
@@ -3876,6 +3887,15 @@ void webTask(void *parameter) {
 void prayerTask(void *parameter) {
     esp_task_wdt_add(NULL);
     
+    Serial.println("\n========================================");
+    Serial.println("PRAYER TASK STARTED");
+    Serial.println("========================================");
+    Serial.println("Stack Size: 8192 bytes");
+    Serial.println("Waiting for triggers...");
+    Serial.println("========================================\n");
+    
+    vTaskDelay(pdMS_TO_TICKS(5000));
+    
     static bool hasUpdatedToday = false;
     static int lastDay = -1;
     static bool waitingForMidnightNTP = false;
@@ -3886,25 +3906,69 @@ void prayerTask(void *parameter) {
         
         ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(1000));
         
-        // ============================================
-        // HANDLE BACKGROUND PRAYER UPDATE (dari web)
-        // ============================================
-        if (needPrayerUpdate && pendingPrayerLat.length() > 0 && pendingPrayerLon.length() > 0) {
-            Serial.println("Memproses update waktu sholat dari web interface...");
-            esp_task_wdt_reset();
-            getPrayerTimesByCoordinates(pendingPrayerLat, pendingPrayerLon);
-            esp_task_wdt_reset();
-            
-            needPrayerUpdate = false;
-            pendingPrayerLat = "";
-            pendingPrayerLon = "";
-            
-            Serial.println("Background update selesai");
+        UBaseType_t stackRemaining = uxTaskGetStackHighWaterMark(NULL);
+        if (stackRemaining < 1000) {
+            Serial.printf("⚠️ WARNING: Prayer Task stack low! %d bytes remaining\n", stackRemaining * 4);
         }
-
-        // ============================================
-        // MIDNIGHT UPDATE LOGIC - DENGAN NTP SYNC
-        // ============================================
+        
+        if (needPrayerUpdate && pendingPrayerLat.length() > 0 && pendingPrayerLon.length() > 0) {
+            
+            if (WiFi.status() != WL_CONNECTED) {
+                Serial.println("Prayer Task: Skipping - WiFi not connected");
+                
+                if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                    needPrayerUpdate = false;
+                    xSemaphoreGive(settingsMutex);
+                }
+                continue;
+            }
+            
+            time_t now_t;
+            if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                now_t = timeConfig.currentTime;
+                xSemaphoreGive(timeMutex);
+            } else {
+                now_t = time(nullptr);
+            }
+            
+            if (now_t < 946684800) {
+                Serial.println("Prayer Task: Skipping - Invalid system time");
+                Serial.printf("Current timestamp: %ld (before 01/01/2000)\n", now_t);
+                
+                if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                    needPrayerUpdate = false;
+                    xSemaphoreGive(settingsMutex);
+                }
+                continue;
+            }
+            
+            Serial.println("\n========================================");
+            Serial.println("PRAYER TASK: Processing Update");
+            Serial.println("========================================");
+            Serial.printf("Stack before HTTP: %d bytes free\n", uxTaskGetStackHighWaterMark(NULL) * 4);
+            Serial.println("Coordinates: " + pendingPrayerLat + ", " + pendingPrayerLon);
+            
+            esp_task_wdt_reset();
+            
+            String tempLat = pendingPrayerLat;
+            String tempLon = pendingPrayerLon;
+            
+            if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                needPrayerUpdate = false;
+                pendingPrayerLat = "";
+                pendingPrayerLon = "";
+                xSemaphoreGive(settingsMutex);
+            }
+            
+            getPrayerTimesByCoordinates(tempLat, tempLon);
+            
+            esp_task_wdt_reset();
+            
+            Serial.printf("Stack after HTTP: %d bytes free\n", uxTaskGetStackHighWaterMark(NULL) * 4);
+            Serial.println("Prayer Task: Update completed");
+            Serial.println("========================================\n");
+        }
+        
         if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
             int currentHour = hour(timeConfig.currentTime);
             int currentMinute = minute(timeConfig.currentTime);
@@ -3921,9 +3985,6 @@ void prayerTask(void *parameter) {
                 waitingForMidnightNTP = false;
             }
 
-            // ================================
-            // DETEKSI MIDNIGHT & TRIGGER NTP
-            // ================================
             if (currentHour == 0 && currentMinute < 5 && 
                 !hasUpdatedToday && 
                 !waitingForMidnightNTP &&
@@ -3933,12 +3994,9 @@ void prayerTask(void *parameter) {
                 Serial.println("MIDNIGHT DETECTED - STARTING SEQUENCE");
                 Serial.println("========================================");
                 Serial.printf("Time: %02d:%02d:%02d\n", currentHour, currentMinute, second(timeConfig.currentTime));
-                Serial.printf("Date NOw: %02d/%02d/%04d\n", currentDay, month(timeConfig.currentTime), currentYear);
+                Serial.printf("Date Now: %02d/%02d/%04d\n", currentDay, month(timeConfig.currentTime), currentYear);
                 Serial.println("");
                 
-                // ================================
-                // TRIGGER NTP SYNC DULU
-                // ================================
                 Serial.println("Triggering NTP Sync...");
                 Serial.println("Reason: Ensuring time is accurate before updating");
                 
@@ -3962,9 +4020,6 @@ void prayerTask(void *parameter) {
                 }
             }
 
-            // ================================
-            // TUNGGU NTP SYNC SELESAI
-            // ================================
             if (waitingForMidnightNTP) {
                 unsigned long waitTime = millis() - midnightNTPStartTime;
                 const unsigned long MAX_WAIT_TIME = 30000;
@@ -3990,9 +4045,6 @@ void prayerTask(void *parameter) {
                         Serial.println("");
                     }
                     
-                    // ================================
-                    // UPDATE PRAYER TIMES
-                    // ================================
                     if (prayerConfig.latitude.length() > 0 && 
                         prayerConfig.longitude.length() > 0) {
                         
