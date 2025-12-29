@@ -4472,42 +4472,15 @@ void restartAPTask(void *parameter) {
     Serial.println("Countdown before AP shutdown");
     Serial.println("========================================\n");
     
-    // ================================
-    // COUNTDOWN 60 DETIK
-    // ================================
     for (int i = 60; i > 0; i--) {
         if (i == 30) {
             Serial.println("\n========================================");
-            Serial.println("SHUTTING DOWN AP (10 seconds left)");
+            Serial.println("SHUTTING DOWN AP NOW");
             Serial.println("========================================");
             
-            int clientsBefore = WiFi.softAPgetStationNum();
-            Serial.printf("Clients connected: %d\n", clientsBefore);
+            WiFi.softAPdisconnect(true);
             
-            if (clientsBefore > 0) {
-                Serial.println("Disconnecting clients...");
-                esp_wifi_deauth_sta(0);
-                vTaskDelay(pdMS_TO_TICKS(1000));
-            }
-            
-            wifi_mode_t currentMode;
-            esp_wifi_get_mode(&currentMode);
-            
-            if (currentMode == WIFI_MODE_APSTA) {
-                WiFi.mode(WIFI_MODE_STA);
-                Serial.println("Mode changed: APSTA -> STA");
-                Serial.println("AP: OFF");
-                Serial.println("STA: STILL RUNNING (WiFi connection preserved)");
-            } else if (currentMode == WIFI_MODE_AP) {
-                WiFi.mode(WIFI_OFF);
-                Serial.println("Mode changed: AP -> OFF");
-                Serial.println("AP: OFF");
-            }
-            
-            vTaskDelay(pdMS_TO_TICKS(500));
-            
-            Serial.println("AP shutdown complete");
-            Serial.println("All clients disconnected");
+            Serial.println("AP: OFF");
             Serial.println("========================================\n");
         }
         
@@ -4545,19 +4518,6 @@ void restartAPTask(void *parameter) {
         savedSubnet = IPAddress(255, 255, 255, 0);
     }
 
-    wifi_mode_t currentMode;
-    esp_wifi_get_mode(&currentMode);
-    
-    if (currentMode == WIFI_MODE_STA) {
-        WiFi.mode(WIFI_MODE_APSTA);
-        vTaskDelay(pdMS_TO_TICKS(500));
-        Serial.println("Mode restored: STA -> APSTA");
-    } else if (currentMode == WIFI_MODE_NULL) {
-        WiFi.mode(WIFI_MODE_AP);
-        vTaskDelay(pdMS_TO_TICKS(500));
-        Serial.println("Mode set: OFF -> AP");
-    }
-    
     Serial.println("\nConfiguring new AP network...");
     WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
     vTaskDelay(pdMS_TO_TICKS(500));
