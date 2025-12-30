@@ -155,8 +155,6 @@ struct WiFiConfig {
   String routerPassword;
   bool isConnected;
   IPAddress localIP;
-  
-  // NEW: AP Advanced Settings
   IPAddress apIP;
   IPAddress apGateway;
   IPAddress apSubnet;
@@ -234,14 +232,14 @@ String pendingPrayerLat = "";
 String pendingPrayerLon = "";
 
 unsigned long lastWiFiCheck = 0;
-const unsigned long WIFI_CHECK_INTERVAL = 5000;  // Check every 5 seconds
+const unsigned long WIFI_CHECK_INTERVAL = 5000;
 int reconnectAttempts = 0;
 const int MAX_RECONNECT_ATTEMPTS = 5;
-unsigned long wifiDisconnectedTime = 0;  // Track when disconnect happened
+unsigned long wifiDisconnectedTime = 0;
 
 bool fastReconnectMode = false;
 unsigned long lastFastScan = 0;
-const unsigned long FAST_SCAN_INTERVAL = 3000;  // Scan every 3 seconds
+const unsigned long FAST_SCAN_INTERVAL = 3000;
 
 // ================================
 // DISPLAY UPDATE STRUCTURE
@@ -302,8 +300,8 @@ BlinkState blinkState = {
   .activePrayer = ""
 };
 
-const unsigned long BLINK_DURATION = 60000; // 1 menit
-const unsigned long BLINK_INTERVAL = 500;   // Kedip setiap 500ms
+const unsigned long BLINK_DURATION = 60000;
+const unsigned long BLINK_INTERVAL = 500;
 
 // ================================
 // WIFI RESTART PROTECTION - TAMBAHAN BARU
@@ -315,7 +313,7 @@ static bool apRestartInProgress = false;
 // Debouncing timestamps
 static unsigned long lastWiFiRestartRequest = 0;
 static unsigned long lastAPRestartRequest = 0;
-const unsigned long RESTART_DEBOUNCE_MS = 3000; // 3 detik minimum antar restart
+const unsigned long RESTART_DEBOUNCE_MS = 3000;
 
 // ============================================
 // FORWARD DECLARATIONS
@@ -1359,7 +1357,7 @@ bool initRTC() {
     
     Serial.println("Testing RTC functionality...");
     rtc.adjust(DateTime(2024, 12, 16, 10, 30, 0));
-    delay(2000); // Tunggu 2 detik
+    delay(2000);
     
     DateTime test = rtc.now();
     Serial.printf("Test result: %02d:%02d:%02d %02d/%02d/%04d\n",
@@ -1394,7 +1392,7 @@ bool initRTC() {
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
             const time_t EPOCH_2000 = 946684800;
             setTime(0, 0, 0, 1, 1, 2000);
-            timeConfig.currentTime = EPOCH_2000;  // Force hardcoded UTC
+            timeConfig.currentTime = EPOCH_2000;
             
             // Safety check
             if (timeConfig.currentTime < EPOCH_2000) {
@@ -1761,7 +1759,7 @@ void setupServerRoutes() {
       Serial.printf("Wait time: %lu ms\n", waitTime);
       Serial.println("========================================\n");
 
-      request -> send(429, "text/plain", msg); // 429 = Too Many Requests
+      request -> send(429, "text/plain", msg);
       return;
     }
 
@@ -2768,7 +2766,7 @@ void setupServerRoutes() {
     WiFi.disconnect(true);
 
     // ============================================
-    // DETEKSI TIPE AKSES (Local AP vs Remote)
+    // ACCESS TYPE DETECTION (Local AP vs Remote)
     // ============================================
     IPAddress clientIP = request->client()->remoteIP();
     IPAddress apIP = WiFi.softAPIP();
@@ -3236,7 +3234,7 @@ void uiTask(void *parameter) {
         switch (update.type) {
           case DisplayUpdate::TIME_UPDATE:
             updateTimeDisplay();
-            checkPrayerTime(); // Cek apakah waktu shalat masuk
+            checkPrayerTime();
             break;
           case DisplayUpdate::PRAYER_UPDATE:
             updatePrayerDisplay();
@@ -3328,7 +3326,6 @@ void wifiTask(void *parameter) {
         // ========================================
         // EVENT: WiFi Got IP (Connected)
         // ========================================
-
         if (bits & WIFI_GOT_IP_BIT) {
             if (!autoUpdateDone && wifiConfig.isConnected) {
                 // ============================================
@@ -3446,7 +3443,6 @@ void wifiTask(void *parameter) {
                 }
             }
             
-            // Monitoring log setiap 60 detik
             if (millis() - lastMonitor > 60000) {
                 lastMonitor = millis();
                 Serial.printf("WiFi: Connected | RSSI: %d dBm | IP: %s\n",
@@ -3456,7 +3452,7 @@ void wifiTask(void *parameter) {
         }
 
         // ========================================
-        // Cek apakah perlu koneksi pertama kali
+        // Check if a first-time connection is required
         // ========================================
         if (wifiState == WIFI_IDLE && wifiConfig.routerSSID.length() > 0) {
             bool isConnected = (bits & WIFI_CONNECTED_BIT) != 0;
@@ -3524,7 +3520,7 @@ void ntpTask(void *parameter) {
             vTaskDelay(pdMS_TO_TICKS(250));
             
             time(&now);
-            gmtime_r(&now, &timeinfo);  // Use gmtime_r to get UTC
+            gmtime_r(&now, &timeinfo);
             
             if (retry % 4 == 0) {
                 Serial.printf("Waiting for NTP sync... (%d/%d) [%.1fs]\n", 
@@ -3587,7 +3583,6 @@ void ntpTask(void *parameter) {
                         currentOffset);
             Serial.println("========================================");
             
-            // Use the timezone-adjusted time
             ntpTime = localTime;
             
         } else {
@@ -4107,7 +4102,7 @@ void rtcSyncTask(void *parameter) {
     while (true) {
         if (rtcAvailable) {
             // ================================
-            // CEK RTC VALID DULU
+            // CHECK RTC VALID FIRST
             // ================================
             if (!isRTCValid()) {
                 Serial.println("\n[RTC Sync] Skipped - RTC invalid");
@@ -4116,7 +4111,7 @@ void rtcSyncTask(void *parameter) {
             }
             
             // ================================
-            // BACA RTC TIME
+            // READ RTC TIME
             // ================================
             DateTime rtcTime;
             if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -4129,7 +4124,7 @@ void rtcSyncTask(void *parameter) {
             }
             
             // ================================
-            // VALIDASI RTC TIME
+            // RTC TIME VALIDATION
             // ================================
             if (!isRTCTimeValid(rtcTime)) {
                 Serial.println("\n[RTC Sync] Skipped - RTC time invalid");
@@ -4141,7 +4136,7 @@ void rtcSyncTask(void *parameter) {
             }
             
             // ================================
-            // COMPARE DENGAN SYSTEM TIME
+            // COMPARE WITH SYSTEM TIME
             // ================================
             time_t systemTime;
             bool ntpSynced;
@@ -4189,7 +4184,7 @@ void rtcSyncTask(void *parameter) {
             }
             
             // ================================
-            // SYNC SYSTEM TIME DARI RTC
+            // SYNC SYSTEM TIME FROM RTC
             // ================================
             if (shouldSync) {
                 if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
@@ -4664,7 +4659,7 @@ void setup() {
   Serial.println("========================================\n");
 
   // ================================
-  // MATIKAN BACKLIGHT TOTAL DULU
+  // TURN OFF THE BACKLIGHT TOTALLY FIRST
   // ================================
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, LOW);
