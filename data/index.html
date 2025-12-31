@@ -2067,10 +2067,9 @@
 					setTimeout(() => {
 						loadWiFiConfig();
 					}, 1000);
-					setTimeout(() => {
-						btn.disabled = false;
-						btn.textContent = originalText;
-					}, 6000);
+					
+					btn.disabled = false;
+					btn.textContent = originalText;
 				} else {
 					throw new Error('Penyimpanan gagal');
 				}
@@ -2139,10 +2138,8 @@
 
 					setTimeout(() => loadWiFiConfig(), 1000);
 
-					setTimeout(() => {
-						btn.disabled = false;
-						btn.textContent = originalText;
-					}, 6000);
+					btn.disabled = false;
+					btn.textContent = originalText;
 
 					startCountdownPolling();
 				} else {
@@ -2204,10 +2201,8 @@
 
 					setTimeout(() => loadWiFiConfig(), 1000);
 
-					setTimeout(() => {
-						btn.disabled = false;
-						btn.textContent = originalText;
-					}, 6000);
+					btn.disabled = false;
+					btn.textContent = originalText;
 
 					startCountdownPolling();
 				} else {
@@ -2285,10 +2280,8 @@
 					if (response.ok) {
 						showToast('Pengaturan berhasil diatur ulang', 'success');
 
-						setTimeout(() => {
-							btn.disabled = false;
-							btn.textContent = originalText;
-						}, 6000);
+						btn.disabled = false;
+						btn.textContent = originalText;
 
 						startCountdownPolling();
 					} else {
@@ -2756,10 +2749,8 @@
 				if (response.ok) {
 					showToast('Perangkat sedang memulai ulang', 'success');
 
-					setTimeout(() => {
-						btn.disabled = false;
-						btn.textContent = originalText;
-					}, 6000);
+					btn.disabled = false;
+					btn.textContent = originalText;
 
 					startCountdownPolling();
 				} else {
