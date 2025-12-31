@@ -1623,7 +1623,7 @@ void setupServerRoutes() {
     Serial.println("Client IP: " + clientIP.toString());
     Serial.println("Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
     
-    startCountdown("device_restart", "Memulai ulang perangkat", 60);
+    startCountdown("device_restart", "Memulai Ulang Perangkat", 60);
     
     Serial.println("Countdown started");
     Serial.println("========================================\n");
@@ -1633,9 +1633,9 @@ void setupServerRoutes() {
     xTaskCreate(
       [](void* param) {
           for (int i = 60; i > 0; i--) {
-              if (i == 30) {
+              if (i == 40) {
                   Serial.println("\n========================================");
-                  Serial.println("SHUTTING DOWN WiFi (10 seconds left)");
+                  Serial.println("SHUTTING DOWN WiFi");
                   Serial.println("========================================");
                   
                   WiFi.mode(WIFI_OFF);
@@ -1917,7 +1917,7 @@ void setupServerRoutes() {
       Serial.println("  Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
 
       if (isLocalAP) {
-          startCountdown("ap_restart", "Memulai ulang Access Point", 60);
+          startCountdown("ap_restart", "Memulai Ulang Access Point", 60);
           Serial.println("Countdown started (client on local AP)");
       } else {
           Serial.println("Client on remote network - no countdown needed");
@@ -2761,7 +2761,7 @@ void setupServerRoutes() {
     Serial.println("Client IP: " + clientIP.toString());
     Serial.println("Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
 
-    startCountdown("factory_reset", "Pengaturan ulang perangkat", 60);
+    startCountdown("factory_reset", "Pengaturan Ulang Perangkat", 60);
     
     if (isLocalAP) {
         Serial.println("Countdown started (client will see countdown)");
@@ -2779,9 +2779,9 @@ void setupServerRoutes() {
     xTaskCreate(
       [](void* param) {
           for (int i = 60; i > 0; i--) {
-              if (i == 30) {
+              if (i == 40) {
                   Serial.println("\n========================================");
-                  Serial.println("SHUTTING DOWN WiFi (10 seconds left)");
+                  Serial.println("SHUTTING DOWN WiFi");
                   Serial.println("========================================");
                 
                   WiFi.mode(WIFI_OFF);
@@ -4488,9 +4488,9 @@ void restartAPTask(void *parameter) {
     Serial.println("========================================\n");
     
     for (int i = 60; i > 0; i--) {
-        if (i == 30) {
+        if (i == 40) {
             Serial.println("\n========================================");
-            Serial.println("SHUTTING DOWN AP (10 seconds left)");
+            Serial.println("SHUTTING DOWN AP");
             Serial.println("========================================");
             
             int clientsBefore = WiFi.softAPgetStationNum();
