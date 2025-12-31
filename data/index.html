@@ -518,11 +518,11 @@
 													<div class="grid-x grid-margin-x">
 														<div class="medium-12 small-12 large-12 cell">
 															<label>SSID WiFi Router</label>
-															<input type="text" id="wifiSSID" placeholder="Masukkan SSID WiFi">
+															<input type="text" id="wifiSSID" placeholder="Masukkan SSID WiFi" autocomplete="off" data-form="wifi-credentials">>
 														</div>
 														<div class="medium-12 small-12 large-12 cell">
 															<label>Password WiFi</label>
-															<input type="password" id="wifiPassword" placeholder="Masukkan password WiFi">
+															<input type="password" id="wifiPassword" placeholder="Masukkan password WiFi" autocomplete="new-password" data-form="wifi-credentials">
 														</div>
 														<div class="medium-6 small-6 large-6 cell">
 															<button class="button secondary expanded" onclick="setWiFi()"> Simpan </button>
@@ -3137,15 +3137,22 @@
 				handleTabClick('home');
 			}, 500);
 
+			const wifiCredInputs = document.querySelectorAll('input[data-form="wifi-credentials"]');
 			const apCredInputs = document.querySelectorAll('input[data-form="ap-credentials"]');
 			const networkConfigInputs = document.querySelectorAll('input[data-form="network-config"]');
-			
+
+			wifiCredInputs.forEach(input => {
+				input.addEventListener('change', function(e) {
+					e.stopPropagation();
+				});
+			});
+
 			apCredInputs.forEach(input => {
 				input.addEventListener('change', function(e) {
 					e.stopPropagation();
 				});
 			});
-			
+
 			networkConfigInputs.forEach(input => {
 				input.addEventListener('change', function(e) {
 					e.stopPropagation();
