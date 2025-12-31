@@ -4510,6 +4510,7 @@ void restartAPTask(void *parameter) {
     Serial.println("========================================\n");
     
     for (int i = 60; i > 0; i--) {
+      /*
         if (i == 50) {
             Serial.println("\n========================================");
             Serial.println("STOPPING WEB SERVER (50 seconds left)");
@@ -4521,6 +4522,7 @@ void restartAPTask(void *parameter) {
             Serial.println("Client countdown: CONTINUES (local calc)");
             Serial.println("========================================\n");
         }
+        */
         
         if (i == 30) {
             Serial.println("\n========================================");
@@ -4641,7 +4643,7 @@ void restartAPTask(void *parameter) {
         Serial.println("Rollback to: " + String(savedSSID));
         Serial.println("========================================\n");
     }
-    
+    /*
     Serial.println("========================================");
     Serial.println("RESTARTING WEB SERVER");
     Serial.println("========================================");
@@ -4651,6 +4653,7 @@ void restartAPTask(void *parameter) {
     
     Serial.println("Starting TCP listener on port 80...");
     server.begin();
+    */
     
     vTaskDelay(pdMS_TO_TICKS(1000));
     
