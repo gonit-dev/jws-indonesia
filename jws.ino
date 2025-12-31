@@ -4509,7 +4509,6 @@ void restartAPTask(void *parameter) {
     Serial.println("Countdown before AP shutdown");
     Serial.println("========================================\n");
     
-    // COUNTDOWN 60 DETIK
     for (int i = 60; i > 0; i--) {
         if (i == 50) {
             Serial.println("\n========================================");
