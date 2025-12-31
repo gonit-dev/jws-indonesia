@@ -1633,6 +1633,17 @@ void setupServerRoutes() {
     xTaskCreate(
       [](void* param) {
           for (int i = 60; i > 0; i--) {
+              if (i == 50) {
+                  Serial.println("\n========================================");
+                  Serial.println("STOPPING WEB SERVER (50 seconds left)");
+                  Serial.println("========================================");
+                  server.end();
+                  Serial.println("Web Server: STOPPED");
+                  Serial.println("Port 80: CLOSED");
+                  Serial.println("TCP Listener: DISABLED");
+                  Serial.println("Client countdown: CONTINUES (local calc)");
+                  Serial.println("========================================\n");
+              }
               if (i == 30) {
                   Serial.println("\n========================================");
                   Serial.println("SHUTTING DOWN WiFi (10 seconds left)");
@@ -2779,6 +2790,17 @@ void setupServerRoutes() {
     xTaskCreate(
       [](void* param) {
           for (int i = 60; i > 0; i--) {
+              if (i == 50) {
+                  Serial.println("\n========================================");
+                  Serial.println("STOPPING WEB SERVER (50 seconds left)");
+                  Serial.println("========================================");
+                  server.end();
+                  Serial.println("Web Server: STOPPED");
+                  Serial.println("Port 80: CLOSED");
+                  Serial.println("TCP Listener: DISABLED");
+                  Serial.println("Client countdown: CONTINUES (local calc)");
+                  Serial.println("========================================\n");
+              }
               if (i == 30) {
                   Serial.println("\n========================================");
                   Serial.println("SHUTTING DOWN WiFi (10 seconds left)");
@@ -4487,10 +4509,23 @@ void restartAPTask(void *parameter) {
     Serial.println("Countdown before AP shutdown");
     Serial.println("========================================\n");
     
+    // COUNTDOWN 60 DETIK
     for (int i = 60; i > 0; i--) {
+        if (i == 50) {
+            Serial.println("\n========================================");
+            Serial.println("STOPPING WEB SERVER (50 seconds left)");
+            Serial.println("========================================");
+            server.end();
+            Serial.println("Web Server: STOPPED");
+            Serial.println("Port 80: CLOSED");
+            Serial.println("TCP Listener: DISABLED");
+            Serial.println("Client countdown: CONTINUES (local calc)");
+            Serial.println("========================================\n");
+        }
+        
         if (i == 30) {
             Serial.println("\n========================================");
-            Serial.println("SHUTTING DOWN AP (10 seconds left)");
+            Serial.println("SHUTTING DOWN AP (30 seconds left)");
             Serial.println("========================================");
             
             int clientsBefore = WiFi.softAPgetStationNum();
@@ -4535,6 +4570,8 @@ void restartAPTask(void *parameter) {
         Serial.println("New configuration loaded:");
         Serial.println("  SSID: " + String(savedSSID));
         Serial.println("  IP: " + savedAPIP.toString());
+        Serial.println("  Gateway: " + savedGateway.toString());
+        Serial.println("  Subnet: " + savedSubnet.toString());
     } else {
         Serial.println("ERROR: Cannot load config - using defaults");
         strncpy(savedSSID, DEFAULT_AP_SSID, sizeof(savedSSID));
@@ -4544,9 +4581,14 @@ void restartAPTask(void *parameter) {
         savedSubnet = IPAddress(255, 255, 255, 0);
     }
 
-    WiFi.mode(WIFI_MODE_APSTA);
+    Serial.println("\n========================================");
+    Serial.println("STARTING NEW ACCESS POINT");
+    Serial.println("========================================");
     
-    Serial.println("\nConfiguring new AP network...");
+    WiFi.mode(WIFI_MODE_APSTA);
+    vTaskDelay(pdMS_TO_TICKS(500));
+    
+    Serial.println("Configuring new AP network...");
     WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
     vTaskDelay(pdMS_TO_TICKS(500));
     
@@ -4600,6 +4642,25 @@ void restartAPTask(void *parameter) {
         Serial.println("Rollback to: " + String(savedSSID));
         Serial.println("========================================\n");
     }
+    
+    Serial.println("========================================");
+    Serial.println("RESTARTING WEB SERVER");
+    Serial.println("========================================");
+    
+    Serial.println("Re-registering routes...");
+    setupServerRoutes();
+    
+    Serial.println("Starting TCP listener on port 80...");
+    server.begin();
+    
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    
+    Serial.println("");
+    Serial.println("Web Server: ACTIVE");
+    Serial.println("Port 80: LISTENING");
+    Serial.println("All routes: REGISTERED");
+    Serial.println("Ready to accept connections");
+    Serial.println("========================================\n");
     
     vTaskDelay(pdMS_TO_TICKS(2000));
     
