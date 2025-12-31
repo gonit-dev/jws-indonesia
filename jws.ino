@@ -1345,7 +1345,7 @@ bool initRTC() {
         Serial.println("\n*** RTC HARDWARE FAILURE ***");
         Serial.println("DS3231 chip is defective!");
         Serial.println("Time registers return garbage data");
-        Serial.println("Temperature sensor works: " + String(rtc.getTemperature()) + "°C");
+        Serial.println("Temperature sensor works: " + String(rtc.getTemperature()) + "Â°C");
         Serial.println("\nPossible causes:");
         Serial.println("  1. Counterfeit/clone DS3231 chip");
         Serial.println("  2. Crystal oscillator failure");
@@ -2962,11 +2962,11 @@ void setupServerRoutes() {
       html += ".icon{font-size:80px;margin-bottom:20px}";
       html += "</style></head><body>";
       html += "<div class='container'>";
-      html += "<div class='icon'>ðŸ”</div>";
+      html += "<div class='icon'>Ã°Å¸â€Â</div>";
       html += "<div class='error-code'>404</div>";
       html += "<h2>Page Not Found</h2>";
       html += "<p>The page you're looking for doesn't exist or you don't have permission to access it. Please return to the home page.</p>";
-      html += "<a href='/' class='btn'>â† Back to Home</a>";
+      html += "<a href='/' class='btn'>Ã¢â€ Â Back to Home</a>";
       html += "</div></body></html>";
 
       request -> send(404, "text/html", html);
