@@ -1633,10 +1633,10 @@ void setupServerRoutes() {
     xTaskCreate(
       [](void* param) {
           for (int i = 60; i > 0; i--) {
-              if (i == 40) {
+              if (i == 35) {
                   Serial.println("\n========================================");
                   Serial.println("SHUTTING DOWN WiFi");
-                  Serial.println("========================================");
+                  Serial.println("==========================================");
                   
                   WiFi.mode(WIFI_OFF);
                   delay(500);
@@ -2779,7 +2779,7 @@ void setupServerRoutes() {
     xTaskCreate(
       [](void* param) {
           for (int i = 60; i > 0; i--) {
-              if (i == 40) {
+              if (i == 35) {
                   Serial.println("\n========================================");
                   Serial.println("SHUTTING DOWN WiFi");
                   Serial.println("========================================");
@@ -4488,7 +4488,7 @@ void restartAPTask(void *parameter) {
     Serial.println("========================================\n");
     
     for (int i = 60; i > 0; i--) {
-        if (i == 40) {
+        if (i == 35) {
             Serial.println("\n========================================");
             Serial.println("SHUTTING DOWN AP");
             Serial.println("========================================");
