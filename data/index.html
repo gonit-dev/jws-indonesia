@@ -1517,22 +1517,10 @@
 		}
 		function stopCountdownDisplay() {
 			if (!isCountdownActive) return;
-			
+
 			stopCountdownPolling();
-			
-			const loadingBar = document.getElementById('countdownLoading');
-			if (loadingBar) {
-				loadingBar.style.display = 'none';
-			}
-			
-			document.body.classList.remove('countdown-active');
+			forceRedirect();
 			isCountdownActive = false;
-			
-			if (document.body.classList.contains('loading')) return;
-			
-			setTimeout(() => {
-				forceRedirect();
-			}, 1000);
 		}
 		// ================================
 		// FORCE REDIRECT - MERCUSYS STYLE
