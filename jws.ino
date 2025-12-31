@@ -70,7 +70,7 @@
 #define WIFI_TASK_STACK_SIZE 3072      // Event-driven + reconnect (small headroom)
 #define NTP_TASK_STACK_SIZE 4096       // Hanya NTP sync
 #define WEB_TASK_STACK_SIZE 5120       // AsyncWebServer + concurrent requests
-#define PRAYER_TASK_STACK_SIZE 6144    // HTTP + JSON parsing
+#define PRAYER_TASK_STACK_SIZE 16384   // HTTP + JSON parsing
 #define RTC_TASK_STACK_SIZE 2048       // Simple I2C
 #define CLOCK_TASK_STACK_SIZE 2048     // Simple time increment
 
@@ -682,9 +682,15 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
     return;
   }
 
-  // ============================================
-  // TIME VALIDATION BEFORE API REQUEST
-  // ============================================
+  UBaseType_t stackBefore = uxTaskGetStackHighWaterMark(NULL);
+  Serial.printf("\n[Prayer API] Stack available: %d bytes\n", stackBefore * 4);
+  
+  if (stackBefore < 2000) {
+    Serial.println("ERROR: Insufficient stack for HTTP request!");
+    Serial.println("Aborting prayer times update to prevent crash");
+    return;
+  }
+
   time_t now_t;
   if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
     now_t = timeConfig.currentTime;
@@ -695,29 +701,19 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
 
   if (now_t < 946684800) {
     Serial.println("\nPRAYER TIMES UPDATE BLOCKED");
-    Serial.println("========================================");
-    Serial.println("Reason: Invalid system time detected");
-    Serial.printf("Current timestamp: %ld\n", now_t);
-    Serial.println("This would send wrong date to API");
-    Serial.println("Waiting for NTP sync to fix time...");
-    Serial.println("========================================\n");
+    Serial.println("Reason: Invalid system time");
     return;
   }
 
   char dateStr[12];
-  sprintf(dateStr, "%02d-%02d-%04d",
-          day(now_t),
-          month(now_t),
-          year(now_t));
+  sprintf(dateStr, "%02d-%02d-%04d", day(now_t), month(now_t), year(now_t));
 
   int currentMethod = methodConfig.methodId;
+  String url = "http://api.aladhan.com/v1/timings/" + String(dateStr) + 
+               "?latitude=" + lat + "&longitude=" + lon + "&method=" + String(currentMethod);
 
-  String url = "http://api.aladhan.com/v1/timings/" + String(dateStr) + "?latitude=" + lat + "&longitude=" + lon + "&method=" + String(currentMethod);
-
-  Serial.println("\nFetching prayer times by coordinates...");
+  Serial.println("\nFetching prayer times...");
   Serial.println("Date: " + String(dateStr));
-  Serial.println("Lat: " + lat + ", Lon: " + lon);
-  Serial.println("Method: " + String(currentMethod) + " (" + methodConfig.methodName + ")");
   Serial.println("URL: " + url);
 
   HTTPClient http;
@@ -727,14 +723,21 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
   http.begin(client, url);
   http.setTimeout(15000);
 
+  esp_task_wdt_reset();
+
   int httpResponseCode = http.GET();
   Serial.println("Response code: " + String(httpResponseCode));
 
   if (httpResponseCode == 200) {
     String payload = http.getString();
+    
+    UBaseType_t stackAfterHTTP = uxTaskGetStackHighWaterMark(NULL);
+    Serial.printf("[Prayer API] Stack after HTTP: %d bytes\n", stackAfterHTTP * 4);
 
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, payload);
+
+    esp_task_wdt_reset();
 
     if (!error) {
       JsonObject timings = doc["data"]["timings"];
@@ -748,35 +751,13 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
       String tempImsak = timings["Imsak"].as<String>().substring(0, 5);
 
       bool allValid = true;
-
-      if (tempSubuh.length() != 5 || tempSubuh.indexOf(':') != 2) {
-        Serial.println("Invalid Subuh time format");
-        allValid = false;
-      }
-      if (tempTerbit.length() != 5 || tempTerbit.indexOf(':') != 2) {
-        Serial.println("Invalid Terbit time format");
-        allValid = false;
-      }
-      if (tempZuhur.length() != 5 || tempZuhur.indexOf(':') != 2) {
-        Serial.println("Invalid Zuhur time format");
-        allValid = false;
-      }
-      if (tempAshar.length() != 5 || tempAshar.indexOf(':') != 2) {
-        Serial.println("Invalid Ashar time format");
-        allValid = false;
-      }
-      if (tempMaghrib.length() != 5 || tempMaghrib.indexOf(':') != 2) {
-        Serial.println("Invalid Maghrib time format");
-        allValid = false;
-      }
-      if (tempIsya.length() != 5 || tempIsya.indexOf(':') != 2) {
-        Serial.println("Invalid Isya time format");
-        allValid = false;
-      }
-      if (tempImsak.length() != 5 || tempImsak.indexOf(':') != 2) {
-        Serial.println("Invalid Imsak time format");
-        allValid = false;
-      }
+      if (tempSubuh.length() != 5 || tempSubuh.indexOf(':') != 2) allValid = false;
+      if (tempTerbit.length() != 5 || tempTerbit.indexOf(':') != 2) allValid = false;
+      if (tempZuhur.length() != 5 || tempZuhur.indexOf(':') != 2) allValid = false;
+      if (tempAshar.length() != 5 || tempAshar.indexOf(':') != 2) allValid = false;
+      if (tempMaghrib.length() != 5 || tempMaghrib.indexOf(':') != 2) allValid = false;
+      if (tempIsya.length() != 5 || tempIsya.indexOf(':') != 2) allValid = false;
+      if (tempImsak.length() != 5 || tempImsak.indexOf(':') != 2) allValid = false;
 
       if (allValid) {
         prayerConfig.subuhTime = tempSubuh;
@@ -787,44 +768,30 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
         prayerConfig.isyaTime = tempIsya;
         prayerConfig.imsakTime = tempImsak;
 
-        Serial.println("\nPrayer times updated successfully:");
-        Serial.println("Method: " + methodConfig.methodName);
-        Serial.println("Imsak: " + prayerConfig.imsakTime);
-        Serial.println("Subuh: " + prayerConfig.subuhTime);
-        Serial.println("Terbit: " + prayerConfig.terbitTime);
-        Serial.println("Zuhur: " + prayerConfig.zuhurTime);
-        Serial.println("Ashar: " + prayerConfig.asharTime);
-        Serial.println("Maghrib: " + prayerConfig.maghribTime);
-        Serial.println("Isya: " + prayerConfig.isyaTime);
-
+        Serial.println("\nPrayer times updated successfully");
         savePrayerTimes();
 
         DisplayUpdate update;
         update.type = DisplayUpdate::PRAYER_UPDATE;
         xQueueSend(displayQueue, &update, pdMS_TO_TICKS(100));
       } else {
-        Serial.println("Invalid prayer times data - keeping existing times");
+        Serial.println("Invalid prayer times data");
       }
     } else {
       Serial.print("JSON parse error: ");
       Serial.println(error.c_str());
-      Serial.println("Keeping existing prayer times");
     }
   } else {
     Serial.printf("HTTP request failed: %d\n", httpResponseCode);
-    Serial.println("Keeping existing prayer times");
-
-    if (httpResponseCode < 0) {
-      Serial.println("Network error (timeout/connection failed)");
-    } else if (httpResponseCode == 404) {
-      Serial.println("API endpoint not found");
-    } else if (httpResponseCode >= 500) {
-      Serial.println("Server error");
-    }
   }
 
   http.end();
   client.stop();
+  
+  // FINAL STACK CHECK
+  UBaseType_t stackAfter = uxTaskGetStackHighWaterMark(NULL);
+  Serial.printf("[Prayer API] Stack after cleanup: %d bytes\n", stackAfter * 4);
+  
   vTaskDelay(pdMS_TO_TICKS(100));
 }
 
@@ -3869,7 +3836,7 @@ void prayerTask(void *parameter) {
     Serial.println("\n========================================");
     Serial.println("PRAYER TASK STARTED");
     Serial.println("========================================");
-    Serial.println("Stack Size: 8192 bytes");
+    Serial.println("Stack Size: 12288 bytes");
     Serial.println("Waiting for triggers...");
     Serial.println("========================================\n");
     
@@ -3883,12 +3850,19 @@ void prayerTask(void *parameter) {
     while (true) {
         esp_task_wdt_reset();
         
-        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(1000));
+        static unsigned long lastStackReport = 0;
         
-        UBaseType_t stackRemaining = uxTaskGetStackHighWaterMark(NULL);
-        if (stackRemaining < 1000) {
-            Serial.printf("⚠️ WARNING: Prayer Task stack low! %d bytes remaining\n", stackRemaining * 4);
+        if (millis() - lastStackReport > 60000) {
+            lastStackReport = millis();
+            UBaseType_t stackRemaining = uxTaskGetStackHighWaterMark(NULL);
+            Serial.printf("[Prayer Task] Stack free: %d bytes\n", stackRemaining * 4);
+            
+            if (stackRemaining < 1000) {
+                Serial.println("WARNING: Prayer Task stack critically low!");
+            }
         }
+        
+        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(1000));
         
         if (needPrayerUpdate && pendingPrayerLat.length() > 0 && pendingPrayerLon.length() > 0) {
             
@@ -4655,7 +4629,7 @@ void setup() {
   Serial.println("ESP32 Islamic Prayer Clock");
   Serial.println("LVGL 9.2.0 + FreeRTOS");
   Serial.println("CONCURRENT ACCESS OPTIMIZED");
-  Serial.println("VERSION 2.1 - MULTI-CLIENT");
+  Serial.println("VERSION 2.2 - STACK OPTIMIZED");
   Serial.println("========================================\n");
 
   // ================================
@@ -4913,7 +4887,9 @@ void setup() {
   // ================================
   // CREATE FREERTOS TASKS
   // ================================
-  Serial.println("Starting FreeRTOS Tasks...");
+  Serial.println("\n========================================");
+  Serial.println("STARTING FREERTOS TASKS");
+  Serial.println("========================================");
 
   xTaskCreatePinnedToCore(
     uiTask,
@@ -4924,7 +4900,7 @@ void setup() {
     &uiTaskHandle,
     1  // Core 1
   );
-  Serial.println("UI Task (Core 1)");
+  Serial.printf("UI Task (Core 1) - Stack: %d bytes\n", UI_TASK_STACK_SIZE);
 
   xTaskCreatePinnedToCore(
     wifiTask,
@@ -4935,7 +4911,7 @@ void setup() {
     &wifiTaskHandle,
     0  // Core 0
   );
-  Serial.println("WiFi Task (Core 0)");
+  Serial.printf("WiFi Task (Core 0) - Stack: %d bytes\n", WIFI_TASK_STACK_SIZE);
 
   xTaskCreatePinnedToCore(
     ntpTask,
@@ -4946,7 +4922,7 @@ void setup() {
     &ntpTaskHandle,
     0  // Core 0
   );
-  Serial.println("NTP Task (Core 0)");
+  Serial.printf("NTP Task (Core 0) - Stack: %d bytes\n", NTP_TASK_STACK_SIZE);
 
   xTaskCreatePinnedToCore(
     webTask,
@@ -4957,7 +4933,7 @@ void setup() {
     &webTaskHandle,
     0  // Core 0
   );
-  Serial.println("Web Task (Core 0)");
+  Serial.printf("Web Task (Core 0) - Stack: %d bytes\n", WEB_TASK_STACK_SIZE);
 
   xTaskCreatePinnedToCore(
     prayerTask,
@@ -4968,11 +4944,11 @@ void setup() {
     &prayerTaskHandle,
     0  // Core 0
   );
-  Serial.println("Prayer Task (Core 0)");
+  Serial.printf("Prayer Task (Core 0) - Stack: %d bytes\n", PRAYER_TASK_STACK_SIZE);
 
   if (prayerTaskHandle) {
       esp_task_wdt_add(prayerTaskHandle);
-      Serial.println("Prayer Task WDT registered");
+      Serial.println("WDT registered");
   }
 
   xTaskCreatePinnedToCore(
@@ -4984,7 +4960,7 @@ void setup() {
     NULL,
     0  // Core 0
   );
-  Serial.println("Clock Task (Core 0)");
+  Serial.printf("Clock Task (Core 0) - Stack: %d bytes\n", CLOCK_TASK_STACK_SIZE);
 
   // ================================
   // RTC SYNC TASK
@@ -4999,29 +4975,131 @@ void setup() {
       &rtcTaskHandle,
       0  // Core 0
     );
-    Serial.println("RTC Sync Task (Core 0)");
+    Serial.printf("RTC Sync Task (Core 0) - Stack: %d bytes\n", RTC_TASK_STACK_SIZE);
   }
+
+  // ================================
+  // AUTO-RECOVERY TASK FOR PRAYER
+  // ================================
+  xTaskCreate(
+    [](void* param) {
+      const TickType_t checkInterval = pdMS_TO_TICKS(30000);  // Check every 30s
+      
+      Serial.println("Prayer Watchdog Task - Monitoring every 30s");
+      
+      while (true) {
+        vTaskDelay(checkInterval);
+        
+        if (prayerTaskHandle != NULL) {
+          eTaskState state = eTaskGetState(prayerTaskHandle);
+          
+          if (state == eDeleted || state == eInvalid) {
+            Serial.println("\n========================================");
+            Serial.println("CRITICAL: PRAYER TASK CRASHED");
+            Serial.println("========================================");
+            Serial.println("Detected state: " + String(state == eDeleted ? "DELETED" : "INVALID"));
+            Serial.println("Action: Auto-restarting task...");
+            Serial.println("========================================");
+            
+            // Recreate task
+            xTaskCreatePinnedToCore(
+              prayerTask,
+              "Prayer",
+              PRAYER_TASK_STACK_SIZE,
+              NULL,
+              PRAYER_TASK_PRIORITY,
+              &prayerTaskHandle,
+              0
+            );
+            
+            if (prayerTaskHandle) {
+              esp_task_wdt_add(prayerTaskHandle);
+              Serial.println("\nPrayer Task restarted successfully");
+              Serial.println("Stack: " + String(PRAYER_TASK_STACK_SIZE) + " bytes");
+              Serial.println("WDT: Re-registered");
+              Serial.println("========================================\n");
+            } else {
+              Serial.println("\nFAILED to restart Prayer Task!");
+              Serial.println("System may be unstable");
+              Serial.println("========================================\n");
+            }
+          }
+        } else {
+          // Task handle is NULL - try to create it
+          Serial.println("\nWARNING: Prayer Task handle is NULL");
+          Serial.println("Attempting to create task...");
+          
+          xTaskCreatePinnedToCore(
+            prayerTask,
+            "Prayer",
+            PRAYER_TASK_STACK_SIZE,
+            NULL,
+            PRAYER_TASK_PRIORITY,
+            &prayerTaskHandle,
+            0
+          );
+          
+          if (prayerTaskHandle) {
+            esp_task_wdt_add(prayerTaskHandle);
+            Serial.println("Prayer Task created successfully\n");
+          }
+        }
+      }
+    },
+    "PrayerWatchdog",
+    2048,
+    NULL,
+    1,  // Low priority
+    NULL
+  );
 
   vTaskDelay(pdMS_TO_TICKS(500));
 
   // ================================
   // REGISTER TASKS TO WATCHDOG
   // ================================
+  Serial.println("\nRegistering tasks to watchdog:");
+  
   if (wifiTaskHandle) {
     esp_task_wdt_add(wifiTaskHandle);
-    Serial.println("WiFi Task WDT");
+    Serial.println("  WiFi Task");
   }
   if (webTaskHandle) {
     esp_task_wdt_add(webTaskHandle);
-    Serial.println("Web Task WDT");
+    Serial.println("  Web Task");
   }
-
   if (ntpTaskHandle) {
     esp_task_wdt_add(ntpTaskHandle);
-    Serial.println("NTP Task WDT");
+    Serial.println("  NTP Task");
   }
 
-  Serial.println("All tasks started\n");
+  Serial.println("========================================\n");
+
+  // ================================
+  // MEMORY & STACK REPORT
+  // ================================
+  Serial.println("========================================");
+  Serial.println("MEMORY REPORT");
+  Serial.println("========================================");
+  
+  size_t freeHeap = ESP.getFreeHeap();
+  size_t totalHeap = ESP.getHeapSize();
+  size_t usedHeap = totalHeap - freeHeap;
+  
+  Serial.printf("Total Heap:  %d bytes (%.2f KB)\n", totalHeap, totalHeap / 1024.0);
+  Serial.printf("Used Heap:   %d bytes (%.2f KB)\n", usedHeap, usedHeap / 1024.0);
+  Serial.printf("Free Heap:   %d bytes (%.2f KB)\n", freeHeap, freeHeap / 1024.0);
+  Serial.printf("Usage:       %.1f%%\n", (usedHeap * 100.0) / totalHeap);
+  
+  Serial.println("\nTask Stack Allocation:");
+  uint32_t totalStack = UI_TASK_STACK_SIZE + WIFI_TASK_STACK_SIZE + 
+                        NTP_TASK_STACK_SIZE + WEB_TASK_STACK_SIZE + 
+                        PRAYER_TASK_STACK_SIZE + CLOCK_TASK_STACK_SIZE;
+  if (rtcAvailable) totalStack += RTC_TASK_STACK_SIZE;
+  
+  Serial.printf("Total:       %d bytes (%.2f KB)\n", totalStack, totalStack / 1024.0);
+  Serial.printf("Largest:     Prayer (%d bytes)\n", PRAYER_TASK_STACK_SIZE);
+  Serial.println("========================================\n");
 
   // ================================
   // STARTUP COMPLETE
@@ -5032,6 +5110,8 @@ void setup() {
   Serial.println("Multi-client concurrent access enabled");
   Serial.println("WiFi sleep disabled for better response");
   Serial.println("Router optimization active (keep-alive)");
+  Serial.println("Prayer Task auto-recovery enabled");
+  Serial.println("Stack monitoring active");
   Serial.println("========================================\n");
 
   if (wifiConfig.routerSSID.length() > 0) {
@@ -5050,6 +5130,10 @@ void setup() {
   }
 
   Serial.println("\nBoot complete - Ready for connections");
+  Serial.println("Monitoring logs will appear below:");
+  Serial.println("  - Stack usage reports every 60s");
+  Serial.println("  - Prayer Task health checks every 30s");
+  Serial.println("  - Memory reports every 30s (from webTask)");
   Serial.println("========================================\n");
 }
 
