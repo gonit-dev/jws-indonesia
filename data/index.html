@@ -1267,16 +1267,17 @@
 		// COUNTDOWN MANAGER - SERVER-DRIVEN
 		// ================================
 		let isCountdownActive = false;
-		let countdownEndTime = 0; // Timestamp kapan countdown selesai
-		let countdownReason = ""; // Reason dari server
-		let countdownMessage = ""; // Message dari server
-		let countdownTotalSeconds = 0; // Total durasi countdown
+		let countdownEndTime = 0;
+		let countdownReason = "";
+		let countdownMessage = "";
+		let countdownTotalSeconds = 0;
 		let countdownCheckInterval = null;
 		let lastKnownCountdownState = null;
 		let lastSuccessfulPoll = Date.now();
 		const POLL_TIMEOUT_MS = 10000;
 
-		// Start polling countdown status
+		let countdownUIInterval = null;
+
 		function startCountdownPolling() {
 			if (countdownCheckInterval) {
 				clearInterval(countdownCheckInterval);
@@ -1294,20 +1295,30 @@
 				}
 			}, 1000);
 		}
+
 		function stopCountdownPolling() {
 			if (countdownCheckInterval) {
 				clearInterval(countdownCheckInterval);
 				countdownCheckInterval = null;
 			}
+			if (countdownUIInterval) {
+				clearInterval(countdownUIInterval);
+				countdownUIInterval = null;
+			}
 		}
+
 		async function checkCountdownStatus() {
 			try {
 				const controller = new AbortController();
-				const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 detik timeout
+				const timeoutId = setTimeout(() => controller.abort(), 2000);
 				
 				const response = await fetch('/api/countdown', {
 					signal: controller.signal,
-					cache: 'no-cache'
+					cache: 'no-cache',
+					headers: {
+						'Cache-Control': 'no-cache',
+						'Pragma': 'no-cache'
+					}
 				});
 				
 				clearTimeout(timeoutId);
@@ -1319,14 +1330,13 @@
 				const data = await response.json();
 				
 				lastSuccessfulPoll = Date.now();
+				lastKnownCountdownState = data;
 				
-				// Server mengatakan countdown aktif
 				if (data.active && data.remaining > 0) {
-					lastKnownCountdownState = data;
 					
 					if (!isCountdownActive) {
 						const clientNow = Date.now();
-						const bufferSeconds = 2;
+						const bufferSeconds = 1;
 						countdownEndTime = clientNow + ((data.remaining + bufferSeconds) * 1000);
 						
 						countdownReason = data.reason;
@@ -1334,6 +1344,16 @@
 						countdownTotalSeconds = data.total || data.remaining;
 						
 						startCountdownDisplay(data);
+						startLocalCountdownTicker();
+					} else {
+						const serverRemaining = data.remaining;
+						const localRemaining = Math.max(0, Math.floor((countdownEndTime - Date.now()) / 1000));
+						const drift = Math.abs(serverRemaining - localRemaining);
+						
+						if (drift > 3) {
+							const clientNow = Date.now();
+							countdownEndTime = clientNow + (serverRemaining * 1000);
+						}
 					}
 				} 
 				else if (data.active === false && isCountdownActive) {
@@ -1342,7 +1362,6 @@
 				}
 				
 			} catch (error) {
-				
 				const timeSinceLastPoll = Date.now() - lastSuccessfulPoll;
 				
 				if (timeSinceLastPoll > POLL_TIMEOUT_MS) {
@@ -1352,19 +1371,27 @@
 				} else {
 				}
 			}
-			
-			if (isCountdownActive && countdownEndTime > 0) {
-				const now = Date.now();
-				const remaining = Math.max(0, Math.floor((countdownEndTime - now) / 1000));
-				
-				// Update display
-				updateCountdownDisplay(remaining, countdownMessage);
-				
-				if (remaining <= 0) {
-					stopCountdownDisplay();
-				}
-			}
 		}
+
+		function startLocalCountdownTicker() {
+			if (countdownUIInterval) {
+				clearInterval(countdownUIInterval);
+			}
+			
+			countdownUIInterval = setInterval(() => {
+				if (isCountdownActive && countdownEndTime > 0) {
+					const now = Date.now();
+					const remaining = Math.max(0, Math.floor((countdownEndTime - now) / 1000));
+					
+					updateCountdownDisplay(remaining, countdownMessage);
+					
+					if (remaining <= 0) {
+						stopCountdownDisplay();
+					}
+				}
+			}, 100);
+		}
+
 		function startCountdownDisplay(data) {
 			if (isCountdownActive) return;
 			
@@ -1392,6 +1419,7 @@
 			toast.className = 'toast callout warning show';
 			toast.style.zIndex = '999999';			
 		}
+
 		function updateCountdownDisplay(remaining, message) {
 			const toast = document.getElementById('toast');
 			
@@ -1403,7 +1431,7 @@
 				
 				let displayMessage = `${message} - ${remaining} detik`;
 				
-				if (isOffline) {
+				if (isOffline && remaining > 10) {
 				}
 				
 				toast.textContent = displayMessage;
@@ -1419,6 +1447,7 @@
 				toast.style.zIndex = '999999';
 			}
 		}
+
 		function stopCountdownDisplay() {
 			if (!isCountdownActive) return;
 			
@@ -1455,9 +1484,6 @@
 			const currentIP = window.location.hostname;
 			const isLocalAP = (currentIP.startsWith('192.168.4.') || currentIP === '192.168.4.1');
 						
-			// ================================
-			// DETERMINE URL BASED ON REASON
-			// ================================
 			if (countdownReason === 'factory_reset') {
 				if (isLocalAP) {
 					targetURL = 'http://192.168.4.1';
@@ -2118,9 +2144,7 @@
 						btn.textContent = originalText;
 					}, 6000);
 
-					setTimeout(() => {
-						startCountdownPolling();
-					}, 7000);
+					startCountdownPolling();
 				} else {
 					return response.text().then(text => { throw new Error(text); });
 				}
@@ -2185,9 +2209,7 @@
 						btn.textContent = originalText;
 					}, 6000);
 
-					setTimeout(() => {
-						startCountdownPolling();
-					}, 7000);
+					startCountdownPolling();
 				} else {
 					return response.text().then(text => { throw new Error(text); });
 				}
@@ -2268,9 +2290,7 @@
 							btn.textContent = originalText;
 						}, 6000);
 
-						setTimeout(() => {
-							startCountdownPolling();
-						}, 7000);
+						startCountdownPolling();
 					} else {
 						throw new Error('Pengaturan ulang gagal');
 					}
@@ -2741,10 +2761,7 @@
 						btn.textContent = originalText;
 					}, 6000);
 
-					// GANTI: Start polling dari server
-					setTimeout(() => {
-						startCountdownPolling();
-					}, 7000);
+					startCountdownPolling();
 				} else {
 					throw new Error('Mulai ulang gagal');
 				}
@@ -3000,7 +3017,7 @@
 
 				await cssLoaded;
 				await updateProgress(50, 'Menyiapkan tampilan...');
-				
+
 				if (status) status.textContent = 'Mengecek status server...';
 				await updateProgress(60, 'Mengecek status server...');
 				
@@ -3014,7 +3031,15 @@
 						
 						LoadingManager.completeLoading();
 						
+						// Start countdown dengan data dari server
+						const clientNow = Date.now();
+						countdownEndTime = clientNow + (countdownData.remaining * 1000);
+						countdownReason = countdownData.reason;
+						countdownMessage = countdownData.message;
+						countdownTotalSeconds = countdownData.total || countdownData.remaining;
+						
 						startCountdownDisplay(countdownData);
+						startLocalCountdownTicker();
 						startCountdownPolling();
 						
 						return;
