@@ -2746,7 +2746,7 @@ void setupServerRoutes() {
     // UPDATE DISPLAY & DISCONNECT WIFI
     // ============================================
     updateCityDisplay();
-    WiFi.disconnect(true);
+    updatePrayerDisplay();
 
     // ============================================
     // ACCESS TYPE DETECTION (Local AP vs Remote)
@@ -2776,12 +2776,12 @@ void setupServerRoutes() {
     Serial.println("========================================");
     Serial.println("Client IP: " + clientIP.toString());
     Serial.println("Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
-
-    startCountdown("factory_reset", "Pengaturan Ulang Perangkat", 60);
     
     if (isLocalAP) {
+        startCountdown("factory_reset", "Pengaturan Ulang Perangkat", 60);
         Serial.println("Countdown started (client will see countdown)");
     } else {
+        startCountdown("factory_reset", "Pengaturan Ulang Perangkat", 60);
         Serial.println("Countdown started (remote client will lose connection)");
     }
     Serial.println("Device will restart in 60 seconds...");
@@ -2799,7 +2799,9 @@ void setupServerRoutes() {
                   Serial.println("\n========================================");
                   Serial.println("SHUTTING DOWN WiFi");
                   Serial.println("========================================");
-                
+
+                  WiFi.disconnect(true);
+                  delay(500);
                   WiFi.mode(WIFI_OFF);
                   delay(500);
                   
