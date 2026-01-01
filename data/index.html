@@ -1005,19 +1005,15 @@
 						<h6>
 							<strong>GONIT: GLOBAL NETWORK IDENTIFICATION TECHNOLOGY</strong>
 						</h6>
-						<span id="tahun"></span>
+						<span id="tahun">
+							<script>document.write(new Date().getFullYear() === 2025 ? '2025' : '2025 - ' + new Date().getFullYear())</script>
+						</span>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
 	<script>
-		const tahunAwal = 2025;
-		const tahunSekarang = new Date().getFullYear();
-
-		document.getElementById("tahun").textContent =
-			tahunAwal + " - " + tahunSekarang;
-
 		// ================================
 		// LOADING MANAGER
 		// ================================
