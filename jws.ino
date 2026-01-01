@@ -416,20 +416,33 @@ void restartAPTask(void *parameter);
 // Display & UI Functions
 // ============================================
 void updateCityDisplay() {
+  char displayText[64] = "--";
+  
   if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-    String displayText = "--";
-
     if (prayerConfig.selectedCity.length() > 0) {
-      displayText = prayerConfig.selectedCity;
-
-      displayText.replace("Kabupaten ", "Kab ");
-      displayText.replace("Kabupaten", "Kab");
-      displayText.replace("District ", "Dist ");
-      displayText.replace("District", "Dist");
+      size_t len = prayerConfig.selectedCity.length();
+      if (len >= sizeof(displayText)) {
+        len = sizeof(displayText) - 1;
+      }
+      
+      strncpy(displayText, prayerConfig.selectedCity.c_str(), len);
+      displayText[len] = '\0';
+      
+      char* pos = strstr(displayText, "Kabupaten ");
+      if (pos) {
+        memmove(pos + 4, pos + 10, strlen(pos + 10) + 1);
+        memcpy(pos, "Kab ", 4);
+      }
+      
+      pos = strstr(displayText, "District ");
+      if (pos) {
+        memmove(pos + 5, pos + 9, strlen(pos + 9) + 1);
+        memcpy(pos, "Dist ", 5);
+      }
     }
 
     if (objects.city_time) {
-      lv_label_set_text(objects.city_time, displayText.c_str());
+      lv_label_set_text(objects.city_time, displayText);
     }
 
     xSemaphoreGive(settingsMutex);
@@ -1191,22 +1204,26 @@ void saveBuzzerConfig() {
 }
 
 void saveCitySelection() {
-  if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
-    fs::File file = LittleFS.open("/city_selection.txt", "w");
-    if (file) {
-      file.println(prayerConfig.selectedCity);
-      file.println(prayerConfig.selectedCityName);
-      file.println(prayerConfig.latitude);
-      file.println(prayerConfig.longitude);
-      file.flush();
-      file.close();
-      Serial.println("City selection saved with coordinates");
-      Serial.println("Lat: " + prayerConfig.latitude + ", Lon: " + prayerConfig.longitude);
+    if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+        fs::File file = LittleFS.open("/city_selection.txt", "w");
+        if (file) {
+            file.println(prayerConfig.selectedCity);
+            file.println(prayerConfig.selectedCityName);
+            file.println(prayerConfig.latitude);
+            file.println(prayerConfig.longitude);
+            file.flush();
+            file.close();
+        }
+        xSemaphoreGive(settingsMutex);
     }
-    xSemaphoreGive(settingsMutex);
-  }
 
-  updateCityDisplay();
+    vTaskDelay(pdMS_TO_TICKS(50));
+    
+    if (displayQueue != NULL) {
+        DisplayUpdate update;
+        update.type = DisplayUpdate::PRAYER_UPDATE;
+        xQueueSend(displayQueue, &update, 0);
+    }
 }
 
 void loadCitySelection() {
@@ -2203,28 +2220,42 @@ void setupServerRoutes() {
   });
 
   server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest * request) {
-      Serial.println("\n========================================");
-      Serial.println("Save City/District");
-      Serial.println("========================================");
-
-      if (!request -> hasParam("city", true)) {
-          request -> send(400, "application/json", "{\"error\":\"Missing city parameter\"}");
+      if (!request->hasParam("city", true)) {
+          request->send(400, "application/json", "{\"error\":\"Missing city parameter\"}");
           return;
       }
 
-      String cityApi = request -> getParam("city", true) -> value();
-      String cityName = request -> hasParam("cityName", true) ? request -> getParam("cityName", true) -> value() : cityApi;
-      String lat = request -> hasParam("lat", true) ? request -> getParam("lat", true) -> value() : "";
-      String lon = request -> hasParam("lon", true) ? request -> getParam("lon", true) -> value() : "";
+      String cityApi = request->getParam("city", true)->value();
+      String cityName = request->hasParam("cityName", true) 
+          ? request->getParam("cityName", true)->value() 
+          : cityApi;
+      String lat = request->hasParam("lat", true) 
+          ? request->getParam("lat", true)->value() 
+          : "";
+      String lon = request->hasParam("lon", true) 
+          ? request->getParam("lon", true)->value() 
+          : "";
 
-      cityApi.trim();
-      cityName.trim();
-      lat.trim();
-      lon.trim();
+      // Bounds checking
+      if (cityApi.length() > 100) cityApi = cityApi.substring(0, 100);
+      if (cityName.length() > 100) cityName = cityName.substring(0, 100);
+      if (lat.length() > 20) lat = lat.substring(0, 20);
+      if (lon.length() > 20) lon = lon.substring(0, 20);
 
-      Serial.println("City: " + cityApi);
-      Serial.println("Lat: " + lat + ", Lon: " + lon);
+      bool willUpdate = (WiFi.status() == WL_CONNECTED && lat.length() > 0 && lon.length() > 0);
 
+      char response[256];
+      snprintf(response, sizeof(response),
+          "{\"success\":true,\"city\":\"%s\",\"updating\":%s}",
+          cityName.c_str(),
+          willUpdate ? "true" : "false"
+      );
+
+      request->send(200, "application/json", response);
+
+      vTaskDelay(pdMS_TO_TICKS(50));
+
+      // Baru update internal state
       if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
           prayerConfig.selectedCity = cityApi;
           prayerConfig.selectedCityName = cityName;
@@ -2234,21 +2265,9 @@ void setupServerRoutes() {
       }
 
       saveCitySelection();
-      updateCityDisplay();
-
-      bool willUpdate = (WiFi.status() == WL_CONNECTED && lat.length() > 0 && lon.length() > 0);
-
-      char responseBuffer[256];
-      snprintf(responseBuffer, sizeof(responseBuffer),
-          "{\"success\":true,\"city\":\"%s\",\"updating\":%s}",
-          cityName.c_str(),
-          willUpdate ? "true" : "false"
-      );
-
-      request -> send(200, "application/json", responseBuffer);
 
       if (willUpdate) {
-          Serial.println("Triggering background prayer times update...");
+          vTaskDelay(pdMS_TO_TICKS(100));
           
           if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
               needPrayerUpdate = true;
@@ -2258,12 +2277,9 @@ void setupServerRoutes() {
               
               if (prayerTaskHandle != NULL) {
                   xTaskNotifyGive(prayerTaskHandle);
-                  Serial.println("Prayer Task notified");
               }
           }
       }
-
-      Serial.println("========================================\n");
   });
 
   server.on(
