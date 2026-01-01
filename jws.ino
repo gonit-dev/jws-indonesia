@@ -2745,8 +2745,8 @@ void setupServerRoutes() {
     // ============================================
     // UPDATE DISPLAY & DISCONNECT WIFI
     // ============================================
-    updateCityDisplay();
     updatePrayerDisplay();
+      updateCityDisplay();
 
     // ============================================
     // ACCESS TYPE DETECTION (Local AP vs Remote)
