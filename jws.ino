@@ -1135,6 +1135,8 @@ void saveTimezoneConfig() {
     }
     xSemaphoreGive(settingsMutex);
   }
+  
+  vTaskDelay(pdMS_TO_TICKS(50));
 }
 
 void loadTimezoneConfig() {
@@ -1274,6 +1276,8 @@ void saveMethodSelection() {
     }
     xSemaphoreGive(settingsMutex);
   }
+  
+  vTaskDelay(pdMS_TO_TICKS(50));
 }
 
 void loadMethodSelection() {
@@ -2069,107 +2073,104 @@ void setupServerRoutes() {
   });
 
   server.on("/settimezone", HTTP_POST, [](AsyncWebServerRequest * request) {
-    Serial.println("\n========================================");
-    Serial.println("Save Timezone");
-    Serial.println("========================================");
-
-    if (!request -> hasParam("offset", true)) {
-      Serial.println("ERROR: Missing offset parameter");
-      request -> send(400, "application/json",
-        "{\"error\":\"Missing offset parameter\"}");
-      return;
-    }
-
-    String offsetStr = request -> getParam("offset", true) -> value();
-    offsetStr.trim();
-
-    int offset = offsetStr.toInt();
-
-    Serial.println("Received offset: " + String(offset));
-
-    if (offset < -12 || offset > 14) {
-      Serial.println("ERROR: Invalid timezone offset");
-      request -> send(400, "application/json",
-        "{\"error\":\"Invalid timezone offset (must be -12 to +14)\"}");
-      return;
-    }
-
-    Serial.println("Saving to memory and file...");
-
-    if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
-      timezoneOffset = offset;
-      xSemaphoreGive(settingsMutex);
-      Serial.println("Memory updated");
-    }
-
-    saveTimezoneConfig();
-
-    Serial.println("========================================");
-    Serial.println("SUCCESS: Timezone saved");
-    Serial.println("Offset: UTC" + String(offset >= 0 ? "+" : "") + String(offset));
-    Serial.println("========================================\n");
-
-    // ========================================
-    // TRIGGER NTP SYNC
-    // ========================================
-    bool ntpTriggered = false;
-    bool prayerWillUpdate = false;
-
-    if (wifiConfig.isConnected && ntpTaskHandle != NULL) {
       Serial.println("\n========================================");
-      Serial.println("AUTO-TRIGGERING NTP RE-SYNC");
+      Serial.println("Save Timezone");
       Serial.println("========================================");
-      Serial.println("Reason: Timezone changed to UTC" + String(offset >= 0 ? "+" : "") + String(offset));
 
-      // Check if prayer times will be updated
-      if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-        Serial.println("City: " + prayerConfig.selectedCity);
-        Serial.println("Coordinates: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
-        Serial.println("");
-        Serial.println("NTP Task will automatically:");
-        Serial.println("  1. Sync time with new timezone");
-        Serial.println("  2. Update prayer times with correct date");
-        prayerWillUpdate = true;
+      if (!request -> hasParam("offset", true)) {
+        Serial.println("ERROR: Missing offset parameter");
+        request -> send(400, "application/json",
+          "{\"error\":\"Missing offset parameter\"}");
+        return;
+      }
+
+      String offsetStr = request -> getParam("offset", true) -> value();
+      offsetStr.trim();
+
+      int offset = offsetStr.toInt();
+
+      Serial.println("Received offset: " + String(offset));
+
+      if (offset < -12 || offset > 14) {
+        Serial.println("ERROR: Invalid timezone offset");
+        request -> send(400, "application/json",
+          "{\"error\":\"Invalid timezone offset (must be -12 to +14)\"}");
+        return;
+      }
+
+      Serial.println("Saving to memory and file...");
+
+      if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+        timezoneOffset = offset;
+        xSemaphoreGive(settingsMutex);
+        Serial.println("Memory updated");
+      }
+
+      // ========================================
+      // TRIGGER NTP SYNC
+      // ========================================
+      bool ntpTriggered = false;
+      bool prayerWillUpdate = false;
+
+      if (wifiConfig.isConnected && ntpTaskHandle != NULL) {
+        Serial.println("\n========================================");
+        Serial.println("AUTO-TRIGGERING NTP RE-SYNC");
+        Serial.println("========================================");
+        Serial.println("Reason: Timezone changed to UTC" + String(offset >= 0 ? "+" : "") + String(offset));
+
+        // Check if prayer times will be updated
+        if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
+          Serial.println("City: " + prayerConfig.selectedCity);
+          Serial.println("Coordinates: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
+          Serial.println("");
+          Serial.println("NTP Task will automatically:");
+          Serial.println("  1. Sync time with new timezone");
+          Serial.println("  2. Update prayer times with correct date");
+          prayerWillUpdate = true;
+        } else {
+          Serial.println("Note: No city coordinates available");
+          Serial.println("Only time will be synced (no prayer times update)");
+        }
+
+        if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+          timeConfig.ntpSynced = false;
+          xSemaphoreGive(timeMutex);
+        }
+
+        xTaskNotifyGive(ntpTaskHandle);
+        ntpTriggered = true;
+
+        Serial.println("NTP re-sync triggered successfully");
+        Serial.println("========================================\n");
+
       } else {
-        Serial.println("Note: No city coordinates available");
-        Serial.println("Only time will be synced (no prayer times update)");
+        Serial.println("\nCannot trigger NTP sync:");
+        if (!wifiConfig.isConnected) {
+          Serial.println("Reason: WiFi not connected");
+        }
+        if (ntpTaskHandle == NULL) {
+          Serial.println("Reason: NTP task not running");
+        }
+        Serial.println("Timezone will apply on next connection\n");
       }
 
-      // Reset NTP status
-      if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-        timeConfig.ntpSynced = false;
-        xSemaphoreGive(timeMutex);
-      }
+      String response = "{";
+      response += "\"success\":true,";
+      response += "\"offset\":" + String(offset) + ",";
+      response += "\"ntpTriggered\":" + String(ntpTriggered ? "true" : "false") + ",";
+      response += "\"prayerTimesWillUpdate\":" + String(prayerWillUpdate ? "true" : "false");
+      response += "}";
 
-      // Trigger NTP sync
-      xTaskNotifyGive(ntpTaskHandle);
-      ntpTriggered = true;
-
-      Serial.println("NTP re-sync triggered successfully");
+      request -> send(200, "application/json", response);
+      
+      vTaskDelay(pdMS_TO_TICKS(50));
+      
+      saveTimezoneConfig();
+      
+      Serial.println("========================================");
+      Serial.println("SUCCESS: Timezone saved");
+      Serial.println("Offset: UTC" + String(offset >= 0 ? "+" : "") + String(offset));
       Serial.println("========================================\n");
-
-    } else {
-      Serial.println("\nCannot trigger NTP sync:");
-      if (!wifiConfig.isConnected) {
-        Serial.println("Reason: WiFi not connected");
-      }
-      if (ntpTaskHandle == NULL) {
-        Serial.println("Reason: NTP task not running");
-      }
-      Serial.println("Timezone will apply on next connection\n");
-    }
-
-    // ========================================
-    // SEND RESPONSE
-    // ========================================
-    String response = "{";
-    response += "\"success\":true,";
-    response += "\"offset\":" + String(offset) + ",";
-    response += "\"ntpTriggered\":" + String(ntpTriggered ? "true" : "false") + ",";
-    response += "\"prayerTimesWillUpdate\":" + String(prayerWillUpdate ? "true" : "false");
-    response += "}";
-
-    request -> send(200, "application/json", response);
   });
 
   // ========================================
@@ -2421,120 +2422,127 @@ void setupServerRoutes() {
   });
 
   server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest * request) {
-    Serial.println("\n========================================");
-    Serial.println("Save Calculation Method");
-    Serial.print("Client IP: ");
-    Serial.println(request -> client() -> remoteIP().toString());
-    Serial.println("========================================");
+      Serial.println("\n========================================");
+      Serial.println("Save Calculation Method");
+      Serial.print("Client IP: ");
+      Serial.println(request -> client() -> remoteIP().toString());
+      Serial.println("========================================");
 
-    if (!request -> hasParam("methodId", true) || !request -> hasParam("methodName", true)) {
-      Serial.println("ERROR: Missing parameters");
+      if (!request -> hasParam("methodId", true) || !request -> hasParam("methodName", true)) {
+        Serial.println("ERROR: Missing parameters");
 
-      int params = request -> params();
-      Serial.printf("Received parameters (%d):\n", params);
-      for (int i = 0; i < params; i++) {
-        const AsyncWebParameter * p = request -> getParam(i);
-        Serial.printf("  %s = %s\n", p -> name().c_str(), p -> value().c_str());
+        int params = request -> params();
+        Serial.printf("Received parameters (%d):\n", params);
+        for (int i = 0; i < params; i++) {
+          const AsyncWebParameter * p = request -> getParam(i);
+          Serial.printf("  %s = %s\n", p -> name().c_str(), p -> value().c_str());
+        }
+
+        request -> send(400, "application/json",
+          "{\"error\":\"Missing methodId or methodName parameter\"}");
+        return;
       }
 
-      request -> send(400, "application/json",
-        "{\"error\":\"Missing methodId or methodName parameter\"}");
-      return;
-    }
+      String methodIdStr = request -> getParam("methodId", true) -> value();
+      String methodName = request -> getParam("methodName", true) -> value();
 
-    String methodIdStr = request -> getParam("methodId", true) -> value();
-    String methodName = request -> getParam("methodName", true) -> value();
+      methodIdStr.trim();
+      methodName.trim();
 
-    methodIdStr.trim();
-    methodName.trim();
+      int methodId = methodIdStr.toInt();
 
-    int methodId = methodIdStr.toInt();
+      Serial.println("Received data:");
+      Serial.println("Method ID: " + String(methodId));
+      Serial.println("Method Name: " + methodName);
 
-    Serial.println("Received data:");
-    Serial.println("Method ID: " + String(methodId));
-    Serial.println("Method Name: " + methodName);
+      if (methodId < 0 || methodId > 20) {
+        Serial.println("ERROR: Invalid method ID");
+        request -> send(400, "application/json",
+          "{\"error\":\"Invalid method ID\"}");
+        return;
+      }
 
-    if (methodId < 0 || methodId > 20) {
-      Serial.println("ERROR: Invalid method ID");
-      request -> send(400, "application/json",
-        "{\"error\":\"Invalid method ID\"}");
-      return;
-    }
+      if (methodName.length() == 0) {
+        Serial.println("ERROR: Empty method name");
+        request -> send(400, "application/json",
+          "{\"error\":\"Method name cannot be empty\"}");
+        return;
+      }
 
-    if (methodName.length() == 0) {
-      Serial.println("ERROR: Empty method name");
-      request -> send(400, "application/json",
-        "{\"error\":\"Method name cannot be empty\"}");
-      return;
-    }
+      if (methodName.length() > 100) {
+        Serial.println("ERROR: Method name too long");
+        request -> send(400, "application/json",
+          "{\"error\":\"Method name too long (max 100 chars)\"}");
+        return;
+      }
 
-    if (methodName.length() > 100) {
-      Serial.println("ERROR: Method name too long");
-      request -> send(400, "application/json",
-        "{\"error\":\"Method name too long (max 100 chars)\"}");
-      return;
-    }
+      Serial.println("Saving to memory...");
 
-    Serial.println("Saving to memory...");
+      if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+        methodConfig.methodId = methodId;
+        methodConfig.methodName = methodName;
 
-    if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
-      methodConfig.methodId = methodId;
-      methodConfig.methodName = methodName;
+        xSemaphoreGive(settingsMutex);
+        Serial.println("Memory updated");
+        Serial.println("Method ID: " + String(methodConfig.methodId));
+        Serial.println("Method Name: " + methodConfig.methodName);
+      }
 
-      xSemaphoreGive(settingsMutex);
-      Serial.println("Memory updated");
-      Serial.println("Method ID: " + String(methodConfig.methodId));
-      Serial.println("Method Name: " + methodConfig.methodName);
-    }
+      bool willFetchPrayerTimes = false;
 
-    Serial.println("Writing to LittleFS...");
-    saveMethodSelection();
+      if (WiFi.status() == WL_CONNECTED) {
+          if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
+              Serial.println("Triggering prayer times update with new method...");
+              Serial.println("City: " + prayerConfig.selectedCity);
+              Serial.println("Method: " + methodName);
+              
+              willFetchPrayerTimes = true;
+          } else {
+              Serial.println("No coordinates available");
+          }
+      } else {
+          Serial.println("WiFi not connected");
+      }
 
-    bool willFetchPrayerTimes = false;
+      String response = "{";
+      response += "\"success\":true,";
+      response += "\"methodId\":" + String(methodId) + ",";
+      response += "\"methodName\":\"" + methodName + "\",";
+      response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
+      response += "}";
 
-    if (WiFi.status() == WL_CONNECTED) {
-        if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-            Serial.println("Triggering prayer times update with new method...");
-            Serial.println("City: " + prayerConfig.selectedCity);
-            Serial.println("Method: " + methodName);
-            
-            if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-                needPrayerUpdate = true;
-                pendingPrayerLat = prayerConfig.latitude;
-                pendingPrayerLon = prayerConfig.longitude;
-                xSemaphoreGive(settingsMutex);
-                
-                if (prayerTaskHandle != NULL) {
-                    xTaskNotifyGive(prayerTaskHandle);
-                    Serial.println("Prayer Task triggered for method change");
-                }
-            }
+      request -> send(200, "application/json", response);
+      
+      vTaskDelay(pdMS_TO_TICKS(50));
+      
+      Serial.println("Writing to LittleFS...");
+      saveMethodSelection();
+      
+      if (willFetchPrayerTimes) {
+          vTaskDelay(pdMS_TO_TICKS(100));
+          
+          if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+              needPrayerUpdate = true;
+              pendingPrayerLat = prayerConfig.latitude;
+              pendingPrayerLon = prayerConfig.longitude;
+              xSemaphoreGive(settingsMutex);
+              
+              if (prayerTaskHandle != NULL) {
+                  xTaskNotifyGive(prayerTaskHandle);
+                  Serial.println("Prayer Task triggered for method change");
+              }
+          }
 
-            Serial.println("Prayer times update initiated");
-            willFetchPrayerTimes = true;
-        } else {
-            Serial.println("No coordinates available");
-        }
-    } else {
-        Serial.println("WiFi not connected");
-    }
+          Serial.println("Prayer times update initiated");
+      }
 
-    Serial.println("========================================");
-    Serial.println("SUCCESS: Method saved successfully");
-    Serial.println("Method: " + methodName);
-    if (willFetchPrayerTimes) {
-      Serial.println("Prayer times will update shortly...");
-    }
-    Serial.println("========================================\n");
-
-    String response = "{";
-    response += "\"success\":true,";
-    response += "\"methodId\":" + String(methodId) + ",";
-    response += "\"methodName\":\"" + methodName + "\",";
-    response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
-    response += "}";
-
-    request -> send(200, "application/json", response);
+      Serial.println("========================================");
+      Serial.println("SUCCESS: Method saved successfully");
+      Serial.println("Method: " + methodName);
+      if (willFetchPrayerTimes) {
+        Serial.println("Prayer times will update shortly...");
+      }
+      Serial.println("========================================\n");
   });
 
   // ========================================
@@ -2663,16 +2671,16 @@ void setupServerRoutes() {
         wifiConfig.routerPassword = "";
         wifiConfig.isConnected = false;
 
-        prayerConfig.imsakTime = "";
-        prayerConfig.subuhTime = "";
-        prayerConfig.terbitTime = "";
-        prayerConfig.zuhurTime = "";
-        prayerConfig.asharTime = "";
-        prayerConfig.maghribTime = "";
-        prayerConfig.isyaTime = "";
-        prayerConfig.selectedCity = "";
-        prayerConfig.selectedCityName = "";
-        prayerConfig.latitude = "";
+        prayerConfig.imsakTime = "00:00";
+        prayerConfig.subuhTime = "00:00";
+        prayerConfig.terbitTime = "00:00";
+        prayerConfig.zuhurTime = "00:00";
+        prayerConfig.asharTime = "00:00";
+        prayerConfig.maghribTime = "00:00";;
+        prayerConfig.isyaTime = "00:00";
+        prayerConfig.selectedCity = "00:00";
+        prayerConfig.selectedCityName = "00:00";
+        prayerConfig.latitude = "00:00";
         prayerConfig.longitude = "";
 
         strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
