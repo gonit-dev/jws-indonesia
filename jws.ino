@@ -168,13 +168,13 @@ struct TimeConfig {
 };
 
 struct PrayerConfig {
-  String subuhTime;
-  String terbitTime;
-  String zuhurTime;
-  String asharTime;
-  String maghribTime;
-  String isyaTime;
-  String imsakTime;
+  String subuhTime = "00:00";
+  String terbitTime = "00:00";
+  String zuhurTime = "00:00";
+  String asharTime = "00:00";
+  String maghribTime = "00:00";
+  String isyaTime = "00:00";
+  String imsakTime = "00:00";
   String selectedCity;
   String selectedCityName;
   String latitude;

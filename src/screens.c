@@ -111,7 +111,7 @@ void create_screen_main() {
                                             lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
                                             lv_obj_set_style_text_font(obj, &ui_font_prototype_14, LV_PART_MAIN | LV_STATE_DEFAULT);
                                             lv_obj_set_style_text_letter_space(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
-                                            lv_label_set_text(obj, "Text");
+                                            lv_label_set_text(obj, "--");
                                         }
                                     }
                                 }
