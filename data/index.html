@@ -1003,17 +1003,27 @@
 				<div class="grid-x grid-padding-y">
 					<div class=" medium-12 small-12 large-12 text-center cell">
 						<h6>
-							<strong>GONIT: GLOBAL NETWORK IDENTIFICATION TECHNOLOGY</strong>
+							<div class="grid-x">
+								<div class=" medium-12 small-12 large-12 text-center cell">
+									<strong>GONIT: GLOBAL NETWORK IDENTIFICATION TECHNOLOGY</strong>
+								</div>
+								<div class=" medium-12 small-12 large-12 text-center cell">
+									<div id="tahun">2025 - 2025</div>
+								</div>
+							</div>
 						</h6>
-						<span id="tahun">
-							<script>document.write(new Date().getFullYear() === 2025 ? '2025' : '2025 - ' + new Date().getFullYear())</script>
-						</span>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
 	<script>
+		const tahunAwal = 2025;
+		const tahunSekarang = new Date().getFullYear();
+
+		document.getElementById("tahun").textContent =
+			tahunAwal + " - " + tahunSekarang;
+
 		// ================================
 		// LOADING MANAGER
 		// ================================
