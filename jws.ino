@@ -1646,8 +1646,9 @@ void setupServerRoutes() {
     
     startCountdown("device_restart", "Memulai Ulang Perangkat", 60);
     
-    Serial.println("Countdown started");
-    Serial.println("========================================\n");
+    Serial.println("\n========================================");
+    Serial.println("SHUTDOWN SEQUENCE - DEVICE RESTART");
+    Serial.println("========================================");
     
     request->send(200, "text/plain", "OK");
     
@@ -1655,16 +1656,41 @@ void setupServerRoutes() {
       [](void* param) {
           for (int i = 60; i > 0; i--) {
               if (i == 35) {
-                  Serial.println("\n========================================");
-                  Serial.println("SHUTTING DOWN WiFi");
-                  Serial.println("==========================================");
-                  
                   WiFi.mode(WIFI_OFF);
-                  delay(500);
+                  vTaskDelay(pdMS_TO_TICKS(500));
                   
-                  Serial.println("WiFi: FULLY DISABLED");
-                  Serial.println("All connections terminated");
-                  Serial.println("========================================\n");
+                  Serial.println("\nStopping background tasks");
+                  if (prayerTaskHandle != NULL) {
+                      vTaskSuspend(prayerTaskHandle);
+                      Serial.println("   Prayer Task suspended");
+                  }
+                  if (ntpTaskHandle != NULL) {
+                      vTaskSuspend(ntpTaskHandle);
+                      Serial.println("   NTP Task suspended");
+                  }
+                  if (wifiTaskHandle != NULL) {
+                      vTaskSuspend(wifiTaskHandle);
+                      Serial.println("   WiFi Task suspended");
+                  }
+                  vTaskDelay(pdMS_TO_TICKS(1000));
+                  
+                  Serial.println("\nClosing web server");
+                  server.end();
+                  vTaskDelay(pdMS_TO_TICKS(500));
+                  Serial.println("   Web server stopped");
+                  
+                  Serial.println("\nSaving current time to RTC");
+                  if (rtcAvailable) {
+                      saveTimeToRTC();
+                      Serial.println("   Time saved to RTC");
+                  }
+                  vTaskDelay(pdMS_TO_TICKS(500));
+                  
+                  Serial.println("\nTurning off display");
+                  ledcWrite(TFT_BL, 0);
+                  tft.fillScreen(TFT_BLACK);
+                  Serial.println("   Display off");
+                  vTaskDelay(pdMS_TO_TICKS(500));
               }
               
               if (i == 60 || i == 20 || i == 10 || i <= 5) {
@@ -1673,10 +1699,12 @@ void setupServerRoutes() {
               vTaskDelay(pdMS_TO_TICKS(1000));
           }
           
-          Serial.println("Restarting NOW...");
+          Serial.println("\n========================================");
+          Serial.println("SHUTDOWN COMPLETE - REBOOTING");
+          Serial.println("========================================\n");
           Serial.flush();
+
           delay(1000);
-          
           ESP.restart();
           vTaskDelete(NULL);
       },
@@ -2780,7 +2808,7 @@ void setupServerRoutes() {
     bool isLocalAP = (apNetwork == clientNetwork);
 
     Serial.println("\n========================================");
-    Serial.println("FACTORY RESET COMPLETE");
+    Serial.println("FACTORY RESET RECEIVED");
     Serial.println("========================================");
     Serial.println("Client IP: " + clientIP.toString());
     Serial.println("Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
@@ -2792,8 +2820,10 @@ void setupServerRoutes() {
         startCountdown("factory_reset", "Pengaturan Ulang Perangkat", 60);
         Serial.println("Countdown started (remote client will lose connection)");
     }
-    Serial.println("Device will restart in 60 seconds...");
-    Serial.println("========================================\n");
+
+    Serial.println("\n========================================");
+    Serial.println("SHUTDOWN SEQUENCE - FACTORY RESET");
+    Serial.println("========================================");
     
     request->send(200, "text/plain", "OK");
     
@@ -2804,18 +2834,36 @@ void setupServerRoutes() {
       [](void* param) {
           for (int i = 60; i > 0; i--) {
               if (i == 35) {
-                  Serial.println("\n========================================");
-                  Serial.println("SHUTTING DOWN WiFi");
-                  Serial.println("========================================");
-
                   WiFi.disconnect(true);
                   delay(500);
                   WiFi.mode(WIFI_OFF);
                   delay(500);
+
+                  Serial.println("\nStopping background tasks");
+                  if (prayerTaskHandle != NULL) {
+                      vTaskSuspend(prayerTaskHandle);
+                      Serial.println("   Prayer Task suspended");
+                  }
+                  if (ntpTaskHandle != NULL) {
+                      vTaskSuspend(ntpTaskHandle);
+                      Serial.println("   NTP Task suspended");
+                  }
+                  if (wifiTaskHandle != NULL) {
+                      vTaskSuspend(wifiTaskHandle);
+                      Serial.println("   WiFi Task suspended");
+                  }
+                  vTaskDelay(pdMS_TO_TICKS(1000));
                   
-                  Serial.println("WiFi: FULLY DISABLED");
-                  Serial.println("All connections terminated");
-                  Serial.println("========================================\n");
+                  Serial.println("\nClosing web server");
+                  server.end();
+                  vTaskDelay(pdMS_TO_TICKS(500));
+                  Serial.println("   Web server stopped");
+                  
+                  Serial.println("\nTurning off display");
+                  ledcWrite(TFT_BL, 0);
+                  tft.fillScreen(TFT_BLACK);
+                  Serial.println("   Display off");
+                  vTaskDelay(pdMS_TO_TICKS(500));
               }
               
               if (i == 60 || i == 20 || i == 10 || i <= 5) {
@@ -2824,10 +2872,12 @@ void setupServerRoutes() {
               vTaskDelay(pdMS_TO_TICKS(1000));
           }
               
-          Serial.println("Restarting NOW...");
+          Serial.println("\n========================================");
+          Serial.println("FACTORY RESET COMPLETE - REBOOTING");
+          Serial.println("========================================\n");
           Serial.flush();
+
           delay(1000);
-          
           ESP.restart();
           vTaskDelete(NULL);
       },
