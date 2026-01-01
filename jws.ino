@@ -281,6 +281,9 @@ volatile WiFiState wifiState = WIFI_IDLE;
 volatile bool ntpSyncInProgress = false;
 volatile bool ntpSyncCompleted = false;
 
+TaskHandle_t restartTaskHandle = NULL;
+TaskHandle_t resetTaskHandle = NULL;
+
 // ================================
 // PRAYER TIME BLINK STATE
 // ================================
@@ -1618,102 +1621,80 @@ void setupServerRoutes() {
   });
 
   server.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
-    IPAddress clientIP = request->client()->remoteIP();
-    IPAddress apIP = WiFi.softAPIP();
-    IPAddress apSubnet = WiFi.softAPSubnetMask();
-    
-    IPAddress apNetwork(
-        apIP[0] & apSubnet[0],
-        apIP[1] & apSubnet[1],
-        apIP[2] & apSubnet[2],
-        apIP[3] & apSubnet[3]
-    );
-    
-    IPAddress clientNetwork(
-        clientIP[0] & apSubnet[0],
-        clientIP[1] & apSubnet[1],
-        clientIP[2] & apSubnet[2],
-        clientIP[3] & apSubnet[3]
-    );
-    
-    bool isLocalAP = (apNetwork == clientNetwork);
-    
-    Serial.println("\n========================================");
-    Serial.println("RESTART REQUEST RECEIVED");
-    Serial.println("========================================");
-    Serial.println("Client IP: " + clientIP.toString());
-    Serial.println("Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
-    
-    startCountdown("device_restart", "Memulai Ulang Perangkat", 60);
-    
-    Serial.println("\n========================================");
-    Serial.println("SHUTDOWN SEQUENCE - DEVICE RESTART");
-    Serial.println("========================================");
-    
-    request->send(200, "text/plain", "OK");
-    
-    xTaskCreate(
-      [](void* param) {
-          for (int i = 60; i > 0; i--) {
-              if (i == 35) {
-                  WiFi.mode(WIFI_OFF);
-                  vTaskDelay(pdMS_TO_TICKS(500));
-                  
-                  Serial.println("\nStopping background tasks");
-                  if (prayerTaskHandle != NULL) {
-                      vTaskSuspend(prayerTaskHandle);
-                      Serial.println("   Prayer Task suspended");
-                  }
-                  if (ntpTaskHandle != NULL) {
-                      vTaskSuspend(ntpTaskHandle);
-                      Serial.println("   NTP Task suspended");
-                  }
-                  if (wifiTaskHandle != NULL) {
-                      vTaskSuspend(wifiTaskHandle);
-                      Serial.println("   WiFi Task suspended");
-                  }
-                  vTaskDelay(pdMS_TO_TICKS(1000));
-                  
-                  Serial.println("\nClosing web server");
-                  server.end();
-                  vTaskDelay(pdMS_TO_TICKS(500));
-                  Serial.println("   Web server stopped");
-                  
-                  Serial.println("\nSaving current time to RTC");
-                  if (rtcAvailable) {
-                      saveTimeToRTC();
-                      Serial.println("   Time saved to RTC");
-                  }
-                  vTaskDelay(pdMS_TO_TICKS(500));
-                  
-                  Serial.println("\nTurning off display");
-                  ledcWrite(TFT_BL, 0);
-                  tft.fillScreen(TFT_BLACK);
-                  Serial.println("   Display off");
-                  vTaskDelay(pdMS_TO_TICKS(500));
-              }
-              
-              if (i == 60 || i == 20 || i == 10 || i <= 5) {
-                  Serial.printf("Restarting in %d seconds...\n", i);
-              }
-              vTaskDelay(pdMS_TO_TICKS(1000));
-          }
-          
-          Serial.println("\n========================================");
-          Serial.println("SHUTDOWN COMPLETE - REBOOTING");
-          Serial.println("========================================\n");
-          Serial.flush();
-
-          delay(1000);
-          ESP.restart();
-          vTaskDelete(NULL);
-      },
-      "DeviceRestartTask",
-      2048,
-      NULL,
-      1,
-      NULL
-    );
+      if (restartTaskHandle != NULL) {
+          vTaskDelete(restartTaskHandle);
+          restartTaskHandle = NULL;
+          vTaskDelay(pdMS_TO_TICKS(100));
+      }
+      
+      IPAddress clientIP = request->client()->remoteIP();
+      IPAddress apIP = WiFi.softAPIP();
+      IPAddress apSubnet = WiFi.softAPSubnetMask();
+      
+      IPAddress apNetwork(
+          apIP[0] & apSubnet[0],
+          apIP[1] & apSubnet[1],
+          apIP[2] & apSubnet[2],
+          apIP[3] & apSubnet[3]
+      );
+      
+      IPAddress clientNetwork(
+          clientIP[0] & apSubnet[0],
+          clientIP[1] & apSubnet[1],
+          clientIP[2] & apSubnet[2],
+          clientIP[3] & apSubnet[3]
+      );
+      
+      bool isLocalAP = (apNetwork == clientNetwork);
+      
+      startCountdown("device_restart", "Memulai Ulang Perangkat", 60);
+      
+      request->send(200, "text/plain", "OK");
+      
+      xTaskCreate(
+        [](void* param) {
+            for (int i = 60; i > 0; i--) {
+                if (i == 35) {
+                    WiFi.mode(WIFI_OFF);
+                    vTaskDelay(pdMS_TO_TICKS(500));
+                    
+                    if (prayerTaskHandle != NULL) {
+                        vTaskSuspend(prayerTaskHandle);
+                    }
+                    if (ntpTaskHandle != NULL) {
+                        vTaskSuspend(ntpTaskHandle);
+                    }
+                    if (wifiTaskHandle != NULL) {
+                        vTaskSuspend(wifiTaskHandle);
+                    }
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+                    
+                    server.end();
+                    vTaskDelay(pdMS_TO_TICKS(500));
+                    
+                    if (rtcAvailable) {
+                        saveTimeToRTC();
+                    }
+                    vTaskDelay(pdMS_TO_TICKS(500));
+                    
+                    ledcWrite(TFT_BL, 0);
+                    tft.fillScreen(TFT_BLACK);
+                    vTaskDelay(pdMS_TO_TICKS(500));
+                }
+                
+                vTaskDelay(pdMS_TO_TICKS(1000));
+            }
+            
+            Serial.flush();
+            delay(1000);
+            ESP.restart();
+        },
+        "DeviceRestartTask",
+        5120,
+        NULL,
+        1,
+        &restartTaskHandle
+      );
   });
 
   // ========================================
@@ -2646,247 +2627,157 @@ void setupServerRoutes() {
   // TAB RESET - FACTORY RESET
   // ========================================
   server.on("/reset", HTTP_POST, [](AsyncWebServerRequest * request) {
-    Serial.println("\n========================================");
-    Serial.println("FACTORY RESET STARTED");
-    Serial.println("========================================");
-
-    // ============================================
-    // DELETE ALL CONFIGURATION FILES
-    // ============================================
-    if (LittleFS.exists("/wifi_creds.txt")) {
-        LittleFS.remove("/wifi_creds.txt");
-        Serial.println("WiFi creds deleted");
-    }
-
-    if (LittleFS.exists("/prayer_times.txt")) {
-        LittleFS.remove("/prayer_times.txt");
-        Serial.println("Prayer times deleted");
-    }
-
-    if (LittleFS.exists("/ap_creds.txt")) {
-        LittleFS.remove("/ap_creds.txt");
-        Serial.println("AP creds deleted");
-    }
-
-    if (LittleFS.exists("/city_selection.txt")) {
-        LittleFS.remove("/city_selection.txt");
-        Serial.println("City selection deleted");
-    }
-
-    if (LittleFS.exists("/method_selection.txt")) {
-        LittleFS.remove("/method_selection.txt");
-        Serial.println("Method selection deleted");
-    }
-
-    if (LittleFS.exists("/timezone.txt")) {
-        LittleFS.remove("/timezone.txt");
-        Serial.println("Timezone config deleted");
-    }
-
-    if (LittleFS.exists("/buzzer_config.txt")) {
-        LittleFS.remove("/buzzer_config.txt");
-        Serial.println("Buzzer config deleted");
-    }
-
-    // ============================================
-    // RESET MEMORY SETTINGS
-    // ============================================
-    if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
-        methodConfig.methodId = 5;
-        methodConfig.methodName = "Egyptian General Authority of Survey";
-
-        wifiConfig.routerSSID = "";
-        wifiConfig.routerPassword = "";
-        wifiConfig.isConnected = false;
-
-        prayerConfig.imsakTime = "00:00";
-        prayerConfig.subuhTime = "00:00";
-        prayerConfig.terbitTime = "00:00";
-        prayerConfig.zuhurTime = "00:00";
-        prayerConfig.asharTime = "00:00";
-        prayerConfig.maghribTime = "00:00";;
-        prayerConfig.isyaTime = "00:00";
-        prayerConfig.selectedCity = "00:00";
-        prayerConfig.selectedCityName = "00:00";
-        prayerConfig.latitude = "00:00";
-        prayerConfig.longitude = "";
-
-        strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
-        strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
-        wifiConfig.apIP = IPAddress(192, 168, 4, 1);
-        wifiConfig.apGateway = IPAddress(192, 168, 4, 1);
-        wifiConfig.apSubnet = IPAddress(255, 255, 255, 0);
-
-        xSemaphoreGive(settingsMutex);
-    }
-
-    timezoneOffset = 7;
-    Serial.println("Settings reset to default");
-
-    // ============================================
-    // RESET TIME TO 01/01/2000
-    // ============================================
-    Serial.println("\nResetting time to 00:00:00 01/01/2000...");
-
-    if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
-        const time_t EPOCH_2000 = 946684800;
-        setTime(0, 0, 0, 1, 1, 2000);
-        timeConfig.currentTime = EPOCH_2000;
-        timeConfig.ntpSynced = false;
-        timeConfig.ntpServer = "";
-
-        if (timeConfig.currentTime < EPOCH_2000) {
-            timeConfig.currentTime = EPOCH_2000;
-        }
-
-        DisplayUpdate update;
-        update.type = DisplayUpdate::TIME_UPDATE;
-        xQueueSend(displayQueue, &update, 0);
-
-        xSemaphoreGive(timeMutex);
-        
-        Serial.printf("Time reset to: %ld (01/01/2000 00:00:00 UTC)\n", EPOCH_2000);
-    }
-
-    // ============================================
-    // SAVE TO RTC IF AVAILABLE
-    // ============================================
-    if (rtcAvailable) {
-        Serial.println("\nSaving time to RTC hardware...");
-        saveTimeToRTC();
-        
-        delay(500);
-        
-        DateTime rtcNow = rtc.now();
-        Serial.println("RTC Verification:");
-        Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
-                    rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
-                    rtcNow.day(), rtcNow.month(), rtcNow.year());
-        
-        bool rtcValid = (
-            rtcNow.year() >= 2000 && rtcNow.year() <= 2100 &&
-            rtcNow.month() >= 1 && rtcNow.month() <= 12 &&
-            rtcNow.day() >= 1 && rtcNow.day() <= 31
-        );
-        
-        if (rtcValid) {
-            Serial.println("RTC saved successfully");
-        } else {
-            Serial.println("RTC save FAILED");
-        }
-    }
-
-    Serial.println("Time reset complete");
-
-    // ============================================
-    // UPDATE DISPLAY & DISCONNECT WIFI
-    // ============================================
-    updatePrayerDisplay();
-      updateCityDisplay();
-
-    // ============================================
-    // ACCESS TYPE DETECTION (Local AP vs Remote)
-    // ============================================
-    IPAddress clientIP = request->client()->remoteIP();
-    IPAddress apIP = WiFi.softAPIP();
-    IPAddress apSubnet = WiFi.softAPSubnetMask();
-    
-    IPAddress apNetwork(
-        apIP[0] & apSubnet[0],
-        apIP[1] & apSubnet[1],
-        apIP[2] & apSubnet[2],
-        apIP[3] & apSubnet[3]
-    );
-    
-    IPAddress clientNetwork(
-        clientIP[0] & apSubnet[0],
-        clientIP[1] & apSubnet[1],
-        clientIP[2] & apSubnet[2],
-        clientIP[3] & apSubnet[3]
-    );
-    
-    bool isLocalAP = (apNetwork == clientNetwork);
-
-    Serial.println("\n========================================");
-    Serial.println("FACTORY RESET RECEIVED");
-    Serial.println("========================================");
-    Serial.println("Client IP: " + clientIP.toString());
-    Serial.println("Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
-    
-    if (isLocalAP) {
-        startCountdown("factory_reset", "Pengaturan Ulang Perangkat", 60);
-        Serial.println("Countdown started (client will see countdown)");
-    } else {
-        startCountdown("factory_reset", "Pengaturan Ulang Perangkat", 60);
-        Serial.println("Countdown started (remote client will lose connection)");
-    }
-
-    Serial.println("\n========================================");
-    Serial.println("SHUTDOWN SEQUENCE - FACTORY RESET");
-    Serial.println("========================================");
-    
-    request->send(200, "text/plain", "OK");
-    
-    // ============================================
-    // SCHEDULE RESTART TASK
-    // ============================================
-    xTaskCreate(
-      [](void* param) {
-          for (int i = 60; i > 0; i--) {
-              if (i == 35) {
-                  WiFi.disconnect(true);
-                  delay(500);
-                  WiFi.mode(WIFI_OFF);
-                  delay(500);
-
-                  Serial.println("\nStopping background tasks");
-                  if (prayerTaskHandle != NULL) {
-                      vTaskSuspend(prayerTaskHandle);
-                      Serial.println("   Prayer Task suspended");
-                  }
-                  if (ntpTaskHandle != NULL) {
-                      vTaskSuspend(ntpTaskHandle);
-                      Serial.println("   NTP Task suspended");
-                  }
-                  if (wifiTaskHandle != NULL) {
-                      vTaskSuspend(wifiTaskHandle);
-                      Serial.println("   WiFi Task suspended");
-                  }
-                  vTaskDelay(pdMS_TO_TICKS(1000));
-                  
-                  Serial.println("\nClosing web server");
-                  server.end();
-                  vTaskDelay(pdMS_TO_TICKS(500));
-                  Serial.println("   Web server stopped");
-                  
-                  Serial.println("\nTurning off display");
-                  ledcWrite(TFT_BL, 0);
-                  tft.fillScreen(TFT_BLACK);
-                  Serial.println("   Display off");
-                  vTaskDelay(pdMS_TO_TICKS(500));
-              }
-              
-              if (i == 60 || i == 20 || i == 10 || i <= 5) {
-                  Serial.printf("Factory reset restarting in %d seconds...\n", i);
-              }
-              vTaskDelay(pdMS_TO_TICKS(1000));
+      if (resetTaskHandle != NULL) {
+          vTaskDelete(resetTaskHandle);
+          resetTaskHandle = NULL;
+          vTaskDelay(pdMS_TO_TICKS(100));
+      }
+      
+      Serial.println("FACTORY RESET STARTED");
+      
+      if (LittleFS.exists("/wifi_creds.txt")) {
+          LittleFS.remove("/wifi_creds.txt");
+      }
+      if (LittleFS.exists("/prayer_times.txt")) {
+          LittleFS.remove("/prayer_times.txt");
+      }
+      if (LittleFS.exists("/ap_creds.txt")) {
+          LittleFS.remove("/ap_creds.txt");
+      }
+      if (LittleFS.exists("/city_selection.txt")) {
+          LittleFS.remove("/city_selection.txt");
+      }
+      if (LittleFS.exists("/method_selection.txt")) {
+          LittleFS.remove("/method_selection.txt");
+      }
+      if (LittleFS.exists("/timezone.txt")) {
+          LittleFS.remove("/timezone.txt");
+      }
+      if (LittleFS.exists("/buzzer_config.txt")) {
+          LittleFS.remove("/buzzer_config.txt");
+      }
+      
+      if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+          methodConfig.methodId = 5;
+          methodConfig.methodName = "Egyptian General Authority of Survey";
+          
+          wifiConfig.routerSSID = "";
+          wifiConfig.routerPassword = "";
+          wifiConfig.isConnected = false;
+          
+          prayerConfig.imsakTime = "00:00";
+          prayerConfig.subuhTime = "00:00";
+          prayerConfig.terbitTime = "00:00";
+          prayerConfig.zuhurTime = "00:00";
+          prayerConfig.asharTime = "00:00";
+          prayerConfig.maghribTime = "00:00";
+          prayerConfig.isyaTime = "00:00";
+          prayerConfig.selectedCity = "";
+          prayerConfig.selectedCityName = "";
+          prayerConfig.latitude = "";
+          prayerConfig.longitude = "";
+          
+          strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
+          strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
+          wifiConfig.apIP = IPAddress(192, 168, 4, 1);
+          wifiConfig.apGateway = IPAddress(192, 168, 4, 1);
+          wifiConfig.apSubnet = IPAddress(255, 255, 255, 0);
+          
+          xSemaphoreGive(settingsMutex);
+      }
+      
+      timezoneOffset = 7;
+      
+      if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+          const time_t EPOCH_2000 = 946684800;
+          setTime(0, 0, 0, 1, 1, 2000);
+          timeConfig.currentTime = EPOCH_2000;
+          timeConfig.ntpSynced = false;
+          timeConfig.ntpServer = "";
+          
+          if (timeConfig.currentTime < EPOCH_2000) {
+              timeConfig.currentTime = EPOCH_2000;
           }
-              
-          Serial.println("\n========================================");
-          Serial.println("FACTORY RESET COMPLETE - REBOOTING");
-          Serial.println("========================================\n");
-          Serial.flush();
-
-          delay(1000);
-          ESP.restart();
-          vTaskDelete(NULL);
-      },
-      "FactoryResetTask",
-      2048,
-      NULL,
-      1,
-      NULL
-    );
+          
+          DisplayUpdate update;
+          update.type = DisplayUpdate::TIME_UPDATE;
+          xQueueSend(displayQueue, &update, 0);
+          
+          xSemaphoreGive(timeMutex);
+      }
+      
+      if (rtcAvailable) {
+          saveTimeToRTC();
+      }
+      
+      updatePrayerDisplay();
+      updateCityDisplay();
+      
+      IPAddress clientIP = request->client()->remoteIP();
+      IPAddress apIP = WiFi.softAPIP();
+      IPAddress apSubnet = WiFi.softAPSubnetMask();
+      
+      IPAddress apNetwork(
+          apIP[0] & apSubnet[0],
+          apIP[1] & apSubnet[1],
+          apIP[2] & apSubnet[2],
+          apIP[3] & apSubnet[3]
+      );
+      
+      IPAddress clientNetwork(
+          clientIP[0] & apSubnet[0],
+          clientIP[1] & apSubnet[1],
+          clientIP[2] & apSubnet[2],
+          clientIP[3] & apSubnet[3]
+      );
+      
+      bool isLocalAP = (apNetwork == clientNetwork);
+      
+      startCountdown("factory_reset", "Pengaturan Ulang Perangkat", 60);
+      
+      request->send(200, "text/plain", "OK");
+      
+      xTaskCreate(
+        [](void* param) {
+            for (int i = 60; i > 0; i--) {
+                if (i == 35) {
+                    WiFi.disconnect(true);
+                    vTaskDelay(pdMS_TO_TICKS(500));
+                    WiFi.mode(WIFI_OFF);
+                    vTaskDelay(pdMS_TO_TICKS(500));
+                    
+                    if (prayerTaskHandle != NULL) {
+                        vTaskSuspend(prayerTaskHandle);
+                    }
+                    if (ntpTaskHandle != NULL) {
+                        vTaskSuspend(ntpTaskHandle);
+                    }
+                    if (wifiTaskHandle != NULL) {
+                        vTaskSuspend(wifiTaskHandle);
+                    }
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+                    
+                    server.end();
+                    vTaskDelay(pdMS_TO_TICKS(500));
+                    
+                    ledcWrite(TFT_BL, 0);
+                    tft.fillScreen(TFT_BLACK);
+                    vTaskDelay(pdMS_TO_TICKS(500));
+                }
+                
+                vTaskDelay(pdMS_TO_TICKS(1000));
+            }
+            
+            Serial.flush();
+            delay(1000);
+            ESP.restart();
+        },
+        "FactoryResetTask",
+        5120,
+        NULL,
+        1,
+        &resetTaskHandle
+      );
   });
 
   // ========================================
@@ -3805,102 +3696,117 @@ void ntpTask(void *parameter) {
 
 void webTask(void *parameter) {
   esp_task_wdt_add(NULL);
-  Serial.println("\n========================================");
-  Serial.println("WEB TASK STARTING");
-  Serial.println("========================================");
-
+  
   setupServerRoutes();
   server.begin();
-
-  Serial.println("Web server started");
-  Serial.println("Port: 80");
-  Serial.println("========================================\n");
-
-  unsigned long lastReport = 0;
-  unsigned long lastAPCheck = 0;
+  
+  unsigned long lastCleanup = 0;
   unsigned long lastMemCheck = 0;
   unsigned long lastStackReport = 0;
-  unsigned long lastCleanup = 0;
-
+  unsigned long lastAPCheck = 0;
+  
   size_t initialHeap = ESP.getFreeHeap();
   size_t lowestHeap = initialHeap;
-
+  size_t highestHeap = initialHeap;
+  
   while (true) {
     esp_task_wdt_reset();
-
+    
     vTaskDelay(pdMS_TO_TICKS(5000));
-
+    
     unsigned long now = millis();
     
     if (now - lastCleanup > 300000) {
-      Serial.println("Cleaning up web server connections...");
       lastCleanup = now;
+      
+      if (restartTaskHandle != NULL) {
+          eTaskState state = eTaskGetState(restartTaskHandle);
+          if (state == eDeleted || state == eInvalid) {
+              restartTaskHandle = NULL;
+          }
+      }
+      
+      if (resetTaskHandle != NULL) {
+          eTaskState state = eTaskGetState(resetTaskHandle);
+          if (state == eDeleted || state == eInvalid) {
+              resetTaskHandle = NULL;
+          }
+      }
     }
-
+    
     if (now - lastStackReport > 120000) {
       lastStackReport = now;
       printStackReport();
     }
-
+    
     if (now - lastMemCheck > 30000) {
       lastMemCheck = now;
-
+      
       size_t currentHeap = ESP.getFreeHeap();
+      
       if (currentHeap < lowestHeap) {
         lowestHeap = currentHeap;
       }
-
-      size_t heapDiff = initialHeap - currentHeap;
-
-      Serial.printf("\nMEMORY STATUS:\n");
-      Serial.printf("Initial: %d bytes (%.2f KB)\n", initialHeap, initialHeap / 1024.0);
-      Serial.printf("Current: %d bytes (%.2f KB)\n", currentHeap, currentHeap / 1024.0);
-      Serial.printf("Lowest:  %d bytes (%.2f KB)\n", lowestHeap, lowestHeap / 1024.0);
-      Serial.printf("Lost:    %d bytes (%.2f KB)\n", heapDiff, heapDiff / 1024.0);
-
-      if (heapDiff > 20480) {
-        Serial.println("WARNING: Possible memory leak detected");
-        Serial.println("Consider restarting if memory continues dropping");
-      } else if (currentHeap < 50000) {
-        Serial.println("WARNING: Low memory Consider restarting soon");
-      } else {
-        Serial.println("Memory stable");
+      if (currentHeap > highestHeap) {
+        highestHeap = currentHeap;
       }
+      
+      int32_t usedFromLowest = initialHeap - lowestHeap;
+      
+      Serial.printf("\nMEMORY STATUS:\n");
+      Serial.printf("Initial:  %6d bytes (%.2f KB)\n", 
+                    initialHeap, initialHeap / 1024.0);
+      Serial.printf("Current:  %6d bytes (%.2f KB)\n", 
+                    currentHeap, currentHeap / 1024.0);
+      Serial.printf("Lowest:   %6d bytes (%.2f KB)\n", 
+                    lowestHeap, lowestHeap / 1024.0);
+      Serial.printf("Highest:  %6d bytes (%.2f KB)\n", 
+                    highestHeap, highestHeap / 1024.0);
+      Serial.printf("Peak Usage: %6d bytes (%.2f KB)\n", 
+                    usedFromLowest, usedFromLowest / 1024.0);
+      
+      if (usedFromLowest > 35000) {
+        Serial.println("WARNING: High peak memory usage");
+      } else if (usedFromLowest > 25000) {
+        Serial.println("CAUTION: Moderate peak memory usage");
+      } else {
+        Serial.println("Memory status: Normal");
+      }
+      
+      // Deteksi leak hanya jika tidak ada countdown aktif
+      bool isCountdownActive = false;
+      if (countdownMutex != NULL && xSemaphoreTake(countdownMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+        isCountdownActive = countdownState.isActive;
+        xSemaphoreGive(countdownMutex);
+      }
+      
+      if (!isCountdownActive) {
+        static size_t prevLowest = lowestHeap;
+        if (prevLowest > lowestHeap && (prevLowest - lowestHeap) > 1000) {
+          int32_t leaked = prevLowest - lowestHeap;
+          Serial.printf("LEAK DETECTED: %d bytes lost since last check\n", leaked);
+        }
+        prevLowest = lowestHeap;
+      }
+      
       Serial.println();
     }
-
+    
     if (now - lastAPCheck > 5000) {
       lastAPCheck = now;
-
-      if (apRestartInProgress) {
+      
+      if (apRestartInProgress || wifiRestartInProgress) {
         continue;
       }
       
-      if (wifiRestartInProgress) {
-        continue;
-      }
-
       wifi_mode_t mode;
       esp_wifi_get_mode(&mode);
-
+      
       if (mode != WIFI_MODE_APSTA) {
-        Serial.println("\n========================================");
-        Serial.println("CRITICAL: WiFi mode changed unexpectedly");
-        Serial.println("========================================");
-        Serial.printf("Current mode: %d (should be %d)\n", mode, WIFI_MODE_APSTA);
-        Serial.println("Reason: Unknown (not from restart task)");
-        Serial.println("Action: Forcing back to AP_STA mode...");
-        Serial.println("========================================\n");
-
         WiFi.mode(WIFI_AP_STA);
         delay(100);
-
         WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
         WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
-        delay(100);
-
-        Serial.println("AP restored: " + String(wifiConfig.apSSID));
-        Serial.println("Mode corrected to AP+STA\n");
       }
     }
   }
