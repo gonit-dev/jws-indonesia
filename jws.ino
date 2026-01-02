@@ -1682,7 +1682,7 @@ void setupServerRoutes() {
     bool isWiFiConnected = (WiFi.status() == WL_CONNECTED && wifiConfig.isConnected && wifiConfig.localIP.toString() != "0.0.0.0");
 
     String ssid = isWiFiConnected ? WiFi.SSID() : "";
-    String ip = isWiFiConnected ? wifiConfig.localIP.toString() : "-";
+    String ip = isWiFiConnected ? wifiConfig.localIP.toString() : "0.0.0.0";
 
     // Pre-allocate buffer
     char jsonBuffer[512];
