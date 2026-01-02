@@ -201,6 +201,10 @@
 		}
 
 		#countdownLoading .loader-title {
+			font-size: 20px;
+			font-weight: bold;
+			color: #1779ba;
+			margin-bottom: 10px;
 			grid-column: 1 / -1;
 			text-align: center;
 		}
@@ -379,10 +383,10 @@
 
 <body>
 	<!-- Page Loading Screen -->
-	<div class="grid-container full">
-		<div class="grid-x grid-padding-x grid-margin-y align-center">
-			<div class="medium-12 small-12 large-12 cell">
-				<div id="pageLoader">
+	<div id="pageLoader">
+		<div class="grid-container full">
+			<div class="grid-x grid-padding-x grid-margin-y align-center">
+				<div class="medium-12 small-12 large-12 cell">
 					<div class="loader-content">
 						<div class="loader-icon">🕌</div>
 						<div class="loader-title">Jadwal Shalat</div>
