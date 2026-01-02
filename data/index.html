@@ -3,7 +3,9 @@
 
 <head>
 	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 	<title>Jadwal Shalat</title>
 	<link rel="stylesheet" href="assets/css/foundation.min.css">
 	<style>
@@ -18,9 +20,35 @@
 		body {
 			min-height: 100vh;
 			position: relative;
+			overscroll-behavior-y: contain;
 		}
 
-		/* Loading Screen Styles */
+		html {
+			overscroll-behavior: none;
+		}
+
+		/* ================================
+		* TABS CONTENT FIX - SCROLL
+		* ================================ */
+		.tabs-content {
+			overflow-y: auto !important;
+			-webkit-overflow-scrolling: touch;
+			max-height: calc(100vh - 200px);
+			overscroll-behavior: contain;
+			position: relative;
+		}
+
+		.tabs-panel {
+			overflow-y: auto !important;
+			-webkit-overflow-scrolling: touch;
+			overscroll-behavior: contain;
+			position: relative;
+			min-height: 300px;
+		}
+
+		/* ================================
+		* LOADING SCREEN STYLES
+		* ================================ */
 		#pageLoader {
 			position: fixed;
 			top: 0;
@@ -82,7 +110,6 @@
 		}
 
 		@keyframes pulse {
-
 			0%,
 			100% {
 				transform: scale(1);
@@ -166,7 +193,9 @@
 			margin-top: 10px;
 		}
 
-		/* Countdown Loading Bar - Like Page Loader */
+		/* ================================
+		* COUNTDOWN LOADING BAR
+		* ================================ */
 		#countdownLoading {
 			position: fixed !important;
 			top: 0;
@@ -174,11 +203,8 @@
 			width: 100vw;
 			height: 100vh;
 			z-index: 999999;
-
-			/* overlay */
 			background: rgba(0, 0, 0, 0.45);
 			backdrop-filter: blur(2px);
-
 			display: flex;
 			align-items: center;
 			justify-content: center;
@@ -192,7 +218,6 @@
 			row-gap: 16px;
 			align-items: center;
 			text-align: unset;
-
 			background: #ffffff;
 			padding: 24px 28px;
 			border-radius: 8px;
@@ -241,24 +266,6 @@
 			transform: translateY(-5px);
 		}
 
-		/* Toast with Higher Z-Index */
-		.toast {
-			position: fixed;
-			top: -100px;
-			left: 50%;
-			transform: translateX(-50%);
-			z-index: 999999;
-			/* Higher than overlay */
-			min-width: 300px;
-			max-width: 90vw;
-			text-align: center;
-			transition: top 0.5s ease-in-out;
-		}
-
-		.toast.show {
-			top: 30px;
-		}
-
 		/* Body Lock - Prevent Scroll & Height Issues */
 		body.countdown-active {
 			overflow: hidden !important;
@@ -269,7 +276,28 @@
 			left: 0 !important;
 		}
 
-		/* Timezone inline edit styling */
+		/* ================================
+		* TOAST NOTIFICATION
+		* ================================ */
+		.toast {
+			position: fixed;
+			top: -100px;
+			left: 50%;
+			transform: translateX(-50%);
+			z-index: 999999;
+			min-width: 300px;
+			max-width: 90vw;
+			text-align: center;
+			transition: top 0.5s ease-in-out;
+		}
+
+		.toast.show {
+			top: 30px;
+		}
+
+		/* ================================
+		* TIMEZONE INLINE EDIT
+		* ================================ */
 		#timezoneInput {
 			font-family: monospace;
 			border: 2px solid #1779ba;
@@ -288,6 +316,9 @@
 			padding: 0 5px;
 		}
 
+		/* ================================
+		* LOADING SPINNER ANIMATION
+		* ================================ */
 		@keyframes spinner {
 			to {
 				transform: rotate(360deg);
@@ -304,7 +335,9 @@
 			animation: spinner 1s ease-in-out infinite;
 		}
 
-		/* Volume Slider - Custom Style */
+		/* ================================
+		* VOLUME SLIDER - CUSTOM STYLE
+		* ================================ */
 		#volumeSlider {
 			-webkit-appearance: none;
 			appearance: none;
@@ -345,7 +378,6 @@
 			box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
 		}
 
-		/* Update slider background saat nilai berubah */
 		#volumeSlider::-webkit-slider-runnable-track {
 			background: linear-gradient(to right, #1779ba 0%, #1779ba var(--slider-value, 50%), #e6e6e6 var(--slider-value, 50%), #e6e6e6 100%);
 			height: 8px;
@@ -362,21 +394,6 @@
 			background: #1779ba;
 			height: 8px;
 			border-radius: 5px;
-		}
-
-		.toast {
-			position: fixed;
-			top: -100px;
-			left: 50%;
-			transform: translateX(-50%);
-			z-index: 9999;
-			min-width: 300px;
-			text-align: center;
-			transition: top 0.5s ease-in-out;
-		}
-
-		.toast.show {
-			top: 30px;
 		}
 	</style>
 </head>
@@ -469,11 +486,11 @@
 												<div class="medium-6 small-12 large-6 cell text-left">
 													<p>
 														<strong>Jaringan WiFi:</strong>
-														<span id="wifiName">-</span>
+														<span id="wifiName"></span>
 													</p>
 													<p>
 														<strong>Alamat IP:</strong>
-														<span id="ipAddress">-</span>
+														<span id="ipAddress">0.0.0.0</span>
 													</p>
 													<p>
 														<strong>Internet:</strong>
@@ -484,11 +501,11 @@
 												<div class="medium-6 small-12 large-6 cell text-left">
 													<p>
 														<strong>Status NTP:</strong>
-														<span id="ntpStatus">-</span>
+														<span id="ntpStatus">Belum tersinkron</span>
 													</p>
 													<p>
 														<strong>Server NTP:</strong>
-														<span id="ntpServerUsed">-</span>
+														<span id="ntpServerUsed"></span>
 													</p>
 													<p>
 														<strong>Waktu:</strong>
@@ -1295,6 +1312,7 @@
 				case 'factory':
 					break;
 				default:
+					break;
 			}
 		}
 		// ================================
@@ -1706,7 +1724,7 @@
 				const data = await response.json();
 				isOnline = data.connected === true;
 				document.getElementById('wifiName').textContent = data.ssid || 'Tidak Terhubung';
-				document.getElementById('ipAddress').textContent = data.ip || '-';
+				document.getElementById('ipAddress').textContent = data.ip || '0.0.0.0';
 				document.getElementById('ntpStatus').textContent = data.ntpSynced ? 'Tersinkron' : 'Belum tersinkron';
 				if (document.getElementById('ntpServerUsed')) {
 					document.getElementById('ntpServerUsed').textContent = data.ntpServer || '-';
@@ -1782,7 +1800,7 @@
 					option.value = city.api;
 					let displayText = city.display;
 					if (city.lat && city.lon) {
-						displayText += ` (${parseFloat(city.lat).toFixed(2)}°, ${parseFloat(city.lon).toFixed(2)}°)`;
+						displayText += ` (${parseFloat(city.lat).ted(2)}°, ${parseFloat(city.lon).ted(2)}°)`;
 					}
 					option.textContent = displayText;
 					option.setAttribute('data-lat', city.lat);
@@ -1858,7 +1876,7 @@
 				coordinatesForm.classList.remove('hide');
 				latInput.value = lat;
 				lonInput.value = lon;
-				defaultCoordsSpan.textContent = `${parseFloat(lat).toFixed(4)}°, ${parseFloat(lon).toFixed(4)}°`;
+				defaultCoordsSpan.textContent = `${parseFloat(lat).ted(4)}°, ${parseFloat(lon).ted(4)}°`;
 			} else {
 				coordinatesForm.classList.add('hide');
 			}
@@ -1945,7 +1963,7 @@
 				if (data.hasSelection && data.selectedCityApi) {
 					let displayText = data.selectedCity;
 					if (data.latitude && data.longitude) {
-						displayText += ` (${parseFloat(data.latitude).toFixed(4)}°, ${parseFloat(data.longitude).toFixed(4)}°)`;
+						displayText += ` (${parseFloat(data.latitude).ted(4)}°, ${parseFloat(data.longitude).ted(4)}°)`;
 					}
 					currentCitySpan.textContent = displayText;
 					currentCitySpan.className = 'text-primary';
@@ -1971,7 +1989,7 @@
 							if (defaultLat && defaultLon) {
 								defaultCoordinates.lat = defaultLat;
 								defaultCoordinates.lon = defaultLon;
-								defaultCoordsSpan.textContent = `${parseFloat(defaultLat).toFixed(4)}°, ${parseFloat(defaultLon).toFixed(4)}°`;
+								defaultCoordsSpan.textContent = `${parseFloat(defaultLat).ted(4)}°, ${parseFloat(defaultLon).ted(4)}°`;
 							}
 						}
 						latInput.value = data.latitude;
@@ -2602,8 +2620,8 @@
 					const ESP32_MAX_HEAP = 320000;
 
 					if (jsonSize > ESP32_MAX_HEAP) {
-						const sizeKB = (jsonSize / 1024).toFixed(2);
-						const maxKB = (ESP32_MAX_HEAP / 1024).toFixed(2);
+						const sizeKB = (jsonSize / 1024).ted(2);
+						const maxKB = (ESP32_MAX_HEAP / 1024).ted(2);
 
 						showToast(`Berkas terlalu berat untuk perangkat ${sizeKB} KB > ${maxKB} KB`, 'error');
 
@@ -2622,8 +2640,8 @@
 						fileSize: file.size
 					};
 
-					const sizeKB = (file.size / 1024).toFixed(2);
-					const jsonSizeKB = (jsonSize / 1024).toFixed(2);
+					const sizeKB = (file.size / 1024).ted(2);
+					const jsonSizeKB = (jsonSize / 1024).ted(2);
 
 					fileNameDisplay.innerHTML =
 						`<span class="label success">${file.name} (${sizeKB} KB)</span><br>` +
@@ -2687,7 +2705,7 @@
 						const percentComplete = Math.round((e.loaded / e.total) * 100);
 						progressBar.style.width = percentComplete + '%';
 						progressBar.querySelector('.progress-meter-text').textContent = percentComplete + '%';
-						statusText.textContent = `Mengunggah: ${(e.loaded / 1024).toFixed(1)} KB / ${(e.total / 1024).toFixed(1)} KB`;
+						statusText.textContent = `Mengunggah: ${(e.loaded / 1024).ted(1)} KB / ${(e.total / 1024).ted(1)} KB`;
 					}
 				});
 
@@ -2698,7 +2716,7 @@
 						statusText.innerHTML = '<span class="label success">Pengunggahan berhasil</span>';
 
 						if (selectedCitiesFile.jsonMetadata) {
-							const jsonSizeKB = (selectedCitiesFile.jsonMetadata.jsonSize / 1024).toFixed(2);
+							const jsonSizeKB = (selectedCitiesFile.jsonMetadata.jsonSize / 1024).ted(2);
 							showToast(`cities.json berhasil diunggah ${selectedCitiesFile.jsonMetadata.citiesCount} lokasi`, 'success');
 						} else {
 							showToast('cities.json berhasil diunggah', 'success');
@@ -3131,17 +3149,37 @@
 					e.preventDefault();
 					const targetId = this.getAttribute('href').substring(1);
 
+					// Remove active class from all tabs
 					document.querySelectorAll('.tabs-title').forEach(tab => {
 						tab.classList.remove('is-active');
 					});
+					
+					// Remove active class from all panels
 					tabPanels.forEach(panel => {
 						panel.classList.remove('is-active');
 					});
 
+					// Add active class to clicked tab
 					this.parentElement.classList.add('is-active');
-					document.getElementById(targetId).classList.add('is-active');
+					
+					// Add active class to target panel
+					const targetPanel = document.getElementById(targetId);
+					if (targetPanel) {
+						targetPanel.classList.add('is-active');
+					}
 
-					// Load tab data
+					// Force reflow untuk trigger scroll visibility
+					setTimeout(() => {
+						const activePanel = document.getElementById(targetId);
+						if (activePanel) {
+							activePanel.style.display = 'none';
+							activePanel.offsetHeight; // Force reflow
+							activePanel.style.display = 'block';
+							
+							activePanel.scrollTop = 0;
+						}
+					}, 50);
+
 					handleTabClick(targetId);
 				});
 			});
@@ -3270,6 +3308,38 @@
 				handleTabClick('home');
 			}, 500);
 
+			// ================================
+			// DISABLE PULL-TO-REFRESH
+			// ================================
+			let lastTouchY = 0;
+			let preventPullToRefresh = false;
+
+			document.addEventListener('touchstart', function(e) {
+				if (e.touches.length !== 1) return;
+				lastTouchY = e.touches[0].clientY;
+				
+				// Cek apakah di dalam scrollable container
+				const target = e.target.closest('.tabs-panel, .tabs-content, .callout');
+				preventPullToRefresh = target && target.scrollTop === 0;
+			}, { passive: false });
+
+			document.addEventListener('touchmove', function(e) {
+				const touchY = e.touches[0].clientY;
+				const touchYDelta = touchY - lastTouchY;
+				lastTouchY = touchY;
+
+				// Jika scroll ke atas di top of page
+				if (preventPullToRefresh && touchYDelta > 0) {
+					e.preventDefault();
+					return false;
+				}
+			}, { passive: false });
+
+			initTabs();
+
+			// ================================
+			// WIFI & AP CREDENTIALS - PREVENT AUTO-CHANGE
+			// ================================
 			const wifiCredInputs = document.querySelectorAll('input[data-form="wifi-credentials"]');
 			const apCredInputs = document.querySelectorAll('input[data-form="ap-credentials"]');
 			const networkConfigInputs = document.querySelectorAll('input[data-form="network-config"]');
@@ -3292,6 +3362,9 @@
 				});
 			});
 
+			// ================================
+			// BUZZER TOGGLE HANDLERS
+			// ================================
 			document.querySelectorAll('.buzzer-toggle').forEach(toggle => {
 				toggle.addEventListener('change', function () {
 					const prayer = this.getAttribute('data-prayer');
@@ -3300,6 +3373,9 @@
 				});
 			});
 
+			// ================================
+			// VOLUME SLIDER HANDLERS
+			// ================================
 			const volumeSlider = document.getElementById('volumeSlider');
 			const volumeValue = document.getElementById('volumeValue');
 
@@ -3329,7 +3405,7 @@
 			});
 
 			// ================================
-			// VALIDATE IP ADDRESS INPUT
+			// IP ADDRESS INPUT VALIDATION
 			// ================================
 			const apIPInput = document.getElementById('apIP');
 			const gatewayInput = document.getElementById('gatewayIP');
@@ -3352,9 +3428,7 @@
 			function setupIPInput(input, fieldName) {
 				if (!input) return;
 
-				// Validasi karakter yang diketik
 				input.addEventListener('keydown', function (e) {
-					// Izinkan keyboard shortcuts dan navigation keys
 					if ([8, 9, 27, 13, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1 ||
 						(e.keyCode === 65 && e.ctrlKey === true) ||
 						(e.keyCode === 67 && e.ctrlKey === true) ||
@@ -3368,7 +3442,6 @@
 					}
 
 					const char = e.key;
-					// Hanya izinkan angka dan titik
 					if (!/^[\d\.]$/.test(char)) {
 						e.preventDefault();
 					}
@@ -3670,6 +3743,7 @@
 			}, 1000);
 
 			window.addEventListener('offline', function () {
+				// Do nothing
 			});
 		});
 	</script>
