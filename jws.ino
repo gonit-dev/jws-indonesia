@@ -46,7 +46,7 @@
 //#define RTC_SDA    21
 //#define RTC_SCL    22
 
-// Pin Audio
+// Pin Audio PCM5012A
 #define I2S_BCLK 25
 #define I2S_LRC  32
 #define I2S_DOUT 33
