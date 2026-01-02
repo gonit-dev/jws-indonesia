@@ -7,265 +7,391 @@
 	<title>Jadwal Shalat</title>
 	<link rel="stylesheet" href="assets/css/foundation.min.css">
 	<style>
-	html,
-	body {
-		height: 100%;
-		margin: 0;
-		padding: 0;
-		overflow-x: hidden;
-	}
+		html,
+		body {
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			overflow-x: hidden;
+		}
 
-	body {
-		min-height: 100vh;
-		position: relative;
-	}
+		body {
+			min-height: 100vh;
+			position: relative;
+		}
 
-	/* ================================
-	PAGE LOADER
-	================================ */
-	#pageLoader {
-		position: fixed;
-		inset: 0;
-		background: #ffffff;
-		z-index: 99999;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: opacity 0.5s ease-out;
-	}
+		/* Loading Screen Styles */
+		#pageLoader {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			width: 100vw;
+			height: 100vh;
+			overflow: hidden;
+			background: #ffffff;
+			z-index: 99999;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			transition: opacity 0.5s ease-out;
+		}
 
-	#pageLoader.loaded {
-		opacity: 0;
-		pointer-events: none;
-	}
+		#pageLoader.loaded {
+			opacity: 0;
+			pointer-events: none;
+		}
 
-	body.loading {
-		overflow: hidden !important;
-		position: fixed !important;
-		width: 100% !important;
-		height: 100vh !important;
-	}
+		body.loading {
+			overflow: hidden !important;
+			height: 100vh !important;
+			max-height: 100vh !important;
+			position: fixed !important;
+			width: 100% !important;
+			top: 0 !important;
+			left: 0 !important;
+		}
 
-	/* ================================
-	LOADER CONTENT
-	================================ */
-	.loader-content {
-		text-align: center;
-		max-width: 520px;
-		width: 100%;
-	}
+		/* Ensure main content is visible after loading */
+		body:not(.loading)>.grid-container:not(#pageLoader) {
+			display: block !important;
+			visibility: visible !important;
+			opacity: 1 !important;
+		}
 
-	.loader-icon {
-		font-size: 60px;
-		margin-bottom: -30px;
-		animation: pulse 2s ease-in-out infinite;
-	}
+		/* Hide main content during loading */
+		body.loading>.grid-container:not(:first-child),
+		body.loading #toast {
+			display: none !important;
+			visibility: hidden !important;
+			opacity: 0 !important;
+		}
 
-	@keyframes pulse {
-		0%,100% { transform: scale(1); opacity: 1; }
-		50% { transform: scale(1.1); opacity: 0.85; }
-	}
+		.loader-content {
+			text-align: center;
+			max-width: 400px;
+			padding: 0 20px;
+		}
 
-	.loader-title {
-		font-size: 20px;
-		font-weight: bold;
-		color: #1779ba;
-		margin-bottom: 10px;
-	}
+		.loader-icon {
+			font-size: 60px;
+			margin-bottom: 20px;
+			animation: pulse 2s ease-in-out infinite;
+		}
 
-	.loader-subtitle {
-		margin-bottom: 5px;
-		font-size: 15px;
-		color: #8a8a8a;
-	}
+		@keyframes pulse {
 
-	/* ================================
-	PROGRESS BAR
-	================================ */
-	.progress {
-		overflow: hidden;
-		background: #e6e6e6;
-		height: 1rem;
-		border-radius: 999px;
-	}
+			0%,
+			100% {
+				transform: scale(1);
+				opacity: 1;
+			}
 
-	.progress-meter {
-		position: relative;
-		height: 100%;
-		width: 0%;
-		background: #1779ba;
-		border-radius: inherit;
-		overflow: hidden;
-		transition: width 0.4s ease;
-		will-change: width;
-	}
+			50% {
+				transform: scale(1.1);
+				opacity: 0.8;
+			}
+		}
 
-	/* SHIMMER FIXED WIDTH */
-	.progress-meter::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: -40%;
-		width: 40%;
-		height: 100%;
-		background: linear-gradient(
-			90deg,
-			transparent,
-			rgba(255,255,255,0.4),
-			transparent
-		);
-		animation: shimmer 1.5s infinite;
-	}
+		.loader-title {
+			font-size: 24px;
+			font-weight: bold;
+			color: #1779ba;
+			margin-bottom: 10px;
+		}
 
-	@keyframes shimmer {
-		0% { transform: translateX(0); }
-		100% { transform: translateX(300%); }
-	}
+		.loader-subtitle {
+			font-size: 14px;
+			color: #8a8a8a;
+			margin-bottom: 30px;
+		}
 
-	/* ================================
-	PROGRESS ROW
-	================================ */
-	.progress-row {
-		width: 400px;
-		max-width: 90vw;
-		display: flex;
-		margin: auto;
-		align-items: center;
-		gap: 12px;
-	}
+		.progress-container {
+			width: 100%;
+			height: 10px;
+			background: #e6e6e6;
+			border-radius: 10px;
+			overflow: hidden;
+			position: relative;
+			margin-bottom: 15px;
+		}
 
-	.progress-row .progress {
-		flex: 1;
-		margin-bottom: 0;
-	}
+		.progress-bar {
+			height: 100%;
+			background: linear-gradient(90deg, #1779ba 0%, #14679e 100%);
+			border-radius: 10px;
+			width: 0%;
+			transition: width 0.3s ease;
+			position: relative;
+			overflow: hidden;
+		}
 
-	.loader-percentage {
-		font-size: 22px;
-		font-weight: bold;
-		color: #1779ba;
-		white-space: nowrap;
-		text-align: right;
-		margin-top: -3px;
-	}
+		.progress-bar::before {
+			content: '';
+			position: absolute;
+			top: 0;
+			left: 0;
+			bottom: 0;
+			right: 0;
+			background: linear-gradient(90deg,
+					transparent 0%,
+					rgba(255, 255, 255, 0.3) 50%,
+					transparent 100%);
+			animation: shimmer 1.5s infinite;
+		}
 
-	/* ================================
-	LOADER STATUS
-	================================ */
-	.loader-status {
-		font-size: 15px;
-		color: #1779ba;
-		font-weight: 500;
-		min-height: 20px;
-	}
+		@keyframes shimmer {
+			0% {
+				transform: translateX(-100%);
+			}
 
-/* ================================
-	COUNTDOWN LOADING
-	================================ */
-	#countdownLoading {
-		position: fixed;
-		inset: 0;
-		z-index: 999999;
-		background: rgba(0,0,0,0.45);
-		backdrop-filter: blur(2px);
-		display: none;
-		align-items: center;
-		justify-content: center;
-	}
+			100% {
+				transform: translateX(100%);
+			}
+		}
 
-	#countdownLoading .loader-content {
-		background: #ffffff;
-		border-radius: 8px;
-		box-shadow: 0 12px 30px rgba(0,0,0,0.3);
-		padding: 20px;
-		max-width: 520px;
-		width: 100%;
-	}
+		.loader-status {
+			font-size: 13px;
+			color: #1779ba;
+			font-weight: 500;
+			min-height: 20px;
+		}
 
-	#countdownLoading .loader-title {
-		font-size: 20px;
-		font-weight: bold;
-		color: #1779ba;
-		text-align: center;
-		margin-bottom: 10px;
-	}
+		.loader-percentage {
+			font-size: 25px;
+			font-weight: bold;
+			color: #1779ba;
+			margin-top: 10px;
+		}
 
-	#countdownLoading .progress-row {
-		width: 400px;
-		max-width: 90vw;
-		display: flex;
-		margin: auto;
-		align-items: center;
-		gap: 12px;
-	}
+		/* Countdown Loading Bar - Like Page Loader */
+		#countdownLoading {
+			position: fixed !important;
+			top: 0;
+			left: 0;
+			width: 100vw;
+			height: 100vh;
+			z-index: 999999;
 
-	#countdownLoading .progress-row .progress {
-		flex: 1;
-		margin-bottom: 0;
-	}
+			/* overlay */
+			background: rgba(0, 0, 0, 0.45);
+			backdrop-filter: blur(2px);
 
-	#countdownLoading .loader-percentage {
-		font-size: 22px;
-		font-weight: bold;
-		color: #1779ba;
-		white-space: nowrap;
-		text-align: right;
-		margin-top: -3px;
-	}
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
 
-	/* ================================
-	TOAST
-	================================ */
-	.toast {
-		position: fixed;
-		top: -100px;
-		left: 50%;
-		transform: translateX(-50%);
-		z-index: 999999;
-		min-width: 300px;
-		max-width: 90vw;
-		text-align: center;
-		transition: top 0.5s ease-in-out;
-	}
+		#countdownLoading .loader-content {
+			display: grid !important;
+			grid-template-columns: 1fr auto !important;
+			grid-template-rows: auto auto !important;
+			column-gap: 12px;
+			row-gap: 16px;
+			align-items: center;
+			text-align: unset;
 
-	.toast.show {
-		top: 30px;
-	}
+			background: #ffffff;
+			padding: 24px 28px;
+			border-radius: 8px;
+			box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+			min-width: 280px;
+		}
+
+		#countdownLoading .loader-title {
+			grid-column: 1 / -1;
+			text-align: center;
+		}
+
+		#countdownLoading .progress-container {
+			grid-column: 1;
+			width: 100% !important;
+			margin-bottom: 0 !important;
+		}
+
+		#countdownLoading .progress-bar {
+			height: 100%;
+			width: 0%;
+			background: linear-gradient(90deg, #1779ba, #2c83bd);
+			transition: width 0.25s ease;
+			position: relative;
+		}
+
+		#countdownLoading .progress-bar::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background: linear-gradient(90deg,
+					transparent 0%,
+					rgba(255, 255, 255, 0.35) 50%,
+					transparent 100%);
+			animation: shimmer 1.4s infinite;
+		}
+
+		#countdownLoading .loader-percentage {
+			line-height: 1;
+			font-size: 20px;
+			font-weight: 600;
+			transform: translateY(-5px);
+		}
+
+		/* Toast with Higher Z-Index */
+		.toast {
+			position: fixed;
+			top: -100px;
+			left: 50%;
+			transform: translateX(-50%);
+			z-index: 999999;
+			/* Higher than overlay */
+			min-width: 300px;
+			max-width: 90vw;
+			text-align: center;
+			transition: top 0.5s ease-in-out;
+		}
+
+		.toast.show {
+			top: 30px;
+		}
+
+		/* Body Lock - Prevent Scroll & Height Issues */
+		body.countdown-active {
+			overflow: hidden !important;
+			position: fixed !important;
+			width: 100% !important;
+			height: 100vh !important;
+			top: 0 !important;
+			left: 0 !important;
+		}
+
+		/* Timezone inline edit styling */
+		#timezoneInput {
+			font-family: monospace;
+			border: 2px solid #1779ba;
+			border-radius: 4px;
+		}
+
+		#timezoneInput:focus {
+			outline: none;
+			border-color: #14679e;
+			box-shadow: 0 0 5px rgba(23, 121, 186, 0.5);
+		}
+
+		#timezoneDisplayText {
+			font-weight: bold;
+			color: #1779ba;
+			padding: 0 5px;
+		}
+
+		@keyframes spinner {
+			to {
+				transform: rotate(360deg);
+			}
+		}
+
+		.loading-spinner {
+			display: inline-block;
+			width: 20px;
+			height: 20px;
+			border: 3px solid rgba(0, 0, 0, .1);
+			border-radius: 50%;
+			border-top-color: #1779ba;
+			animation: spinner 1s ease-in-out infinite;
+		}
+
+		/* Volume Slider - Custom Style */
+		#volumeSlider {
+			-webkit-appearance: none;
+			appearance: none;
+			height: 8px;
+			border-radius: 5px;
+			background: #e6e6e6;
+			outline: none;
+		}
+
+		#volumeSlider::-webkit-slider-thumb {
+			-webkit-appearance: none;
+			appearance: none;
+			width: 24px;
+			height: 24px;
+			border-radius: 50%;
+			background: #1779ba;
+			cursor: pointer;
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+		}
+
+		#volumeSlider::-moz-range-thumb {
+			width: 24px;
+			height: 24px;
+			border-radius: 50%;
+			background: #1779ba;
+			cursor: pointer;
+			border: none;
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+		}
+
+		#volumeSlider::-webkit-slider-thumb:hover {
+			background: #14679e;
+			box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+		}
+
+		#volumeSlider::-moz-range-thumb:hover {
+			background: #14679e;
+			box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+		}
+
+		/* Update slider background saat nilai berubah */
+		#volumeSlider::-webkit-slider-runnable-track {
+			background: linear-gradient(to right, #1779ba 0%, #1779ba var(--slider-value, 50%), #e6e6e6 var(--slider-value, 50%), #e6e6e6 100%);
+			height: 8px;
+			border-radius: 5px;
+		}
+
+		#volumeSlider::-moz-range-track {
+			background: #e6e6e6;
+			height: 8px;
+			border-radius: 5px;
+		}
+
+		#volumeSlider::-moz-range-progress {
+			background: #1779ba;
+			height: 8px;
+			border-radius: 5px;
+		}
+
+		.toast {
+			position: fixed;
+			top: -100px;
+			left: 50%;
+			transform: translateX(-50%);
+			z-index: 9999;
+			min-width: 300px;
+			text-align: center;
+			transition: top 0.5s ease-in-out;
+		}
+
+		.toast.show {
+			top: 30px;
+		}
 	</style>
-
 </head>
 
 <body>
 	<!-- Page Loading Screen -->
-	<div id="pageLoader">
-		<div class="grid-container full">
-			<div class="grid-x grid-padding-x grid-margin-y align-center">
-				<div class="medium-12 small-12 large-12 cell">
+	<div class="grid-container full">
+		<div class="grid-x grid-padding-x grid-margin-y align-center">
+			<div class="medium-12 small-12 large-12 cell">
+				<div id="pageLoader">
 					<div class="loader-content">
-						<div class="grid-x grid-padding-y">
-							<div class="medium-12 small-12 large-12 cell">
-								<div class="loader-icon">🕌</div>
-							</div>
-							<div class="medium-12 small-12 large-12 cell">
-								<div class="loader-title">Jadwal Shalat</div>
-							</div>
+						<div class="loader-icon">🕌</div>
+						<div class="loader-title">Jadwal Shalat</div>
+						<div class="loader-subtitle">Memuat halaman...</div>
+						<div class="progress-container">
+							<div class="progress-bar" id="loadingProgress"></div>
 						</div>
-						<div class="grid-x grid-padding-x">
-							<div class="medium-12 small-12 large-12 cell">
-								<div class="loader-subtitle">Memuat halaman...</div>
-							</div>
-							<div class="medium-12 small-12 large-12 cell">
-								<div class="progress-row">
-									<div class="progress" role="progressbar" tabindex="0"
-										aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-										<div class="progress-meter" id="loadingProgress"></div>
-									</div>
-									<div class="loader-percentage" id="loadingPercentage">0%</div>
-								</div>
-							</div>
-							<div class="medium-12 small-12 large-12 cell">
-								<div class="loader-status" id="loadingStatus">Mohon tunggu...</div>
-							</div>
-						</div>
+						<div class="loader-percentage" id="loadingPercentage">0%</div>
+						<div class="loader-status" id="loadingStatus">Mohon tunggu...</div>
 					</div>
 				</div>
 			</div>
@@ -274,25 +400,16 @@
 	<!-- Toast Notification using Foundation Callout -->
 	<div id="toast" class="toast callout success"></div>
 	<!-- Countdown Loading Bar (Like Page Loader) -->
-	<div  id="countdownLoading" style="display: none;">
+	<div id="countdownLoading" style="display: none;">
 		<div class="grid-container full">
 			<div class="grid-x grid-padding-x grid-margin-y align-center">
 				<div class="medium-12 small-12 large-12 cell">
 					<div class="loader-content">
-						<div class="grid-x grid-padding-x">
-							<div class="medium-12 small-12 large-12 cell">
-								<div class="loader-title" id="countdownTitle">Mulai</div>
-							</div>
-							<div class="medium-12 small-12 large-12 cell">
-								<div class="progress-row">
-									<div class="progress" role="progressbar" tabindex="0"
-										aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-										<div class="progress-meter" id="countdownProgressBar"></div>
-									</div>
-									<div class="loader-percentage" id="countdownPercentage">0%</div>
-								</div>
-							</div>
+						<div class="loader-title" id="countdownTitle">Mulai</div>
+						<div class="progress-container">
+							<div class="progress-bar" id="countdownProgressBar"></div>
 						</div>
+						<div class="loader-percentage" id="countdownPercentage">0%</div>
 					</div>
 				</div>
 			</div>
@@ -1046,30 +1163,24 @@
 			updateProgress(stepIndex, statusText) {
 				const progress = this.steps[stepIndex].progress;
 				const progressBar = document.getElementById('loadingProgress');
-				const progressContainer = progressBar?.closest('.progress');
 				const percentage = document.getElementById('loadingPercentage');
 				const status = document.getElementById('loadingStatus');
-				
 				if (progressBar) progressBar.style.width = progress + '%';
-				if (progressContainer) progressContainer.setAttribute('aria-valuenow', progress);
 				if (percentage) percentage.textContent = progress + '%';
 				if (status) status.textContent = statusText || this.steps[stepIndex].name;
 			},
 			completeLoading() {
 				const loader = document.getElementById('pageLoader');
 				const progressBar = document.getElementById('loadingProgress');
-				const progressContainer = progressBar?.closest('.progress');
 				const percentage = document.getElementById('loadingPercentage');
 				const status = document.getElementById('loadingStatus');
-				
 				if (progressBar) progressBar.style.width = '100%';
-				if (progressContainer) progressContainer.setAttribute('aria-valuenow', 100);
 				if (percentage) percentage.textContent = '100%';
 				if (status) status.textContent = 'Siap';
-				
 				setTimeout(() => {
 					if (loader) {
 						loader.classList.add('loaded');
+						// Enable scroll kembali
 						document.body.classList.remove('loading');
 						setTimeout(() => {
 							loader.style.display = 'none';
@@ -1117,7 +1228,6 @@
 		let cityList = [];
 		let loadAttempts = 0;
 		const MAX_LOAD_ATTEMPTS = 3;
-		let buzzerTestInterval = null;
 		let isUserLocalAP = true;
 		let isLoadingDeviceStatus = false;
 		let isLoadingPrayerTimes = false;
@@ -1502,20 +1612,37 @@
 		function updateCountdownDisplay(remaining, message) {
 			const loadingBar = document.getElementById('countdownLoading');
 			const progressBar = document.getElementById('countdownProgressBar');
-			const progressContainer = progressBar?.closest('.progress');
 			const percentageElement = document.getElementById('countdownPercentage');
 			const titleElement = document.getElementById('countdownTitle');
 
 			if (!loadingBar) return;
 
 			const now = Date.now();
-			const elapsedMs = countdownTotalSeconds * 1000 - (countdownEndTime - now);
-			const percentage = Math.min(100, Math.max(0, Math.round((elapsedMs / (countdownTotalSeconds * 1000)) * 100)));
 
-			if (progressBar) progressBar.style.width = percentage + '%';
-			if (progressContainer) progressContainer.setAttribute('aria-valuenow', percentage);
-			if (percentageElement) percentageElement.textContent = percentage + '%';
-			if (titleElement) titleElement.textContent = message;
+			const elapsedMs =
+				countdownTotalSeconds * 1000 - (countdownEndTime - now);
+
+			const percentage = Math.min(
+				100,
+				Math.max(
+					0,
+					Math.round(
+						(elapsedMs / (countdownTotalSeconds * 1000)) * 100
+					)
+				)
+			);
+
+			if (progressBar) {
+				progressBar.style.width = percentage + '%';
+			}
+
+			if (percentageElement) {
+				percentageElement.textContent = percentage + '%';
+			}
+
+			if (titleElement) {
+				titleElement.textContent = message;
+			}
 
 			loadingBar.style.display = 'flex';
 		}
@@ -2004,50 +2131,6 @@
 				} catch (error) {
 				}
 			}, 500);
-		}
-
-		async function toggleTestBuzzer() {
-			const btn = document.getElementById('testBuzzerBtn');
-			
-			if (buzzerTestInterval) {
-				// Stop test
-				clearInterval(buzzerTestInterval);
-				buzzerTestInterval = null;
-				
-				// Stop buzzer on server
-				await fetch('/stopbuzzer', { method: 'POST' });
-				
-				btn.textContent = '🔔 Test Buzzer';
-				btn.classList.remove('alert');
-				btn.classList.add('secondary');
-				
-			} else {
-				const volume = document.getElementById('volumeSlider').value;
-				
-				try {
-					const response = await fetch('/testbuzzer', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-						body: 'volume=' + volume
-					});
-					
-					if (response.ok) {
-						btn.textContent = '⏹ Stop Test';
-						btn.classList.remove('secondary');
-						btn.classList.add('alert');
-						
-						showToast('Buzzer test dimulai (akan otomatis berhenti dalam 30 detik)', 'success');
-						
-						setTimeout(() => {
-							if (buzzerTestInterval) {
-								toggleTestBuzzer();
-							}
-						}, 30000);
-					}
-				} catch (error) {
-					showToast('Gagal menguji buzzer', 'error');
-				}
-			}
 		}
 
 		// ================================
@@ -3587,5 +3670,4 @@
 		});
 	</script>
 </body>
-
 </html>
