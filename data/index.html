@@ -7,16 +7,19 @@
 	<title>Jadwal Shalat</title>
 	<link rel="stylesheet" href="assets/css/foundation.min.css">
 	<style>
-		html, body {
+		html,
+		body {
 			height: 100%;
 			margin: 0;
 			padding: 0;
 			overflow-x: hidden;
 		}
+
 		body {
 			min-height: 100vh;
 			position: relative;
 		}
+
 		/* Loading Screen Styles */
 		#pageLoader {
 			position: fixed;
@@ -52,7 +55,7 @@
 		}
 
 		/* Ensure main content is visible after loading */
-		body:not(.loading) > .grid-container:not(#pageLoader) {
+		body:not(.loading)>.grid-container:not(#pageLoader) {
 			display: block !important;
 			visibility: visible !important;
 			opacity: 1 !important;
@@ -193,7 +196,7 @@
 			background: #ffffff;
 			padding: 24px 28px;
 			border-radius: 8px;
-			box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+			box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
 			min-width: 280px;
 		}
 
@@ -220,12 +223,10 @@
 			content: '';
 			position: absolute;
 			inset: 0;
-			background: linear-gradient(
-				90deg,
-				transparent 0%,
-				rgba(255,255,255,0.35) 50%,
-				transparent 100%
-			);
+			background: linear-gradient(90deg,
+					transparent 0%,
+					rgba(255, 255, 255, 0.35) 50%,
+					transparent 100%);
 			animation: shimmer 1.4s infinite;
 		}
 
@@ -242,7 +243,8 @@
 			top: -100px;
 			left: 50%;
 			transform: translateX(-50%);
-			z-index: 999999; /* Higher than overlay */
+			z-index: 999999;
+			/* Higher than overlay */
 			min-width: 300px;
 			max-width: 90vw;
 			text-align: center;
@@ -392,8 +394,16 @@
 						<div class="loader-status" id="loadingStatus">Mohon tunggu...</div>
 					</div>
 				</div>
-				<!-- Countdown Loading Bar (Like Page Loader) -->
-				<div id="countdownLoading" style="display: none;">
+			</div>
+		</div>
+	</div>
+	<!-- Toast Notification using Foundation Callout -->
+	<div id="toast" class="toast callout success"></div>
+	<!-- Countdown Loading Bar (Like Page Loader) -->
+	<div id="countdownLoading" style="display: none;">
+		<div class="grid-container full">
+			<div class="grid-x grid-padding-x grid-margin-y align-center">
+				<div class="medium-12 small-12 large-12 cell">
 					<div class="loader-content">
 						<div class="loader-title" id="countdownTitle">Mulai</div>
 						<div class="progress-container">
@@ -405,8 +415,6 @@
 			</div>
 		</div>
 	</div>
-	<!-- Toast Notification using Foundation Callout -->
-	<div id="toast" class="toast callout success"></div>
 	<div class="grid-container">
 		<div class="grid-x grid-padding-x grid-margin-y align-center">
 			<div class="medium-10 small-12 large-10 cell">
@@ -465,25 +473,26 @@
 													</p>
 													<p>
 														<strong>Internet:</strong>
-														<span id="internetStatus" class="label warning">Menghubungkan…</span>
+														<span id="internetStatus"
+															class="label warning">Menghubungkan…</span>
 													</p>
 												</div>
 												<div class="medium-6 small-12 large-6 cell text-left">
 													<p>
 														<strong>Status NTP:</strong>
-														<span id="ntpStatus"></span>
+														<span id="ntpStatus">-</span>
 													</p>
 													<p>
 														<strong>Server NTP:</strong>
-														<span id="ntpServerUsed"></span>
+														<span id="ntpServerUsed">-</span>
 													</p>
 													<p>
 														<strong>Waktu:</strong>
-														<span id="currentTime">0</span>
+														<span id="currentTime">00:00:00</span>
 													</p>
 													<p>
 														<strong>Tanggal:</strong>
-														<span id="currentDate">00/00/0000</span>
+														<span id="currentDate">01/01/2000</span>
 													</p>
 													<p>
 														<strong>Waktu Aktif:</strong>
@@ -491,7 +500,8 @@
 													</p>
 												</div>
 												<div class="medium-12 small-12 large-12 cell">
-													<button class="button secondary expanded" onclick="restartDevice()"> Mulai Ulang Perangkat </button>
+													<button class="button secondary expanded" onclick="restartDevice()">
+														Mulai Ulang Perangkat </button>
 												</div>
 											</div>
 										</div>
@@ -518,17 +528,24 @@
 													<div class="grid-x grid-margin-x">
 														<div class="medium-12 small-12 large-12 cell">
 															<label>SSID WiFi Router</label>
-															<input type="text" id="wifiSSID" placeholder="Masukkan SSID WiFi" autocomplete="off" data-form="wifi-credentials">
+															<input type="text" id="wifiSSID"
+																placeholder="Masukkan SSID WiFi" autocomplete="off"
+																data-form="wifi-credentials">
 														</div>
 														<div class="medium-12 small-12 large-12 cell">
 															<label>Password WiFi</label>
-															<input type="password" id="wifiPassword" placeholder="Masukkan password WiFi" autocomplete="new-password" data-form="wifi-credentials">
+															<input type="password" id="wifiPassword"
+																placeholder="Masukkan password WiFi"
+																autocomplete="new-password"
+																data-form="wifi-credentials">
 														</div>
 														<div class="medium-6 small-6 large-6 cell">
-															<button class="button secondary expanded" onclick="setWiFi()"> Simpan </button>
+															<button class="button secondary expanded"
+																onclick="setWiFi()"> Simpan </button>
 														</div>
 														<div class="medium-6 small-6 large-6 cell">
-															<button class="button secondary expanded" onclick="clearWiFiForm()"> Batal </button>
+															<button class="button secondary expanded"
+																onclick="clearWiFiForm()"> Batal </button>
 														</div>
 													</div>
 												</div>
@@ -545,17 +562,22 @@
 											<div class="grid-x grid-margin-x">
 												<div class="medium-12 small-12 large-12 cell">
 													<label>SSID Access Point</label>
-													<input type="text" id="apSSID" placeholder="Masukkan SSID AP" autocomplete="off" data-form="ap-credentials">
+													<input type="text" id="apSSID" placeholder="Masukkan SSID AP"
+														autocomplete="off" data-form="ap-credentials">
 												</div>
 												<div class="medium-12 small-12 large-12 cell">
 													<label>Password Access Point</label>
-													<input type="password" id="apPassword" placeholder="Masukkan password AP (minimal 8 karakter)" autocomplete="new-password" data-form="ap-credentials">
+													<input type="password" id="apPassword"
+														placeholder="Masukkan password AP (minimal 8 karakter)"
+														autocomplete="new-password" data-form="ap-credentials">
 												</div>
 												<div class="medium-6 small-6 large-6 cell">
-													<button class="button secondary expanded" onclick="setAP()"> Simpan </button>
+													<button class="button secondary expanded" onclick="setAP()"> Simpan
+													</button>
 												</div>
 												<div class="medium-6 small-6 large-6 cell">
-													<button class="button secondary expanded" onclick="clearAPForm()"> Batal </button>
+													<button class="button secondary expanded" onclick="clearAPForm()">
+														Batal </button>
 												</div>
 											</div>
 										</div>
@@ -570,21 +592,26 @@
 											<div class="grid-x grid-margin-x">
 												<div class="medium-12 small-12 large-12 cell">
 													<label>IP Address Access Point</label>
-													<input type="text" id="apIP" placeholder="192.168.4.1" autocomplete="off" data-form="network-config">
+													<input type="text" id="apIP" placeholder="192.168.4.1"
+														autocomplete="off" data-form="network-config">
 												</div>
 												<div class="medium-12 small-12 large-12 cell">
 													<label>Gateway</label>
-													<input type="text" id="gatewayIP" placeholder="192.168.4.1" autocomplete="off" data-form="network-config">
+													<input type="text" id="gatewayIP" placeholder="192.168.4.1"
+														autocomplete="off" data-form="network-config">
 												</div>
 												<div class="medium-12 small-12 large-12 cell">
 													<label>Subnet Mask</label>
-													<input type="text" id="subnetMask" placeholder="255.255.255.0" autocomplete="off" data-form="network-config">
+													<input type="text" id="subnetMask" placeholder="255.255.255.0"
+														autocomplete="off" data-form="network-config">
 												</div>
 												<div class="medium-6 small-6 large-6 cell">
-													<button class="button secondary expanded" onclick="setAPNetwork()">Simpan</button>
+													<button class="button secondary expanded"
+														onclick="setAPNetwork()">Simpan</button>
 												</div>
 												<div class="medium-6 small-6 large-6 cell">
-													<button class="button secondary expanded" onclick="clearDHCPForm()">Batal</button>
+													<button class="button secondary expanded"
+														onclick="clearDHCPForm()">Batal</button>
 												</div>
 											</div>
 										</div>
@@ -616,7 +643,8 @@
 															<p class="help-text">Perbarui waktu dari perangkat Anda</p>
 														</div>
 														<div class="medium-12 small-12 large-12 cell">
-															<button class="button secondary expanded" onclick="syncTime()"> Perbarui Waktu </button>
+															<button class="button secondary expanded"
+																onclick="syncTime()"> Perbarui Waktu </button>
 														</div>
 													</div>
 												</div>
@@ -624,18 +652,31 @@
 													<div class="callout secondary">
 														<div class="medium-12 small-12 large-12 cell">
 															<h6>
-																<strong>🌐 Pembaruan Otomatis (NTP) <span class="label success">AUTO</span>
+																<strong>🌐 Pembaruan Otomatis (NTP) <span
+																		class="label success">AUTO</span>
 																</strong>
 															</h6>
-															<p class="help-text">Waktu diperbarui otomatis saat terhubung ke internet</p>
+															<p class="help-text">Waktu diperbarui otomatis saat
+																terhubung ke internet</p>
 														</div>
 														<div class="medium-12 small-12 large-12 cell">
-															<p class="help-text"> 🔄 Perbarui otomatis setiap 1 jam <br> 🗄️ Beberapa server cadangan <br> 🌐 Zona waktu: UTC <span id="timezoneDisplayText">+7</span>
-																<input type="text" id="timezoneInput" value="+7" style="display: none; width: 60px; height: 25px; padding: 2px 5px; margin: 0 5px; text-align: center; font-weight: bold;" pattern="^[+-]?\d+$" maxlength="3">
-																<button id="timezoneBtn" onclick="toggleTimezoneEdit()" style="margin-left: -5px; padding: 5px 10px; line-height: 1;" title="Edit Zona Waktu"> 🕐 </button>
-																<button id="timezoneCancelBtn" onclick="cancelTimezoneEdit()" style="display: none; margin-left: -5px; padding: 5px 10px; line-height: 1;" title="Batal Edit"> ✖ </button>
+															<p class="help-text"> 🔄 Perbarui otomatis setiap 1 jam <br>
+																🗄️ Beberapa server cadangan <br> 🌐 Zona waktu: UTC
+																<span id="timezoneDisplayText">+7</span>
+																<input type="text" id="timezoneInput" value="+7"
+																	style="display: none; width: 60px; height: 25px; padding: 2px 5px; margin: 0 5px; text-align: center; font-weight: bold;"
+																	pattern="^[+-]?\d+$" maxlength="3">
+																<button id="timezoneBtn" onclick="toggleTimezoneEdit()"
+																	style="margin-left: -5px; padding: 5px 10px; line-height: 1;"
+																	title="Edit Zona Waktu"> 🕐 </button>
+																<button id="timezoneCancelBtn"
+																	onclick="cancelTimezoneEdit()"
+																	style="display: none; margin-left: -5px; padding: 5px 10px; line-height: 1;"
+																	title="Batal Edit"> ✖ </button>
 															</p>
-															<p class="help-text" style="margin-top: 5px; font-size: 11px; color: #666;"> 🇮🇩 WIB = +7 | WITA = +8 | WIT = +9 <br>
+															<p class="help-text"
+																style="margin-top: 5px; font-size: 11px; color: #666;">
+																🇮🇩 WIB = +7 | WITA = +8 | WIT = +9 <br>
 															</p>
 														</div>
 													</div>
@@ -667,12 +708,14 @@
 															<strong>Lokasi Terpilih:</strong>
 														</p>
 														<h4 id="currentCity" class="text-primary">Pilih lokasi</h4>
-														<p id="currentCityType" class="help-text" style="margin-top: -10px; font-size: 13px; color: #666;">
+														<p id="currentCityType" class="help-text"
+															style="margin-top: -10px; font-size: 13px; color: #666;">
 															<span id="cityTypeLabel"></span>
 														</p>
 														<p>
 															<strong>Metode:</strong>
-															<span id="currentMethodTop">Egyptian General Authority of Survey</span>
+															<span id="currentMethodTop">Egyptian General Authority of
+																Survey</span>
 														</p>
 													</div>
 												</div>
@@ -686,7 +729,8 @@
 												</div>
 												<div class="medium-4 small-12 large-3 cell">
 													<label class="show-for-medium">&nbsp;</label>
-													<button class="button secondary expanded" onclick="saveCity()"> Simpan </button>
+													<button class="button secondary expanded" onclick="saveCity()">
+														Simpan </button>
 												</div>
 												<div id="coordinatesForm" class="medium-12 small-12 large-12 cell hide">
 													<div class="grid-x grid-padding-y">
@@ -700,26 +744,35 @@
 													<div class="grid-x grid-margin-x">
 														<div class="medium-6 small-12 large-6 cell">
 															<label>Latitude (Lintang)</label>
-															<input type="text" id="latInput" placeholder="-6.2088" pattern="^-?\d+\.?\d*$">
+															<input type="text" id="latInput" placeholder="-6.2088"
+																pattern="^-?\d+\.?\d*$">
 															<p class="help-text">Contoh: -6.2088</p>
 														</div>
 														<div class="medium-6 small-12 large-6 cell">
 															<label>Longitude (Bujur)</label>
-															<input type="text" id="lonInput" placeholder="106.8456" pattern="^-?\d+\.?\d*$">
+															<input type="text" id="lonInput" placeholder="106.8456"
+																pattern="^-?\d+\.?\d*$">
 															<p class="help-text">Contoh: 106.8456</p>
 														</div>
 														<div class="medium-6 small-6 large-6 cell">
-															<button class="button secondary expanded" onclick="resetToDefaultCoordinates()" title="Reset ke koordinat dari JSON"> Reset </button>
+															<button class="button secondary expanded"
+																onclick="resetToDefaultCoordinates()"
+																title="Reset ke koordinat dari JSON"> Reset </button>
 														</div>
 														<div class="medium-6 small-6 large-6 cell">
-															<button class="button secondary expanded" onclick="cancelCoordinatesEdit()" title="Batalkan perubahan koordinat"> Batal </button>
+															<button class="button secondary expanded"
+																onclick="cancelCoordinatesEdit()"
+																title="Batalkan perubahan koordinat"> Batal </button>
 														</div>
 													</div>
 													<div class="grid-x grid-margin-x">
 														<div class="medium-12 small-12 large-12 cell">
 															<div class="callout secondary">
-																<p class="help-text"> 📍 Koordinat <span id="defaultCoords">-</span>
-																	<br> 🧮 Gunakan format angka dengan titik desimal <br> 🌐 Latitude: -90 hingga 90 | Longitude: -180 hingga 180
+																<p class="help-text"> 📍 Koordinat <span
+																		id="defaultCoords">-</span>
+																	<br> 🧮 Gunakan format angka dengan titik desimal
+																	<br> 🌐 Latitude: -90 hingga 90 | Longitude: -180
+																	hingga 180
 																</p>
 															</div>
 														</div>
@@ -728,25 +781,34 @@
 												<div class="medium-8 small-12 large-9 cell">
 													<label>Metode Kalkulasi Jadwal Shalat</label>
 													<select id="methodDropdown">
-														<option value="20">Kementerian Agama Indonesia (Kemenag) </option>
+														<option value="20">Kementerian Agama Indonesia (Kemenag)
+														</option>
 														<option value="3">Muslim World League (MWL)</option>
-														<option value="5" selected>Egyptian General Authority of Survey </option>
-														<option value="2">Islamic Society of North America (ISNA) </option>
+														<option value="5" selected>Egyptian General Authority of Survey
+														</option>
+														<option value="2">Islamic Society of North America (ISNA)
+														</option>
 														<option value="0">Shia Ithna-Ashari</option>
-														<option value="1">University of Islamic Sciences, Karachi </option>
+														<option value="1">University of Islamic Sciences, Karachi
+														</option>
 														<option value="4">Umm Al-Qura University, Makkah</option>
-														<option value="7">Institute of Geophysics, University of Tehran </option>
+														<option value="7">Institute of Geophysics, University of Tehran
+														</option>
 													</select>
 												</div>
 												<div class="medium-4 small-12 large-3 cell">
 													<label class="show-for-medium">&nbsp;</label>
-													<button class="button secondary expanded" onclick="saveMethod()"> Simpan </button>
+													<button class="button secondary expanded" onclick="saveMethod()">
+														Simpan </button>
 												</div>
 											</div>
 											<div class="grid-x grid-margin-x">
 												<div class="medium-12 small-12 large-12 cell">
 													<div class="callout secondary">
-														<p class="help-text"> 📍 Pilih lokasi untuk menghitung jadwal shalat <br> 📐 Pilih metode perhitungan yang diinginkan <br> 🔄 Jadwal akan diperbarui otomatis setelah memilih lokasi </p>
+														<p class="help-text"> 📍 Pilih lokasi untuk menghitung jadwal
+															shalat <br> 📐 Pilih metode perhitungan yang diinginkan <br>
+															🔄 Jadwal akan diperbarui otomatis setelah memilih lokasi
+														</p>
 													</div>
 												</div>
 											</div>
@@ -773,23 +835,33 @@
 															<br>
 														</p>
 														<p>
-														<div class="help-text"> ➕ Ada lokasi baru yang ditambahkan <br> 📍 Data koordinat lokasi ada yang diperbarui <br> Berkas <code>cities.json</code> rusak atau hilang </div>
+														<div class="help-text"> ➕ Ada lokasi baru yang ditambahkan <br>
+															📍 Data koordinat lokasi ada yang diperbarui <br> Berkas
+															<code>cities.json</code> rusak atau hilang </div>
 														</p>
 													</div>
 												</div>
 											</div>
 											<div class="medium-8 small-12 large-8 cell">
-												<label for="citiesFileInput" class="button hollow expanded"> 📁 Pilih berkas cities.json <input type="file" id="citiesFileInput" accept=".json" class="show-for-sr" onchange="handleCitiesFileSelect(event)">
+												<label for="citiesFileInput" class="button hollow expanded"> 📁 Pilih
+													berkas cities.json <input type="file" id="citiesFileInput"
+														accept=".json" class="show-for-sr"
+														onchange="handleCitiesFileSelect(event)">
 												</label>
-												<p id="selectedFileName" class="help-text"> Belum ada berkas yang dipilih </p>
+												<p id="selectedFileName" class="help-text"> Belum ada berkas yang
+													dipilih </p>
 											</div>
 											<div class="medium-4 small-12 large-4 cell">
-												<button id="uploadBtn" class="button primary expanded" onclick="uploadCitiesFile()" disabled> 📤 Unggah Berkas </button>
-												<button id="clearFileBtn" class="button primary expanded" onclick="clearSelectedFile()" style="display: none; margin-top: 10px;"> ✖ Batal </button>
+												<button id="uploadBtn" class="button primary expanded"
+													onclick="uploadCitiesFile()" disabled> 📤 Unggah Berkas </button>
+												<button id="clearFileBtn" class="button primary expanded"
+													onclick="clearSelectedFile()"
+													style="display: none; margin-top: 10px;"> ✖ Batal </button>
 											</div>
 											<div id="uploadProgress" class="hide">
 												<div class="progress" role="progressbar">
-													<div id="uploadProgressBar" class="progress-meter" style="width: 0%">
+													<div id="uploadProgressBar" class="progress-meter"
+														style="width: 0%">
 														<p class="progress-meter-text">0%</p>
 													</div>
 												</div>
@@ -801,8 +873,11 @@
 														<p>
 															<strong>Penting</strong>
 														</p>
-														<p class="help-text"> 📄 Nama berkas harus <code>cities.json</code>
-															<br> 🧾 Format harus valid JSON array <br> 📦 Ukuran maksimal: 1 MB <br> 🔄 Dropdown lokasi akan otomatis diperbarui setelah berhasil
+														<p class="help-text"> 📄 Nama berkas harus
+															<code>cities.json</code>
+															<br> 🧾 Format harus valid JSON array <br> 📦 Ukuran
+															maksimal: 1 MB <br> 🔄 Dropdown lokasi akan otomatis
+															diperbarui setelah berhasil
 														</p>
 													</div>
 												</div>
@@ -835,10 +910,15 @@
 																	<td class="text-left">
 																		<div class="switch tiny">
 																			<strong>🌙 Imsak</strong>
-																			<input class="switch-input buzzer-toggle" id="toggle-imsak" type="checkbox" name="buzzer-imsak" data-prayer="imsak">
-																			<label class="switch-paddle" for="toggle-imsak">
-																				<span class="switch-active" aria-hidden="true">ON</span>
-																				<span class="switch-inactive" aria-hidden="true">OFF</span>
+																			<input class="switch-input buzzer-toggle"
+																				id="toggle-imsak" type="checkbox"
+																				name="buzzer-imsak" data-prayer="imsak">
+																			<label class="switch-paddle"
+																				for="toggle-imsak">
+																				<span class="switch-active"
+																					aria-hidden="true">ON</span>
+																				<span class="switch-inactive"
+																					aria-hidden="true">OFF</span>
 																			</label>
 																		</div>
 																	</td>
@@ -850,10 +930,15 @@
 																	<td class="text-left">
 																		<div class="switch tiny">
 																			<strong>🌅 Subuh</strong>
-																			<input class="switch-input buzzer-toggle" id="toggle-subuh" type="checkbox" name="buzzer-subuh" data-prayer="subuh">
-																			<label class="switch-paddle" for="toggle-subuh">
-																				<span class="switch-active" aria-hidden="true">ON</span>
-																				<span class="switch-inactive" aria-hidden="true">OFF</span>
+																			<input class="switch-input buzzer-toggle"
+																				id="toggle-subuh" type="checkbox"
+																				name="buzzer-subuh" data-prayer="subuh">
+																			<label class="switch-paddle"
+																				for="toggle-subuh">
+																				<span class="switch-active"
+																					aria-hidden="true">ON</span>
+																				<span class="switch-inactive"
+																					aria-hidden="true">OFF</span>
 																			</label>
 																		</div>
 																	</td>
@@ -865,10 +950,16 @@
 																	<td class="text-left">
 																		<div class="switch tiny">
 																			<strong>🌄 Terbit</strong>
-																			<input class="switch-input buzzer-toggle" id="toggle-terbit" type="checkbox" name="buzzer-terbit" data-prayer="terbit">
-																			<label class="switch-paddle" for="toggle-terbit">
-																				<span class="switch-active" aria-hidden="true">ON</span>
-																				<span class="switch-inactive" aria-hidden="true">OFF</span>
+																			<input class="switch-input buzzer-toggle"
+																				id="toggle-terbit" type="checkbox"
+																				name="buzzer-terbit"
+																				data-prayer="terbit">
+																			<label class="switch-paddle"
+																				for="toggle-terbit">
+																				<span class="switch-active"
+																					aria-hidden="true">ON</span>
+																				<span class="switch-inactive"
+																					aria-hidden="true">OFF</span>
 																			</label>
 																		</div>
 																	</td>
@@ -880,10 +971,15 @@
 																	<td class="text-left">
 																		<div class="switch tiny">
 																			<strong>☀️ Zuhur</strong>
-																			<input class="switch-input buzzer-toggle" id="toggle-zuhur" type="checkbox" name="buzzer-zuhur" data-prayer="zuhur">
-																			<label class="switch-paddle" for="toggle-zuhur">
-																				<span class="switch-active" aria-hidden="true">ON</span>
-																				<span class="switch-inactive" aria-hidden="true">OFF</span>
+																			<input class="switch-input buzzer-toggle"
+																				id="toggle-zuhur" type="checkbox"
+																				name="buzzer-zuhur" data-prayer="zuhur">
+																			<label class="switch-paddle"
+																				for="toggle-zuhur">
+																				<span class="switch-active"
+																					aria-hidden="true">ON</span>
+																				<span class="switch-inactive"
+																					aria-hidden="true">OFF</span>
 																			</label>
 																		</div>
 																	</td>
@@ -895,10 +991,15 @@
 																	<td class="text-left">
 																		<div class="switch tiny">
 																			<strong>🌤️ Ashar</strong>
-																			<input class="switch-input buzzer-toggle" id="toggle-ashar" type="checkbox" name="buzzer-ashar" data-prayer="ashar">
-																			<label class="switch-paddle" for="toggle-ashar">
-																				<span class="switch-active" aria-hidden="true">ON</span>
-																				<span class="switch-inactive" aria-hidden="true">OFF</span>
+																			<input class="switch-input buzzer-toggle"
+																				id="toggle-ashar" type="checkbox"
+																				name="buzzer-ashar" data-prayer="ashar">
+																			<label class="switch-paddle"
+																				for="toggle-ashar">
+																				<span class="switch-active"
+																					aria-hidden="true">ON</span>
+																				<span class="switch-inactive"
+																					aria-hidden="true">OFF</span>
 																			</label>
 																		</div>
 																	</td>
@@ -910,10 +1011,16 @@
 																	<td class="text-left">
 																		<div class="switch tiny">
 																			<strong>🌆 Maghrib</strong>
-																			<input class="switch-input buzzer-toggle" id="toggle-maghrib" type="checkbox" name="buzzer-maghrib" data-prayer="maghrib">
-																			<label class="switch-paddle" for="toggle-maghrib">
-																				<span class="switch-active" aria-hidden="true">ON</span>
-																				<span class="switch-inactive" aria-hidden="true">OFF</span>
+																			<input class="switch-input buzzer-toggle"
+																				id="toggle-maghrib" type="checkbox"
+																				name="buzzer-maghrib"
+																				data-prayer="maghrib">
+																			<label class="switch-paddle"
+																				for="toggle-maghrib">
+																				<span class="switch-active"
+																					aria-hidden="true">ON</span>
+																				<span class="switch-inactive"
+																					aria-hidden="true">OFF</span>
 																			</label>
 																		</div>
 																	</td>
@@ -925,10 +1032,15 @@
 																	<td class="text-left">
 																		<div class="switch tiny">
 																			<strong>🌙 Isya</strong>
-																			<input class="switch-input buzzer-toggle" id="toggle-isya" type="checkbox" name="buzzer-isya" data-prayer="isya">
-																			<label class="switch-paddle" for="toggle-isya">
-																				<span class="switch-active" aria-hidden="true">ON</span>
-																				<span class="switch-inactive" aria-hidden="true">OFF</span>
+																			<input class="switch-input buzzer-toggle"
+																				id="toggle-isya" type="checkbox"
+																				name="buzzer-isya" data-prayer="isya">
+																			<label class="switch-paddle"
+																				for="toggle-isya">
+																				<span class="switch-active"
+																					aria-hidden="true">ON</span>
+																				<span class="switch-inactive"
+																					aria-hidden="true">OFF</span>
 																			</label>
 																		</div>
 																	</td>
@@ -939,13 +1051,17 @@
 															</tbody>
 														</table>
 														<!-- Volume Control - Native HTML5 Slider -->
-														<div class="medium-12 small-12 large-12 cell" style="margin-top: 20px;">
+														<div class="medium-12 small-12 large-12 cell"
+															style="margin-top: 20px;">
 															<strong>🔊 VOLUME BUZZER</strong>
-															<div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+															<div
+																style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
 																<span>0</span>
-																<input type="range" id="volumeSlider" min="0" max="100" value="50" style="flex: 1;">
+																<input type="range" id="volumeSlider" min="0" max="100"
+																	value="50" style="flex: 1;">
 																<span>100</span>
-																<span id="volumeValue" style="font-weight: bold; color: #1779ba;">50%</span>
+																<span id="volumeValue"
+																	style="font-weight: bold; color: #1779ba;">50%</span>
 															</div>
 														</div>
 													</div>
@@ -954,7 +1070,10 @@
 											<div class="grid-x grid-margin-x">
 												<div class="medium-12 small-12 large-12 cell">
 													<div class="callout secondary">
-														<p class="help-text"> 🕌 Jadwal shalat berdasarkan lokasi yang dipilih <br> 🔄 Diperbarui otomatis setiap tengah malam <br> 📐 <span id="currentMethodBottom">Egyptian General Authority of Survey</span>
+														<p class="help-text"> 🕌 Jadwal shalat berdasarkan lokasi yang
+															dipilih <br> 🔄 Diperbarui otomatis setiap tengah malam <br>
+															📐 <span id="currentMethodBottom">Egyptian General Authority
+																of Survey</span>
 															<br> ⚡ Diperbarui otomatis saat terhubung ke internet
 														</p>
 													</div>
@@ -983,15 +1102,19 @@
 												<div class="medium-12 small-12 large-12 cell">
 													<div class="callout secondary">
 														<p>
-															<strong>Peringatan</strong> Tindakan ini akan menghapus seluruh data dan tidak dapat dibatalkan
+															<strong>Peringatan</strong> Tindakan ini akan menghapus
+															seluruh data dan tidak dapat dibatalkan
 														</p>
-														<p class="help-text"> 📶 kredensial WiFi </br> 📡 Konfigurasi Access Point </br> 🕌 Jadwal shalat tersimpan </br> 📍 Lokasi yang dipilih </br> Waktu dan tanggal </br>
+														<p class="help-text"> 📶 kredensial WiFi </br> 📡 Konfigurasi
+															Access Point </br> 🕌 Jadwal shalat tersimpan </br> 📍
+															Lokasi yang dipilih </br> Waktu dan tanggal </br>
 														</p>
 													</div>
 												</div>
 											</div>
 											<div class="medium-12 small-12 large-12 cell">
-												<button class="button secondary expanded" onclick="resetSettings()"> Reset </button>
+												<button class="button secondary expanded" onclick="resetSettings()">
+													Reset </button>
 											</div>
 										</div>
 									</div>
@@ -1003,15 +1126,9 @@
 				<div class="grid-x grid-padding-y">
 					<div class=" medium-12 small-12 large-12 text-center cell">
 						<h6>
-							<div class="grid-x">
-								<div class=" medium-12 small-12 large-12 text-center cell">
-									<strong>GONIT: GLOBAL NETWORK IDENTIFICATION TECHNOLOGY</strong>
-								</div>
-								<div class=" medium-12 small-12 large-12 text-center cell">
-									<div id="tahun">2025 - 2025</div>
-								</div>
-							</div>
+							<strong>GONIT: GLOBAL NETWORK IDENTIFICATION TECHNOLOGY</strong>
 						</h6>
+						<span id="tahun"></span>
 					</div>
 				</div>
 			</div>
@@ -1278,7 +1395,7 @@
 		}
 
 		function formatTime(date) {
-			if (!date) return '00:00:--';
+			if (!date) return '--:--:--';
 			const hours = String(date.getHours()).padStart(2, '0');
 			const minutes = String(date.getMinutes()).padStart(2, '0');
 			const seconds = String(date.getSeconds()).padStart(2, '0');
@@ -1286,7 +1403,7 @@
 		}
 
 		function formatUptime(seconds) {
-			if (seconds === 0) return '00:00:--';
+			if (seconds === 0) return '--:--:--';
 			const days = Math.floor(seconds / 86400);
 			const hours = Math.floor((seconds % 86400) / 3600);
 			const minutes = Math.floor((seconds % 3600) / 60);
@@ -1358,15 +1475,15 @@
 			if (countdownCheckInterval) {
 				clearInterval(countdownCheckInterval);
 			}
-			
+
 			lastSuccessfulPoll = Date.now();
 			checkCountdownStatus();
-			
+
 			countdownCheckInterval = setInterval(() => {
 				checkCountdownStatus();
-				
+
 				const timeSinceLastPoll = Date.now() - lastSuccessfulPoll;
-				
+
 				if (timeSinceLastPoll > POLL_TIMEOUT_MS && isCountdownActive) {
 				}
 			}, 1000);
@@ -1387,7 +1504,7 @@
 			try {
 				const controller = new AbortController();
 				const timeoutId = setTimeout(() => controller.abort(), 2000);
-				
+
 				const response = await fetch('/api/countdown', {
 					signal: controller.signal,
 					cache: 'no-cache',
@@ -1396,53 +1513,53 @@
 						'Pragma': 'no-cache'
 					}
 				});
-				
+
 				clearTimeout(timeoutId);
-				
+
 				if (!response.ok) {
 					throw new Error(`HTTP ${response.status}`);
 				}
-				
+
 				const data = await response.json();
-				
+
 				lastSuccessfulPoll = Date.now();
 				lastKnownCountdownState = data;
-				
+
 				if (data.active && data.remaining > 0) {
-					
+
 					if (!isCountdownActive) {
 						const clientNow = Date.now();
 						const bufferSeconds = 1;
 						countdownEndTime = clientNow + ((data.remaining + bufferSeconds) * 1000);
-						
+
 						countdownReason = data.reason;
 						countdownMessage = data.message;
 						countdownTotalSeconds = data.total || data.remaining;
-						
+
 						startCountdownDisplay(data);
 						startLocalCountdownTicker();
 					} else {
 						const serverRemaining = data.remaining;
 						const localRemaining = Math.max(0, Math.floor((countdownEndTime - Date.now()) / 1000));
 						const drift = Math.abs(serverRemaining - localRemaining);
-						
+
 						if (drift > 3) {
 							const clientNow = Date.now();
 							countdownEndTime = clientNow + (serverRemaining * 1000);
 						}
 					}
-				} 
+				}
 				else if (data.active === false && isCountdownActive) {
 					stopCountdownDisplay();
 					return;
 				}
-				
+
 			} catch (error) {
 				const timeSinceLastPoll = Date.now() - lastSuccessfulPoll;
-				
+
 				if (timeSinceLastPoll > POLL_TIMEOUT_MS) {
 				}
-				
+
 				if (error.name === 'AbortError') {
 				} else {
 				}
@@ -1453,7 +1570,7 @@
 			if (countdownUIInterval) {
 				clearInterval(countdownUIInterval);
 			}
-			
+
 			countdownUIInterval = setInterval(() => {
 				if (!isCountdownActive) return;
 
@@ -1472,18 +1589,18 @@
 
 		function startCountdownDisplay(data) {
 			if (isCountdownActive) return;
-			
+
 			isCountdownActive = true;
 			document.body.classList.add('countdown-active');
-			
+
 			// Show loading bar
 			const loadingBar = document.getElementById('countdownLoading');
 			const titleElement = document.getElementById('countdownTitle');
-			
+
 			if (titleElement) {
 				titleElement.textContent = data.message || 'Memulai ulang proses';
 			}
-			
+
 			loadingBar.style.display = 'flex';
 		}
 		function updateCountdownDisplay(remaining, message) {
@@ -1535,22 +1652,22 @@
 		// ================================
 		function forceRedirect() {
 			let targetURL = window.location.href;
-			
+
 			const currentIP = window.location.hostname;
 			const isLocalAP = (currentIP.startsWith('192.168.4.') || currentIP === '192.168.4.1');
-						
+
 			if (countdownReason === 'factory_reset') {
 				if (isLocalAP) {
 					targetURL = 'http://192.168.4.1';
 				} else {
 					targetURL = window.location.href;
 				}
-				
+
 			} else if (countdownReason === 'ap_restart') {
 				if (isLocalAP) {
 					const newIPInput = document.getElementById('apIP');
 					const newIP = newIPInput ? newIPInput.value.trim() : '';
-					
+
 					if (newIP && newIP !== currentIP) {
 						targetURL = `http://${newIP}`;
 					} else {
@@ -1559,9 +1676,9 @@
 				} else {
 					targetURL = window.location.href;
 				}
-				
+
 			} else if (countdownReason === 'device_restart') {
-				targetURL = window.location.href;				
+				targetURL = window.location.href;
 			} else {
 			}
 			window.location.href = targetURL;
@@ -2122,7 +2239,7 @@
 					setTimeout(() => {
 						loadWiFiConfig();
 					}, 1000);
-					
+
 					btn.disabled = false;
 					btn.textContent = originalText;
 				} else {
@@ -2145,11 +2262,11 @@
 		function setAP() {
 			if (event && event.target) {
 				const buttonText = event.target.textContent.trim();
-				
+
 				if (buttonText !== 'Simpan') {
 					return;
 				}
-				
+
 				const isAPCredButton = event.target.closest('.grid-x')?.querySelector('#apSSID') !== null;
 				if (!isAPCredButton) {
 					return;
@@ -2184,38 +2301,38 @@
 				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 				body: formData.toString()
 			})
-			.then(response => {
-				if (response.ok) {
-					savedWiFiConfig.apSSID = ssid;
-					if (pass) savedWiFiConfig.apPassword = pass;
+				.then(response => {
+					if (response.ok) {
+						savedWiFiConfig.apSSID = ssid;
+						if (pass) savedWiFiConfig.apPassword = pass;
 
-					showToast(`Pengaturan Access Point "${ssid}" berhasil disimpan`, 'success');
+						showToast(`Pengaturan Access Point "${ssid}" berhasil disimpan`, 'success');
 
-					setTimeout(() => loadWiFiConfig(), 1000);
+						setTimeout(() => loadWiFiConfig(), 1000);
 
+						btn.disabled = false;
+						btn.textContent = originalText;
+
+						startCountdownPolling();
+					} else {
+						return response.text().then(text => { throw new Error(text); });
+					}
+				})
+				.catch(error => {
+					showToast('Gagal menyimpan Access Point: ' + error.message, 'error');
 					btn.disabled = false;
 					btn.textContent = originalText;
-
-					startCountdownPolling();
-				} else {
-					return response.text().then(text => { throw new Error(text); });
-				}
-			})
-			.catch(error => {
-				showToast('Gagal menyimpan Access Point: ' + error.message, 'error');
-				btn.disabled = false;
-				btn.textContent = originalText;
-			});
+				});
 		}
 
 		function setAPNetwork() {
 			if (event && event.target) {
 				const buttonText = event.target.textContent.trim();
-				
+
 				if (buttonText !== 'Simpan') {
 					return;
 				}
-				
+
 				const isNetworkConfigButton = event.target.closest('.grid-x')?.querySelector('#apIP') !== null;
 				if (!isNetworkConfigButton) {
 					return;
@@ -2237,7 +2354,7 @@
 			btn.textContent = 'Menyimpan...';
 
 			const formData = new URLSearchParams();
-			
+
 			formData.append('updateNetworkConfig', 'true');
 
 			if (apIP) formData.append('apIP', apIP);
@@ -2249,26 +2366,26 @@
 				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 				body: formData.toString()
 			})
-			.then(response => {
-				if (response.ok) {
-					const networkMsg = apIP ? apIP : '192.168.4.1';
-					showToast(`Konfigurasi jaringan berhasil disimpan (IP: ${networkMsg})`, 'success');
+				.then(response => {
+					if (response.ok) {
+						const networkMsg = apIP ? apIP : '192.168.4.1';
+						showToast(`Konfigurasi jaringan berhasil disimpan (IP: ${networkMsg})`, 'success');
 
-					setTimeout(() => loadWiFiConfig(), 1000);
+						setTimeout(() => loadWiFiConfig(), 1000);
 
+						btn.disabled = false;
+						btn.textContent = originalText;
+
+						startCountdownPolling();
+					} else {
+						return response.text().then(text => { throw new Error(text); });
+					}
+				})
+				.catch(error => {
+					showToast('Gagal menyimpan konfigurasi: ' + error.message, 'error');
 					btn.disabled = false;
 					btn.textContent = originalText;
-
-					startCountdownPolling();
-				} else {
-					return response.text().then(text => { throw new Error(text); });
-				}
-			})
-			.catch(error => {
-				showToast('Gagal menyimpan konfigurasi: ' + error.message, 'error');
-				btn.disabled = false;
-				btn.textContent = originalText;
-			});
+				});
 		}
 
 		function clearAPForm() {
@@ -3066,28 +3183,28 @@
 
 				if (status) status.textContent = 'Mengecek status server...';
 				await updateProgress(60, 'Mengecek status server...');
-				
+
 				try {
 					const countdownCheck = await fetch('/api/countdown');
 					const countdownData = await countdownCheck.json();
-					
+
 					if (countdownData.active && countdownData.remaining > 0) {
-						
+
 						await updateProgress(100, countdownData.message + '...');
-						
+
 						LoadingManager.completeLoading();
-						
+
 						// Start countdown dengan data dari server
 						const clientNow = Date.now();
 						countdownEndTime = clientNow + (countdownData.remaining * 1000);
 						countdownReason = countdownData.reason;
 						countdownMessage = countdownData.message;
 						countdownTotalSeconds = countdownData.total || countdownData.remaining;
-						
+
 						startCountdownDisplay(countdownData);
 						startLocalCountdownTicker();
 						startCountdownPolling();
-						
+
 						return;
 					}
 				} catch (err) {
@@ -3148,19 +3265,19 @@
 			const networkConfigInputs = document.querySelectorAll('input[data-form="network-config"]');
 
 			wifiCredInputs.forEach(input => {
-				input.addEventListener('change', function(e) {
+				input.addEventListener('change', function (e) {
 					e.stopPropagation();
 				});
 			});
 
 			apCredInputs.forEach(input => {
-				input.addEventListener('change', function(e) {
+				input.addEventListener('change', function (e) {
 					e.stopPropagation();
 				});
 			});
 
 			networkConfigInputs.forEach(input => {
-				input.addEventListener('change', function(e) {
+				input.addEventListener('change', function (e) {
 					e.stopPropagation();
 				});
 			});
@@ -3547,4 +3664,5 @@
 		});
 	</script>
 </body>
+
 </html>
