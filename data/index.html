@@ -392,21 +392,21 @@
 						<div class="loader-status" id="loadingStatus">Mohon tunggu...</div>
 					</div>
 				</div>
+				<!-- Countdown Loading Bar (Like Page Loader) -->
+				<div id="countdownLoading" style="display: none;">
+					<div class="loader-content">
+						<div class="loader-title" id="countdownTitle">Mulai</div>
+						<div class="progress-container">
+							<div class="progress-bar" id="countdownProgressBar"></div>
+						</div>
+						<div class="loader-percentage" id="countdownPercentage">0%</div>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
 	<!-- Toast Notification using Foundation Callout -->
 	<div id="toast" class="toast callout success"></div>
-	<!-- Countdown Loading Bar (Like Page Loader) -->
-	<div id="countdownLoading" style="display: none;">
-		<div class="loader-content">
-			<div class="loader-title" id="countdownTitle">Mulai</div>
-			<div class="progress-container">
-				<div class="progress-bar" id="countdownProgressBar"></div>
-			</div>
-			<div class="loader-percentage" id="countdownPercentage">0%</div>
-		</div>
-	</div>
 	<div class="grid-container">
 		<div class="grid-x grid-padding-x grid-margin-y align-center">
 			<div class="medium-10 small-12 large-10 cell">
@@ -471,23 +471,23 @@
 												<div class="medium-6 small-12 large-6 cell text-left">
 													<p>
 														<strong>Status NTP:</strong>
-														<span id="ntpStatus">-</span>
+														<span id="ntpStatus"></span>
 													</p>
 													<p>
 														<strong>Server NTP:</strong>
-														<span id="ntpServerUsed">-</span>
+														<span id="ntpServerUsed"></span>
 													</p>
 													<p>
 														<strong>Waktu:</strong>
-														<span id="currentTime">-</span>
+														<span id="currentTime">0</span>
 													</p>
 													<p>
 														<strong>Tanggal:</strong>
-														<span id="currentDate">-</span>
+														<span id="currentDate">00/00/0000</span>
 													</p>
 													<p>
 														<strong>Waktu Aktif:</strong>
-														<span id="uptime">--:--:--</span>
+														<span id="uptime">00:00:00</span>
 													</p>
 												</div>
 												<div class="medium-12 small-12 large-12 cell">
@@ -843,7 +843,7 @@
 																		</div>
 																	</td>
 																	<td class="text-right">
-																		<h5 id="imsakTime">--:--</h5>
+																		<h5 id="imsakTime">00:00</h5>
 																	</td>
 																</tr>
 																<tr>
@@ -858,7 +858,7 @@
 																		</div>
 																	</td>
 																	<td class="text-right">
-																		<h5 id="subuhTime">--:--</h5>
+																		<h5 id="subuhTime">00:00</h5>
 																	</td>
 																</tr>
 																<tr>
@@ -873,7 +873,7 @@
 																		</div>
 																	</td>
 																	<td class="text-right">
-																		<h5 id="terbitTime">--:--</h5>
+																		<h5 id="terbitTime">00:00</h5>
 																	</td>
 																</tr>
 																<tr>
@@ -888,7 +888,7 @@
 																		</div>
 																	</td>
 																	<td class="text-right">
-																		<h5 id="zuhurTime">--:--</h5>
+																		<h5 id="zuhurTime">00:00</h5>
 																	</td>
 																</tr>
 																<tr>
@@ -903,7 +903,7 @@
 																		</div>
 																	</td>
 																	<td class="text-right">
-																		<h5 id="asharTime">--:--</h5>
+																		<h5 id="asharTime">00:00</h5>
 																	</td>
 																</tr>
 																<tr>
@@ -918,7 +918,7 @@
 																		</div>
 																	</td>
 																	<td class="text-right">
-																		<h5 id="maghribTime">--:--</h5>
+																		<h5 id="maghribTime">00:00</h5>
 																	</td>
 																</tr>
 																<tr>
@@ -933,7 +933,7 @@
 																		</div>
 																	</td>
 																	<td class="text-right">
-																		<h5 id="isyaTime">--:--</h5>
+																		<h5 id="isyaTime">00:00</h5>
 																	</td>
 																</tr>
 															</tbody>
@@ -1114,13 +1114,13 @@
 		let serverUptimeStart = 0;
 		let lastSyncTime = 0;
 		let prayerConfig = {
-			imsakTime: '--:--',
-			subuhTime: '--:--',
-			terbitTime: '--:--',
-			zuhurTime: '--:--',
-			asharTime: '--:--',
-			maghribTime: '--:--',
-			isyaTime: '--:--'
+			imsakTime: '00:00',
+			subuhTime: '00:00',
+			terbitTime: '00:00',
+			zuhurTime: '00:00',
+			asharTime: '00:00',
+			maghribTime: '00:00',
+			isyaTime: '00:00'
 		};
 		let methodConfig = {
 			methodId: 5,
@@ -1278,7 +1278,7 @@
 		}
 
 		function formatTime(date) {
-			if (!date) return '--:--:--';
+			if (!date) return '00:00:--';
 			const hours = String(date.getHours()).padStart(2, '0');
 			const minutes = String(date.getMinutes()).padStart(2, '0');
 			const seconds = String(date.getSeconds()).padStart(2, '0');
@@ -1286,7 +1286,7 @@
 		}
 
 		function formatUptime(seconds) {
-			if (seconds === 0) return '--:--:--';
+			if (seconds === 0) return '00:00:--';
 			const days = Math.floor(seconds / 86400);
 			const hours = Math.floor((seconds % 86400) / 3600);
 			const minutes = Math.floor((seconds % 3600) / 60);
@@ -2021,13 +2021,13 @@
 			try {
 				const response = await fetch('/getprayertimes');
 				const data = await response.json();
-				prayerConfig.imsakTime = data.imsak || '--:--';
-				prayerConfig.subuhTime = data.subuh || '--:--';
-				prayerConfig.terbitTime = data.terbit || '--:--';
-				prayerConfig.zuhurTime = data.zuhur || '--:--';
-				prayerConfig.asharTime = data.ashar || '--:--';
-				prayerConfig.maghribTime = data.maghrib || '--:--';
-				prayerConfig.isyaTime = data.isya || '--:--';
+				prayerConfig.imsakTime = data.imsak || '00:00';
+				prayerConfig.subuhTime = data.subuh || '00:00';
+				prayerConfig.terbitTime = data.terbit || '00:00';
+				prayerConfig.zuhurTime = data.zuhur || '00:00';
+				prayerConfig.asharTime = data.ashar || '00:00';
+				prayerConfig.maghribTime = data.maghrib || '00:00';
+				prayerConfig.isyaTime = data.isya || '00:00';
 				document.getElementById('imsakTime').textContent = prayerConfig.imsakTime;
 				document.getElementById('subuhTime').textContent = prayerConfig.subuhTime;
 				document.getElementById('terbitTime').textContent = prayerConfig.terbitTime;
