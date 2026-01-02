@@ -22,6 +22,8 @@
 #include "HTTPClient.h"
 #include "esp_task_wdt.h"
 #include "esp_wifi.h"
+#include "driver/i2s.h"
+#include "SD.h"
 
 // EEZ generated files
 #include "src/ui.h"
@@ -43,6 +45,21 @@
 
 //#define RTC_SDA    21
 //#define RTC_SCL    22
+
+// Pin Audio
+#define I2S_BCLK 25
+#define I2S_LRC  32
+#define I2S_DOUT 33
+
+// Pin SD Card
+#define SD_CS    5
+#define SD_MOSI  23
+#define SD_MISO  19
+#define SD_CLK   18
+
+#define AUDIO_SAMPLE_RATE 44100
+#define AUDIO_BUFFER_SIZE 1024
+#define AUDIO_VOLUME 70
 
 // Pin & PWM config
 #define BUZZER_PIN 26
@@ -73,6 +90,7 @@
 #define PRAYER_TASK_STACK_SIZE 16384   // HTTP + JSON parsing
 #define RTC_TASK_STACK_SIZE 2048       // Simple I2C
 #define CLOCK_TASK_STACK_SIZE 2048     // Simple time increment
+#define AUDIO_TASK_STACK_SIZE 4096     // Audio adzan
 
 // Task Priorities (0 = lowest, higher number = higher priority)
 #define UI_TASK_PRIORITY 3             // Highest (display responsiveness)
@@ -82,6 +100,7 @@
 #define PRAYER_TASK_PRIORITY 1         // Low (daily update)
 #define RTC_TASK_PRIORITY 1            // Low (backup sync)
 #define CLOCK_TASK_PRIORITY 2          // High (time accuracy)
+#define AUDIO_TASK_PRIORITY 0          // Low (Audio adzan)
 
 // Task Handles
 TaskHandle_t rtcTaskHandle = NULL;
@@ -101,6 +120,7 @@ SemaphoreHandle_t wifiMutex;
 SemaphoreHandle_t settingsMutex;
 SemaphoreHandle_t spiMutex;
 SemaphoreHandle_t i2cMutex;
+SemaphoreHandle_t sdMutex; 
 
 // Queue for display updates
 QueueHandle_t displayQueue;
@@ -197,7 +217,6 @@ struct BuzzerConfig {
   int volume;
 };
 
-
 struct CountdownState {
   bool isActive;
   unsigned long startTime;
@@ -215,6 +234,18 @@ CountdownState countdownState = {
 };
 
 SemaphoreHandle_t countdownMutex = NULL;
+
+struct AdzanState {
+  bool isPlaying;
+  String currentPrayer;
+  time_t startTime;
+  time_t deadlineTime;
+  bool canTouch;
+};
+
+AdzanState adzanState = {false, "", 0, 0, false};
+SemaphoreHandle_t audioMutex = NULL;
+TaskHandle_t audioTaskHandle = NULL;
 
 WiFiConfig wifiConfig;
 TimeConfig timeConfig;
@@ -572,37 +603,43 @@ int getRemainingSeconds() {
 // Prayer Time Blink Functions
 // ============================================
 void checkPrayerTime() {
-  if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-    time_t now_t = timeConfig.currentTime;
-    struct tm timeinfo;
-    localtime_r(&now_t, &timeinfo);
+  time_t now_t = timeConfig.currentTime;
+  struct tm timeinfo;
+  localtime_r(&now_t, &timeinfo);
+  
+  char currentTime[6];
+  sprintf(currentTime, "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
+  
+  if (timeinfo.tm_sec == 0 && !blinkState.isBlinking && !adzanState.canTouch) {
+    String current = String(currentTime);
+    String prayerName = "";
     
-    char currentTime[6];
-    sprintf(currentTime, "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
+    if (current == prayerConfig.imsakTime && buzzerConfig.imsakEnabled) prayerName = "imsak";
+    else if (current == prayerConfig.subuhTime && buzzerConfig.subuhEnabled) prayerName = "subuh";
+    else if (current == prayerConfig.terbitTime && buzzerConfig.terbitEnabled) prayerName = "terbit";
+    else if (current == prayerConfig.zuhurTime && buzzerConfig.zuhurEnabled) prayerName = "zuhur";
+    else if (current == prayerConfig.asharTime && buzzerConfig.asharEnabled) prayerName = "ashar";
+    else if (current == prayerConfig.maghribTime && buzzerConfig.maghribEnabled) prayerName = "maghrib";
+    else if (current == prayerConfig.isyaTime && buzzerConfig.isyaEnabled) prayerName = "isya";
     
-    xSemaphoreGive(timeMutex);
-    
-    if (timeinfo.tm_sec == 0) {
-      String current = String(currentTime);
+    if (prayerName.length() > 0) {
+      startBlinking(prayerName);
       
-      if (!blinkState.isBlinking) {
-        if (current == prayerConfig.imsakTime && buzzerConfig.imsakEnabled) {
-          startBlinking("imsak");
-        } else if (current == prayerConfig.subuhTime && buzzerConfig.subuhEnabled) {
-          startBlinking("subuh");
-        } else if (current == prayerConfig.terbitTime && buzzerConfig.terbitEnabled) {
-          startBlinking("terbit");
-        } else if (current == prayerConfig.zuhurTime && buzzerConfig.zuhurEnabled) {
-          startBlinking("zuhur");
-        } else if (current == prayerConfig.asharTime && buzzerConfig.asharEnabled) {
-          startBlinking("ashar");
-        } else if (current == prayerConfig.maghribTime && buzzerConfig.maghribEnabled) {
-          startBlinking("maghrib");
-        } else if (current == prayerConfig.isyaTime && buzzerConfig.isyaEnabled) {
-          startBlinking("isya");
-        }
-      }
+      adzanState.canTouch = true;
+      adzanState.currentPrayer = prayerName;
+      adzanState.startTime = now_t;
+      adzanState.deadlineTime = now_t + 600;
+      saveAdzanState();
+      
+      Serial.println("ADZAN AKTIF: " + prayerName + " (10 menit)");
     }
+  }
+  
+  if (adzanState.canTouch && getAdzanRemainingSeconds() <= 0) {
+    Serial.println("ADZAN EXPIRED: " + adzanState.currentPrayer);
+    adzanState.canTouch = false;
+    adzanState.currentPrayer = "";
+    saveAdzanState();
   }
 }
 
@@ -1206,6 +1243,61 @@ void saveBuzzerConfig() {
     }
     xSemaphoreGive(settingsMutex);
   }
+}
+
+void saveAdzanState() {
+  fs::File file = LittleFS.open("/adzan_state.txt", "w");
+  if (file) {
+    file.println(adzanState.currentPrayer);
+    file.println(adzanState.canTouch ? "1" : "0");
+    file.println((unsigned long)adzanState.startTime);
+    file.println((unsigned long)adzanState.deadlineTime);
+    file.close();
+  }
+}
+
+void loadAdzanState() {
+  if (!LittleFS.exists("/adzan_state.txt")) return;
+  
+  fs::File file = LittleFS.open("/adzan_state.txt", "r");
+  if (!file) return;
+  
+  adzanState.currentPrayer = file.readStringUntil('\n');
+  adzanState.currentPrayer.trim();
+  
+  String touchStr = file.readStringUntil('\n');
+  touchStr.trim();
+  
+  String startStr = file.readStringUntil('\n');
+  startStr.trim();
+  adzanState.startTime = (time_t)startStr.toInt();
+  
+  String deadlineStr = file.readStringUntil('\n');
+  deadlineStr.trim();
+  adzanState.deadlineTime = (time_t)deadlineStr.toInt();
+  
+  file.close();
+  
+  if (touchStr == "1" && adzanState.currentPrayer.length() > 0) {
+    time_t now = timeConfig.currentTime;
+    int remaining = getAdzanRemainingSeconds();
+    
+    if (remaining > 0) {
+      adzanState.canTouch = true;
+      Serial.println("ADZAN RESTORED: " + adzanState.currentPrayer);
+      Serial.printf("Sisa: %d detik (%d menit)\n", remaining, remaining/60);
+    } else {
+      adzanState.canTouch = false;
+      adzanState.currentPrayer = "";
+      Serial.println("ADZAN EXPIRED");
+    }
+  }
+}
+
+int getAdzanRemainingSeconds() {
+  if (!adzanState.canTouch) return 0;
+  int remaining = (int)(adzanState.deadlineTime - timeConfig.currentTime);
+  return remaining > 0 ? remaining : 0;
 }
 
 void saveCitySelection() {
@@ -2623,6 +2715,64 @@ void setupServerRoutes() {
     request -> send(200, "text/plain", "OK");
   });
 
+  server.on("/testbuzzer", HTTP_POST, [](AsyncWebServerRequest * request) {
+    if (!request->hasParam("volume", true)) {
+      request->send(400, "text/plain", "Missing volume");
+      return;
+    }
+
+    int volume = request->getParam("volume", true)->value().toInt();
+    if (volume < 0) volume = 0;
+    if (volume > 100) volume = 100;
+
+    Serial.println("\n========================================");
+    Serial.println("BUZZER TEST STARTED");
+    Serial.println("========================================");
+    Serial.printf("Volume: %d%%\n", volume);
+    Serial.println("Duration: Manual stop or 30s timeout");
+    Serial.println("========================================\n");
+
+    xTaskCreate(
+      [](void* param) {
+        int vol = *((int*)param);
+        int pwmValue = map(vol, 0, 100, 0, 255);
+        
+        unsigned long startTime = millis();
+        const unsigned long maxDuration = 30000;
+        
+        while ((millis() - startTime) < maxDuration) {
+          ledcWrite(BUZZER_CHANNEL, pwmValue);
+          vTaskDelay(pdMS_TO_TICKS(500));
+          
+          ledcWrite(BUZZER_CHANNEL, 0);
+          vTaskDelay(pdMS_TO_TICKS(500));
+        }
+        
+        ledcWrite(BUZZER_CHANNEL, 0);
+        
+        Serial.println("Buzzer test completed (timeout)");
+        
+        delete (int*)param;
+        vTaskDelete(NULL);
+      },
+      "BuzzerTest",
+      2048,
+      new int(volume),
+      1,
+      NULL
+    );
+
+    request->send(200, "text/plain", "OK");
+  });
+
+  server.on("/stopbuzzer", HTTP_POST, [](AsyncWebServerRequest * request) {
+    ledcWrite(BUZZER_CHANNEL, 0);
+    
+    Serial.println("Buzzer test stopped manually");
+    
+    request->send(200, "text/plain", "OK");
+  });
+
   // ========================================
   // TAB RESET - FACTORY RESET
   // ========================================
@@ -2655,6 +2805,9 @@ void setupServerRoutes() {
       }
       if (LittleFS.exists("/buzzer_config.txt")) {
           LittleFS.remove("/buzzer_config.txt");
+      }
+      if (LittleFS.exists("/adzan_state.txt")) {
+          LittleFS.remove("/adzan_state.txt");
       }
       
       if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
@@ -3115,6 +3268,56 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data) {
         }
       }
       xSemaphoreGive(spiMutex);
+    }
+
+    if (validTouch && adzanState.canTouch && !touchPressed) {
+      struct {String name; int x1,y1,x2,y2;} areas[] = {
+        {"subuh",   200, 70,  310, 95},
+        {"zuhur",   200, 130, 310, 155},
+        {"ashar",   200, 160, 310, 185},
+        {"maghrib", 200, 190, 310, 215},
+        {"isya",    200, 220, 310, 240}
+      };
+      
+      for (int i = 0; i < 5; i++) {
+        if (areas[i].name == adzanState.currentPrayer &&
+            lastX >= areas[i].x1 && lastX <= areas[i].x2 &&
+            lastY >= areas[i].y1 && lastY <= areas[i].y2) {
+          
+          Serial.println("TOUCH ADZAN: " + areas[i].name);
+          
+          if (blinkState.isBlinking) stopBlinking();
+          
+          if (audioTaskHandle != NULL) {
+            Serial.println("Audio system available - triggering playback");
+            
+            adzanState.isPlaying = true;
+            adzanState.canTouch = false;
+            
+            xTaskNotifyGive(audioTaskHandle);
+            
+          } else {
+            Serial.println("========================================");
+            Serial.println("WARNING: Audio system not available");
+            Serial.println("========================================");
+            Serial.println("Reason: SD Card not detected or audio disabled");
+            Serial.println("Action: Clearing adzan state immediately");
+            Serial.println("========================================");
+            
+            // Langsung matikan state
+            adzanState.isPlaying = false;
+            adzanState.canTouch = false;
+            adzanState.currentPrayer = "";
+            
+            // Simpan state kosong ke file
+            saveAdzanState();
+            
+            Serial.println("Adzan state cleared - ready for next prayer time");
+          }
+          
+          break;
+        }
+      }
     }
     
     if (validTouch) {
@@ -3773,7 +3976,6 @@ void webTask(void *parameter) {
         Serial.println("Memory status: Normal");
       }
       
-      // Deteksi leak hanya jika tidak ada countdown aktif
       bool isCountdownActive = false;
       if (countdownMutex != NULL && xSemaphoreTake(countdownMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
         isCountdownActive = countdownState.isActive;
@@ -3811,6 +4013,7 @@ void webTask(void *parameter) {
     }
   }
 }
+
 
 void prayerTask(void *parameter) {
     esp_task_wdt_add(NULL);
@@ -4599,6 +4802,143 @@ void restartAPTask(void *parameter) {
     vTaskDelete(NULL);
 }
 
+bool initI2S() {
+  i2s_config_t i2s_config = {
+    .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
+    .sample_rate = AUDIO_SAMPLE_RATE,
+    .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+    .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
+    .communication_format = I2S_COMM_FORMAT_STAND_I2S,
+    .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
+    .dma_buf_count = 8,
+    .dma_buf_len = 64,
+    .use_apll = false,
+    .tx_desc_auto_clear = true,
+    .fixed_mclk = 0
+  };
+
+  i2s_pin_config_t pin_config = {
+    .bck_io_num = I2S_BCLK,
+    .ws_io_num = I2S_LRC,
+    .data_out_num = I2S_DOUT,
+    .data_in_num = I2S_PIN_NO_CHANGE
+  };
+
+  if (i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL) != ESP_OK) return false;
+  if (i2s_set_pin(I2S_NUM_0, &pin_config) != ESP_OK) return false;
+  i2s_zero_dma_buffer(I2S_NUM_0);
+  
+  Serial.println("I2S OK");
+  return true;
+}
+
+bool initSDCard() {
+  SPIClass sdSPI(HSPI);
+  
+  sdSPI.begin(SD_CLK, SD_MISO, SD_MOSI, SD_CS);
+  
+  if (!SD.begin(SD_CS, sdSPI)) {
+    Serial.println("SD FAIL");
+    return false;
+  }
+  Serial.println("SD OK");
+  return true;
+}
+
+bool isAudioFileValid(String filepath) {
+  if (!SD.exists(filepath)) {
+    Serial.println("File not found: " + filepath);
+    return false;
+  }
+  
+  File f = SD.open(filepath);
+  if (!f || f.size() < 1024) {
+    if(f) f.close();
+    Serial.println("File corrupted/empty: " + filepath);
+    return false;
+  }
+  
+  f.close();
+  return true;
+}
+
+bool playWAV(String filepath) {  
+  File audioFile = SD.open(filepath);
+  if (!audioFile) return false;
+  
+  audioFile.seek(44);
+  
+  Serial.println("PLAYING: " + filepath);
+  
+  uint8_t buffer[AUDIO_BUFFER_SIZE];
+  size_t bytesRead, bytesWritten;
+  
+  unsigned long lastWDTReset = millis();
+  
+  while (audioFile.available() && adzanState.isPlaying) {
+    bytesRead = audioFile.read(buffer, AUDIO_BUFFER_SIZE);
+    
+    for (size_t i = 0; i < bytesRead; i += 2) {
+      int16_t sample = (int16_t)(buffer[i] | (buffer[i+1] << 8));
+      sample = (sample * AUDIO_VOLUME) / 100;
+      buffer[i] = sample & 0xFF;
+      buffer[i+1] = (sample >> 8) & 0xFF;
+    }
+    
+    esp_err_t result = i2s_write(I2S_NUM_0, buffer, bytesRead, &bytesWritten, pdMS_TO_TICKS(100));
+    
+    if (result == ESP_ERR_TIMEOUT) {
+      Serial.println("I2S timeout - skipping chunk");
+    }
+    
+    if (millis() - lastWDTReset > 5000) {
+      esp_task_wdt_reset();
+      lastWDTReset = millis();
+    }
+    
+    vTaskDelay(pdMS_TO_TICKS(2));
+  }
+  
+  audioFile.close();
+  i2s_zero_dma_buffer(I2S_NUM_0);
+  Serial.println("AUDIO DONE");
+  return true;
+}
+
+void stopAudio() {
+  adzanState.isPlaying = false;
+  i2s_zero_dma_buffer(I2S_NUM_0);
+}
+
+void audioTask(void *parameter) {
+  while (true) {
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    
+    if (adzanState.isPlaying && adzanState.currentPrayer.length() > 0) {
+      String filepath = "/adzan/" + adzanState.currentPrayer + ".wav";
+      
+      if (xSemaphoreTake(sdMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+        if (isAudioFileValid(filepath)) {
+          Serial.println("Playing audio: " + filepath);
+          
+          playWAV(filepath);
+        } else {
+          Serial.println("Audio file not available: " + filepath);
+        }
+        xSemaphoreGive(sdMutex);
+      }
+      
+      // Cleanup state
+      adzanState.isPlaying = false;
+      adzanState.canTouch = false;
+      adzanState.currentPrayer = "";
+      saveAdzanState();
+      
+      Serial.println("Adzan state cleared");
+    }
+  }
+}
+
 // ================================
 // SETUP - ESP32 CORE 3.x
 // ================================
@@ -4641,8 +4981,43 @@ void setup() {
   settingsMutex = xSemaphoreCreateMutex();
   spiMutex = xSemaphoreCreateMutex();
   i2cMutex = xSemaphoreCreateMutex();
+  audioMutex = xSemaphoreCreateMutex();
+  sdMutex = xSemaphoreCreateMutex();
 
   displayQueue = xQueueCreate(20, sizeof(DisplayUpdate));
+  
+  bool i2sOK = initI2S();
+  bool sdOK = initSDCard();
+  
+  if (i2sOK && sdOK) {
+    loadAdzanState();
+    
+    xTaskCreatePinnedToCore(
+      audioTask, 
+      "Audio", 
+      AUDIO_TASK_STACK_SIZE, 
+      NULL, 
+      AUDIO_TASK_PRIORITY,
+      &audioTaskHandle, 
+      1
+    );
+    Serial.println("Audio Task OK");
+  } else {
+    Serial.println("Audio DISABLED");
+
+    Serial.println("Clearing any pending adzan state...");
+    
+    adzanState.isPlaying = false;
+    adzanState.canTouch = false;
+    adzanState.currentPrayer = "";
+    
+    if (LittleFS.exists("/adzan_state.txt")) {
+      LittleFS.remove("/adzan_state.txt");
+      Serial.println("Adzan state file removed (no audio system)");
+    }
+    
+    Serial.println("Adzan state cleaned - buzzer-only mode active");
+  }
 
   Serial.println("Semaphores & Queue created");
 
