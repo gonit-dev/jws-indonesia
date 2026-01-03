@@ -400,6 +400,9 @@ void saveTimezoneConfig();
 void loadTimezoneConfig();
 void saveBuzzerConfig();
 void loadBuzzerConfig();
+void saveAdzanState();
+void loadAdzanState();
+int getAdzanRemainingSeconds();
 void saveCitySelection();
 void loadCitySelection();
 void saveMethodSelection();
@@ -417,6 +420,7 @@ void saveTimeToRTC();
 // Web Server Functions
 // ============================================
 void setupServerRoutes();
+void sendJSONResponse(AsyncWebServerRequest *request, const String &json);
 
 // ============================================
 // Utility Functions
@@ -440,12 +444,22 @@ void webTask(void *parameter);
 void prayerTask(void *parameter);
 void rtcSyncTask(void *parameter);
 void clockTickTask(void *parameter);
+void audioTask(void *parameter);
 
 // ============================================
 // WiFi & AP Restart Tasks
 // ============================================
 void restartWiFiTask(void *parameter);
 void restartAPTask(void *parameter);
+
+// ============================================
+// Audio Functions
+// ============================================
+bool initI2S();
+bool initSDCard();
+bool isAudioFileValid(String filepath);
+bool playWAV(String filepath);
+void stopAudio();
 
 // ============================================
 // Display & UI Functions
