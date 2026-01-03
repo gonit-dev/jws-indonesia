@@ -1755,6 +1755,7 @@ void setupServerRoutes() {
       xTaskCreate(
         [](void* param) {
             esp_task_wdt_add(NULL);
+
             for (int i = 60; i > 0; i--) {
                 if (i == 35) {
                     WiFi.mode(WIFI_OFF);
@@ -2926,7 +2927,8 @@ void setupServerRoutes() {
       
       xTaskCreate(
         [](void* param) {
-            esp_task_wdt_add(NULL)
+            esp_task_wdt_add(NULL);
+            
             for (int i = 60; i > 0; i--) {
                 if (i == 35) {
                     WiFi.disconnect(true);
@@ -3529,7 +3531,7 @@ void wifiTask(void *parameter) {
                         if (ntpWaitCounter % 10 == 0) {  // Log setiap 5 detik
                             Serial.printf("Waiting for NTP sync to complete... (%lu ms)\n", 
                                         millis() - waitStartTime);
-                                        
+
                             esp_task_wdt_reset();
                         }
                         
