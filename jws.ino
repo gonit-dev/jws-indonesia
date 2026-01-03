@@ -5266,7 +5266,7 @@ void setup() {
   esp_task_wdt_deinit();
 
   esp_task_wdt_config_t wdt_config = {
-    .timeout_ms = 60000,
+    .timeout_ms = 100000,
     .idle_core_mask = 0,
     .trigger_panic = true
   };
