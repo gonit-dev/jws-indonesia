@@ -110,6 +110,7 @@ TaskHandle_t ntpTaskHandle = NULL;
 TaskHandle_t webTaskHandle = NULL;
 TaskHandle_t prayerTaskHandle = NULL;
 TaskHandle_t clockTaskHandle = NULL;
+TaskHandle_t buzzerTestTaskHandle = NULL; 
 
 // ================================
 // SEMAPHORES & MUTEXES
@@ -2716,61 +2717,84 @@ void setupServerRoutes() {
   });
 
   server.on("/testbuzzer", HTTP_POST, [](AsyncWebServerRequest * request) {
-    if (!request->hasParam("volume", true)) {
-      request->send(400, "text/plain", "Missing volume");
-      return;
-    }
+      if (!request->hasParam("volume", true)) {
+          request->send(400, "text/plain", "Missing volume");
+          return;
+      }
 
-    int volume = request->getParam("volume", true)->value().toInt();
-    if (volume < 0) volume = 0;
-    if (volume > 100) volume = 100;
+      int volume = request->getParam("volume", true)->value().toInt();
+      if (volume < 0) volume = 0;
+      if (volume > 100) volume = 100;
 
-    Serial.println("\n========================================");
-    Serial.println("BUZZER TEST STARTED");
-    Serial.println("========================================");
-    Serial.printf("Volume: %d%%\n", volume);
-    Serial.println("Duration: Manual stop or 30s timeout");
-    Serial.println("========================================\n");
+      Serial.println("\n========================================");
+      Serial.println("BUZZER TEST STARTED");
+      Serial.println("========================================");
+      Serial.printf("Volume: %d%%\n", volume);
+      Serial.println("Duration: Manual stop or 30s timeout");
+      Serial.println("========================================\n");
 
-    xTaskCreate(
-      [](void* param) {
-        int vol = *((int*)param);
-        int pwmValue = map(vol, 0, 100, 0, 255);
-        
-        unsigned long startTime = millis();
-        const unsigned long maxDuration = 30000;
-        
-        while ((millis() - startTime) < maxDuration) {
-          ledcWrite(BUZZER_CHANNEL, pwmValue);
-          vTaskDelay(pdMS_TO_TICKS(500));
-          
+      if (buzzerTestTaskHandle != NULL) {
+          vTaskDelete(buzzerTestTaskHandle);
+          buzzerTestTaskHandle = NULL;
           ledcWrite(BUZZER_CHANNEL, 0);
-          vTaskDelay(pdMS_TO_TICKS(500));
-        }
-        
-        ledcWrite(BUZZER_CHANNEL, 0);
-        
-        Serial.println("Buzzer test completed (timeout)");
-        
-        delete (int*)param;
-        vTaskDelete(NULL);
-      },
-      "BuzzerTest",
-      2048,
-      new int(volume),
-      1,
-      NULL
-    );
+          vTaskDelay(pdMS_TO_TICKS(100));
+      }
 
-    request->send(200, "text/plain", "OK");
+      request->send(200, "text/plain", "OK");
+
+      xTaskCreate(
+          [](void* param) {
+              int vol = *((int*)param);
+              int pwmValue = map(vol, 0, 100, 0, 255);
+              
+              unsigned long startTime = millis();
+              const unsigned long maxDuration = 30000;
+              
+              Serial.printf("Buzzer test loop starting (PWM: %d)\n", pwmValue);
+              
+              while ((millis() - startTime) < maxDuration) {
+                  if (buzzerTestTaskHandle == NULL) {
+                      Serial.println("Buzzer test stopped by user");
+                      break;
+                  }
+                  
+                  ledcWrite(BUZZER_CHANNEL, pwmValue);
+                  vTaskDelay(pdMS_TO_TICKS(500));
+                  
+                  ledcWrite(BUZZER_CHANNEL, 0);
+                  vTaskDelay(pdMS_TO_TICKS(500));
+              }
+              
+              ledcWrite(BUZZER_CHANNEL, 0);
+              Serial.println("Buzzer test completed");
+              
+              buzzerTestTaskHandle = NULL;
+              delete (int*)param;
+              vTaskDelete(NULL);
+          },
+          "BuzzerTest",
+          2048,
+          new int(volume),
+          1,
+          &buzzerTestTaskHandle
+      );
   });
 
   server.on("/stopbuzzer", HTTP_POST, [](AsyncWebServerRequest * request) {
-    ledcWrite(BUZZER_CHANNEL, 0);
-    
-    Serial.println("Buzzer test stopped manually");
-    
-    request->send(200, "text/plain", "OK");
+      Serial.println("\n========================================");
+      Serial.println("BUZZER STOP REQUESTED");
+      Serial.println("========================================\n");
+      
+      ledcWrite(BUZZER_CHANNEL, 0);
+      
+      if (buzzerTestTaskHandle != NULL) {
+          vTaskDelete(buzzerTestTaskHandle);
+          buzzerTestTaskHandle = NULL;
+          Serial.println("Buzzer test task deleted");
+      }
+      
+      request->send(200, "text/plain", "OK");
+      Serial.println("Buzzer stopped successfully\n");
   });
 
   // ========================================

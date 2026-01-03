@@ -1053,23 +1053,21 @@
 															</tbody>
 														</table>
 														<!-- Volume Control - Native HTML5 Slider -->
-														<div class="medium-12 small-12 large-12 cell"
-															style="margin-top: 20px;">
+														<div class="medium-12 small-12 large-12 cell" style="margin-top: 20px;">
 															<strong>🔊 VOLUME BUZZER</strong>
-															<div
-																style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+															<div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
 																<span>0</span>
-																<input type="range" id="volumeSlider" min="0" max="100"
-																	value="50" style="flex: 1;">
+																<input type="range" id="volumeSlider" min="0" max="100" value="50" style="flex: 1;">
 																<span>100</span>
-																<span id="volumeValue"
-																	style="font-weight: bold; color: #1779ba;">50%</span>
+																<span id="volumeValue" style="font-weight: bold; color: #1779ba;">50%</span>
 															</div>
 															<div style="margin-top: 15px;">
-																<button id="testBuzzerBtn" class="button secondary" 
-																	onclick="toggleTestBuzzer()">
+																<button id="testBuzzerBtn" class="button secondary" onclick="toggleTestBuzzer()">
 																	🔔 Test Buzzer
 																</button>
+																<p id="buzzerTestStatus" class="help-text" style="margin-top: 10px; display: none; color: #cc4b37;">
+																	<span class="label warning">⏱️ Test berjalan: <span id="buzzerCountdown">30</span> detik</span>
+																</p>
 															</div>
 														</div>
 													</div>
@@ -2127,44 +2125,91 @@
 
 		async function toggleTestBuzzer() {
 			const btn = document.getElementById('testBuzzerBtn');
+			const statusEl = document.getElementById('buzzerTestStatus');
+			const countdownEl = document.getElementById('buzzerCountdown');
 			
 			if (buzzerTestInterval) {
-				// Stop test
+				// STOP TEST
 				clearInterval(buzzerTestInterval);
 				buzzerTestInterval = null;
 				
-				// Stop buzzer on server
-				await fetch('/stopbuzzer', { method: 'POST' });
+				try {
+					btn.disabled = true;
+					btn.textContent = 'Menghentikan...';
+					
+					const response = await fetch('/stopbuzzer', { 
+						method: 'POST',
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+					});
+					
+					if (response.ok) {
+						showToast('Buzzer test dihentikan', 'warning');
+					} else {
+						throw new Error('Server error: ' + response.status);
+					}
+				} catch (error) {
+					showToast('Error menghentikan buzzer: ' + error.message, 'error');
+				}
 				
 				btn.textContent = '🔔 Test Buzzer';
 				btn.classList.remove('alert');
 				btn.classList.add('secondary');
+				btn.disabled = false;
+				
+				if (statusEl) statusEl.style.display = 'none';
 				
 			} else {
-				const volume = document.getElementById('volumeSlider').value;
+				// START TEST
+				const volumeSlider = document.getElementById('volumeSlider');
+				const volume = volumeSlider ? volumeSlider.value : 50;
 				
 				try {
+					btn.disabled = true;
+					btn.textContent = 'Memulai test...';
+					
 					const response = await fetch('/testbuzzer', {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 						body: 'volume=' + volume
 					});
 					
-					if (response.ok) {
-						btn.textContent = '⏹ Stop Test';
-						btn.classList.remove('secondary');
-						btn.classList.add('alert');
-						
-						showToast('Buzzer test dimulai (akan otomatis berhenti dalam 30 detik)', 'success');
-						
-						setTimeout(() => {
-							if (buzzerTestInterval) {
-								toggleTestBuzzer();
-							}
-						}, 30000);
+					if (!response.ok) {
+						throw new Error('Server error: ' + response.status);
 					}
+										
+					btn.textContent = '⏹ Stop Test';
+					btn.classList.remove('secondary');
+					btn.classList.add('alert');
+					btn.disabled = false;
+					
+					if (statusEl) statusEl.style.display = 'block';
+					
+					buzzerTestStartTime = Date.now();
+					
+					buzzerTestInterval = setInterval(() => {
+						const elapsed = Date.now() - buzzerTestStartTime;
+						const remaining = Math.max(0, Math.ceil((BUZZER_TEST_DURATION - elapsed) / 1000));
+						
+						if (countdownEl) {
+							countdownEl.textContent = remaining;
+						}
+						
+						if (remaining <= 0) {
+							toggleTestBuzzer();
+						}
+					}, 1000);
+					
+					showToast('Buzzer test dimulai (volume: ' + volume + '%)', 'success');
+					
 				} catch (error) {
-					showToast('Gagal menguji buzzer', 'error');
+					showToast('Gagal menguji buzzer: ' + error.message, 'error');
+					
+					btn.textContent = '🔔 Test Buzzer';
+					btn.classList.remove('alert');
+					btn.classList.add('secondary');
+					btn.disabled = false;
+					
+					if (statusEl) statusEl.style.display = 'none';
 				}
 			}
 		}
