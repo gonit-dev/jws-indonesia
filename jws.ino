@@ -1902,7 +1902,7 @@ void setupServerRoutes() {
       xTaskCreate(
         restartWiFiTask, // Function
         "WiFiRestart", // Name
-        4096, // Stack size
+        5120, // Stack size
         NULL, // Parameter
         1, // Priority (low)
         NULL // Handle
