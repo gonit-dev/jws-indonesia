@@ -5273,7 +5273,7 @@ void setup() {
 
   esp_err_t wdt_err = esp_task_wdt_init(&wdt_config);
   if (wdt_err == ESP_OK) {
-    Serial.println("Watchdog configured (60s timeout)");
+    Serial.println("Watchdog configured (100s timeout)");
   } else {
     Serial.printf("Watchdog init error: %s\n", esp_err_to_name(wdt_err));
   }
