@@ -7,6 +7,7 @@
 	<title>Jadwal Shalat</title>
 	<link rel="stylesheet" href="assets/css/foundation.min.css">
 	<style>
+		/* ===== GLOBAL ===== */
 		html, body {
 			height: 100%;
 			margin: 0;
@@ -17,7 +18,8 @@
 			min-height: 100vh;
 			position: relative;
 		}
-		/* Loading Screen Styles */
+
+		/* ===== PAGE LOADER ===== */
 		#pageLoader {
 			position: fixed;
 			top: 0;
@@ -45,14 +47,12 @@
 			overflow: hidden !important;
 		}
 
-		/* Ensure main content is visible after loading */
 		body:not(.loading) > .grid-container:not(#pageLoader) {
 			display: block !important;
 			visibility: visible !important;
 			opacity: 1 !important;
 		}
 
-		/* Hide main content during loading */
 		body.loading>.grid-container:not(:first-child),
 		body.loading #toast {
 			display: none !important;
@@ -60,43 +60,50 @@
 			opacity: 0 !important;
 		}
 
+		/* =========================
+		LOADER CONTENT — UPDATED
+		========================= */
 		.loader-content {
-			text-align: center;
 			max-width: 400px;
 			padding: 0 20px;
+			text-align: center;
+		}
+
+		/* >>>>>>>>>>>>> NEW <<< */
+		#pageLoader .loader-content {
+			display:grid !important;
+			grid-template-columns: 1fr auto; 
+			grid-template-rows: auto auto;
+			column-gap:12px;
+			row-gap:16px;
+			align-items:center;
 		}
 
 		.loader-icon {
 			font-size: 60px;
 			margin-bottom: 20px;
 			animation: pulse 2s ease-in-out infinite;
+			grid-column: 1 / -1;
 		}
 
 		@keyframes pulse {
-
-			0%,
-			100% {
-				transform: scale(1);
-				opacity: 1;
-			}
-
-			50% {
-				transform: scale(1.1);
-				opacity: 0.8;
-			}
+			0%,100%{transform:scale(1);opacity:1;}
+			50%{transform:scale(1.1);opacity:.8;}
 		}
 
 		.loader-title {
 			font-size: 24px;
 			font-weight: bold;
 			color: #1779ba;
-			margin-bottom: 10px;
+			margin-bottom: 5px;
+			grid-column: 1 / -1;
 		}
 
 		.loader-subtitle {
 			font-size: 14px;
 			color: #8a8a8a;
-			margin-bottom: 30px;
+			margin-bottom: 5px;
+			grid-column: 1 / -1;
 		}
 
 		.progress-container {
@@ -106,7 +113,14 @@
 			border-radius: 10px;
 			overflow: hidden;
 			position: relative;
-			margin-bottom: 15px;
+			margin-bottom: 0 !important;
+		}
+
+		/* >>> PAGE LOADER PROGRESS POSITION <<< */
+		#pageLoader .progress-container{
+			grid-column:1;
+			width:100%;
+			min-width:0;
 		}
 
 		.progress-bar {
@@ -120,27 +134,16 @@
 		}
 
 		.progress-bar::before {
-			content: '';
-			position: absolute;
-			top: 0;
-			left: 0;
-			bottom: 0;
-			right: 0;
-			background: linear-gradient(90deg,
-					transparent 0%,
-					rgba(255, 255, 255, 0.3) 50%,
-					transparent 100%);
+			content:'';
+			position:absolute;
+			inset:0;
+			background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.3) 50%,transparent 100%);
 			animation: shimmer 1.5s infinite;
 		}
 
 		@keyframes shimmer {
-			0% {
-				transform: translateX(-100%);
-			}
-
-			100% {
-				transform: translateX(100%);
-			}
+			0%{transform:translateX(-100%);}
+			100%{transform:translateX(100%);}
 		}
 
 		.loader-status {
@@ -148,16 +151,21 @@
 			color: #1779ba;
 			font-weight: 500;
 			min-height: 20px;
+			grid-column: 1 / -1;
 		}
 
+		/* >>> PAGE LOADER PERCENTAGE — FIX <<< */
 		.loader-percentage {
 			font-size: 25px;
 			font-weight: bold;
 			color: #1779ba;
-			margin-top: 10px;
+			margin-top: 0 !important;
+			white-space: nowrap;
+			grid-column:2;
+			align-self:center;
 		}
 
-		/* Countdown Loading Bar - Like Page Loader */
+		/* ===== COUNTDOWN OVERLAY ===== */
 		#countdownLoading {
 			position: fixed !important;
 			top: 0;
@@ -165,11 +173,8 @@
 			width: 100vw;
 			height: 100vh;
 			z-index: 999999;
-
-			/* overlay */
-			background: rgba(0, 0, 0, 0.45);
+			background: rgba(0,0,0,0.45);
 			backdrop-filter: blur(2px);
-
 			display: flex;
 			align-items: center;
 			justify-content: center;
@@ -183,7 +188,6 @@
 			row-gap: 16px;
 			align-items: center;
 			text-align: unset;
-
 			background: #ffffff;
 			padding: 24px 28px;
 			border-radius: 8px;
@@ -195,15 +199,13 @@
 			font-size: 20px;
 			font-weight: bold;
 			color: #1779ba;
-			margin-bottom: 5px;
 			grid-column: 1 / -1;
 			text-align: center;
+			margin-bottom: 5px;
 		}
 
 		#countdownLoading .progress-container {
-			grid-column: 1;
-			width: 100% !important;
-			margin-bottom: 0 !important;
+			grid-column:1;
 		}
 
 		#countdownLoading .progress-bar {
@@ -215,32 +217,32 @@
 		}
 
 		#countdownLoading .progress-bar::before {
-			content: '';
-			position: absolute;
-			inset: 0;
-			background: linear-gradient(
-				90deg,
-				transparent 0%,
-				rgba(255,255,255,0.35) 50%,
-				transparent 100%
-			);
+			content:'';
+			position:absolute;
+			inset:0;
+			background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
 			animation: shimmer 1.4s infinite;
 		}
 
-		#countdownLoading .loader-percentage {
-			line-height: 1;
-			font-size: 20px;
-			font-weight: 600;
-			transform: translateY(-4px);
+		#countdownLoading .loader-content {
+			display:grid !important;
+			grid-template-columns: 1fr auto;
+			grid-template-rows: auto auto;
+			align-items:center;
 		}
 
-		/* Toast with Higher Z-Index */
+		#countdownLoading .loader-percentage {
+			grid-column:2;
+			align-self:center;
+		}
+
+		/* ===== Toast ===== */
 		.toast {
 			position: fixed;
 			top: -100px;
 			left: 50%;
 			transform: translateX(-50%);
-			z-index: 999999; /* Higher than overlay */
+			z-index: 999999;
 			min-width: 300px;
 			max-width: 90vw;
 			text-align: center;
@@ -251,7 +253,6 @@
 			top: 30px;
 		}
 
-		/* Body Lock - Prevent Scroll & Height Issues */
 		body.countdown-active {
 			overflow: hidden !important;
 		}
@@ -349,21 +350,6 @@
 			background: #1779ba;
 			height: 8px;
 			border-radius: 5px;
-		}
-
-		.toast {
-			position: fixed;
-			top: -100px;
-			left: 50%;
-			transform: translateX(-50%);
-			z-index: 9999;
-			min-width: 300px;
-			text-align: center;
-			transition: top 0.5s ease-in-out;
-		}
-
-		.toast.show {
-			top: 30px;
 		}
 	</style>
 </head>
