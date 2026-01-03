@@ -731,6 +731,8 @@ void handleBlinking() {
 // Prayer Times API Functions
 // ============================================
 void getPrayerTimesByCoordinates(String lat, String lon) {
+  esp_task_wdt_reset();
+  
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi not connected - keeping existing prayer times");
     return;
@@ -782,8 +784,12 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
   int httpResponseCode = http.GET();
   Serial.println("Response code: " + String(httpResponseCode));
 
+  esp_task_wdt_reset();
+
   if (httpResponseCode == 200) {
     String payload = http.getString();
+
+    esp_task_wdt_reset();
     
     UBaseType_t stackAfterHTTP = uxTaskGetStackHighWaterMark(NULL);
     Serial.printf("[Prayer API] Stack after HTTP: %d bytes\n", stackAfterHTTP * 4);
@@ -845,6 +851,8 @@ void getPrayerTimesByCoordinates(String lat, String lon) {
   // FINAL STACK CHECK
   UBaseType_t stackAfter = uxTaskGetStackHighWaterMark(NULL);
   Serial.printf("[Prayer API] Stack after cleanup: %d bytes\n", stackAfter * 4);
+  
+  esp_task_wdt_reset();
   
   vTaskDelay(pdMS_TO_TICKS(100));
 }
@@ -1746,6 +1754,7 @@ void setupServerRoutes() {
       
       xTaskCreate(
         [](void* param) {
+            esp_task_wdt_add(NULL);
             for (int i = 60; i > 0; i--) {
                 if (i == 35) {
                     WiFi.mode(WIFI_OFF);
@@ -1777,6 +1786,7 @@ void setupServerRoutes() {
                 
                 vTaskDelay(pdMS_TO_TICKS(1000));
             }
+            esp_task_wdt_delete(NULL);
             
             Serial.flush();
             delay(1000);
@@ -2916,6 +2926,7 @@ void setupServerRoutes() {
       
       xTaskCreate(
         [](void* param) {
+            esp_task_wdt_add(NULL)
             for (int i = 60; i > 0; i--) {
                 if (i == 35) {
                     WiFi.disconnect(true);
@@ -2944,6 +2955,7 @@ void setupServerRoutes() {
                 
                 vTaskDelay(pdMS_TO_TICKS(1000));
             }
+            esp_task_wdt_delete(NULL);
             
             Serial.flush();
             delay(1000);
@@ -3517,6 +3529,8 @@ void wifiTask(void *parameter) {
                         if (ntpWaitCounter % 10 == 0) {  // Log setiap 5 detik
                             Serial.printf("Waiting for NTP sync to complete... (%lu ms)\n", 
                                         millis() - waitStartTime);
+                                        
+                            esp_task_wdt_reset();
                         }
                         
                         esp_task_wdt_reset();
@@ -3639,6 +3653,8 @@ void ntpTask(void *parameter) {
         esp_task_wdt_reset();
         
         uint32_t notifyValue = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(30000));
+
+        esp_task_wdt_reset();
         
         if (notifyValue == 0) {
             esp_task_wdt_reset();
@@ -3688,8 +3704,12 @@ void ntpTask(void *parameter) {
                              retry, retry_count, retry * 0.25);
             }
             
-            esp_task_wdt_reset();
+            if (retry % 4 == 0) {
+                esp_task_wdt_reset();
+            }
         }
+
+        esp_task_wdt_reset();
         
         syncSuccess = (timeinfo.tm_year >= (2024 - 1900));
         
@@ -4074,6 +4094,7 @@ void prayerTask(void *parameter) {
         ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(1000));
         
         if (needPrayerUpdate && pendingPrayerLat.length() > 0 && pendingPrayerLon.length() > 0) {
+            esp_task_wdt_reset();
             
             if (WiFi.status() != WL_CONNECTED) {
                 Serial.println("Prayer Task: Skipping - WiFi not connected");
@@ -4185,6 +4206,10 @@ void prayerTask(void *parameter) {
             if (waitingForMidnightNTP) {
                 unsigned long waitTime = millis() - midnightNTPStartTime;
                 const unsigned long MAX_WAIT_TIME = 30000;
+
+                if (waitTime % 5000 < 1000) {
+                    esp_task_wdt_reset();
+                }
                 
                 if (ntpSyncCompleted) {
                     Serial.println("\n========================================");
@@ -4521,6 +4546,8 @@ void restartWiFiTask(void *parameter) {
     }
     
     wifiRestartInProgress = true;
+
+    esp_task_wdt_add(NULL);
     
     Serial.println("\n========================================");
     Serial.println("SAFE WiFi RESTART SEQUENCE STARTED");
@@ -4530,6 +4557,8 @@ void restartWiFiTask(void *parameter) {
     Serial.println("========================================\n");
     
     vTaskDelay(pdMS_TO_TICKS(3000));
+
+    esp_task_wdt_reset();
     
     // ============================================
     // SAVE CREDENTIALS FIRST
@@ -4552,16 +4581,19 @@ void restartWiFiTask(void *parameter) {
         Serial.println("   ERROR: Failed to acquire wifiMutex");
         wifiRestartInProgress = false;
         xSemaphoreGive(wifiRestartMutex);
+        esp_task_wdt_delete(NULL);
         vTaskDelete(NULL);
         return;
     }
+    esp_task_wdt_reset();
     
     // ============================================
     // DISCONNECT SAFELY
     // ============================================
     Serial.println("\nDisconnecting old WiFi...");
-    WiFi.disconnect(false, false); // Keep config, don't erase
+    WiFi.disconnect(false, false);
     vTaskDelay(pdMS_TO_TICKS(1000));
+    esp_task_wdt_reset();
     Serial.println("   Disconnected (config preserved)");
     
     // ============================================
@@ -4576,10 +4608,12 @@ void restartWiFiTask(void *parameter) {
         
         WiFi.softAPdisconnect(false);
         vTaskDelay(pdMS_TO_TICKS(500));
+        esp_task_wdt_reset();
         
         WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
         bool apStarted = WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
         vTaskDelay(pdMS_TO_TICKS(1000));
+        esp_task_wdt_reset();
         
         if (apStarted) {
             Serial.println("   AP restored successfully");
@@ -4590,6 +4624,8 @@ void restartWiFiTask(void *parameter) {
     } else {
         Serial.println("   AP still alive: " + apIP.toString());
     }
+
+    esp_task_wdt_reset();
     
     // ============================================
     // RECONNECT WiFi
@@ -4619,6 +4655,8 @@ void restartWiFiTask(void *parameter) {
     
     // Delay sebelum release lock
     vTaskDelay(pdMS_TO_TICKS(1000));
+
+    esp_task_wdt_reset();
     
     // ============================================
     // RELEASE LOCK & CLEANUP
@@ -4628,6 +4666,8 @@ void restartWiFiTask(void *parameter) {
     
     Serial.println("WiFi restart sequence completed");
     Serial.println("Lock released - system ready for next request\n");
+
+    esp_task_wdt_delete(NULL);
     
     vTaskDelete(NULL);
 }
@@ -4690,6 +4730,9 @@ void restartAPTask(void *parameter) {
     
     apRestartInProgress = true;
     
+    // *** TAMBAHKAN INI: Register task ke WDT ***
+    esp_task_wdt_add(NULL);
+    
     Serial.println("\n========================================");
     Serial.println("AP RESTART TASK STARTED");
     Serial.println("========================================");
@@ -4697,6 +4740,8 @@ void restartAPTask(void *parameter) {
     Serial.println("========================================\n");
     
     for (int i = 60; i > 0; i--) {
+        esp_task_wdt_reset();
+        
         if (i == 35) {
             Serial.println("\n========================================");
             Serial.println("SHUTTING DOWN AP");
@@ -4709,10 +4754,14 @@ void restartAPTask(void *parameter) {
                 Serial.println("Disconnecting clients...");
                 esp_wifi_deauth_sta(0);
                 vTaskDelay(pdMS_TO_TICKS(1000));
+                
+                esp_task_wdt_reset();
             }
 
             WiFi.mode(WIFI_MODE_STA);
             WiFi.softAPdisconnect(true);
+            
+            esp_task_wdt_reset();
             
             Serial.println("AP shutdown complete");
             Serial.println("All clients disconnected");
@@ -4728,6 +4777,8 @@ void restartAPTask(void *parameter) {
     Serial.println("\n========================================");
     Serial.println("COUNTDOWN COMPLETED - STARTING NEW AP NOW");
     Serial.println("========================================\n");
+    
+    esp_task_wdt_reset();
   
     char savedSSID[33];
     char savedPassword[65];
@@ -4753,15 +4804,21 @@ void restartAPTask(void *parameter) {
         savedSubnet = IPAddress(255, 255, 255, 0);
     }
 
+    esp_task_wdt_reset();
+
     WiFi.mode(WIFI_MODE_APSTA);
     
     Serial.println("\nConfiguring new AP network...");
     WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
     vTaskDelay(pdMS_TO_TICKS(500));
     
+    esp_task_wdt_reset();
+    
     Serial.println("Starting new AP broadcast...");
     bool apStarted = WiFi.softAP(savedSSID, savedPassword);
     vTaskDelay(pdMS_TO_TICKS(2000));
+    
+    esp_task_wdt_reset();
     
     if (apStarted) {
         IPAddress newAPIP = WiFi.softAPIP();
@@ -4800,6 +4857,8 @@ void restartAPTask(void *parameter) {
         savedGateway = IPAddress(192, 168, 4, 1);
         savedSubnet = IPAddress(255, 255, 255, 0);
         
+        esp_task_wdt_reset();
+        
         WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
         vTaskDelay(pdMS_TO_TICKS(500));
         
@@ -4812,6 +4871,8 @@ void restartAPTask(void *parameter) {
     
     vTaskDelay(pdMS_TO_TICKS(2000));
     
+    esp_task_wdt_reset();
+    
     apRestartInProgress = false;
     xSemaphoreGive(wifiRestartMutex);
     
@@ -4821,6 +4882,8 @@ void restartAPTask(void *parameter) {
     Serial.println("apRestartInProgress: false");
     Serial.println("webTask monitoring: ACTIVE again");
     Serial.println("========================================\n");
+    
+    esp_task_wdt_delete(NULL);
     
     Serial.println("AP restart task completed\n");
     vTaskDelete(NULL);
