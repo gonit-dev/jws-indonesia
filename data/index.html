@@ -7,19 +7,16 @@
 	<title>Jadwal Shalat</title>
 	<link rel="stylesheet" href="assets/css/foundation.min.css">
 	<style>
-		html,
-		body {
+		html, body {
 			height: 100%;
 			margin: 0;
 			padding: 0;
 			overflow-x: hidden;
 		}
-
 		body {
 			min-height: 100vh;
 			position: relative;
 		}
-
 		/* Loading Screen Styles */
 		#pageLoader {
 			position: fixed;
@@ -55,7 +52,7 @@
 		}
 
 		/* Ensure main content is visible after loading */
-		body:not(.loading)>.grid-container:not(#pageLoader) {
+		body:not(.loading) > .grid-container:not(#pageLoader) {
 			display: block !important;
 			visibility: visible !important;
 			opacity: 1 !important;
@@ -175,6 +172,7 @@
 			height: 100vh;
 			z-index: 999999;
 
+			/* overlay */
 			background: rgba(0, 0, 0, 0.45);
 			backdrop-filter: blur(2px);
 
@@ -195,7 +193,7 @@
 			background: #ffffff;
 			padding: 24px 28px;
 			border-radius: 8px;
-			box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+			box-shadow: 0 12px 30px rgba(0,0,0,0.3);
 			min-width: 280px;
 		}
 
@@ -226,10 +224,12 @@
 			content: '';
 			position: absolute;
 			inset: 0;
-			background: linear-gradient(90deg,
-					transparent 0%,
-					rgba(255, 255, 255, 0.35) 50%,
-					transparent 100%);
+			background: linear-gradient(
+				90deg,
+				transparent 0%,
+				rgba(255,255,255,0.35) 50%,
+				transparent 100%
+			);
 			animation: shimmer 1.4s infinite;
 		}
 
@@ -246,8 +246,7 @@
 			top: -100px;
 			left: 50%;
 			transform: translateX(-50%);
-			z-index: 999999;
-			/* Higher than overlay */
+			z-index: 999999; /* Higher than overlay */
 			min-width: 300px;
 			max-width: 90vw;
 			text-align: center;
@@ -468,11 +467,11 @@
 												<div class="medium-6 small-12 large-6 cell text-left">
 													<p>
 														<strong>Jaringan WiFi:</strong>
-														<span id="wifiName"></span>
+														<span id="wifiName">-</span>
 													</p>
 													<p>
 														<strong>Alamat IP:</strong>
-														<span id="ipAddress">0.0.0.0</span>
+														<span id="ipAddress">-</span>
 													</p>
 													<p>
 														<strong>Internet:</strong>
@@ -906,7 +905,7 @@
 											</div>
 											<div class="grid-x grid-margin-x">
 												<div class="medium-12 small-12 large-12 cell">
-													<div class="callout secondary" id="prayerTimesBox">
+													<div class="callout secondary">
 														<table class="unstriped hover">
 															<tbody>
 																<tr>
@@ -1166,24 +1165,30 @@
 			updateProgress(stepIndex, statusText) {
 				const progress = this.steps[stepIndex].progress;
 				const progressBar = document.getElementById('loadingProgress');
+				const progressContainer = progressBar?.closest('.progress');
 				const percentage = document.getElementById('loadingPercentage');
 				const status = document.getElementById('loadingStatus');
+				
 				if (progressBar) progressBar.style.width = progress + '%';
+				if (progressContainer) progressContainer.setAttribute('aria-valuenow', progress);
 				if (percentage) percentage.textContent = progress + '%';
 				if (status) status.textContent = statusText || this.steps[stepIndex].name;
 			},
 			completeLoading() {
 				const loader = document.getElementById('pageLoader');
 				const progressBar = document.getElementById('loadingProgress');
+				const progressContainer = progressBar?.closest('.progress');
 				const percentage = document.getElementById('loadingPercentage');
 				const status = document.getElementById('loadingStatus');
+				
 				if (progressBar) progressBar.style.width = '100%';
+				if (progressContainer) progressContainer.setAttribute('aria-valuenow', 100);
 				if (percentage) percentage.textContent = '100%';
 				if (status) status.textContent = 'Siap';
+				
 				setTimeout(() => {
 					if (loader) {
 						loader.classList.add('loaded');
-						// Enable scroll kembali
 						document.body.classList.remove('loading');
 						setTimeout(() => {
 							loader.style.display = 'none';
@@ -1231,6 +1236,7 @@
 		let cityList = [];
 		let loadAttempts = 0;
 		const MAX_LOAD_ATTEMPTS = 3;
+		let buzzerTestInterval = null;
 		let isUserLocalAP = true;
 		let isLoadingDeviceStatus = false;
 		let isLoadingPrayerTimes = false;
@@ -1615,37 +1621,20 @@
 		function updateCountdownDisplay(remaining, message) {
 			const loadingBar = document.getElementById('countdownLoading');
 			const progressBar = document.getElementById('countdownProgressBar');
+			const progressContainer = progressBar?.closest('.progress');
 			const percentageElement = document.getElementById('countdownPercentage');
 			const titleElement = document.getElementById('countdownTitle');
 
 			if (!loadingBar) return;
 
 			const now = Date.now();
+			const elapsedMs = countdownTotalSeconds * 1000 - (countdownEndTime - now);
+			const percentage = Math.min(100, Math.max(0, Math.round((elapsedMs / (countdownTotalSeconds * 1000)) * 100)));
 
-			const elapsedMs =
-				countdownTotalSeconds * 1000 - (countdownEndTime - now);
-
-			const percentage = Math.min(
-				100,
-				Math.max(
-					0,
-					Math.round(
-						(elapsedMs / (countdownTotalSeconds * 1000)) * 100
-					)
-				)
-			);
-
-			if (progressBar) {
-				progressBar.style.width = percentage + '%';
-			}
-
-			if (percentageElement) {
-				percentageElement.textContent = percentage + '%';
-			}
-
-			if (titleElement) {
-				titleElement.textContent = message;
-			}
+			if (progressBar) progressBar.style.width = percentage + '%';
+			if (progressContainer) progressContainer.setAttribute('aria-valuenow', percentage);
+			if (percentageElement) percentageElement.textContent = percentage + '%';
+			if (titleElement) titleElement.textContent = message;
 
 			loadingBar.style.display = 'flex';
 		}
@@ -1704,8 +1693,8 @@
 				const response = await fetch('/devicestatus');
 				const data = await response.json();
 				isOnline = data.connected === true;
-				document.getElementById('wifiName').textContent = data.ssid || 'Belum terhubung';
-				document.getElementById('ipAddress').textContent = data.ip || '0.0.0.0';
+				document.getElementById('wifiName').textContent = data.ssid || 'Tidak terhubung';
+				document.getElementById('ipAddress').textContent = data.ip || '';
 				document.getElementById('ntpStatus').textContent = data.ntpSynced ? 'Tersinkron' : 'Belum tersinkron';
 				if (document.getElementById('ntpServerUsed')) {
 					document.getElementById('ntpServerUsed').textContent = data.ntpServer || '';
@@ -1837,7 +1826,7 @@
 				lonInput.value = '';
 				defaultCoordinates.lat = '';
 				defaultCoordinates.lon = '';
-				defaultCoordsSpan.textContent = '-';
+				defaultCoordsSpan.textContent = '';
 				if (cityTypeLabel) cityTypeLabel.textContent = '';
 				return;
 			}
@@ -1890,7 +1879,7 @@
 				lonInput.value = '';
 				defaultCoordinates.lat = '';
 				defaultCoordinates.lon = '';
-				defaultCoordsSpan.textContent = '-';
+				defaultCoordsSpan.textContent = '';
 				if (cityTypeLabel) cityTypeLabel.textContent = '';
 				return;
 			}
@@ -2134,6 +2123,50 @@
 				} catch (error) {
 				}
 			}, 500);
+		}
+
+		async function toggleTestBuzzer() {
+			const btn = document.getElementById('testBuzzerBtn');
+			
+			if (buzzerTestInterval) {
+				// Stop test
+				clearInterval(buzzerTestInterval);
+				buzzerTestInterval = null;
+				
+				// Stop buzzer on server
+				await fetch('/stopbuzzer', { method: 'POST' });
+				
+				btn.textContent = '🔔 Test Buzzer';
+				btn.classList.remove('alert');
+				btn.classList.add('secondary');
+				
+			} else {
+				const volume = document.getElementById('volumeSlider').value;
+				
+				try {
+					const response = await fetch('/testbuzzer', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+						body: 'volume=' + volume
+					});
+					
+					if (response.ok) {
+						btn.textContent = '⏹ Stop Test';
+						btn.classList.remove('secondary');
+						btn.classList.add('alert');
+						
+						showToast('Buzzer test dimulai (akan otomatis berhenti dalam 30 detik)', 'success');
+						
+						setTimeout(() => {
+							if (buzzerTestInterval) {
+								toggleTestBuzzer();
+							}
+						}, 30000);
+					}
+				} catch (error) {
+					showToast('Gagal menguji buzzer', 'error');
+				}
+			}
 		}
 
 		// ================================
@@ -3118,6 +3151,7 @@
 			}
 		}
 
+
 		// ================================
 		// VANILLA JS TABS FUNCTIONALITY
 		// ================================
@@ -3192,28 +3226,28 @@
 
 				if (status) status.textContent = 'Mengecek status server...';
 				await updateProgress(60, 'Mengecek status server...');
-
+				
 				try {
 					const countdownCheck = await fetch('/api/countdown');
 					const countdownData = await countdownCheck.json();
-
+					
 					if (countdownData.active && countdownData.remaining > 0) {
-
+						
 						await updateProgress(100, countdownData.message + '...');
-
+						
 						LoadingManager.completeLoading();
-
+						
 						// Start countdown dengan data dari server
 						const clientNow = Date.now();
 						countdownEndTime = clientNow + (countdownData.remaining * 1000);
 						countdownReason = countdownData.reason;
 						countdownMessage = countdownData.message;
 						countdownTotalSeconds = countdownData.total || countdownData.remaining;
-
+						
 						startCountdownDisplay(countdownData);
 						startLocalCountdownTicker();
 						startCountdownPolling();
-
+						
 						return;
 					}
 				} catch (err) {
@@ -3274,19 +3308,19 @@
 			const networkConfigInputs = document.querySelectorAll('input[data-form="network-config"]');
 
 			wifiCredInputs.forEach(input => {
-				input.addEventListener('change', function (e) {
+				input.addEventListener('change', function(e) {
 					e.stopPropagation();
 				});
 			});
 
 			apCredInputs.forEach(input => {
-				input.addEventListener('change', function (e) {
+				input.addEventListener('change', function(e) {
 					e.stopPropagation();
 				});
 			});
 
 			networkConfigInputs.forEach(input => {
-				input.addEventListener('change', function (e) {
+				input.addEventListener('change', function(e) {
 					e.stopPropagation();
 				});
 			});
@@ -3351,9 +3385,7 @@
 			function setupIPInput(input, fieldName) {
 				if (!input) return;
 
-				// Validasi karakter yang diketik
 				input.addEventListener('keydown', function (e) {
-					// Izinkan keyboard shortcuts dan navigation keys
 					if ([8, 9, 27, 13, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1 ||
 						(e.keyCode === 65 && e.ctrlKey === true) ||
 						(e.keyCode === 67 && e.ctrlKey === true) ||
