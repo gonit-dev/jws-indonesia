@@ -2072,7 +2072,7 @@ void setupServerRoutes() {
 
       request->send(200, "text/plain", "OK");
 
-      xTaskCreate(restartAPTask, "APRestart", 4096, NULL, 1, NULL);
+      xTaskCreate(restartAPTask, "APRestart", 5120, NULL, 1, NULL);
   });
 
   server.on("/api/connection-type", HTTP_GET, [](AsyncWebServerRequest * request) {
