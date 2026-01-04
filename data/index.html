@@ -452,7 +452,7 @@
 													</p>
 													<p>
 														<strong>Server NTP:</strong>
-														<span id="ntpServerUsed"></span>
+														<span id="ntpServerUsed">Belum tersedia</span>
 													</p>
 													<p>
 														<strong>Waktu:</strong>
@@ -1661,7 +1661,7 @@
 				document.getElementById('ipAddress').textContent = data.ip || '0.0.0.0';
 				document.getElementById('ntpStatus').textContent = data.ntpSynced ? 'Tersinkron' : 'Belum tersinkron';
 				if (document.getElementById('ntpServerUsed')) {
-					document.getElementById('ntpServerUsed').textContent = data.ntpServer || '';
+					document.getElementById('ntpServerUsed').textContent = data.ntpServer || 'Belum tersedia';
 				}
 				const statusBadge = document.getElementById('internetStatus');
 				if (isOnline) {
