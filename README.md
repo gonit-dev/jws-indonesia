@@ -1565,20 +1565,6 @@ Jika ada crash, increase stack:
 - ✅ Coordinate edit dengan reset/cancel
 - ✅ Test buzzer dengan auto-timeout 30s
 
-### v2.1
-- Event-driven WiFi (no polling)
-- NTP auto-sync setiap 1 jam
-- Midnight prayer update (00:00-00:05)
-- RTC backup sync
-- Volume control buzzer (0-100%)
-
-### v2.0
-- LVGL 9.2.0 migration
-- EEZ Studio UI
-- FreeRTOS multi-task
-- Concurrent web access
-- LittleFS storage
-
 ## 🙏 Credits
 
 **Developer:**
