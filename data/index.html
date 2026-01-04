@@ -433,7 +433,7 @@
 												<div class="medium-6 small-12 large-6 cell text-left">
 													<p>
 														<strong>Jaringan WiFi:</strong>
-														<span id="wifiName">Tidak Terhubung</span>
+														<span id="wifiName">Tidak terhubung</span>
 													</p>
 													<p>
 														<strong>Alamat IP:</strong>
@@ -448,11 +448,11 @@
 												<div class="medium-6 small-12 large-6 cell text-left">
 													<p>
 														<strong>Status NTP:</strong>
-														<span id="ntpStatus">Tidak Tersinkron</span>
+														<span id="ntpStatus">Tidak tersinkron</span>
 													</p>
 													<p>
 														<strong>Server NTP:</strong>
-														<span id="ntpServerUsed">Tidak Tersedia</span>
+														<span id="ntpServerUsed"></span>
 													</p>
 													<p>
 														<strong>Waktu:</strong>
@@ -816,7 +816,7 @@
 														accept=".json" class="show-for-sr"
 														onchange="handleCitiesFileSelect(event)">
 												</label>
-												<p id="selectedFileName" class="help-text"> Belum ada berkas yang
+												<p id="selectedFileName" class="help-text"> Tidak ada berkas yang
 													dipilih </p>
 											</div>
 											<div class="medium-4 small-12 large-4 cell">
@@ -1657,18 +1657,18 @@
 				const response = await fetch('/devicestatus');
 				const data = await response.json();
 				isOnline = data.connected === true;
-				document.getElementById('wifiName').textContent = data.ssid || 'Tidak Terhubung';
+				document.getElementById('wifiName').textContent = data.ssid || 'Tidak terhubung';
 				document.getElementById('ipAddress').textContent = data.ip || '0.0.0.0';
-				document.getElementById('ntpStatus').textContent = data.ntpSynced ? 'Tersinkron' : 'Tidak Tersinkron';
+				document.getElementById('ntpStatus').textContent = data.ntpSynced ? 'Tersinkron' : 'Tidak tersinkron';
 				if (document.getElementById('ntpServerUsed')) {
-					document.getElementById('ntpServerUsed').textContent = data.ntpServer || 'Tidak Tersedia';
+					document.getElementById('ntpServerUsed').textContent = data.ntpServer || '';
 				}
 				const statusBadge = document.getElementById('internetStatus');
 				if (isOnline) {
 					statusBadge.textContent = 'Terhubung';
 					statusBadge.className = 'label success';
 				} else {
-					statusBadge.textContent = 'Tidak Terhubung';
+					statusBadge.textContent = 'Tidak terhubung';
 					statusBadge.className = 'label alert';
 				}
 				// ================================
@@ -2570,7 +2570,7 @@
 
 			if (!file) {
 				selectedCitiesFile = null;
-				fileNameDisplay.textContent = 'Belum ada berkas dipilih';
+				fileNameDisplay.textContent = 'Tidak ada berkas dipilih';
 				fileNameDisplay.className = 'help-text';
 				uploadBtn.disabled = true;
 				clearBtn.style.display = 'none';
@@ -2748,7 +2748,7 @@
 						}
 
 						document.getElementById('citiesFileInput').value = '';
-						document.getElementById('selectedFileName').textContent = 'Belum ada berkas dipilih';
+						document.getElementById('selectedFileName').textContent = 'Tidak ada berkas dipilih';
 						selectedCitiesFile = null;
 
 						setTimeout(() => {
@@ -2804,7 +2804,7 @@
 			fileInput.value = '';
 			selectedCitiesFile = null;
 
-			fileNameDisplay.textContent = 'Belum ada berkas yang dipilih';
+			fileNameDisplay.textContent = 'Tidak ada berkas yang dipilih';
 			fileNameDisplay.className = 'help-text';
 
 			uploadBtn.disabled = true;
@@ -2936,7 +2936,7 @@
 						}, 4000);
 					} else {
 						setTimeout(() => {
-							showToast('Metode disimpan. Pilih lokasi untuk menghitung jadwal salat jika belum diatur', 'warning');
+							showToast('Metode disimpan. Pilih lokasi untuk menghitung jadwal salat jika tidak diatur', 'warning');
 						}, 1500);
 					}
 
@@ -3697,7 +3697,7 @@
 				const clearBtn = document.getElementById('clearFileBtn');
 				if (clearBtn && clearBtn.style.display === 'block') {
 					e.preventDefault();
-					e.returnValue = 'Berkas belum diupload. Yakin ingin meninggalkan halaman?';
+					e.returnValue = 'Berkas tidak diupload. Yakin ingin meninggalkan halaman?';
 					return e.returnValue;
 				}
 			});
