@@ -466,6 +466,10 @@
 														<span id="uptime">00:00:00</span>
 													</p>
 												</div>
+												<div class="medium-12 small-12 large-12 cell">
+													<button class="button secondary expanded" onclick="restartDevice()">
+														Mulai Ulang Perangkat </button>
+												</div>
 											</div>
 										</div>
 									</div>
@@ -1649,32 +1653,16 @@
 				return;
 			}
 			isLoadingDeviceStatus = true;
-			
 			try {
 				const response = await fetch('/devicestatus');
 				const data = await response.json();
-				
 				isOnline = data.connected === true;
-				
-				// WiFi Name - dengan fallback yang natural
-				document.getElementById('wifiName').textContent = 
-					data.ssid || 'Tidak terhubung';
-				
-				// IP Address - dengan fallback yang natural
-				document.getElementById('ipAddress').textContent = 
-					data.ip || 'Tidak tersedia';
-				
-				// NTP Status - dengan fallback yang natural
-				document.getElementById('ntpStatus').textContent = 
-					data.ntpSynced ? 'Tersinkron' : 'Tidak tersinkron';
-				
-				// NTP Server - dengan fallback yang natural
+				document.getElementById('wifiName').textContent = data.ssid || 'Tidak terhubung';
+				document.getElementById('ipAddress').textContent = data.ip || '';
+				document.getElementById('ntpStatus').textContent = data.ntpSynced ? 'Tersinkron' : 'Tidak tersinkron';
 				if (document.getElementById('ntpServerUsed')) {
-					document.getElementById('ntpServerUsed').textContent = 
-						data.ntpServer || 'Tidak tersedia';
+					document.getElementById('ntpServerUsed').textContent = data.ntpServer || '';
 				}
-				
-				// Internet Status Badge
 				const statusBadge = document.getElementById('internetStatus');
 				if (isOnline) {
 					statusBadge.textContent = 'Terhubung';
@@ -1683,50 +1671,26 @@
 					statusBadge.textContent = 'Tidak terhubung';
 					statusBadge.className = 'label alert';
 				}
-				
 				// ================================
 				// UPDATE TIME & DATE FROM SERVER
 				// ================================
 				if (data.currentTime && data.currentDate) {
 					const timeParts = data.currentTime.split(':');
 					const dateParts = data.currentDate.split('/');
-					
 					if (timeParts.length === 3 && dateParts.length === 3) {
-						const now = new Date(
-							parseInt(dateParts[2]), 
-							parseInt(dateParts[1]) - 1, 
-							parseInt(dateParts[0]), 
-							parseInt(timeParts[0]), 
-							parseInt(timeParts[1]), 
-							parseInt(timeParts[2])
-						);
-						
+						const now = new Date(parseInt(dateParts[2]), parseInt(dateParts[1]) - 1, parseInt(dateParts[0]), parseInt(timeParts[0]), parseInt(timeParts[1]), parseInt(timeParts[2]));
 						serverTimestamp = Math.floor(now.getTime() / 1000);
 						localStartTime = Date.now();
 						lastSyncTime = Date.now();
 					}
 				}
-				
 				if (data.uptime !== undefined) {
 					serverUptimeStart = data.uptime;
 				}
-				
 			} catch (error) {
-				// Error handling dengan text yang konsisten dan natural
 				isOnline = false;
-				document.getElementById('wifiName').textContent = 'Gagal terhubung';
-				document.getElementById('ipAddress').textContent = 'Tidak tersedia';
-				document.getElementById('ntpStatus').textContent = 'Gagal terhubung';
-				
-				if (document.getElementById('ntpServerUsed')) {
-					document.getElementById('ntpServerUsed').textContent = 'Tidak tersedia';
-				}
-				
-				const statusBadge = document.getElementById('internetStatus');
-				statusBadge.textContent = 'Terjadi kesalahan';
-				statusBadge.className = 'label alert';
-				
-				console.error('Error fetching device status:', error);
+				document.getElementById('internetStatus').textContent = 'Terjadi kesalahan';
+				document.getElementById('internetStatus').className = 'label alert';
 			} finally {
 				isLoadingDeviceStatus = false;
 			}
@@ -2606,7 +2570,7 @@
 
 			if (!file) {
 				selectedCitiesFile = null;
-				fileNameDisplay.textContent = 'Tidak ada berkas dipilih';
+				fileNameDisplay.textContent = 'Belum ada berkas dipilih';
 				fileNameDisplay.className = 'help-text';
 				uploadBtn.disabled = true;
 				clearBtn.style.display = 'none';
@@ -2784,7 +2748,7 @@
 						}
 
 						document.getElementById('citiesFileInput').value = '';
-						document.getElementById('selectedFileName').textContent = 'Tidak ada berkas dipilih';
+						document.getElementById('selectedFileName').textContent = 'Belum ada berkas dipilih';
 						selectedCitiesFile = null;
 
 						setTimeout(() => {
@@ -2840,7 +2804,7 @@
 			fileInput.value = '';
 			selectedCitiesFile = null;
 
-			fileNameDisplay.textContent = 'Tidak ada berkas yang dipilih';
+			fileNameDisplay.textContent = 'Belum ada berkas yang dipilih';
 			fileNameDisplay.className = 'help-text';
 
 			uploadBtn.disabled = true;
@@ -2972,7 +2936,7 @@
 						}, 4000);
 					} else {
 						setTimeout(() => {
-							showToast('Metode disimpan. Pilih lokasi untuk menghitung jadwal salat jika tidak diatur', 'warning');
+							showToast('Metode disimpan. Pilih lokasi untuk menghitung jadwal salat jika belum diatur', 'warning');
 						}, 1500);
 					}
 
@@ -3232,50 +3196,32 @@
 		// ================================
 		async function initializeApp() {
 			const progressBar = document.getElementById('loadingProgress');
-			const progressContainer = progressBar?.closest('.progress');
 			const percentage = document.getElementById('loadingPercentage');
 			const status = document.getElementById('loadingStatus');
 
 			let currentProgress = 0;
 
-			// Update progress langsung di awal
-			if (progressBar) progressBar.style.width = '10%';
-			if (progressContainer) progressContainer.setAttribute('aria-valuenow', 10);
-			if (percentage) percentage.textContent = '10%';
-			if (status) status.textContent = 'Memuat halaman...';
-			currentProgress = 10;
-
-			function updateProgress(targetProgress, message, speed = 40) {
+			function updateProgress(targetProgress, message) {
 				return new Promise((resolve) => {
-					if (status) status.textContent = message;
-					
-					if (currentProgress >= targetProgress) {
-						currentProgress = targetProgress;
-						if (progressBar) progressBar.style.width = currentProgress + '%';
-						if (progressContainer) progressContainer.setAttribute('aria-valuenow', currentProgress);
-						if (percentage) percentage.textContent = currentProgress + '%';
-						resolve();
-						return;
-					}
-
 					const interval = setInterval(() => {
 						if (currentProgress < targetProgress) {
 							currentProgress += 1;
 							if (progressBar) progressBar.style.width = currentProgress + '%';
-							if (progressContainer) progressContainer.setAttribute('aria-valuenow', currentProgress);
 							if (percentage) percentage.textContent = currentProgress + '%';
+							if (status) status.textContent = message;
 						} else {
 							clearInterval(interval);
-							currentProgress = targetProgress;
 							resolve();
 						}
-					}, speed);
+					}, 20);
 				});
 			}
 
 			const LOADING_TIMEOUT = 10000;
+			let timeoutReached = false;
 
 			const timeoutTimer = setTimeout(() => {
+				timeoutReached = true;
 				if (status) status.textContent = 'Timeout - melanjutkan...';
 				setTimeout(() => {
 					LoadingManager.completeLoading();
@@ -3283,28 +3229,17 @@
 			}, LOADING_TIMEOUT);
 
 			try {
+				if (status) status.textContent = 'Memuat halaman...';
+				await updateProgress(10, 'Memuat halaman...');
 
-				await updateProgress(20, 'Memuat stylesheet...');
-				
-				// CSS Loading dengan progress update
-				const cssLoadStart = Date.now();
 				await cssLoaded;
-				const cssLoadTime = Date.now() - cssLoadStart;
-				
 				await updateProgress(50, 'Menyiapkan tampilan...');
-				
+
+				if (status) status.textContent = 'Mengecek status server...';
 				await updateProgress(60, 'Mengecek status server...');
 				
 				try {
-					const controller = new AbortController();
-					const timeoutId = setTimeout(() => controller.abort(), 2000); // Timeout 2 detik
-					
-					const countdownCheck = await fetch('/api/countdown', {
-						signal: controller.signal,
-						cache: 'no-cache'
-					});
-					
-					clearTimeout(timeoutId);
+					const countdownCheck = await fetch('/api/countdown');
 					const countdownData = await countdownCheck.json();
 					
 					if (countdownData.active && countdownData.remaining > 0) {
@@ -3324,22 +3259,16 @@
 						startLocalCountdownTicker();
 						startCountdownPolling();
 						
-						clearTimeout(timeoutTimer);
-						console.timeEnd('Total Init Time');
 						return;
 					}
 				} catch (err) {
-					// Lanjut meskipun error
 				}
 
 				await updateProgress(90, 'Menyiapkan halaman...');
-				
 				initTabs();
 
-				// Real-time display update
 				setInterval(updateRealtimeDisplay, 1000);
 
-				// Auto refresh device status dan prayer times
 				setInterval(() => {
 					const activePanel = document.querySelector('.tabs-panel.is-active');
 					const activeTab = activePanel ? activePanel.getAttribute('id') : null;
@@ -3356,8 +3285,6 @@
 
 				clearTimeout(timeoutTimer);
 
-				console.timeEnd('Total Init Time');
-
 				LoadingManager.completeLoading();
 
 			} catch (error) {
@@ -3371,7 +3298,8 @@
 				}, 1500);
 			}
 		}
-		document.addEventListener('DOMContentLoaded', function () {			
+
+		document.addEventListener('DOMContentLoaded', function () {
 			setTimeout(() => {
 				forceRemoveLoadingState();
 			}, 15000);
@@ -3767,7 +3695,7 @@
 				const clearBtn = document.getElementById('clearFileBtn');
 				if (clearBtn && clearBtn.style.display === 'block') {
 					e.preventDefault();
-					e.returnValue = 'Berkas tidak diupload. Yakin ingin meninggalkan halaman?';
+					e.returnValue = 'Berkas belum diupload. Yakin ingin meninggalkan halaman?';
 					return e.returnValue;
 				}
 			});

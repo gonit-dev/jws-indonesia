@@ -86,7 +86,7 @@
 #define UI_TASK_STACK_SIZE 12288       // LVGL + EEZ rendering
 #define WIFI_TASK_STACK_SIZE 3072      // Event-driven + reconnect (small headroom)
 #define NTP_TASK_STACK_SIZE 4096       // Hanya NTP sync
-#define WEB_TASK_STACK_SIZE 5120       // AsyncWebServer + concurrent requests
+#define WEB_TASK_STACK_SIZE 6102       // AsyncWebServer + concurrent requests
 #define PRAYER_TASK_STACK_SIZE 16384   // HTTP + JSON parsing
 #define RTC_TASK_STACK_SIZE 2048       // Simple I2C
 #define CLOCK_TASK_STACK_SIZE 2048     // Simple time increment
