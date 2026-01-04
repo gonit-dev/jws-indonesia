@@ -433,22 +433,21 @@
 												<div class="medium-6 small-12 large-6 cell text-left">
 													<p>
 														<strong>Jaringan WiFi:</strong>
-														<span id="wifiName">Tidak terhubung</span>
+														<span id="wifiName">Memuat...</span>
 													</p>
 													<p>
 														<strong>Alamat IP:</strong>
-														<span id="ipAddress">0.0.0.0</span>
+														<span id="ipAddress">Tidak tersedia</span>
 													</p>
 													<p>
 														<strong>Internet:</strong>
-														<span id="internetStatus"
-															class="label warning">Menghubungkan…</span>
+														<span id="internetStatus" class="label warning">Menghubungkan…</span>
 													</p>
 												</div>
 												<div class="medium-6 small-12 large-6 cell text-left">
 													<p>
 														<strong>Status NTP:</strong>
-														<span id="ntpStatus">Tidak tersinkron</span>
+														<span id="ntpStatus">Belum sinkron</span>
 													</p>
 													<p>
 														<strong>Server NTP:</strong>
@@ -466,10 +465,6 @@
 														<strong>Waktu Aktif:</strong>
 														<span id="uptime">00:00:00</span>
 													</p>
-												</div>
-												<div class="medium-12 small-12 large-12 cell">
-													<button class="button secondary expanded" onclick="restartDevice()">
-														Mulai Ulang Perangkat </button>
 												</div>
 											</div>
 										</div>
@@ -1106,6 +1101,7 @@
 			</div>
 		</div>
 	</div>
+
 	<script>
 		const tahunAwal = 2025;
 		const tahunSekarang = new Date().getFullYear();
@@ -1653,16 +1649,32 @@
 				return;
 			}
 			isLoadingDeviceStatus = true;
+			
 			try {
 				const response = await fetch('/devicestatus');
 				const data = await response.json();
+				
 				isOnline = data.connected === true;
-				document.getElementById('wifiName').textContent = data.ssid || 'Tidak terhubung';
-				document.getElementById('ipAddress').textContent = data.ip || '0.0.0.0';
-				document.getElementById('ntpStatus').textContent = data.ntpSynced ? 'Tersinkron' : 'Tidak tersinkron';
+				
+				// WiFi Name - dengan fallback yang natural
+				document.getElementById('wifiName').textContent = 
+					data.ssid || 'Tidak terhubung';
+				
+				// IP Address - dengan fallback yang natural
+				document.getElementById('ipAddress').textContent = 
+					data.ip || 'Tidak tersedia';
+				
+				// NTP Status - dengan fallback yang natural
+				document.getElementById('ntpStatus').textContent = 
+					data.ntpSynced ? 'Tersinkron' : 'Belum tersinkron';
+				
+				// NTP Server - dengan fallback yang natural
 				if (document.getElementById('ntpServerUsed')) {
-					document.getElementById('ntpServerUsed').textContent = data.ntpServer || 'Tidak tersedia';
+					document.getElementById('ntpServerUsed').textContent = 
+						data.ntpServer || 'Tidak tersedia';
 				}
+				
+				// Internet Status Badge
 				const statusBadge = document.getElementById('internetStatus');
 				if (isOnline) {
 					statusBadge.textContent = 'Terhubung';
@@ -1671,26 +1683,50 @@
 					statusBadge.textContent = 'Tidak terhubung';
 					statusBadge.className = 'label alert';
 				}
+				
 				// ================================
 				// UPDATE TIME & DATE FROM SERVER
 				// ================================
 				if (data.currentTime && data.currentDate) {
 					const timeParts = data.currentTime.split(':');
 					const dateParts = data.currentDate.split('/');
+					
 					if (timeParts.length === 3 && dateParts.length === 3) {
-						const now = new Date(parseInt(dateParts[2]), parseInt(dateParts[1]) - 1, parseInt(dateParts[0]), parseInt(timeParts[0]), parseInt(timeParts[1]), parseInt(timeParts[2]));
+						const now = new Date(
+							parseInt(dateParts[2]), 
+							parseInt(dateParts[1]) - 1, 
+							parseInt(dateParts[0]), 
+							parseInt(timeParts[0]), 
+							parseInt(timeParts[1]), 
+							parseInt(timeParts[2])
+						);
+						
 						serverTimestamp = Math.floor(now.getTime() / 1000);
 						localStartTime = Date.now();
 						lastSyncTime = Date.now();
 					}
 				}
+				
 				if (data.uptime !== undefined) {
 					serverUptimeStart = data.uptime;
 				}
+				
 			} catch (error) {
+				// Error handling dengan text yang konsisten dan natural
 				isOnline = false;
-				document.getElementById('internetStatus').textContent = 'Terjadi kesalahan';
-				document.getElementById('internetStatus').className = 'label alert';
+				document.getElementById('wifiName').textContent = 'Gagal terhubung';
+				document.getElementById('ipAddress').textContent = 'Tidak tersedia';
+				document.getElementById('ntpStatus').textContent = 'Gagal terhubung';
+				
+				if (document.getElementById('ntpServerUsed')) {
+					document.getElementById('ntpServerUsed').textContent = 'Tidak tersedia';
+				}
+				
+				const statusBadge = document.getElementById('internetStatus');
+				statusBadge.textContent = 'Terjadi kesalahan';
+				statusBadge.className = 'label alert';
+				
+				console.error('Error fetching device status:', error);
 			} finally {
 				isLoadingDeviceStatus = false;
 			}
@@ -2570,7 +2606,7 @@
 
 			if (!file) {
 				selectedCitiesFile = null;
-				fileNameDisplay.textContent = 'Tidak ada berkas dipilih';
+				fileNameDisplay.textContent = 'Belum ada berkas dipilih';
 				fileNameDisplay.className = 'help-text';
 				uploadBtn.disabled = true;
 				clearBtn.style.display = 'none';
@@ -2748,7 +2784,7 @@
 						}
 
 						document.getElementById('citiesFileInput').value = '';
-						document.getElementById('selectedFileName').textContent = 'Tidak ada berkas dipilih';
+						document.getElementById('selectedFileName').textContent = 'Belum ada berkas dipilih';
 						selectedCitiesFile = null;
 
 						setTimeout(() => {
@@ -2804,7 +2840,7 @@
 			fileInput.value = '';
 			selectedCitiesFile = null;
 
-			fileNameDisplay.textContent = 'Tidak ada berkas yang dipilih';
+			fileNameDisplay.textContent = 'Belum ada berkas yang dipilih';
 			fileNameDisplay.className = 'help-text';
 
 			uploadBtn.disabled = true;
@@ -2936,7 +2972,7 @@
 						}, 4000);
 					} else {
 						setTimeout(() => {
-							showToast('Metode disimpan. Pilih lokasi untuk menghitung jadwal salat jika tidak diatur', 'warning');
+							showToast('Metode disimpan. Pilih lokasi untuk menghitung jadwal salat jika belum diatur', 'warning');
 						}, 1500);
 					}
 
@@ -3697,7 +3733,7 @@
 				const clearBtn = document.getElementById('clearFileBtn');
 				if (clearBtn && clearBtn.style.display === 'block') {
 					e.preventDefault();
-					e.returnValue = 'Berkas tidak diupload. Yakin ingin meninggalkan halaman?';
+					e.returnValue = 'Berkas belum diupload. Yakin ingin meninggalkan halaman?';
 					return e.returnValue;
 				}
 			});
