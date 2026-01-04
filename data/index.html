@@ -81,8 +81,8 @@
 
 		.loader-icon {
 			font-size: 60px;
-			margin-bottom: 20px;
 			animation: pulse 2s ease-in-out infinite;
+			margin-bottom: 5px;
 			grid-column: 1 / -1;
 		}
 
@@ -92,7 +92,7 @@
 		}
 
 		.loader-title {
-			font-size: 24px;
+			font-size: 28px;
 			font-weight: bold;
 			color: #1779ba;
 			margin-bottom: 5px;
@@ -100,9 +100,9 @@
 		}
 
 		.loader-subtitle {
-			font-size: 14px;
+			font-size: 18px;
 			color: #8a8a8a;
-			margin-bottom: 5px;
+			margin-bottom: -5px;
 			grid-column: 1 / -1;
 		}
 
@@ -147,22 +147,25 @@
 		}
 
 		.loader-status {
-			font-size: 13px;
+			font-size: 15px;
 			color: #1779ba;
 			font-weight: 500;
 			min-height: 20px;
 			grid-column: 1 / -1;
+			margin-top: -10px;
+			text-align: center;
 		}
 
-		/* >>> PAGE LOADER PERCENTAGE — FIX <<< */
+		/* >>> PAGE LOADER PERCENTAGE <<< */
 		.loader-percentage {
-			font-size: 25px;
+			font-size: 20px;
 			font-weight: bold;
 			color: #1779ba;
 			margin-top: 0 !important;
 			white-space: nowrap;
 			grid-column:2;
 			align-self:center;
+			margin-bottom: 0 !important;
 		}
 
 		/* ===== COUNTDOWN OVERLAY ===== */
@@ -196,7 +199,7 @@
 		}
 
 		#countdownLoading .loader-title {
-			font-size: 20px;
+			font-size: 28px;
 			font-weight: bold;
 			color: #1779ba;
 			grid-column: 1 / -1;
@@ -373,11 +376,11 @@
 	<!-- Countdown Loading Bar (Like Page Loader) -->
 	<div id="countdownLoading" style="display: none;">
 		<div class="loader-content">
-			<div class="loader-title" id="countdownTitle">Mulai</div>
 			<div class="progress-container">
 				<div class="progress-bar" id="countdownProgressBar"></div>
 			</div>
 			<div class="loader-percentage" id="countdownPercentage">0%</div>
+			<div class="loader-status" id="countdownTitle">Mulai</div>
 		</div>
 	</div>
 	<div class="grid-container">
@@ -430,11 +433,11 @@
 												<div class="medium-6 small-12 large-6 cell text-left">
 													<p>
 														<strong>Jaringan WiFi:</strong>
-														<span id="wifiName">-</span>
+														<span id="wifiName">Tidak terhubung</span>
 													</p>
 													<p>
 														<strong>Alamat IP:</strong>
-														<span id="ipAddress">-</span>
+														<span id="ipAddress">0.0.0.0</span>
 													</p>
 													<p>
 														<strong>Internet:</strong>
@@ -445,7 +448,7 @@
 												<div class="medium-6 small-12 large-6 cell text-left">
 													<p>
 														<strong>Status NTP:</strong>
-														<span id="ntpStatus"></span>
+														<span id="ntpStatus">Belum tersinkron</span>
 													</p>
 													<p>
 														<strong>Server NTP:</strong>
@@ -1371,7 +1374,7 @@
 		}
 
 		function formatTime(date) {
-			if (!date) return '--:--:--';
+			if (!date) return '00:00:00';
 			const hours = String(date.getHours()).padStart(2, '0');
 			const minutes = String(date.getMinutes()).padStart(2, '0');
 			const seconds = String(date.getSeconds()).padStart(2, '0');
@@ -1379,7 +1382,7 @@
 		}
 
 		function formatUptime(seconds) {
-			if (seconds === 0) return '--:--:--';
+			if (seconds === 0) return '00:00:00';
 			const days = Math.floor(seconds / 86400);
 			const hours = Math.floor((seconds % 86400) / 3600);
 			const minutes = Math.floor((seconds % 3600) / 60);
@@ -1655,7 +1658,7 @@
 				const data = await response.json();
 				isOnline = data.connected === true;
 				document.getElementById('wifiName').textContent = data.ssid || 'Tidak terhubung';
-				document.getElementById('ipAddress').textContent = data.ip || '';
+				document.getElementById('ipAddress').textContent = data.ip || '0.0.0.0';
 				document.getElementById('ntpStatus').textContent = data.ntpSynced ? 'Tersinkron' : 'Belum tersinkron';
 				if (document.getElementById('ntpServerUsed')) {
 					document.getElementById('ntpServerUsed').textContent = data.ntpServer || '';
