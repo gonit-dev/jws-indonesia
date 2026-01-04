@@ -433,7 +433,7 @@
 												<div class="medium-6 small-12 large-6 cell text-left">
 													<p>
 														<strong>Jaringan WiFi:</strong>
-														<span id="wifiName">Tidak terhubung</span>
+														<span id="wifiName">Tidak Terhubung</span>
 													</p>
 													<p>
 														<strong>Alamat IP:</strong>
@@ -448,11 +448,11 @@
 												<div class="medium-6 small-12 large-6 cell text-left">
 													<p>
 														<strong>Status NTP:</strong>
-														<span id="ntpStatus">Belum tersinkron</span>
+														<span id="ntpStatus">Tidak ersinkron</span>
 													</p>
 													<p>
 														<strong>Server NTP:</strong>
-														<span id="ntpServerUsed">Belum tersedia</span>
+														<span id="ntpServerUsed">Tidak Tersedia</span>
 													</p>
 													<p>
 														<strong>Waktu:</strong>
@@ -1657,18 +1657,18 @@
 				const response = await fetch('/devicestatus');
 				const data = await response.json();
 				isOnline = data.connected === true;
-				document.getElementById('wifiName').textContent = data.ssid || 'Tidak terhubung';
+				document.getElementById('wifiName').textContent = data.ssid || 'Tidak Terhubung';
 				document.getElementById('ipAddress').textContent = data.ip || '0.0.0.0';
-				document.getElementById('ntpStatus').textContent = data.ntpSynced ? 'Tersinkron' : 'Belum tersinkron';
+				document.getElementById('ntpStatus').textContent = data.ntpSynced ? 'Tersinkron' : 'Tidak ersinkron';
 				if (document.getElementById('ntpServerUsed')) {
-					document.getElementById('ntpServerUsed').textContent = data.ntpServer || 'Belum tersedia';
+					document.getElementById('ntpServerUsed').textContent = data.ntpServer || 'Tidak Tersedia';
 				}
 				const statusBadge = document.getElementById('internetStatus');
 				if (isOnline) {
 					statusBadge.textContent = 'Terhubung';
 					statusBadge.className = 'label success';
 				} else {
-					statusBadge.textContent = 'Tidak terhubung';
+					statusBadge.textContent = 'Tidak Terhubung';
 					statusBadge.className = 'label alert';
 				}
 				// ================================
