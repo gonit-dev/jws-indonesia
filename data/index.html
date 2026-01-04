@@ -357,7 +357,7 @@
 	</style>
 </head>
 
-<body>
+<body class="loading">
 	<!-- Page Loading Screen -->
 	<div id="pageLoader">
 		<div class="loader-content">
@@ -3232,32 +3232,50 @@
 		// ================================
 		async function initializeApp() {
 			const progressBar = document.getElementById('loadingProgress');
+			const progressContainer = progressBar?.closest('.progress');
 			const percentage = document.getElementById('loadingPercentage');
 			const status = document.getElementById('loadingStatus');
 
 			let currentProgress = 0;
 
-			function updateProgress(targetProgress, message) {
+			// Update progress langsung di awal
+			if (progressBar) progressBar.style.width = '10%';
+			if (progressContainer) progressContainer.setAttribute('aria-valuenow', 10);
+			if (percentage) percentage.textContent = '10%';
+			if (status) status.textContent = 'Memuat halaman...';
+			currentProgress = 10;
+
+			function updateProgress(targetProgress, message, speed = 40) {
 				return new Promise((resolve) => {
+					if (status) status.textContent = message;
+					
+					if (currentProgress >= targetProgress) {
+						currentProgress = targetProgress;
+						if (progressBar) progressBar.style.width = currentProgress + '%';
+						if (progressContainer) progressContainer.setAttribute('aria-valuenow', currentProgress);
+						if (percentage) percentage.textContent = currentProgress + '%';
+						resolve();
+						return;
+					}
+
 					const interval = setInterval(() => {
 						if (currentProgress < targetProgress) {
 							currentProgress += 1;
 							if (progressBar) progressBar.style.width = currentProgress + '%';
+							if (progressContainer) progressContainer.setAttribute('aria-valuenow', currentProgress);
 							if (percentage) percentage.textContent = currentProgress + '%';
-							if (status) status.textContent = message;
 						} else {
 							clearInterval(interval);
+							currentProgress = targetProgress;
 							resolve();
 						}
-					}, 20);
+					}, speed);
 				});
 			}
 
 			const LOADING_TIMEOUT = 10000;
-			let timeoutReached = false;
 
 			const timeoutTimer = setTimeout(() => {
-				timeoutReached = true;
 				if (status) status.textContent = 'Timeout - melanjutkan...';
 				setTimeout(() => {
 					LoadingManager.completeLoading();
@@ -3265,17 +3283,28 @@
 			}, LOADING_TIMEOUT);
 
 			try {
-				if (status) status.textContent = 'Memuat halaman...';
-				await updateProgress(10, 'Memuat halaman...');
 
+				await updateProgress(20, 'Memuat stylesheet...');
+				
+				// CSS Loading dengan progress update
+				const cssLoadStart = Date.now();
 				await cssLoaded;
+				const cssLoadTime = Date.now() - cssLoadStart;
+				
 				await updateProgress(50, 'Menyiapkan tampilan...');
-
-				if (status) status.textContent = 'Mengecek status server...';
+				
 				await updateProgress(60, 'Mengecek status server...');
 				
 				try {
-					const countdownCheck = await fetch('/api/countdown');
+					const controller = new AbortController();
+					const timeoutId = setTimeout(() => controller.abort(), 2000); // Timeout 2 detik
+					
+					const countdownCheck = await fetch('/api/countdown', {
+						signal: controller.signal,
+						cache: 'no-cache'
+					});
+					
+					clearTimeout(timeoutId);
 					const countdownData = await countdownCheck.json();
 					
 					if (countdownData.active && countdownData.remaining > 0) {
@@ -3295,16 +3324,22 @@
 						startLocalCountdownTicker();
 						startCountdownPolling();
 						
+						clearTimeout(timeoutTimer);
+						console.timeEnd('Total Init Time');
 						return;
 					}
 				} catch (err) {
+					// Lanjut meskipun error
 				}
 
 				await updateProgress(90, 'Menyiapkan halaman...');
+				
 				initTabs();
 
+				// Real-time display update
 				setInterval(updateRealtimeDisplay, 1000);
 
+				// Auto refresh device status dan prayer times
 				setInterval(() => {
 					const activePanel = document.querySelector('.tabs-panel.is-active');
 					const activeTab = activePanel ? activePanel.getAttribute('id') : null;
@@ -3321,6 +3356,8 @@
 
 				clearTimeout(timeoutTimer);
 
+				console.timeEnd('Total Init Time');
+
 				LoadingManager.completeLoading();
 
 			} catch (error) {
@@ -3334,10 +3371,7 @@
 				}, 1500);
 			}
 		}
-
-		document.addEventListener('DOMContentLoaded', function () {
-			document.body.classList.add('loading');
-
+		document.addEventListener('DOMContentLoaded', function () {			
 			setTimeout(() => {
 				forceRemoveLoadingState();
 			}, 15000);
