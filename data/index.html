@@ -2570,7 +2570,7 @@
 
 			if (!file) {
 				selectedCitiesFile = null;
-				fileNameDisplay.textContent = 'Belum ada berkas dipilih';
+				fileNameDisplay.textContent = 'Tidak ada berkas dipilih';
 				fileNameDisplay.className = 'help-text';
 				uploadBtn.disabled = true;
 				clearBtn.style.display = 'none';
@@ -2748,7 +2748,7 @@
 						}
 
 						document.getElementById('citiesFileInput').value = '';
-						document.getElementById('selectedFileName').textContent = 'Belum ada berkas dipilih';
+						document.getElementById('selectedFileName').textContent = 'Tidak ada berkas dipilih';
 						selectedCitiesFile = null;
 
 						setTimeout(() => {
@@ -2936,7 +2936,7 @@
 						}, 4000);
 					} else {
 						setTimeout(() => {
-							showToast('Metode disimpan. Pilih lokasi untuk menghitung jadwal salat jika belum diatur', 'warning');
+							showToast('Metode disimpan. Pilih lokasi untuk menghitung jadwal salat jika tidak diatur', 'warning');
 						}, 1500);
 					}
 
@@ -3695,7 +3695,7 @@
 				const clearBtn = document.getElementById('clearFileBtn');
 				if (clearBtn && clearBtn.style.display === 'block') {
 					e.preventDefault();
-					e.returnValue = 'Berkas belum diupload. Yakin ingin meninggalkan halaman?';
+					e.returnValue = 'Berkas tidak diupload. Yakin ingin meninggalkan halaman?';
 					return e.returnValue;
 				}
 			});
