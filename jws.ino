@@ -4,15 +4,15 @@
  * OPTIMIZED VERSION - Event-Driven + Built-in NTP
  */
 
-#include <WiFiClientSecure.h>
-#include <Wire.h>
-#include <RTClib.h>
-#include <lvgl.h>
-#include <TFT_eSPI.h>
-#include <XPT2046_Touchscreen.h>
-#include <SPI.h>
-#include <LittleFS.h>
-#include <FS.h>
+#include "WiFiClientSecure.h"
+#include "Wire.h"
+#include "RTClib.h"
+#include "lvgl.h"
+#include "TFT_eSPI.h"
+#include "XPT2046_Touchscreen.h"
+#include "SPI.h"
+#include "LittleFS.h"
+#include "FS.h"
 #include "ArduinoJson.h"
 #include "WiFi.h"
 #include "ESPAsyncWebServer.h"
@@ -24,6 +24,7 @@
 #include "esp_wifi.h"
 #include "driver/i2s.h"
 #include "SD.h"
+#include "SimpleFTPServer.h"
 
 // EEZ generated files
 #include "src/ui.h"
@@ -91,6 +92,7 @@
 #define RTC_TASK_STACK_SIZE 2048       // Simple I2C
 #define CLOCK_TASK_STACK_SIZE 2048     // Simple time increment
 #define AUDIO_TASK_STACK_SIZE 4096     // Audio adzan
+#define FTP_TASK_STACK_SIZE 4096
 
 // Task Priorities (0 = lowest, higher number = higher priority)
 #define UI_TASK_PRIORITY 3             // Highest (display responsiveness)
@@ -101,6 +103,7 @@
 #define RTC_TASK_PRIORITY 1            // Low (backup sync)
 #define CLOCK_TASK_PRIORITY 2          // High (time accuracy)
 #define AUDIO_TASK_PRIORITY 0          // Low (Audio adzan)
+#define FTP_TASK_PRIORITY 1
 
 // Task Handles
 TaskHandle_t rtcTaskHandle = NULL;
@@ -110,7 +113,8 @@ TaskHandle_t ntpTaskHandle = NULL;
 TaskHandle_t webTaskHandle = NULL;
 TaskHandle_t prayerTaskHandle = NULL;
 TaskHandle_t clockTaskHandle = NULL;
-TaskHandle_t buzzerTestTaskHandle = NULL; 
+TaskHandle_t buzzerTestTaskHandle = NULL;
+TaskHandle_t ftpTaskHandle = NULL;
 
 // ================================
 // SEMAPHORES & MUTEXES
@@ -139,6 +143,12 @@ XPT2046_Touchscreen touch(TOUCH_CS, TOUCH_IRQ);
 
 RTC_DS3231 rtc;
 bool rtcAvailable = false;
+
+// ================================
+// FTP SERVER CONFIG
+// ================================
+#define FTP_USER "JWS Indonesia"
+#define FTP_PASS "12345678"
 
 // ================================
 // DEFAULT AP CONFIGURATION
@@ -289,6 +299,11 @@ struct DisplayUpdate {
 // NETWORK OBJECTS
 // ================================
 AsyncWebServer server(80);
+
+// ================================
+// FTP SERVER OBJECT
+// ================================
+FtpServer ftpSrv;
 
 // ================================
 // TOUCH VARIABLES
@@ -445,6 +460,7 @@ void prayerTask(void *parameter);
 void rtcSyncTask(void *parameter);
 void clockTickTask(void *parameter);
 void audioTask(void *parameter);
+void ftpTask(void *parameter);
 
 // ============================================
 // WiFi & AP Restart Tasks
@@ -4976,6 +4992,27 @@ void audioTask(void *parameter) {
   }
 }
 
+void ftpTask(void *parameter) {
+    Serial.println("\n========================================");
+    Serial.println("FTP SERVER STARTED");
+    Serial.println("========================================");
+    Serial.println("Username: " FTP_USER);
+    Serial.println("Password: " FTP_PASS);
+    Serial.println("Port: 21");
+    Serial.println("Root: / (LittleFS)");
+    
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("WiFi FTP: ftp://" + WiFi.localIP().toString());
+    }
+    Serial.println("AP FTP: ftp://" + WiFi.softAPIP().toString());
+    Serial.println("========================================\n");
+    
+    while (true) {
+        ftpSrv.handleFTP();
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
+}
+
 // ================================
 // SETUP - ESP32 CORE 3.x
 // ================================
@@ -5069,6 +5106,10 @@ void setup() {
   }
 
   init_littlefs();
+
+  ftpSrv.begin(FTP_USER, FTP_PASS);
+  Serial.println("FTP Server initialized on LittleFS");
+
   loadWiFiCredentials();
   loadPrayerTimes();
   loadCitySelection();
@@ -5371,6 +5412,17 @@ void setup() {
     );
     Serial.printf("RTC Sync Task (Core 0) - Stack: %d bytes\n", RTC_TASK_STACK_SIZE);
   }
+
+  xTaskCreatePinnedToCore(
+      ftpTask,
+      "FTP",
+      FTP_TASK_STACK_SIZE,
+      NULL,
+      FTP_TASK_PRIORITY,
+      &ftpTaskHandle,
+      0  // Core 0
+  );
+  Serial.printf("FTP Task (Core 0) - Stack: %d bytes\n", FTP_TASK_STACK_SIZE);
 
   // ================================
   // AUTO-RECOVERY TASK FOR PRAYER
