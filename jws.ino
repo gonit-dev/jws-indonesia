@@ -4885,13 +4885,11 @@ void playDFPlayerAdzan(String prayerName) {
   
   int trackNumber = 0;
   
-  if (prayerName == "imsak") trackNumber = 1;
-  else if (prayerName == "subuh") trackNumber = 2;
-  else if (prayerName == "terbit") trackNumber = 3;
-  else if (prayerName == "zuhur") trackNumber = 4;
-  else if (prayerName == "ashar") trackNumber = 5;
-  else if (prayerName == "maghrib") trackNumber = 6;
-  else if (prayerName == "isya") trackNumber = 7;
+  if (prayerName == "subuh") trackNumber = 1;
+  else if (prayerName == "zuhur") trackNumber = 2;
+  else if (prayerName == "ashar") trackNumber = 3;
+  else if (prayerName == "maghrib") trackNumber = 4;
+  else if (prayerName == "isya") trackNumber = 5;
   
   if (trackNumber == 0) {
     Serial.println("Invalid prayer name: " + prayerName);
@@ -4902,7 +4900,7 @@ void playDFPlayerAdzan(String prayerName) {
   Serial.println("PLAYING ADZAN: " + prayerName);
   Serial.println("========================================");
   Serial.println("Track: " + String(trackNumber));
-  Serial.println("File: /mp3/000" + String(trackNumber) + ".mp3");
+  Serial.println("File: /000" + String(trackNumber) + ".mp3");
   Serial.println("========================================\n");
   
   dfPlayer.play(trackNumber);
