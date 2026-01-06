@@ -18,12 +18,11 @@
 #include "ESPAsyncWebServer.h"
 #include "TimeLib.h"
 #include <time.h>
-#include <sys/time.h>
 #include "HTTPClient.h"
 #include "esp_task_wdt.h"
 #include "esp_wifi.h"
 #include "driver/i2s.h"
-#include "SD.h"
+#include "DFRobotDFPlayerMini.h"
 
 // EEZ generated files
 #include "src/ui.h"
@@ -46,20 +45,9 @@
 //#define RTC_SDA    21
 //#define RTC_SCL    22
 
-// Pin Audio PCM5012A
-#define I2S_BCLK 25
-#define I2S_LRC  32
-#define I2S_DOUT 33
-
-// Pin SD Card
-#define SD_CS    5
-#define SD_MOSI  23
-#define SD_MISO  19
-#define SD_CLK   18
-
-#define AUDIO_SAMPLE_RATE 44100
-#define AUDIO_BUFFER_SIZE 1024
-#define AUDIO_VOLUME 70
+// Pin DFPlayer Mini (Hardware Serial)
+#define DFPLAYER_TX 25  // ESP32 TX → DFPlayer RX
+#define DFPLAYER_RX 32  // ESP32 RX → DFPlayer TX
 
 // Pin & PWM config
 #define BUZZER_PIN 26
@@ -121,7 +109,6 @@ SemaphoreHandle_t wifiMutex;
 SemaphoreHandle_t settingsMutex;
 SemaphoreHandle_t spiMutex;
 SemaphoreHandle_t i2cMutex;
-SemaphoreHandle_t sdMutex; 
 
 // Queue for display updates
 QueueHandle_t displayQueue;
@@ -247,6 +234,9 @@ struct AdzanState {
 AdzanState adzanState = {false, "", 0, 0, false};
 SemaphoreHandle_t audioMutex = NULL;
 TaskHandle_t audioTaskHandle = NULL;
+DFRobotDFPlayerMini dfPlayer;
+HardwareSerial dfSerial(2); // Use UART2
+bool dfPlayerAvailable = false;
 
 WiFiConfig wifiConfig;
 TimeConfig timeConfig;
@@ -453,13 +443,13 @@ void restartWiFiTask(void *parameter);
 void restartAPTask(void *parameter);
 
 // ============================================
-// Audio Functions
+// DFPlayer Functions
 // ============================================
-bool initI2S();
-bool initSDCard();
-bool isAudioFileValid(String filepath);
-bool playWAV(String filepath);
-void stopAudio();
+bool initDFPlayer();
+void setDFPlayerVolume(int vol);
+void playDFPlayerAdzan(String prayerName);
+void stopDFPlayer();
+bool isDFPlayerPlaying();
 
 // ============================================
 // Display & UI Functions
@@ -4839,112 +4829,98 @@ void restartAPTask(void *parameter) {
     vTaskDelete(NULL);
 }
 
-bool initI2S() {
-  i2s_config_t i2s_config = {
-    .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
-    .sample_rate = AUDIO_SAMPLE_RATE,
-    .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
-    .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
-    .communication_format = I2S_COMM_FORMAT_STAND_I2S,
-    .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
-    .dma_buf_count = 8,
-    .dma_buf_len = 64,
-    .use_apll = false,
-    .tx_desc_auto_clear = true,
-    .fixed_mclk = 0
-  };
-
-  i2s_pin_config_t pin_config = {
-    .bck_io_num = I2S_BCLK,
-    .ws_io_num = I2S_LRC,
-    .data_out_num = I2S_DOUT,
-    .data_in_num = I2S_PIN_NO_CHANGE
-  };
-
-  if (i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL) != ESP_OK) return false;
-  if (i2s_set_pin(I2S_NUM_0, &pin_config) != ESP_OK) return false;
-  i2s_zero_dma_buffer(I2S_NUM_0);
+bool initDFPlayer() {
+  Serial.println("\n========================================");
+  Serial.println("INITIALIZING DFPlayer Mini");
+  Serial.println("========================================");
+  Serial.println("UART2: TX=GPIO25, RX=GPIO32");
   
-  Serial.println("I2S OK");
-  return true;
-}
-
-bool initSDCard() {
-  SPIClass sdSPI(HSPI);
+  dfSerial.begin(9600, SERIAL_8N1, DFPLAYER_RX, DFPLAYER_TX);
+  delay(500);
   
-  sdSPI.begin(SD_CLK, SD_MISO, SD_MOSI, SD_CS);
-  
-  if (!SD.begin(SD_CS, sdSPI)) {
-    Serial.println("SD FAIL");
-    return false;
-  }
-  Serial.println("SD OK");
-  return true;
-}
-
-bool isAudioFileValid(String filepath) {
-  if (!SD.exists(filepath)) {
-    Serial.println("File not found: " + filepath);
+  if (!dfPlayer.begin(dfSerial, true, true)) {
+    Serial.println("DFPlayer connection FAILED!");
+    Serial.println("Check wiring:");
+    Serial.println("  ESP32 TX (GPIO25) → DFPlayer RX");
+    Serial.println("  ESP32 RX (GPIO32) → DFPlayer TX");
+    Serial.println("  VCC → 5V");
+    Serial.println("  GND → GND");
+    Serial.println("  Speaker → SPK_1 & SPK_2");
+    Serial.println("========================================\n");
     return false;
   }
   
-  File f = SD.open(filepath);
-  if (!f || f.size() < 1024) {
-    if(f) f.close();
-    Serial.println("File corrupted/empty: " + filepath);
-    return false;
-  }
+  delay(200);
   
-  f.close();
+  dfPlayer.setTimeOut(500);
+  dfPlayer.volume(15);
+  dfPlayer.EQ(DFPLAYER_EQ_NORMAL);
+  dfPlayer.outputDevice(DFPLAYER_DEVICE_SD);
+  
+  delay(200);
+  
+  int fileCount = dfPlayer.readFileCounts();
+  
+  Serial.println("DFPlayer initialized successfully!");
+  Serial.println("UART2: TX=GPIO25, RX=GPIO32");
+  Serial.println("Volume: 15/30");
+  Serial.println("Files on SD: " + String(fileCount));
+  Serial.println("========================================\n");
+  
   return true;
 }
 
-bool playWAV(String filepath) {  
-  File audioFile = SD.open(filepath);
-  if (!audioFile) return false;
+void setDFPlayerVolume(int vol) {
+  if (!dfPlayerAvailable) return;
   
-  audioFile.seek(44);
-  
-  Serial.println("PLAYING: " + filepath);
-  
-  uint8_t buffer[AUDIO_BUFFER_SIZE];
-  size_t bytesRead, bytesWritten;
-  
-  unsigned long lastWDTReset = millis();
-  
-  while (audioFile.available() && adzanState.isPlaying) {
-    bytesRead = audioFile.read(buffer, AUDIO_BUFFER_SIZE);
-    
-    for (size_t i = 0; i < bytesRead; i += 2) {
-      int16_t sample = (int16_t)(buffer[i] | (buffer[i+1] << 8));
-      sample = (sample * AUDIO_VOLUME) / 100;
-      buffer[i] = sample & 0xFF;
-      buffer[i+1] = (sample >> 8) & 0xFF;
-    }
-    
-    esp_err_t result = i2s_write(I2S_NUM_0, buffer, bytesRead, &bytesWritten, pdMS_TO_TICKS(100));
-    
-    if (result == ESP_ERR_TIMEOUT) {
-      Serial.println("I2S timeout - skipping chunk");
-    }
-    
-    if (millis() - lastWDTReset > 5000) {
-      esp_task_wdt_reset();
-      lastWDTReset = millis();
-    }
-    
-    vTaskDelay(pdMS_TO_TICKS(2));
-  }
-  
-  audioFile.close();
-  i2s_zero_dma_buffer(I2S_NUM_0);
-  Serial.println("AUDIO DONE");
-  return true;
+  int dfVol = map(vol, 0, 100, 0, 30);
+  dfPlayer.volume(dfVol);
+  Serial.println("DFPlayer volume: " + String(dfVol) + "/30");
 }
 
-void stopAudio() {
-  adzanState.isPlaying = false;
-  i2s_zero_dma_buffer(I2S_NUM_0);
+void playDFPlayerAdzan(String prayerName) {
+  if (!dfPlayerAvailable) {
+    Serial.println("DFPlayer not available");
+    return;
+  }
+  
+  int trackNumber = 0;
+  
+  if (prayerName == "imsak") trackNumber = 1;
+  else if (prayerName == "subuh") trackNumber = 2;
+  else if (prayerName == "terbit") trackNumber = 3;
+  else if (prayerName == "zuhur") trackNumber = 4;
+  else if (prayerName == "ashar") trackNumber = 5;
+  else if (prayerName == "maghrib") trackNumber = 6;
+  else if (prayerName == "isya") trackNumber = 7;
+  
+  if (trackNumber == 0) {
+    Serial.println("Invalid prayer name: " + prayerName);
+    return;
+  }
+  
+  Serial.println("\n========================================");
+  Serial.println("PLAYING ADZAN: " + prayerName);
+  Serial.println("========================================");
+  Serial.println("Track: " + String(trackNumber));
+  Serial.println("File: /mp3/000" + String(trackNumber) + ".mp3");
+  Serial.println("========================================\n");
+  
+  dfPlayer.play(trackNumber);
+}
+
+void stopDFPlayer() {
+  if (!dfPlayerAvailable) return;
+  
+  dfPlayer.stop();
+  Serial.println("DFPlayer stopped");
+}
+
+bool isDFPlayerPlaying() {
+  if (!dfPlayerAvailable) return false;
+  
+  int state = dfPlayer.readState();
+  return (state == 1);
 }
 
 void audioTask(void *parameter) {
@@ -4952,20 +4928,20 @@ void audioTask(void *parameter) {
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     
     if (adzanState.isPlaying && adzanState.currentPrayer.length() > 0) {
-      String filepath = "/adzan/" + adzanState.currentPrayer + ".wav";
+      Serial.println("Audio task triggered for: " + adzanState.currentPrayer);
       
-      if (xSemaphoreTake(sdMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-        if (isAudioFileValid(filepath)) {
-          Serial.println("Playing audio: " + filepath);
-          
-          playWAV(filepath);
-        } else {
-          Serial.println("Audio file not available: " + filepath);
-        }
-        xSemaphoreGive(sdMutex);
+      playDFPlayerAdzan(adzanState.currentPrayer);
+      
+      unsigned long startTime = millis();
+      const unsigned long maxDuration = 600000;
+      
+      while (isDFPlayerPlaying() && (millis() - startTime < maxDuration)) {
+        vTaskDelay(pdMS_TO_TICKS(500));
+        esp_task_wdt_reset();
       }
       
-      // Cleanup state
+      Serial.println("Adzan playback completed");
+      
       adzanState.isPlaying = false;
       adzanState.canTouch = false;
       adzanState.currentPrayer = "";
@@ -5019,14 +4995,12 @@ void setup() {
   spiMutex = xSemaphoreCreateMutex();
   i2cMutex = xSemaphoreCreateMutex();
   audioMutex = xSemaphoreCreateMutex();
-  sdMutex = xSemaphoreCreateMutex();
 
   displayQueue = xQueueCreate(20, sizeof(DisplayUpdate));
   
-  bool i2sOK = initI2S();
-  bool sdOK = initSDCard();
-  
-  if (i2sOK && sdOK) {
+  dfPlayerAvailable = initDFPlayer();
+
+  if (dfPlayerAvailable) {
     loadAdzanState();
     
     xTaskCreatePinnedToCore(
@@ -5040,8 +5014,7 @@ void setup() {
     );
     Serial.println("Audio Task OK");
   } else {
-    Serial.println("Audio DISABLED");
-
+    Serial.println("DFPlayer DISABLED - no audio playback");
     Serial.println("Clearing any pending adzan state...");
     
     adzanState.isPlaying = false;
