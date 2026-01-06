@@ -133,6 +133,8 @@ TX           →    GPIO32 (ESP32 RX)
 RX           →    GPIO25 (ESP32 TX)
 SPK_1        →    Speaker + (Kanan)
 SPK_2        →    Speaker - (Kiri)
+DAC_R        →    Line-out audio (AUX Kanan)
+DAC_L        →    Line-out audio (AUX Kiri)
 ```
 
 **Setup Audio:**
@@ -151,7 +153,7 @@ SPK_2        →    Speaker - (Kiri)
 6. **Touch waktu sholat** saat blink untuk play audio (10 menit timeout)
 
 **⚠️ PENTING:**
-- **Jangan gunakan speaker aktif** (amplifier built-in) - akan rusak!
+- **Jangan gunakan speaker aktif** (amplifier built-in) - akan rusak. Sudah ada pin AUX sebagai pengganti
 - **File naming harus exact:** `0001.mp3`, `0002.mp3`, dst (4 digit, leading zero)
 - **Folder harus `/mp3/`** di root SD Card (bukan `/adzan/` atau yang lain)
 - **Format MP3:** 128-320 kbps, Stereo/Mono, Sample rate bebas (DFPlayer auto-detect)
