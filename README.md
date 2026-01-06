@@ -153,7 +153,7 @@ DAC_L        →    Line-out audio (AUX Kiri)
 6. **Touch waktu sholat** saat blink untuk play audio (10 menit timeout)
 
 **⚠️ PENTING:**
-- **Jangan gunakan speaker aktif** (amplifier built-in) - akan rusak. Sudah ada pin AUX sebagai pengganti
+- **Jangan gunakan speaker aktif** (amplifier built-in) - akan rusak. Sudah ada pin AUX sebagai pengganti ke amplifier besar
 - **File naming harus exact:** `0001.mp3`, `0002.mp3`, dst (4 digit, leading zero)
 - **Folder harus `/mp3/`** di root SD Card (bukan `/adzan/` atau yang lain)
 - **Format MP3:** 128-320 kbps, Stereo/Mono, Sample rate bebas (DFPlayer auto-detect)
