@@ -4844,7 +4844,7 @@ bool initDFPlayer() {
     Serial.println("  ESP32 RX (GPIO32) → DFPlayer TX");
     Serial.println("  VCC → 5V");
     Serial.println("  GND → GND");
-    Serial.println("  Speaker → SPK_1 & SPK_2");
+    Serial.println("  Speaker → SPK_1 & SPK_2 or Amplifier DAC_R & DAC_L");
     Serial.println("========================================\n");
     return false;
   }
@@ -4990,7 +4990,7 @@ void setup() {
 
   displayQueue = xQueueCreate(20, sizeof(DisplayUpdate));
   
-  dfPlayerAvailable = initDFPlayer();
+  dfPlayerAvailable = c();
 
   if (dfPlayerAvailable) {
     loadAdzanState();
