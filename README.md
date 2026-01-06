@@ -65,7 +65,7 @@
   - Touch waktu sholat untuk play (10 menit timeout)
   - Auto-stop setelah selesai
   - Volume independen dari buzzer (0-30)
-  - Files: `/mp3/0001.mp3` hingga `/mp3/0007.mp3`
+  - Files: `/0001.mp3` hingga `/0007.mp3` (jangan masukin folder)
   - Speaker passive 3-5W (4-8Ω)
 
 ### 💾 Penyimpanan
