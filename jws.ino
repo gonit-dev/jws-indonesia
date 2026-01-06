@@ -4990,7 +4990,7 @@ void setup() {
 
   displayQueue = xQueueCreate(20, sizeof(DisplayUpdate));
   
-  dfPlayerAvailable = c();
+  dfPlayerAvailable = initDFPlayer();
 
   if (dfPlayerAvailable) {
     loadAdzanState();
