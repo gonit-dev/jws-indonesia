@@ -448,7 +448,6 @@ void restartAPTask(void *parameter);
 bool initDFPlayer();
 void setDFPlayerVolume(int vol);
 void playDFPlayerAdzan(String prayerName);
-void stopDFPlayer();
 bool isDFPlayerPlaying();
 
 // ============================================
@@ -4907,13 +4906,6 @@ void playDFPlayerAdzan(String prayerName) {
   Serial.println("========================================\n");
   
   dfPlayer.play(trackNumber);
-}
-
-void stopDFPlayer() {
-  if (!dfPlayerAvailable) return;
-  
-  dfPlayer.stop();
-  Serial.println("DFPlayer stopped");
 }
 
 bool isDFPlayerPlaying() {
