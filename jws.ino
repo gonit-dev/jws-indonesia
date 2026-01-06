@@ -1473,7 +1473,7 @@ bool initRTC() {
         Serial.println("\n*** RTC HARDWARE FAILURE ***");
         Serial.println("DS3231 chip is defective!");
         Serial.println("Time registers return garbage data");
-        Serial.println("Temperature sensor works: " + String(rtc.getTemperature()) + "Â°C");
+        Serial.println("Temperature sensor works: " + String(rtc.getTemperature()) + " °C");
         Serial.println("\nPossible causes:");
         Serial.println("  1. Counterfeit/clone DS3231 chip");
         Serial.println("  2. Crystal oscillator failure");
