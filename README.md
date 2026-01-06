@@ -139,7 +139,7 @@ DAC_L        →    Line-out audio (AUX Kiri)
 
 **Setup Audio:**
 1. Format **Micro SD Card** (FAT32, max 32GB)
-2. Buat folder `/mp3/` di **root** SD Card
+2. Buat folder `/` di **root** SD Card
 3. Copy file MP3 dengan nama **exact**:
    - `0001.mp3` = Adzan Imsak
    - `0002.mp3` = Adzan Subuh
@@ -155,7 +155,7 @@ DAC_L        →    Line-out audio (AUX Kiri)
 **⚠️ PENTING:**
 - **Jangan gunakan speaker aktif** (amplifier built-in) - akan rusak. Sudah ada pin AUX sebagai pengganti ke amplifier besar
 - **File naming harus exact:** `0001.mp3`, `0002.mp3`, dst (4 digit, leading zero)
-- **Folder harus `/mp3/`** di root SD Card (bukan `/adzan/` atau yang lain)
+- **Folder harus `/`** di root SD Card (bukan `/adzan/` atau yang lain)
 - **Format MP3:** 128-320 kbps, Stereo/Mono, Sample rate bebas (DFPlayer auto-detect)
 - **Max file size:** 32MB per file
 - **Max SD Card:** 32GB (FAT32 only, exFAT tidak support)
@@ -397,8 +397,8 @@ NTP Task will automatically:
 3. Klik **Test Buzzer** untuk tes suara (auto-stop 30 detik)
 4. **Opsional - Setup Audio Adzan:**
    - Format SD Card (FAT32)
-   - Buat folder `/adzan/`
-   - Copy file WAV: `subuh.wav`, `zuhur.wav`, `ashar.wav`, `maghrib.wav`, `isya.wav`
+   - Buat folder `/`
+   - Copy file MP3: `subuh.mp3`, `zuhur.mp3`, `ashar.mp3`, `maghrib.mp3`, `isya.mp3`
    - Reboot perangkat
    - **Cara play:** Saat waktu sholat tiba dan label blink, **tap label waktu sholat** (misal tap "SUBUH") → audio akan play otomatis
 
@@ -1019,9 +1019,9 @@ Audio DISABLED                      → ❌ System disabled
 
 **2. Cek File Audio:**
 - Format SD Card: **FAT32** (bukan exFAT/NTFS)
-- Folder: `/adzan/` di root SD Card
-- Files: `subuh.wav`, `zuhur.wav`, `ashar.wav`, `maghrib.wav`, `isya.wav`
-- Format WAV: **44.1kHz, 16-bit, Stereo atau Mono**
+- Folder: `/` di root SD Card
+- Files: `0001.mp3`, `0002.mp3`, `0003.mp3`, `0004.mp3`, `0005.mp3`
+- Format MP3: **44.1kHz, 16-bit, Stereo atau Mono**
 
 **3. Cara Play Audio:**
 ```
@@ -1037,8 +1037,8 @@ Audio DISABLED                      → ❌ System disabled
 ADZAN AKTIF: subuh (10 menit)
 TOUCH ADZAN: subuh
 Audio system available - triggering playback
-Playing audio: /adzan/subuh.wav
-PLAYING: /adzan/subuh.wav
+Playing audio: /subuh.mp3
+PLAYING: /subuh.mp3
 AUDIO DONE
 Adzan state cleared
 
@@ -1052,10 +1052,10 @@ Action: Clearing adzan state immediately
 - Audio dapat di-play selama **10 menit** setelah waktu sholat masuk
 - Setelah 10 menit, touch tidak berfungsi (auto-expire)
 
-**5. Format WAV:**
+**5. Format MP3:**
 ```bash
-# Convert MP3 ke WAV dengan ffmpeg:
-ffmpeg -i input.mp3 -ar 44100 -ac 2 -sample_fmt s16 output.wav
+# Convert MP3 ke MP3 dengan ffmpeg:
+ffmpeg -i input.mp3 -ar 44100 -ac 2 -sample_fmt s16 output.mp3
 
 # Parameter:
 -ar 44100       : Sample rate 44.1kHz
@@ -1242,7 +1242,7 @@ AP IP:       192.168.4.1
 | **Prayer** | 0 | 1 (Low) | 16 | Trigger | API fetch, midnight update |
 | **Clock** | 0 | 2 (High) | 2 | 1s | Time increment, NTP hourly trigger |
 | **RTC Sync** | 0 | 1 (Low) | 2 | 60s | RTC → System time backup |
-| **Audio** | 1 | 0 (Lowest) | 4 | Trigger | Play WAV from SD Card |
+| **Audio** | 1 | 0 (Lowest) | 4 | Trigger | Play MP3 from SD Card |
 
 **Watchdog:**
 - Timeout: **60 seconds**
@@ -1259,7 +1259,6 @@ AP IP:       192.168.4.1
 - `spiMutex` - SPI bus (TFT + Touch)
 - `i2cMutex` - I2C bus (RTC)
 - `audioMutex` - Audio state protection
-- `sdMutex` - SD Card access
 - `countdownMutex` - Countdown state
 - `wifiRestartMutex` - WiFi/AP restart protection
 
