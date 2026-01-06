@@ -65,7 +65,7 @@
   - Touch waktu sholat untuk play (10 menit timeout)
   - Auto-stop setelah selesai
   - Volume independen dari buzzer (0-30)
-  - Files: `/0001.mp3` hingga `/0007.mp3` (jangan masukin folder)
+  - Files: `/0001.mp3` hingga `/0005.mp3` (jangan masukin folder)
   - Speaker passive 3-5W (4-8Ω)
 
 ### 💾 Penyimpanan
@@ -141,13 +141,11 @@ DAC_L        →    Line-out audio (AUX Kiri)
 1. Format **Micro SD Card** (FAT32, max 32GB)
 2. Buat folder `/` di **root** SD Card
 3. Copy file MP3 dengan nama **exact**:
-   - `0001.mp3` = Adzan Imsak
-   - `0002.mp3` = Adzan Subuh
-   - `0003.mp3` = Adzan Terbit (opsional)
-   - `0004.mp3` = Adzan Zuhur
-   - `0005.mp3` = Adzan Ashar
-   - `0006.mp3` = Adzan Maghrib
-   - `0007.mp3` = Adzan Isya
+   - `0001.mp3` = Adzan Subuh
+   - `0002.mp3` = Adzan Zuhur
+   - `0003.mp3` = Adzan Ashar
+   - `0004.mp3` = Adzan Maghrib
+   - `0005.mp3` = Adzan Isya
 4. Masukkan SD Card ke slot DFPlayer
 5. Sambungkan speaker **passive** (3-5W, 4-8Ω) ke SPK_1 dan SPK_2
 6. **Touch waktu sholat** saat blink untuk play audio (10 menit timeout)
@@ -398,7 +396,7 @@ NTP Task will automatically:
 4. **Opsional - Setup Audio Adzan:**
    - Format SD Card (FAT32)
    - Buat folder `/`
-   - Copy file MP3: `subuh.mp3`, `zuhur.mp3`, `ashar.mp3`, `maghrib.mp3`, `isya.mp3`
+   - Copy file MP3: `0001.mp3`, `0002.mp3`, `0003.mp3`, `0004.mp3`, `0005.mp3`
    - Reboot perangkat
    - **Cara play:** Saat waktu sholat tiba dan label blink, **tap label waktu sholat** (misal tap "SUBUH") → audio akan play otomatis
 
@@ -854,7 +852,7 @@ Check wiring:
    - Format: **FAT32** (bukan exFAT/NTFS)
    - Size: Max 32GB
    - Folder: `/mp3/` di **root** (huruf kecil semua)
-   - Files: `0001.mp3`, `0002.mp3`, hingga `0007.mp3`
+   - Files: `0001.mp3`, `0002.mp3`, hingga `0005.mp3`
    - File naming: **4 digit** dengan leading zero
 
 3. **Test Manual:**
@@ -1037,8 +1035,8 @@ Audio DISABLED                      → ❌ System disabled
 ADZAN AKTIF: subuh (10 menit)
 TOUCH ADZAN: subuh
 Audio system available - triggering playback
-Playing audio: /subuh.mp3
-PLAYING: /subuh.mp3
+Playing audio: /0001.mp3
+PLAYING: /0001.mp3
 AUDIO DONE
 Adzan state cleared
 
