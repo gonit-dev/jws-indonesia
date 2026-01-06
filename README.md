@@ -57,14 +57,16 @@
 
 ### 🔊 Kontrol Buzzer & Audio
 - Toggle per-waktu sholat (7 waktu)
-- Kontrol volume 0-100% (PWM)
+- Kontrol volume 0-100% (PWM buzzer) / 0-30 (DFPlayer)
 - Test buzzer manual dengan auto-timeout 30 detik
 - Output PWM (GPIO26, Channel 1, 2000 Hz)
-- **Audio Adzan via SD Card** (format WAV 44.1kHz 16-bit)
-  - PCM5102A I2S DAC
+- **Audio Adzan via DFPlayer Mini** (opsional)
+  - Format MP3 (128-320kbps)
   - Touch waktu sholat untuk play (10 menit timeout)
-  - Auto-stop setelah selesai atau manual stop
-  - Files: `/adzan/subuh.wav`, `/adzan/zuhur.wav`, dll
+  - Auto-stop setelah selesai
+  - Volume independen dari buzzer (0-30)
+  - Files: `/mp3/0001.mp3` hingga `/mp3/0007.mp3`
+  - Speaker passive 3-5W (4-8Ω)
 
 ### 💾 Penyimpanan
 - LittleFS storage untuk semua konfigurasi
@@ -119,28 +121,56 @@ SCL     →    GPIO 22 (I2C)
 
 **⚠️ PENTING:** Jika RTC terdeteksi rusak/tidak valid, sistem akan tetap jalan dengan waktu reset ke 01/01/2000 sampai NTP sync berhasil.
 
-### SD Card + Audio DAC (Opsional - Untuk Audio Adzan)
-```
-SD Card (HSPI)    ESP32
-CS           →    GPIO 5
-MOSI         →    GPIO 23
-MISO         →    GPIO 19
-CLK          →    GPIO 18
+### DFPlayer Mini + Speaker (Opsional - Untuk Audio Adzan)
 
-PCM5102A (I2S)    ESP32
-BCK          →    GPIO 25
-LRC          →    GPIO 32
-DIN          →    GPIO 33
-VIN          →    3.3V
+**Wiring:**
+```
+DFPlayer Mini     ESP32-2432S024
+─────────────     ──────────────
+VCC          →    5V
 GND          →    GND
+TX           →    GPIO32 (ESP32 RX)
+RX           →    GPIO25 (ESP32 TX)
+SPK_1        →    Speaker + (Kanan)
+SPK_2        →    Speaker - (Kiri)
 ```
 
 **Setup Audio:**
-1. Format SD Card (FAT32)
-2. Buat folder `/adzan/` di root
-3. Copy file WAV (44.1kHz, 16-bit, Stereo/Mono)
-4. Nama file: `subuh.wav`, `zuhur.wav`, `ashar.wav`, `maghrib.wav`, `isya.wav`
-5. **Touch waktu sholat** saat blink untuk play audio (10 menit timeout)
+1. Format **Micro SD Card** (FAT32, max 32GB)
+2. Buat folder `/mp3/` di **root** SD Card
+3. Copy file MP3 dengan nama **exact**:
+   - `0001.mp3` = Adzan Imsak
+   - `0002.mp3` = Adzan Subuh
+   - `0003.mp3` = Adzan Terbit (opsional)
+   - `0004.mp3` = Adzan Zuhur
+   - `0005.mp3` = Adzan Ashar
+   - `0006.mp3` = Adzan Maghrib
+   - `0007.mp3` = Adzan Isya
+4. Masukkan SD Card ke slot DFPlayer
+5. Sambungkan speaker **passive** (3-5W, 4-8Ω) ke SPK_1 dan SPK_2
+6. **Touch waktu sholat** saat blink untuk play audio (10 menit timeout)
+
+**⚠️ PENTING:**
+- **Jangan gunakan speaker aktif** (amplifier built-in) - akan rusak!
+- **File naming harus exact:** `0001.mp3`, `0002.mp3`, dst (4 digit, leading zero)
+- **Folder harus `/mp3/`** di root SD Card (bukan `/adzan/` atau yang lain)
+- **Format MP3:** 128-320 kbps, Stereo/Mono, Sample rate bebas (DFPlayer auto-detect)
+- **Max file size:** 32MB per file
+- **Max SD Card:** 32GB (FAT32 only, exFAT tidak support)
+
+**Test Audio:**
+1. Cek Serial Monitor saat boot:
+```
+   ========================================
+   INITIALIZING DFPlayer Mini
+   ========================================
+   UART2: TX=GPIO25, RX=GPIO32
+   DFPlayer initialized successfully!
+   Files on SD: 7
+   ========================================
+```
+2. Jika muncul "Files on SD: 0" → SD Card tidak terbaca atau folder salah
+3. Jika muncul "DFPlayer connection FAILED!" → cek wiring TX/RX
 
 ---
 
@@ -773,9 +803,7 @@ LEAK DETECTED: 1024 bytes lost since last check  → ⚠️ Memory leak!
    ```
    Serial Monitor saat boot:
    Touch initialized               → ✅ OK
-   I2S OK                          → ⚠️ Konflik GPIO33
    ```
-   **Jika konflik:** Edit kode, ganti I2S_DOUT ke GPIO lain
 
 4. **Kalibrasi manual** (edit di kode jika perlu):
    ```cpp
@@ -787,6 +815,108 @@ LEAK DETECTED: 1024 bytes lost since last check  → ⚠️ Memory leak!
    ```
    Adjust nilai sesuai hasil test touch Anda.
 
+---
+### Audio Adzan Tidak Play (DFPlayer Mini)
+
+**Pemeriksaan Hardware Boot:**
+```
+Serial Monitor saat boot:
+========================================
+INITIALIZING DFPlayer Mini
+========================================
+UART2: TX=GPIO25, RX=GPIO32
+DFPlayer initialized successfully!
+Volume: 15/30
+Files on SD: 7
+========================================
+
+// Jika gagal:
+DFPlayer connection FAILED!
+Check wiring:
+  ESP32 TX (GPIO25) → DFPlayer RX
+  ESP32 RX (GPIO32) → DFPlayer TX
+```
+
+**Troubleshooting Checklist:**
+
+1. **Cek Wiring:**
+```
+   DFPlayer TX  → ESP32 GPIO32 (RX)  ✅ Harus silang!
+   DFPlayer RX  → ESP32 GPIO25 (TX)  ✅ Harus silang!
+   DFPlayer VCC → ESP32 5V
+   DFPlayer GND → ESP32 GND
+```
+   **⚠️ PENTING:** TX-RX harus **SILANG** (tidak sama-sama TX atau RX)
+
+2. **Cek SD Card:**
+   - Format: **FAT32** (bukan exFAT/NTFS)
+   - Size: Max 32GB
+   - Folder: `/mp3/` di **root** (huruf kecil semua)
+   - Files: `0001.mp3`, `0002.mp3`, hingga `0007.mp3`
+   - File naming: **4 digit** dengan leading zero
+
+3. **Test Manual:**
+```
+   Serial Monitor → Ketik:
+   AT+VOL=15    // Set volume ke 15
+   AT+PLAY=1    // Play file 0001.mp3
+```
+   Jika tidak ada command parser, cek files dengan:
+```
+   Files on SD: 7  → ✅ SD Card OK
+   Files on SD: 0  → ❌ SD Card error
+```
+
+4. **Cek Speaker:**
+   - Tipe: **Passive speaker** (tanpa amplifier)
+   - Power: 3-5W
+   - Impedance: 4-8Ω
+   - **JANGAN** gunakan speaker aktif (akan rusak!)
+
+5. **Cara Play Audio:**
+```
+   1. Tunggu waktu sholat masuk
+   2. Label akan BLINK (kedip-kedip) selama 1 menit
+   3. TAP AREA LABEL saat blink (misal tap "SUBUH")
+   4. Audio akan play dari DFPlayer
+```
+
+6. **Debug Serial Monitor:**
+```
+   ✅ NORMAL:
+   ADZAN AKTIF: subuh (10 menit)
+   TOUCH ADZAN: subuh
+   Audio system available - triggering playback
+   ========================================
+   PLAYING ADZAN: subuh
+   ========================================
+   Track: 2
+   File: /mp3/0002.mp3
+   ========================================
+   DFPlayer stopped
+   Adzan playback completed
+   
+   ❌ ERROR:
+   WARNING: Audio system not available
+   Reason: SD Card not detected or audio disabled
+```
+
+7. **Timeout System:**
+   - Audio dapat di-play selama **10 menit** setelah waktu sholat masuk
+   - Setelah 10 menit, touch tidak berfungsi (auto-expire)
+
+8. **Volume Control:**
+   - Buzzer volume (Tab JADWAL): **Tidak mempengaruhi** DFPlayer
+   - DFPlayer volume: Hardcoded 15/30 di kode (edit jika perlu)
+```cpp
+   // Baris di initDFPlayer()
+   dfPlayer.volume(15);  // 0-30 (ubah sesuai kebutuhan)
+```
+
+**Jika masih tidak berfungsi:**
+- Ganti DFPlayer Mini (kemungkinan modul rusak)
+- Test dengan sketch sederhana (DFPlayer example dari library)
+- Cek Serial Monitor untuk error message detail
 ---
 
 ### Buzzer Tidak Bunyi
