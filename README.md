@@ -1679,24 +1679,6 @@ Jika ada crash, increase stack:
 
 ---
 
-## 📝 Changelog
-
-### v2.2 (Current)
-- ✅ Stack optimization untuk semua tasks
-- ✅ Auto-recovery Prayer Task (watchdog)
-- ✅ WiFi sleep double-disabled untuk performa
-- ✅ Countdown visual untuk restart/reset (60s)
-- ✅ Touch adzan mode (10 menit timeout)
-- ✅ Audio adzan via SD Card + PCM5102A
-- ✅ Persistent adzan state (survive restart)
-- ✅ Memory leak detection
-- ✅ RTC validation dan auto-recovery
-- ✅ Timezone auto-trigger NTP + Prayer update
-- ✅ WiFi/AP restart protection (debouncing + mutex)
-- ✅ Upload cities.json validation (size + JSON)
-- ✅ Coordinate edit dengan reset/cancel
-- ✅ Test buzzer dengan auto-timeout 30s
-
 ## 🙏 Credits
 
 **Developer:**
