@@ -390,7 +390,9 @@
 				<div class="grid-x grid-padding-y">
 					<div class="medium-12 small-12 large-12 text-center cell">
 						<h3>🕌 Jadwal Shalat</h3>
-						<p class="subheader">Pengaturan otomatis melalui WiFi</p>
+						<p class="subheader">
+							Pengaturan otomatis melalui WiFi
+						</p>
 					</div>
 				</div>
 				<div class="medium-12 small-12 large-12 cell">
@@ -467,8 +469,7 @@
 													</p>
 												</div>
 												<div class="medium-12 small-12 large-12 cell">
-													<button class="button secondary expanded" onclick="restartDevice()">
-														Mulai Ulang Perangkat </button>
+													<button class="button secondary expanded" onclick="restartDevice()">Mulai Ulang Perangkat </button>
 												</div>
 											</div>
 										</div>
@@ -495,24 +496,17 @@
 													<div class="grid-x grid-margin-x">
 														<div class="medium-12 small-12 large-12 cell">
 															<label>SSID WiFi Router</label>
-															<input type="text" id="wifiSSID"
-																placeholder="Masukkan SSID WiFi" autocomplete="off"
-																data-form="wifi-credentials">
+															<input type="text" id="wifiSSID" placeholder="Masukkan SSID WiFi" autocomplete="off" data-form="wifi-credentials">
 														</div>
 														<div class="medium-12 small-12 large-12 cell">
 															<label>Password WiFi</label>
-															<input type="password" id="wifiPassword"
-																placeholder="Masukkan password WiFi"
-																autocomplete="new-password"
-																data-form="wifi-credentials">
+															<input type="password" id="wifiPassword" placeholder="Masukkan password WiFi" autocomplete="new-password" data-form="wifi-credentials">
 														</div>
 														<div class="medium-6 small-6 large-6 cell">
-															<button class="button secondary expanded"
-																onclick="setWiFi()"> Simpan </button>
+															<button class="button secondary expanded" onclick="setWiFi()"> Simpan </button>
 														</div>
 														<div class="medium-6 small-6 large-6 cell">
-															<button class="button secondary expanded"
-																onclick="clearWiFiForm()"> Batal </button>
+															<button class="button secondary expanded" onclick="clearWiFiForm()"> Batal </button>
 														</div>
 													</div>
 												</div>
@@ -534,17 +528,14 @@
 												</div>
 												<div class="medium-12 small-12 large-12 cell">
 													<label>Password Access Point</label>
-													<input type="password" id="apPassword"
-														placeholder="Masukkan password AP (minimal 8 karakter)"
-														autocomplete="new-password" data-form="ap-credentials">
+													<input type="password" id="apPassword" placeholder="Masukkan password AP (minimal 8 karakter)" autocomplete="new-password" data-form="ap-credentials">
 												</div>
 												<div class="medium-6 small-6 large-6 cell">
 													<button class="button secondary expanded" onclick="setAP()"> Simpan
 													</button>
 												</div>
 												<div class="medium-6 small-6 large-6 cell">
-													<button class="button secondary expanded" onclick="clearAPForm()">
-														Batal </button>
+													<button class="button secondary expanded" onclick="clearAPForm()"> Batal </button>
 												</div>
 											</div>
 										</div>
@@ -559,26 +550,21 @@
 											<div class="grid-x grid-margin-x">
 												<div class="medium-12 small-12 large-12 cell">
 													<label>IP Address Access Point</label>
-													<input type="text" id="apIP" placeholder="192.168.4.1"
-														autocomplete="off" data-form="network-config">
+													<input type="text" id="apIP" placeholder="192.168.4.1" autocomplete="off" data-form="network-config">
 												</div>
 												<div class="medium-12 small-12 large-12 cell">
 													<label>Gateway</label>
-													<input type="text" id="gatewayIP" placeholder="192.168.4.1"
-														autocomplete="off" data-form="network-config">
+													<input type="text" id="gatewayIP" placeholder="192.168.4.1" autocomplete="off" data-form="network-config">
 												</div>
 												<div class="medium-12 small-12 large-12 cell">
 													<label>Subnet Mask</label>
-													<input type="text" id="subnetMask" placeholder="255.255.255.0"
-														autocomplete="off" data-form="network-config">
+													<input type="text" id="subnetMask" placeholder="255.255.255.0" autocomplete="off" data-form="network-config">
 												</div>
 												<div class="medium-6 small-6 large-6 cell">
-													<button class="button secondary expanded"
-														onclick="setAPNetwork()">Simpan</button>
+													<button class="button secondary expanded" onclick="setAPNetwork()">Simpan</button>
 												</div>
 												<div class="medium-6 small-6 large-6 cell">
-													<button class="button secondary expanded"
-														onclick="clearDHCPForm()">Batal</button>
+													<button class="button secondary expanded" onclick="clearDHCPForm()">Batal</button>
 												</div>
 											</div>
 										</div>
@@ -607,11 +593,12 @@
 															<h6>
 																<strong>📱 Pembaruan Manual</strong>
 															</h6>
-															<p class="help-text">Perbarui waktu dari perangkat Anda</p>
+															<p class="help-text">
+																Perbarui waktu dari perangkat Anda
+															</p>
 														</div>
 														<div class="medium-12 small-12 large-12 cell">
-															<button class="button secondary expanded"
-																onclick="syncTime()"> Perbarui Waktu </button>
+															<button class="button secondary expanded" onclick="syncTime()"> Perbarui Waktu </button>
 														</div>
 													</div>
 												</div>
@@ -619,31 +606,26 @@
 													<div class="callout secondary">
 														<div class="medium-12 small-12 large-12 cell">
 															<h6>
-																<strong>🌐 Pembaruan Otomatis (NTP) <span
-																		class="label success">AUTO</span>
+																<strong>🌐 Pembaruan Otomatis (NTP) <span class="label success">AUTO</span>
 																</strong>
 															</h6>
-															<p class="help-text">Waktu diperbarui otomatis saat
-																terhubung ke internet</p>
+															<p class="help-text">
+																Waktu diperbarui otomatis saat terhubung ke internet
+															</p>
 														</div>
 														<div class="medium-12 small-12 large-12 cell">
-															<p class="help-text"> 🔄 Perbarui otomatis setiap 1 jam <br>
-																🗄️ Beberapa server cadangan <br> 🌐 Zona waktu: UTC
+															<p class="help-text">
+																🔄 Perbarui otomatis setiap 1 jam </br>
+																🗄️ Beberapa server cadangan </br>
+																🌐 Zona waktu: UTC
 																<span id="timezoneDisplayText">+7</span>
-																<input type="text" id="timezoneInput" value="+7"
-																	style="display: none; width: 60px; height: 25px; padding: 2px 5px; margin: 0 5px; text-align: center; font-weight: bold;"
-																	pattern="^[+-]?\d+$" maxlength="3">
-																<button id="timezoneBtn" onclick="toggleTimezoneEdit()"
-																	style="margin-left: -5px; padding: 5px 10px; line-height: 1;"
-																	title="Edit Zona Waktu"> 🕐 </button>
-																<button id="timezoneCancelBtn"
-																	onclick="cancelTimezoneEdit()"
-																	style="display: none; margin-left: -5px; padding: 5px 10px; line-height: 1;"
-																	title="Batal Edit"> ✖ </button>
+																<input type="text" id="timezoneInput" value="+7" style="display: none; width: 60px; height: 25px; padding: 2px 5px; margin: 0 5px; text-align: center; font-weight: bold;" pattern="^[+-]?\d+$" maxlength="3">
+																<button id="timezoneBtn" onclick="toggleTimezoneEdit()" style="margin-left: -5px; padding: 5px 10px; line-height: 1;" title="Edit Zona Waktu"> 🕐 </button>
+																<button id="timezoneCancelBtn" onclick="cancelTimezoneEdit()" style="display: none; margin-left: -5px; padding: 5px 10px; line-height: 1;" title="Batal Edit"> ✖ </button>
 															</p>
 															<p class="help-text"
 																style="margin-top: 5px; font-size: 11px; color: #666;">
-																🇮🇩 WIB = +7 | WITA = +8 | WIT = +9 <br>
+																🇮🇩 WIB = +7 | WITA = +8 | WIT = +9 </br>
 															</p>
 														</div>
 													</div>
@@ -675,14 +657,11 @@
 															<strong>Lokasi Terpilih:</strong>
 														</p>
 														<h4 id="currentCity" class="text-primary">Pilih lokasi</h4>
-														<p id="currentCityType" class="help-text"
-															style="margin-top: -10px; font-size: 13px; color: #666;">
+														<p id="currentCityType" class="help-text" style="margin-top: -10px; font-size: 13px; color: #666;">
 															<span id="cityTypeLabel"></span>
 														</p>
 														<p>
-															<strong>Metode:</strong>
-															<span id="currentMethodTop">Egyptian General Authority of
-																Survey</span>
+															<strong>Metode:</strong> <span id="currentMethodTop">Egyptian General Authority of Survey</span>
 														</p>
 													</div>
 												</div>
@@ -696,8 +675,7 @@
 												</div>
 												<div class="medium-4 small-12 large-3 cell">
 													<label class="show-for-medium">&nbsp;</label>
-													<button class="button secondary expanded" onclick="saveCity()">
-														Simpan </button>
+													<button class="button secondary expanded" onclick="saveCity()"> Simpan </button>
 												</div>
 												<div id="coordinatesForm" class="medium-12 small-12 large-12 cell hide">
 													<div class="grid-x grid-padding-y">
@@ -705,7 +683,9 @@
 															<h5>
 																<strong>📍 Ubah Koordinat</strong>
 															</h5>
-															<p class="help-text">Sesuaikan koordinat jika diperlukan</p>
+															<p class="help-text">
+																Sesuaikan koordinat jika diperlukan
+															</p>
 														</div>
 													</div>
 													<div class="grid-x grid-margin-x">
@@ -713,33 +693,31 @@
 															<label>Latitude (Lintang)</label>
 															<input type="text" id="latInput" placeholder="-6.2088"
 																pattern="^-?\d+\.?\d*$">
-															<p class="help-text">Contoh: -6.2088</p>
+															<p class="help-text">
+																Contoh: -6.2088
+															</p>
 														</div>
 														<div class="medium-6 small-12 large-6 cell">
 															<label>Longitude (Bujur)</label>
-															<input type="text" id="lonInput" placeholder="106.8456"
-																pattern="^-?\d+\.?\d*$">
-															<p class="help-text">Contoh: 106.8456</p>
+															<input type="text" id="lonInput" placeholder="106.8456" pattern="^-?\d+\.?\d*$">
+															<p class="help-text">
+																Contoh: 106.8456
+															</p>
 														</div>
 														<div class="medium-6 small-6 large-6 cell">
-															<button class="button secondary expanded"
-																onclick="resetToDefaultCoordinates()"
-																title="Reset ke koordinat dari JSON"> Reset </button>
+															<button class="button secondary expanded" onclick="resetToDefaultCoordinates()" title="Reset ke koordinat dari JSON"> Reset </button>
 														</div>
 														<div class="medium-6 small-6 large-6 cell">
-															<button class="button secondary expanded"
-																onclick="cancelCoordinatesEdit()"
-																title="Batalkan perubahan koordinat"> Batal </button>
+															<button class="button secondary expanded" onclick="cancelCoordinatesEdit()" title="Batalkan perubahan koordinat"> Batal </button>
 														</div>
 													</div>
 													<div class="grid-x grid-margin-x">
 														<div class="medium-12 small-12 large-12 cell">
 															<div class="callout secondary">
-																<p class="help-text"> 📍 Koordinat <span
-																		id="defaultCoords">-</span>
-																	<br> 🧮 Gunakan format angka dengan titik desimal
-																	<br> 🌐 Latitude: -90 hingga 90 | Longitude: -180
-																	hingga 180
+																<p class="help-text">
+																	📍 Koordinat <span id="defaultCoords">-</span> </br>
+																	🧮 Gunakan format angka dengan titik desimal </br>
+																	🌐 Latitude: -90 hingga 90 | Longitude: -180 hingga 180 </br>
 																</p>
 															</div>
 														</div>
@@ -765,16 +743,16 @@
 												</div>
 												<div class="medium-4 small-12 large-3 cell">
 													<label class="show-for-medium">&nbsp;</label>
-													<button class="button secondary expanded" onclick="saveMethod()">
-														Simpan </button>
+													<button class="button secondary expanded" onclick="saveMethod()"> Simpan </button>
 												</div>
 											</div>
 											<div class="grid-x grid-margin-x">
 												<div class="medium-12 small-12 large-12 cell">
 													<div class="callout secondary">
-														<p class="help-text"> 📍 Pilih lokasi untuk menghitung jadwal
-															shalat <br> 📐 Pilih metode perhitungan yang diinginkan <br>
-															🔄 Jadwal akan diperbarui otomatis setelah memilih lokasi
+														<p class="help-text">
+															📍 Pilih lokasi untuk menghitung jadwal shalat </br>
+															📐 Pilih metode perhitungan </br>
+															🔄 Jadwal akan diperbarui otomatis setelah memilih lokasi </br>
 														</p>
 													</div>
 												</div>
@@ -799,40 +777,38 @@
 													<div class="callout secondary">
 														<p>
 															<strong>Kapan perlu unggah cities.json?</strong>
-															<br>
 														</p>
-														<p>
-														<div class="help-text"> ➕ Ada lokasi baru yang ditambahkan <br>
-															📍 Data koordinat lokasi ada yang diperbarui <br> Berkas
-															<code>cities.json</code> rusak atau hilang </div>
+														<p class="help-text">
+															➕ Ada lokasi baru yang ditambahkan </br>
+															📍 Data koordinat lokasi ada yang diperbarui </br> 
+															📄 Berkas <code>cities.json</code> rusak atau hilang </br>
 														</p>
 													</div>
 												</div>
 											</div>
 											<div class="medium-8 small-12 large-8 cell">
-												<label for="citiesFileInput" class="button hollow expanded"> 📁 Pilih
-													berkas cities.json <input type="file" id="citiesFileInput"
-														accept=".json" class="show-for-sr"
-														onchange="handleCitiesFileSelect(event)">
+												<label for="citiesFileInput" class="button hollow expanded">
+													📁 Pilih berkas cities.json <input type="file" id="citiesFileInput" accept=".json" class="show-for-sr" onchange="handleCitiesFileSelect(event)">
 												</label>
-												<p id="selectedFileName" class="help-text"> Tidak ada berkas yang
-													dipilih </p>
+												<p id="selectedFileName" class="help-text">
+													Tidak ada berkas yang dipilih
+												</p>
 											</div>
 											<div class="medium-4 small-12 large-4 cell">
-												<button id="uploadBtn" class="button primary expanded"
-													onclick="uploadCitiesFile()" disabled> 📤 Unggah Berkas </button>
-												<button id="clearFileBtn" class="button primary expanded"
-													onclick="clearSelectedFile()"
-													style="display: none; margin-top: 10px;"> ✖ Batal </button>
+												<button id="uploadBtn" class="button primary expanded" onclick="uploadCitiesFile()" disabled> 📤 Unggah Berkas </button>
+												<button id="clearFileBtn" class="button primary expanded" onclick="clearSelectedFile()" style="display: none; margin-top: 10px;"> ✖ Batal </button>
 											</div>
 											<div id="uploadProgress" class="hide">
 												<div class="progress" role="progressbar">
-													<div id="uploadProgressBar" class="progress-meter"
-														style="width: 0%">
-														<p class="progress-meter-text">0%</p>
+													<div id="uploadProgressBar" class="progress-meter" style="width: 0%">
+														<p class="progress-meter-text">
+															0%
+														</p>
 													</div>
 												</div>
-												<p id="uploadStatus" class="help-text"> Mulai mengunggah… </p>
+												<p id="uploadStatus" class="help-text">
+													Mulai mengunggah…
+												</p>
 											</div>
 											<div class="grid-x grid-margin-x">
 												<div class="medium-12 small-12 large-12 cell">
@@ -840,11 +816,11 @@
 														<p>
 															<strong>Penting</strong>
 														</p>
-														<p class="help-text"> 📄 Nama berkas harus
-															<code>cities.json</code>
-															<br> 🧾 Format harus valid JSON array <br> 📦 Ukuran
-															maksimal: 1 MB <br> 🔄 Dropdown lokasi akan otomatis
-															diperbarui setelah berhasil
+														<p class="help-text">
+															📄 Nama berkas harus <code>cities.json</code> </br>
+															🧾 Format harus valid JSON array </br>
+															📦 Ukuran maksimal: 1 MB </br>
+															🔄 Dropdown lokasi akan otomatis diperbarui setelah berhasil </br>
 														</p>
 													</div>
 												</div>
@@ -877,15 +853,10 @@
 																	<td class="text-left">
 																		<div class="switch tiny">
 																			<strong>🌙 Imsak</strong>
-																			<input class="switch-input buzzer-toggle"
-																				id="toggle-imsak" type="checkbox"
-																				name="buzzer-imsak" data-prayer="imsak">
-																			<label class="switch-paddle"
-																				for="toggle-imsak">
-																				<span class="switch-active"
-																					aria-hidden="true">ON</span>
-																				<span class="switch-inactive"
-																					aria-hidden="true">OFF</span>
+																			<input class="switch-input buzzer-toggle" id="toggle-imsak" type="checkbox" name="buzzer-imsak" data-prayer="imsak">
+																			<label class="switch-paddle" for="toggle-imsak">
+																				<span class="switch-active" aria-hidden="true">ON</span>
+																				<span class="switch-inactive" aria-hidden="true">OFF</span>
 																			</label>
 																		</div>
 																	</td>
@@ -897,15 +868,10 @@
 																	<td class="text-left">
 																		<div class="switch tiny">
 																			<strong>🌅 Subuh</strong>
-																			<input class="switch-input buzzer-toggle"
-																				id="toggle-subuh" type="checkbox"
-																				name="buzzer-subuh" data-prayer="subuh">
-																			<label class="switch-paddle"
-																				for="toggle-subuh">
-																				<span class="switch-active"
-																					aria-hidden="true">ON</span>
-																				<span class="switch-inactive"
-																					aria-hidden="true">OFF</span>
+																			<input class="switch-input buzzer-toggle" id="toggle-subuh" type="checkbox" name="buzzer-subuh" data-prayer="subuh">
+																			<label class="switch-paddle" for="toggle-subuh">
+																				<span class="switch-active" aria-hidden="true">ON</span>
+																				<span class="switch-inactive" aria-hidden="true">OFF</span>
 																			</label>
 																		</div>
 																	</td>
@@ -917,16 +883,10 @@
 																	<td class="text-left">
 																		<div class="switch tiny">
 																			<strong>🌄 Terbit</strong>
-																			<input class="switch-input buzzer-toggle"
-																				id="toggle-terbit" type="checkbox"
-																				name="buzzer-terbit"
-																				data-prayer="terbit">
-																			<label class="switch-paddle"
-																				for="toggle-terbit">
-																				<span class="switch-active"
-																					aria-hidden="true">ON</span>
-																				<span class="switch-inactive"
-																					aria-hidden="true">OFF</span>
+																			<input class="switch-input buzzer-toggle" id="toggle-terbit" type="checkbox" name="buzzer-terbit" data-prayer="terbit">
+																			<label class="switch-paddle" for="toggle-terbit">
+																				<span class="switch-active" aria-hidden="true">ON</span>
+																				<span class="switch-inactive" aria-hidden="true">OFF</span>
 																			</label>
 																		</div>
 																	</td>
@@ -938,15 +898,10 @@
 																	<td class="text-left">
 																		<div class="switch tiny">
 																			<strong>☀️ Zuhur</strong>
-																			<input class="switch-input buzzer-toggle"
-																				id="toggle-zuhur" type="checkbox"
-																				name="buzzer-zuhur" data-prayer="zuhur">
-																			<label class="switch-paddle"
-																				for="toggle-zuhur">
-																				<span class="switch-active"
-																					aria-hidden="true">ON</span>
-																				<span class="switch-inactive"
-																					aria-hidden="true">OFF</span>
+																			<input class="switch-input buzzer-toggle" id="toggle-zuhur" type="checkbox" name="buzzer-zuhur" data-prayer="zuhur">
+																			<label class="switch-paddle" for="toggle-zuhur">
+																				<span class="switch-active" aria-hidden="true">ON</span>
+																				<span class="switch-inactive" aria-hidden="true">OFF</span>
 																			</label>
 																		</div>
 																	</td>
@@ -958,15 +913,10 @@
 																	<td class="text-left">
 																		<div class="switch tiny">
 																			<strong>🌤️ Ashar</strong>
-																			<input class="switch-input buzzer-toggle"
-																				id="toggle-ashar" type="checkbox"
-																				name="buzzer-ashar" data-prayer="ashar">
-																			<label class="switch-paddle"
-																				for="toggle-ashar">
-																				<span class="switch-active"
-																					aria-hidden="true">ON</span>
-																				<span class="switch-inactive"
-																					aria-hidden="true">OFF</span>
+																			<input class="switch-input buzzer-toggle" id="toggle-ashar" type="checkbox" name="buzzer-ashar" data-prayer="ashar">
+																			<label class="switch-paddle" for="toggle-ashar">
+																				<span class="switch-active" aria-hidden="true">ON</span>
+																				<span class="switch-inactive" aria-hidden="true">OFF</span>
 																			</label>
 																		</div>
 																	</td>
@@ -978,16 +928,10 @@
 																	<td class="text-left">
 																		<div class="switch tiny">
 																			<strong>🌆 Maghrib</strong>
-																			<input class="switch-input buzzer-toggle"
-																				id="toggle-maghrib" type="checkbox"
-																				name="buzzer-maghrib"
-																				data-prayer="maghrib">
-																			<label class="switch-paddle"
-																				for="toggle-maghrib">
-																				<span class="switch-active"
-																					aria-hidden="true">ON</span>
-																				<span class="switch-inactive"
-																					aria-hidden="true">OFF</span>
+																			<input class="switch-input buzzer-toggle" id="toggle-maghrib" type="checkbox" name="buzzer-maghrib" data-prayer="maghrib">
+																			<label class="switch-paddle" for="toggle-maghrib">
+																				<span class="switch-active" aria-hidden="true">ON</span>
+																				<span class="switch-inactive" aria-hidden="true">OFF</span>
 																			</label>
 																		</div>
 																	</td>
@@ -999,15 +943,10 @@
 																	<td class="text-left">
 																		<div class="switch tiny">
 																			<strong>🌙 Isya</strong>
-																			<input class="switch-input buzzer-toggle"
-																				id="toggle-isya" type="checkbox"
-																				name="buzzer-isya" data-prayer="isya">
-																			<label class="switch-paddle"
-																				for="toggle-isya">
-																				<span class="switch-active"
-																					aria-hidden="true">ON</span>
-																				<span class="switch-inactive"
-																					aria-hidden="true">OFF</span>
+																			<input class="switch-input buzzer-toggle" id="toggle-isya" type="checkbox" name="buzzer-isya" data-prayer="isya">
+																			<label class="switch-paddle" for="toggle-isya">
+																				<span class="switch-active" aria-hidden="true">ON</span>
+																				<span class="switch-inactive" aria-hidden="true">OFF</span>
 																			</label>
 																		</div>
 																	</td>
@@ -1042,14 +981,14 @@
 												<div class="medium-12 small-12 large-12 cell">
 													<div class="callout secondary">
 														<p class="help-text">
-															🕌 Jadwal shalat berdasarkan lokasi yang dipilih <br>
-															🔄 Diperbarui otomatis setiap tengah malam <br>
-															📐 <span id="currentMethodBottom">Egyptian General Authority of Survey</span> <br>
-															⚡ Diperbarui otomatis saat terhubung ke internet <br>
-															⏏️ Tombol ON/OFF notifikasi kedip LCD saat adzan <br>
-															🔊 Buzzer dan pengaturan Volume <br>
-															📱 Layar sentuh pengaktif adzan <br>
-															⏱️ Delay 10 menit sentuh adzan aktif di LCD <br>
+															🕌 Jadwal shalat berdasarkan lokasi yang dipilih </br>
+															🔄 Diperbarui otomatis setiap tengah malam </br>
+															⚡ Diperbarui otomatis saat terhubung ke internet </br>
+															📐 <span id="currentMethodBottom">Egyptian General Authority of Survey</span> </br>
+															⏏️ Tombol ON/OFF notifikasi kedip LCD saat adzan </br>
+															🔊 Buzzer dan pengaturan Volume </br>
+															📱 Layar sentuh pengaktif adzan </br>
+															⏱️ Delay 10 menit sentuh adzan aktif di LCD </br>
 														</p>
 													</div>
 												</div>
@@ -1080,9 +1019,12 @@
 															<strong>Peringatan</strong> Tindakan ini akan menghapus
 															seluruh data dan tidak dapat dibatalkan
 														</p>
-														<p class="help-text"> 📶 kredensial WiFi </br> 📡 Konfigurasi
-															Access Point </br> 🕌 Jadwal shalat tersimpan </br> 📍
-															Lokasi yang dipilih </br> Waktu dan tanggal </br>
+														<p class="help-text">
+															📶 kredensial WiFi </br>
+															📡 Konfigurasi Access Point </br>
+															🕌 Jadwal shalat tersimpan </br>
+															📍 Lokasi yang dipilih </br>
+															⏱️ Waktu dan tanggal </br>
 														</p>
 													</div>
 												</div>
@@ -2495,7 +2437,7 @@
 		// RESET PABRIK
 		// ================================
 		function resetSettings() {
-			if (!confirm('Yakin ingin mereset seluruh pengaturan ke setelan ulang? Perangkat akan memulai ulang dan kembali ke pengaturan ulang.')) {
+			if (!confirm('Apakah Anda ingin mengatur ulang semua pengaturan ke pengaturan ulang?')) {
 				return;
 			}
 
@@ -2673,7 +2615,7 @@
 					const jsonSizeKB = (jsonSize / 1024).toFixed(2);
 
 					fileNameDisplay.innerHTML =
-						`<span class="label success">${file.name} (${sizeKB} KB)</span><br>` +
+						`<span class="label success">${file.name} (${sizeKB} KB)</span></br>` +
 						`<small>${json.length} lokasi | DynamicJsonDocument: ${jsonSizeKB} KB</small>`;
 					uploadBtn.disabled = false;
 					clearBtn.style.display = 'block';
@@ -2958,7 +2900,7 @@
 		}
 
 		async function restartDevice() {
-			if (!confirm('🔄 Yakin ingin mulai ulang perangkat?')) {
+			if (!confirm('Apakah Anda ingin memulai ulang perangkat?')) {
 				return;
 			}
 
