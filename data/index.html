@@ -1555,13 +1555,12 @@
 			forceRedirect();
 			isCountdownActive = false;
 		}
-		// ================================
-		// FORCE REDIRECT - MERCUSYS STYLE
-		// ================================
 		function forceRedirect() {
 			let targetURL = window.location.href;
 			const currentIP = window.location.hostname;
 			const isLocalAP = (currentIP.startsWith('192.168.4.') || currentIP === '192.168.4.1');
+
+			console.log(`[Redirect] Starting - Reason: ${countdownReason}, Current IP: ${currentIP}, Is Local AP: ${isLocalAP}`);
 
 			if (countdownReason === 'factory_reset') {
 				targetURL = 'http://192.168.4.1';
@@ -1572,7 +1571,12 @@
 
 					if (newIP && newIP !== currentIP) {
 						targetURL = `http://${newIP}`;
+					} else {
+						targetURL = window.location.href;
 					}
+				} else {
+					// User WiFi: Tetap di halaman (SAFETY NET - seharusnya tidak dapat countdown)
+					targetURL = window.location.href;
 				}
 
 			} else if (countdownReason === 'device_restart') {
