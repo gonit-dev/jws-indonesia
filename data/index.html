@@ -1560,17 +1560,11 @@
 		// ================================
 		function forceRedirect() {
 			let targetURL = window.location.href;
-
 			const currentIP = window.location.hostname;
 			const isLocalAP = (currentIP.startsWith('192.168.4.') || currentIP === '192.168.4.1');
 
 			if (countdownReason === 'factory_reset') {
-				if (isLocalAP) {
-					targetURL = 'http://192.168.4.1';
-				} else {
-					targetURL = window.location.href;
-				}
-
+				targetURL = 'http://192.168.4.1';
 			} else if (countdownReason === 'ap_restart') {
 				if (isLocalAP) {
 					const newIPInput = document.getElementById('apIP');
@@ -1578,16 +1572,11 @@
 
 					if (newIP && newIP !== currentIP) {
 						targetURL = `http://${newIP}`;
-					} else {
-						targetURL = window.location.href;
 					}
-				} else {
-					targetURL = window.location.href;
 				}
 
 			} else if (countdownReason === 'device_restart') {
 				targetURL = window.location.href;
-			} else {
 			}
 			window.location.href = targetURL;
 		}
