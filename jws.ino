@@ -74,8 +74,8 @@
 #define UI_TASK_STACK_SIZE 12288       // LVGL + EEZ rendering
 #define WIFI_TASK_STACK_SIZE 3072      // Event-driven + reconnect (small headroom)
 #define NTP_TASK_STACK_SIZE 4096       // Hanya NTP sync
-#define WEB_TASK_STACK_SIZE 6102       // AsyncWebServer + concurrent requests
-#define PRAYER_TASK_STACK_SIZE 16384   // HTTP + JSON parsing
+#define WEB_TASK_STACK_SIZE 4096       // AsyncWebServer
+#define PRAYER_TASK_STACK_SIZE 4096    // HTTP + JSON parsing
 #define RTC_TASK_STACK_SIZE 2048       // Simple I2C
 #define CLOCK_TASK_STACK_SIZE 2048     // Simple time increment
 #define AUDIO_TASK_STACK_SIZE 4096     // Audio adzan
@@ -96,6 +96,7 @@ TaskHandle_t uiTaskHandle = NULL;
 TaskHandle_t wifiTaskHandle = NULL;
 TaskHandle_t ntpTaskHandle = NULL;
 TaskHandle_t webTaskHandle = NULL;
+TaskHandle_t httpTaskHandle = NULL;
 TaskHandle_t prayerTaskHandle = NULL;
 TaskHandle_t clockTaskHandle = NULL;
 TaskHandle_t buzzerTestTaskHandle = NULL; 
@@ -112,6 +113,7 @@ SemaphoreHandle_t i2cMutex;
 
 // Queue for display updates
 QueueHandle_t displayQueue;
+QueueHandle_t httpQueue; 
 
 // ================================
 // GLOBAL OBJECTS
@@ -273,6 +275,14 @@ struct DisplayUpdate {
     STATUS_UPDATE
   } type;
   String data;
+};
+
+// ================================
+// HTTP REQUEST STRUCTURE
+// ================================
+struct HTTPRequest {
+  String latitude;
+  String longitude;
 };
 
 // ================================
@@ -733,131 +743,18 @@ void handleBlinking() {
 // ============================================
 // Prayer Times API Functions
 // ============================================
-void getPrayerTimesByCoordinates(String lat, String lon) {
-  esp_task_wdt_reset();
+void getPrayerTimesByCoordinates(String lat, String lon) {  
+  Serial.println("\n[Prayer Task] Sending HTTP request to queue...");
   
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi not connected - keeping existing prayer times");
-    return;
-  }
-
-  UBaseType_t stackBefore = uxTaskGetStackHighWaterMark(NULL);
-  Serial.printf("\n[Prayer API] Stack available: %d bytes\n", stackBefore * 4);
+  HTTPRequest request;
+  request.latitude = lat;
+  request.longitude = lon;
   
-  if (stackBefore < 2000) {
-    Serial.println("ERROR: Insufficient stack for HTTP request!");
-    Serial.println("Aborting prayer times update to prevent crash");
-    return;
-  }
-
-  time_t now_t;
-  if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-    now_t = timeConfig.currentTime;
-    xSemaphoreGive(timeMutex);
+  if (xQueueSend(httpQueue, &request, pdMS_TO_TICKS(100)) == pdTRUE) {
+    Serial.println("[Prayer Task] HTTP request queued successfully");
   } else {
-    now_t = time(nullptr);
+    Serial.println("[Prayer Task] Failed to queue HTTP request (queue full)");
   }
-
-  if (now_t < 946684800) {
-    Serial.println("\nPRAYER TIMES UPDATE BLOCKED");
-    Serial.println("Reason: Invalid system time");
-    return;
-  }
-
-  char dateStr[12];
-  sprintf(dateStr, "%02d-%02d-%04d", day(now_t), month(now_t), year(now_t));
-
-  int currentMethod = methodConfig.methodId;
-  String url = "http://api.aladhan.com/v1/timings/" + String(dateStr) + 
-               "?latitude=" + lat + "&longitude=" + lon + "&method=" + String(currentMethod);
-
-  Serial.println("\nFetching prayer times...");
-  Serial.println("Date: " + String(dateStr));
-  Serial.println("URL: " + url);
-
-  HTTPClient http;
-  WiFiClient client;
-
-  http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
-  http.begin(client, url);
-  http.setTimeout(15000);
-
-  esp_task_wdt_reset();
-
-  int httpResponseCode = http.GET();
-  Serial.println("Response code: " + String(httpResponseCode));
-
-  esp_task_wdt_reset();
-
-  if (httpResponseCode == 200) {
-    String payload = http.getString();
-
-    esp_task_wdt_reset();
-    
-    UBaseType_t stackAfterHTTP = uxTaskGetStackHighWaterMark(NULL);
-    Serial.printf("[Prayer API] Stack after HTTP: %d bytes\n", stackAfterHTTP * 4);
-
-    JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, payload);
-
-    esp_task_wdt_reset();
-
-    if (!error) {
-      JsonObject timings = doc["data"]["timings"];
-
-      String tempSubuh = timings["Fajr"].as<String>().substring(0, 5);
-      String tempTerbit = timings["Sunrise"].as<String>().substring(0, 5);
-      String tempZuhur = timings["Dhuhr"].as<String>().substring(0, 5);
-      String tempAshar = timings["Asr"].as<String>().substring(0, 5);
-      String tempMaghrib = timings["Maghrib"].as<String>().substring(0, 5);
-      String tempIsya = timings["Isha"].as<String>().substring(0, 5);
-      String tempImsak = timings["Imsak"].as<String>().substring(0, 5);
-
-      bool allValid = true;
-      if (tempSubuh.length() != 5 || tempSubuh.indexOf(':') != 2) allValid = false;
-      if (tempTerbit.length() != 5 || tempTerbit.indexOf(':') != 2) allValid = false;
-      if (tempZuhur.length() != 5 || tempZuhur.indexOf(':') != 2) allValid = false;
-      if (tempAshar.length() != 5 || tempAshar.indexOf(':') != 2) allValid = false;
-      if (tempMaghrib.length() != 5 || tempMaghrib.indexOf(':') != 2) allValid = false;
-      if (tempIsya.length() != 5 || tempIsya.indexOf(':') != 2) allValid = false;
-      if (tempImsak.length() != 5 || tempImsak.indexOf(':') != 2) allValid = false;
-
-      if (allValid) {
-        prayerConfig.subuhTime = tempSubuh;
-        prayerConfig.terbitTime = tempTerbit;
-        prayerConfig.zuhurTime = tempZuhur;
-        prayerConfig.asharTime = tempAshar;
-        prayerConfig.maghribTime = tempMaghrib;
-        prayerConfig.isyaTime = tempIsya;
-        prayerConfig.imsakTime = tempImsak;
-
-        Serial.println("\nPrayer times updated successfully");
-        savePrayerTimes();
-
-        DisplayUpdate update;
-        update.type = DisplayUpdate::PRAYER_UPDATE;
-        xQueueSend(displayQueue, &update, pdMS_TO_TICKS(100));
-      } else {
-        Serial.println("Invalid prayer times data");
-      }
-    } else {
-      Serial.print("JSON parse error: ");
-      Serial.println(error.c_str());
-    }
-  } else {
-    Serial.printf("HTTP request failed: %d\n", httpResponseCode);
-  }
-
-  http.end();
-  client.stop();
-  
-  // FINAL STACK CHECK
-  UBaseType_t stackAfter = uxTaskGetStackHighWaterMark(NULL);
-  Serial.printf("[Prayer API] Stack after cleanup: %d bytes\n", stackAfter * 4);
-  
-  esp_task_wdt_reset();
-  
-  vTaskDelay(pdMS_TO_TICKS(100));
 }
 
 void savePrayerTimes() {
@@ -1647,16 +1544,18 @@ void setupServerRoutes() {
     request -> send(response);
   });
 
-  server.on("/assets/css/foundation.min.css", HTTP_GET, [](AsyncWebServerRequest * request) {
-    if (!LittleFS.exists("/assets/css/foundation.min.css")) {
+  server.on("/css/foundation.min.css", HTTP_GET, [](AsyncWebServerRequest * request) {
+    if (!LittleFS.exists("/css/foundation.min.css")) {
       request -> send(404, "text/plain", "CSS not found");
       return;
     }
 
     AsyncWebServerResponse * response = request -> beginResponse(
-      LittleFS, "/assets/css/foundation.min.css", "text/css");
+      LittleFS, "/css/foundation.min.css", "text/css");
 
-    response -> addHeader("Cache-Control", "public, max-age=3600");
+    response -> addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    response -> addHeader("Pragma", "no-cache");
+    response -> addHeader("Expires", "0");;
     response -> addHeader("Content-Type", "text/css; charset=utf-8");
 
     request -> send(response);
@@ -3134,7 +3033,7 @@ void setupServerRoutes() {
       Serial.printf("\n[404] Client: %s | URL: %s\n",
         clientIP.toString().c_str(), url.c_str());
 
-      if (url.startsWith("/assets/") || url.endsWith(".css") || url.endsWith(".js") ||
+      if (url.startsWith("/css/") || url.endsWith(".css") || url.endsWith(".js") ||
         url.endsWith(".png") || url.endsWith(".jpg") || url.endsWith(".jpeg") ||
         url.endsWith(".gif") || url.endsWith(".ico") || url.endsWith(".svg") ||
         url.endsWith(".woff") || url.endsWith(".woff2") || url.endsWith(".ttf")) {
@@ -3178,6 +3077,7 @@ void printStackReport() {
     { wifiTaskHandle, "WiFi", WIFI_TASK_STACK_SIZE },
     { ntpTaskHandle, "NTP", NTP_TASK_STACK_SIZE },
     { prayerTaskHandle, "Prayer", PRAYER_TASK_STACK_SIZE },
+    { httpTaskHandle, "HTTP", 8192 },
     { rtcTaskHandle, "RTC", RTC_TASK_STACK_SIZE }
   };
 
@@ -4942,6 +4842,145 @@ void audioTask(void *parameter) {
   }
 }
 
+// ============================================
+// HTTP Task - Dedicated untuk API Requests
+// ============================================
+void httpTask(void *parameter) {
+  esp_task_wdt_add(NULL);
+  
+  Serial.println("\n========================================");
+  Serial.println("HTTP TASK STARTED");
+  Serial.println("========================================");
+  Serial.println("Stack Size: 8192 bytes");
+  Serial.println("Purpose: Handle prayer times API requests");
+  Serial.println("========================================\n");
+  
+  HTTPRequest request;
+  
+  while (true) {
+    esp_task_wdt_reset();
+    
+    if (xQueueReceive(httpQueue, &request, pdMS_TO_TICKS(10000)) == pdTRUE) {
+      esp_task_wdt_reset();
+      
+      if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("HTTP Task: WiFi not connected - skipping request");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        continue;
+      }
+      
+      Serial.println("\n========================================");
+      Serial.println("HTTP TASK: Processing Prayer Times");
+      Serial.println("========================================");
+      Serial.println("Coordinates: " + request.latitude + ", " + request.longitude);
+      
+      time_t now_t;
+      if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+        now_t = timeConfig.currentTime;
+        xSemaphoreGive(timeMutex);
+      } else {
+        now_t = time(nullptr);
+      }
+      
+      if (now_t < 946684800) {
+        Serial.println("Invalid system time - skipping");
+        continue;
+      }
+      
+      char dateStr[12];
+      sprintf(dateStr, "%02d-%02d-%04d", day(now_t), month(now_t), year(now_t));
+      
+      int currentMethod = methodConfig.methodId;
+      String url = "http://api.aladhan.com/v1/timings/" + String(dateStr) + 
+                   "?latitude=" + request.latitude + 
+                   "&longitude=" + request.longitude + 
+                   "&method=" + String(currentMethod);
+      
+      Serial.println("URL: " + url);
+      
+      HTTPClient http;
+      WiFiClient client;
+      
+      http.begin(client, url);
+      http.setTimeout(20000);
+      
+      esp_task_wdt_reset();
+      
+      int httpResponseCode = http.GET();
+      
+      esp_task_wdt_reset();
+      
+      Serial.println("Response code: " + String(httpResponseCode));
+      
+      if (httpResponseCode == 200) {
+        String payload = http.getString();
+        
+        esp_task_wdt_reset();
+        
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, payload);
+        
+        esp_task_wdt_reset();
+        
+        if (!error) {
+          JsonObject timings = doc["data"]["timings"];
+          
+          String tempSubuh = timings["Fajr"].as<String>().substring(0, 5);
+          String tempTerbit = timings["Sunrise"].as<String>().substring(0, 5);
+          String tempZuhur = timings["Dhuhr"].as<String>().substring(0, 5);
+          String tempAshar = timings["Asr"].as<String>().substring(0, 5);
+          String tempMaghrib = timings["Maghrib"].as<String>().substring(0, 5);
+          String tempIsya = timings["Isha"].as<String>().substring(0, 5);
+          String tempImsak = timings["Imsak"].as<String>().substring(0, 5);
+          
+          bool allValid = true;
+          if (tempSubuh.length() != 5 || tempSubuh.indexOf(':') != 2) allValid = false;
+          if (tempTerbit.length() != 5 || tempTerbit.indexOf(':') != 2) allValid = false;
+          if (tempZuhur.length() != 5 || tempZuhur.indexOf(':') != 2) allValid = false;
+          if (tempAshar.length() != 5 || tempAshar.indexOf(':') != 2) allValid = false;
+          if (tempMaghrib.length() != 5 || tempMaghrib.indexOf(':') != 2) allValid = false;
+          if (tempIsya.length() != 5 || tempIsya.indexOf(':') != 2) allValid = false;
+          if (tempImsak.length() != 5 || tempImsak.indexOf(':') != 2) allValid = false;
+          
+          if (allValid) {
+            prayerConfig.subuhTime = tempSubuh;
+            prayerConfig.terbitTime = tempTerbit;
+            prayerConfig.zuhurTime = tempZuhur;
+            prayerConfig.asharTime = tempAshar;
+            prayerConfig.maghribTime = tempMaghrib;
+            prayerConfig.isyaTime = tempIsya;
+            prayerConfig.imsakTime = tempImsak;
+            
+            Serial.println("Prayer times updated successfully");
+            savePrayerTimes();
+            
+            DisplayUpdate update;
+            update.type = DisplayUpdate::PRAYER_UPDATE;
+            xQueueSend(displayQueue, &update, pdMS_TO_TICKS(100));
+          } else {
+            Serial.println("Invalid prayer times data");
+          }
+        } else {
+          Serial.println("JSON parse error: " + String(error.c_str()));
+        }
+      } else {
+        Serial.println("HTTP request failed: " + String(httpResponseCode));
+      }
+      
+      http.end();
+      client.stop();
+      
+      Serial.println("HTTP Task: Request completed");
+      Serial.println("========================================\n");
+      
+      esp_task_wdt_reset();
+    }
+    
+    esp_task_wdt_reset();
+    vTaskDelay(pdMS_TO_TICKS(100));
+  }
+}
+
 // ================================
 // SETUP - ESP32 CORE 3.x
 // ================================
@@ -4954,7 +4993,7 @@ void setup() {
   Serial.println("ESP32 Islamic Prayer Clock");
   Serial.println("LVGL 9.2.0 + FreeRTOS");
   Serial.println("CONCURRENT ACCESS OPTIMIZED");
-  Serial.println("VERSION 2.2 - STACK OPTIMIZED");
+  Serial.println("VERSION 2.3 - HTTP TASK SEPARATED");
   Serial.println("========================================\n");
 
   // ================================
@@ -4987,7 +5026,13 @@ void setup() {
   audioMutex = xSemaphoreCreateMutex();
 
   displayQueue = xQueueCreate(20, sizeof(DisplayUpdate));
+  httpQueue = xQueueCreate(5, sizeof(HTTPRequest));  // ← BARU: Queue untuk HTTP
   
+  Serial.println("Semaphores & Queues created");
+
+  // ================================
+  // DFPLAYER INIT
+  // ================================
   dfPlayerAvailable = initDFPlayer();
 
   if (dfPlayerAvailable) {
@@ -5019,12 +5064,9 @@ void setup() {
     Serial.println("Adzan state cleaned - buzzer-only mode active");
   }
 
-  Serial.println("Semaphores & Queue created");
-
   // ================================
   // LITTLEFS & LOAD SETTINGS
   // ================================
-
   if (wifiConfig.apIP == IPAddress(0, 0, 0, 0)) {
     wifiConfig.apIP = IPAddress(192, 168, 4, 1);
     wifiConfig.apGateway = IPAddress(192, 168, 4, 1);
@@ -5079,8 +5121,11 @@ void setup() {
   touch.setRotation(1);
   Serial.println("Touch initialized");
 
+  // ================================
+  // BUZZER INIT
+  // ================================
   ledcAttach(BUZZER_PIN, BUZZER_FREQ, BUZZER_RESOLUTION);
-  ledcWrite(BUZZER_CHANNEL, 0); // Mati dulu
+  ledcWrite(BUZZER_CHANNEL, 0);
   Serial.println("Buzzer initialized (GPIO26)");
 
   // ================================
@@ -5137,7 +5182,7 @@ void setup() {
   Serial.printf("Backlight ON: %d/255\n", TFT_BL_BRIGHTNESS);
 
   // ================================
-  // WIFI CONFIGURATION - UPDATED!
+  // WIFI CONFIGURATION
   // ================================
   Serial.println("\n========================================");
   Serial.println("WIFI CONFIGURATION");
@@ -5158,7 +5203,7 @@ void setup() {
   Serial.println("  TX Power: 19.5dBm (max)");
 
   // ================================
-  // SET HOSTNAME SEBELUM OPERASI WIFI LAINNYA
+  // SET HOSTNAME
   // ================================
   WiFi.setHostname("JWS-Indonesia");
   delay(200);
@@ -5248,6 +5293,9 @@ void setup() {
   Serial.println("STARTING FREERTOS TASKS");
   Serial.println("========================================");
 
+  // ================================
+  // UI TASK
+  // ================================
   xTaskCreatePinnedToCore(
     uiTask,
     "UI",
@@ -5259,6 +5307,9 @@ void setup() {
   );
   Serial.printf("UI Task (Core 1) - Stack: %d bytes\n", UI_TASK_STACK_SIZE);
 
+  // ================================
+  // WIFI TASK
+  // ================================
   xTaskCreatePinnedToCore(
     wifiTask,
     "WiFi",
@@ -5270,6 +5321,9 @@ void setup() {
   );
   Serial.printf("WiFi Task (Core 0) - Stack: %d bytes\n", WIFI_TASK_STACK_SIZE);
 
+  // ================================
+  // NTP TASK
+  // ================================
   xTaskCreatePinnedToCore(
     ntpTask,
     "NTP",
@@ -5281,6 +5335,9 @@ void setup() {
   );
   Serial.printf("NTP Task (Core 0) - Stack: %d bytes\n", NTP_TASK_STACK_SIZE);
 
+  // ================================
+  // WEB TASK
+  // ================================
   xTaskCreatePinnedToCore(
     webTask,
     "Web",
@@ -5292,10 +5349,32 @@ void setup() {
   );
   Serial.printf("Web Task (Core 0) - Stack: %d bytes\n", WEB_TASK_STACK_SIZE);
 
+  // ================================
+  // HTTP TASK (BARU) - Dedicated untuk API
+  // ================================
+  xTaskCreatePinnedToCore(
+    httpTask,
+    "HTTP",
+    8192,               // 8KB stack
+    NULL,
+    0,                  // Priority paling rendah (tidak ganggu web)
+    &httpTaskHandle,
+    0                   // Core 0
+  );
+  Serial.printf("HTTP Task (Core 0) - Stack: 8192 bytes\n");
+  
+  if (httpTaskHandle) {
+    esp_task_wdt_add(httpTaskHandle);
+    Serial.println("  HTTP Task WDT registered");
+  }
+
+  // ================================
+  // PRAYER TASK (STACK DIKURANGI)
+  // ================================
   xTaskCreatePinnedToCore(
     prayerTask,
     "Prayer",
-    PRAYER_TASK_STACK_SIZE,
+    PRAYER_TASK_STACK_SIZE,  // Sekarang 4096 bytes (dikurangi dari 16384)
     NULL,
     PRAYER_TASK_PRIORITY,
     &prayerTaskHandle,
@@ -5304,10 +5383,13 @@ void setup() {
   Serial.printf("Prayer Task (Core 0) - Stack: %d bytes\n", PRAYER_TASK_STACK_SIZE);
 
   if (prayerTaskHandle) {
-      esp_task_wdt_add(prayerTaskHandle);
-      Serial.println("WDT registered");
+    esp_task_wdt_add(prayerTaskHandle);
+    Serial.println("  Prayer Task WDT registered");
   }
 
+  // ================================
+  // CLOCK TASK
+  // ================================
   xTaskCreatePinnedToCore(
     clockTickTask,
     "Clock",
@@ -5336,11 +5418,11 @@ void setup() {
   }
 
   // ================================
-  // AUTO-RECOVERY TASK FOR PRAYER
+  // PRAYER WATCHDOG TASK
   // ================================
   xTaskCreate(
     [](void* param) {
-      const TickType_t checkInterval = pdMS_TO_TICKS(30000);  // Check every 30s
+      const TickType_t checkInterval = pdMS_TO_TICKS(30000);
       
       Serial.println("Prayer Watchdog Task - Monitoring every 30s");
       
@@ -5358,7 +5440,6 @@ void setup() {
             Serial.println("Action: Auto-restarting task...");
             Serial.println("========================================");
             
-            // Recreate task
             xTaskCreatePinnedToCore(
               prayerTask,
               "Prayer",
@@ -5382,7 +5463,6 @@ void setup() {
             }
           }
         } else {
-          // Task handle is NULL - try to create it
           Serial.println("\nWARNING: Prayer Task handle is NULL");
           Serial.println("Attempting to create task...");
           
@@ -5406,7 +5486,7 @@ void setup() {
     "PrayerWatchdog",
     2048,
     NULL,
-    1,  // Low priority
+    1,
     NULL
   );
 
@@ -5451,11 +5531,15 @@ void setup() {
   Serial.println("\nTask Stack Allocation:");
   uint32_t totalStack = UI_TASK_STACK_SIZE + WIFI_TASK_STACK_SIZE + 
                         NTP_TASK_STACK_SIZE + WEB_TASK_STACK_SIZE + 
-                        PRAYER_TASK_STACK_SIZE + CLOCK_TASK_STACK_SIZE;
+                        PRAYER_TASK_STACK_SIZE + CLOCK_TASK_STACK_SIZE +
+                        8192;  // HTTP Task
   if (rtcAvailable) totalStack += RTC_TASK_STACK_SIZE;
   
   Serial.printf("Total:       %d bytes (%.2f KB)\n", totalStack, totalStack / 1024.0);
-  Serial.printf("Largest:     Prayer (%d bytes)\n", PRAYER_TASK_STACK_SIZE);
+  Serial.printf("UI Task:     %d bytes\n", UI_TASK_STACK_SIZE);
+  Serial.printf("Web Task:    %d bytes\n", WEB_TASK_STACK_SIZE);
+  Serial.printf("HTTP Task:   8192 bytes (NEW)\n");
+  Serial.printf("Prayer Task: %d bytes (REDUCED from 16384)\n", PRAYER_TASK_STACK_SIZE);
   Serial.println("========================================\n");
 
   // ================================
@@ -5468,7 +5552,9 @@ void setup() {
   Serial.println("WiFi sleep disabled for better response");
   Serial.println("Router optimization active (keep-alive)");
   Serial.println("Prayer Task auto-recovery enabled");
+  Serial.println("HTTP Task separated (non-blocking)");
   Serial.println("Stack monitoring active");
+  Serial.println("Memory optimized (saved ~8KB)");
   Serial.println("========================================\n");
 
   if (wifiConfig.routerSSID.length() > 0) {
@@ -5490,6 +5576,7 @@ void setup() {
   Serial.println("Monitoring logs will appear below:");
   Serial.println("  - Stack usage reports every 60s");
   Serial.println("  - Prayer Task health checks every 30s");
+  Serial.println("  - HTTP Task processing logs");
   Serial.println("  - Memory reports every 30s (from webTask)");
   Serial.println("========================================\n");
 }
