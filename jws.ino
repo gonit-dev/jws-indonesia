@@ -1654,15 +1654,12 @@ void setupServerRoutes() {
                       
                       if (prayerTaskHandle != NULL) {
                           vTaskSuspend(prayerTaskHandle);
-                          Serial.println("Prayer Task suspended");
                       }
                       if (ntpTaskHandle != NULL) {
                           vTaskSuspend(ntpTaskHandle);
-                          Serial.println("NTP Task suspended");
                       }
                       if (wifiTaskHandle != NULL) {
                           vTaskSuspend(wifiTaskHandle);
-                          Serial.println("WiFi Task suspended");
                       }
                       vTaskDelay(pdMS_TO_TICKS(1000));
                       
@@ -1674,7 +1671,7 @@ void setupServerRoutes() {
                       }
                       vTaskDelay(pdMS_TO_TICKS(500));
                       
-                      ledcWrite(TFT_BL_CHANNEL, 0);
+                      ledcWrite(TFT_BL, 0);
                       tft.fillScreen(TFT_BLACK);
                       vTaskDelay(pdMS_TO_TICKS(500));
                   }
@@ -2813,22 +2810,19 @@ void setupServerRoutes() {
                       
                       if (prayerTaskHandle != NULL) {
                           vTaskSuspend(prayerTaskHandle);
-                          Serial.println("Prayer Task suspended");
                       }
                       if (ntpTaskHandle != NULL) {
                           vTaskSuspend(ntpTaskHandle);
-                          Serial.println("NTP Task suspended");
                       }
                       if (wifiTaskHandle != NULL) {
                           vTaskSuspend(wifiTaskHandle);
-                          Serial.println("WiFi Task suspended");
                       }
                       vTaskDelay(pdMS_TO_TICKS(1000));
                       
                       server.end();
                       vTaskDelay(pdMS_TO_TICKS(500));
                       
-                      ledcWrite(TFT_BL_CHANNEL, 0);
+                      ledcWrite(TFT_BL, 0);
                       tft.fillScreen(TFT_BLACK);
                       vTaskDelay(pdMS_TO_TICKS(500));
                   }
