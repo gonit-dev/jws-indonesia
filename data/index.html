@@ -550,11 +550,11 @@
 											<div class="grid-x grid-margin-x">
 												<div class="medium-12 small-12 large-12 cell">
 													<label>IP Address Access Point</label>
-													<input type="text" id="apIP" placeholder="192.168.4.1" autocomplete="off" data-form="network-config">
+													<input type="text" id="apIP" placeholder="192.168.100.1" autocomplete="off" data-form="network-config">
 												</div>
 												<div class="medium-12 small-12 large-12 cell">
 													<label>Gateway</label>
-													<input type="text" id="gatewayIP" placeholder="192.168.4.1" autocomplete="off" data-form="network-config">
+													<input type="text" id="gatewayIP" placeholder="192.168.100.1" autocomplete="off" data-form="network-config">
 												</div>
 												<div class="medium-12 small-12 large-12 cell">
 													<label>Subnet Mask</label>
@@ -1570,10 +1570,10 @@
 		function forceRedirect() {
 			let targetURL = window.location.href;
 			const currentIP = window.location.hostname;
-			const isLocalAP = (currentIP.startsWith('192.168.4.') || currentIP === '192.168.4.1');
+			const isLocalAP = (currentIP.startsWith('192.168.100.1') || currentIP === '192.168.100.1');
 
 			if (countdownReason === 'factory_reset') {
-				targetURL = 'http://192.168.4.1';
+				targetURL = 'http://192.168.100.1';
 			} else if (countdownReason === 'ap_restart') {
 				if (isLocalAP) {
 					const newIPInput = document.getElementById('apIP');
@@ -2369,7 +2369,7 @@
 			})
 				.then(async response => {
 					if (response.ok) {
-						const networkMsg = apIP ? apIP : '192.168.4.1';
+						const networkMsg = apIP ? apIP : '192.168.100.1';
 						await showToastBeforeCountdown(
 							`Konfigurasi jaringan berhasil disimpan ${networkMsg}`,
 							'success'
