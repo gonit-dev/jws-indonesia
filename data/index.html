@@ -752,7 +752,7 @@
 														<p class="help-text">
 															📍 Pilih lokasi untuk menghitung jadwal shalat </br>
 															📐 Pilih metode perhitungan </br>
-															🔄 Jadwal akan diperbarui otomatis setelah memilih lokasi
+															🔄 Jadwal diperbarui otomatis setelah memilih lokasi
 														</p>
 													</div>
 												</div>
@@ -820,7 +820,7 @@
 															📄 Nama berkas harus <code>cities.json</code> </br>
 															🧾 Format harus valid JSON array </br>
 															📦 Ukuran maksimal: 1 MB </br>
-															🔄 Dropdown lokasi akan otomatis diperbarui setelah berhasil
+															🔄 Dropdown lokasi otomatis diperbarui setelah berhasil
 														</p>
 													</div>
 												</div>
@@ -1016,7 +1016,7 @@
 												<div class="medium-12 small-12 large-12 cell">
 													<div class="callout secondary">
 														<p>
-															<strong>Peringatan</strong> Tindakan ini akan menghapus
+															<strong>Peringatan</strong> Tindakan ini menghapus
 															seluruh data dan tidak dapat dibatalkan
 														</p>
 														<p class="help-text">
@@ -2455,7 +2455,7 @@
 				.then(async response => {
 					if (response.ok) {
 						await showToastBeforeCountdown(
-							'Pengaturan dihapus, perangkat akan dimulai ulang',
+							'Pengaturan dihapus, perangkat dimulai ulang',
 							'success'
 						);
 
@@ -3100,7 +3100,7 @@
 					showToast('Zona waktu berhasil disimpan', 'success');
 
 					setTimeout(() => {
-						showToast('NTP akan melakukan perbarui ulang dengan zona waktu baru...', 'warning');
+						showToast('NTP melakukan perbarui ulang dengan zona waktu baru...', 'warning');
 					}, 1500);
 
 				} else {
