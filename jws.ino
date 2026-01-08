@@ -4967,16 +4967,10 @@ void setup() {
   Serial.println("VERSION 2.3 - HTTP TASK SEPARATED");
   Serial.println("========================================\n");
 
-  // ================================
-  // TURN OFF THE BACKLIGHT TOTALLY FIRST
-  // ================================
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, LOW);
   Serial.println("Backlight: OFF");
 
-  // ================================
-  // INIT TFT
-  // ================================
   pinMode(TOUCH_IRQ, INPUT_PULLUP);
 
   tft.begin();
@@ -4997,13 +4991,10 @@ void setup() {
   audioMutex = xSemaphoreCreateMutex();
 
   displayQueue = xQueueCreate(20, sizeof(DisplayUpdate));
-  httpQueue = xQueueCreate(5, sizeof(HTTPRequest));  // ← BARU: Queue untuk HTTP
+  httpQueue = xQueueCreate(5, sizeof(HTTPRequest));
   
   Serial.println("Semaphores & Queues created");
 
-  // ================================
-  // DFPLAYER INIT
-  // ================================
   dfPlayerAvailable = initDFPlayer();
 
   if (dfPlayerAvailable) {
@@ -5035,9 +5026,6 @@ void setup() {
     Serial.println("Adzan state cleaned - buzzer-only mode active");
   }
 
-  // ================================
-  // LITTLEFS & LOAD SETTINGS
-  // ================================
   if (wifiConfig.apIP == IPAddress(0, 0, 0, 0)) {
     wifiConfig.apIP = IPAddress(192, 168, 100, 1);
     wifiConfig.apGateway = IPAddress(192, 168, 100, 1);
@@ -5058,9 +5046,6 @@ void setup() {
   Wire.beginTransmission(0x68);
   Wire.endTransmission();
 
-  // ================================
-  // RTC DS3231 INIT
-  // ================================
   rtcAvailable = initRTC();
 
   if (rtcAvailable) {
@@ -5084,24 +5069,15 @@ void setup() {
       }
   }
 
-  // ================================
-  // TOUCH INIT
-  // ================================
   touchSPI.begin(TOUCH_CLK, TOUCH_MISO, TOUCH_MOSI, TOUCH_CS);
   touch.begin(touchSPI);
   touch.setRotation(1);
   Serial.println("Touch initialized");
 
-  // ================================
-  // BUZZER INIT
-  // ================================
   ledcAttach(BUZZER_PIN, BUZZER_FREQ, BUZZER_RESOLUTION);
   ledcWrite(BUZZER_CHANNEL, 0);
   Serial.println("Buzzer initialized (GPIO26)");
 
-  // ================================
-  // LVGL INIT
-  // ================================
   lv_init();
   lv_tick_set_cb([]() {
     return (uint32_t)millis();
@@ -5118,21 +5094,12 @@ void setup() {
 
   Serial.println("LVGL initialized");
 
-  // ================================
-  // EEZ UI INIT
-  // ================================
   ui_init();
   Serial.println("EEZ UI initialized");
 
-  // ================================
-  // SEMBUNYIKAN UI ELEMENTS DULU
-  // ================================
   hideAllUIElements();
   Serial.println("UI elements hidden");
 
-  // ================================
-  // FORCE RENDER BLACK SCREEN
-  // ================================
   delay(100);
   lv_timer_handler();
   delay(100);
@@ -5143,21 +5110,23 @@ void setup() {
 
   Serial.println("UI rendered (black screen)");
 
-  // ================================
-  // NYALAKAN BACKLIGHT DENGAN PWM
-  // ================================
   Serial.println("Starting backlight...");
 
   ledcAttach(TFT_BL, TFT_BL_FREQ, TFT_BL_RESOLUTION);
   ledcWrite(TFT_BL, TFT_BL_BRIGHTNESS);
   Serial.printf("Backlight ON: %d/255\n", TFT_BL_BRIGHTNESS);
 
-  // ================================
-  // WIFI CONFIGURATION
-  // ================================
   Serial.println("\n========================================");
   Serial.println("WIFI CONFIGURATION");
   Serial.println("========================================");
+
+  WiFi.setHostname("JWS-Indonesia");
+  WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
+  WiFi.setHostname("JWS-Indonesia");
+  delay(100);
+  
+  Serial.print("Hostname set to: ");
+  Serial.println(WiFi.getHostname());
 
   setupWiFiEvents();
   WiFi.mode(WIFI_AP_STA);
@@ -5172,14 +5141,6 @@ void setup() {
   Serial.println("  Protocol: 802.11 b/g/n");
   Serial.println("  Bandwidth: 40MHz (HT40)");
   Serial.println("  TX Power: 19.5dBm (max)");
-
-  // ================================
-  // SET HOSTNAME
-  // ================================
-  WiFi.setHostname("JWS-Indonesia");
-  delay(200);
-  Serial.print("Hostname: ");
-  Serial.println(WiFi.getHostname());
 
   WiFi.setSleep(WIFI_PS_NONE);
   esp_wifi_set_ps(WIFI_PS_NONE);
@@ -5208,15 +5169,9 @@ void setup() {
   Serial.println(WiFi.softAPIP());
   Serial.printf("AP MAC: %s\n", WiFi.softAPmacAddress().c_str());
 
-  // ================================
-  // TIME CONFIG INIT
-  // ================================
   timeConfig.ntpServer = "pool.ntp.org";
   timeConfig.ntpSynced = false;
 
-  // ================================
-  // DISPLAY LOADED CITY & PRAYER TIMES
-  // ================================
   if (prayerConfig.selectedCity.length() > 0) {
     Serial.println("\nSelected City: " + prayerConfig.selectedCity);
     Serial.println("\nLoaded Prayer Times:");
@@ -5274,7 +5229,7 @@ void setup() {
     NULL,
     UI_TASK_PRIORITY,
     &uiTaskHandle,
-    1  // Core 1
+    1 // Core 1
   );
   Serial.printf("UI Task (Core 1) - Stack: %d bytes\n", UI_TASK_STACK_SIZE);
 
@@ -5288,7 +5243,7 @@ void setup() {
     NULL,
     WIFI_TASK_PRIORITY,
     &wifiTaskHandle,
-    0  // Core 0
+    0 // Core 0
   );
   Serial.printf("WiFi Task (Core 0) - Stack: %d bytes\n", WIFI_TASK_STACK_SIZE);
 
@@ -5302,7 +5257,7 @@ void setup() {
     NULL,
     NTP_TASK_PRIORITY,
     &ntpTaskHandle,
-    0  // Core 0
+    0 // Core 0
   );
   Serial.printf("NTP Task (Core 0) - Stack: %d bytes\n", NTP_TASK_STACK_SIZE);
 
@@ -5316,21 +5271,21 @@ void setup() {
     NULL,
     WEB_TASK_PRIORITY,
     &webTaskHandle,
-    0  // Core 0
+    0 // Core 0
   );
   Serial.printf("Web Task (Core 0) - Stack: %d bytes\n", WEB_TASK_STACK_SIZE);
 
   // ================================
-  // HTTP TASK (BARU) - Dedicated untuk API
+  // HTTP TASK
   // ================================
   xTaskCreatePinnedToCore(
     httpTask,
     "HTTP",
-    8192,               // 8KB stack
+    8192,
     NULL,
-    0,                  // Priority paling rendah (tidak ganggu web)
+    0,
     &httpTaskHandle,
-    0                   // Core 0
+    0 // Core 0
   );
   Serial.printf("HTTP Task (Core 0) - Stack: 8192 bytes\n");
   
@@ -5340,12 +5295,12 @@ void setup() {
   }
 
   // ================================
-  // PRAYER TASK (STACK DIKURANGI)
+  // PRAYER TASK
   // ================================
   xTaskCreatePinnedToCore(
     prayerTask,
     "Prayer",
-    PRAYER_TASK_STACK_SIZE,  // Sekarang 4096 bytes (dikurangi dari 16384)
+    PRAYER_TASK_STACK_SIZE,
     NULL,
     PRAYER_TASK_PRIORITY,
     &prayerTaskHandle,
@@ -5409,6 +5364,11 @@ void setup() {
             Serial.println("========================================");
             Serial.println("Detected state: " + String(state == eDeleted ? "DELETED" : "INVALID"));
             Serial.println("Action: Auto-restarting task...");
+            
+            // PERBAIKAN PENTING: Hapus dari watchdog dulu
+            esp_task_wdt_delete(prayerTaskHandle);
+            Serial.println("Removed from watchdog");
+            
             Serial.println("========================================");
             
             xTaskCreatePinnedToCore(
@@ -5483,9 +5443,6 @@ void setup() {
 
   Serial.println("========================================\n");
 
-  // ================================
-  // MEMORY & STACK REPORT
-  // ================================
   Serial.println("========================================");
   Serial.println("MEMORY REPORT");
   Serial.println("========================================");
@@ -5503,7 +5460,7 @@ void setup() {
   uint32_t totalStack = UI_TASK_STACK_SIZE + WIFI_TASK_STACK_SIZE + 
                         NTP_TASK_STACK_SIZE + WEB_TASK_STACK_SIZE + 
                         PRAYER_TASK_STACK_SIZE + CLOCK_TASK_STACK_SIZE +
-                        8192;  // HTTP Task
+                        8192;
   if (rtcAvailable) totalStack += RTC_TASK_STACK_SIZE;
   
   Serial.printf("Total:       %d bytes (%.2f KB)\n", totalStack, totalStack / 1024.0);
@@ -5513,9 +5470,6 @@ void setup() {
   Serial.printf("Prayer Task: %d bytes (REDUCED from 16384)\n", PRAYER_TASK_STACK_SIZE);
   Serial.println("========================================\n");
 
-  // ================================
-  // STARTUP COMPLETE
-  // ================================
   Serial.println("========================================");
   Serial.println("SYSTEM READY");
   Serial.println("========================================");
@@ -5526,6 +5480,7 @@ void setup() {
   Serial.println("HTTP Task separated (non-blocking)");
   Serial.println("Stack monitoring active");
   Serial.println("Memory optimized (saved ~8KB)");
+  Serial.println("Hostname: " + String(WiFi.getHostname()));
   Serial.println("========================================\n");
 
   if (wifiConfig.routerSSID.length() > 0) {
@@ -5535,7 +5490,7 @@ void setup() {
     Serial.println("Connect to AP to configure:");
     Serial.println("1. WiFi: " + String(wifiConfig.apSSID));
     Serial.println("2. Password: " + String(wifiConfig.apPassword));
-    Serial.println("3. Browser: http://192.168.4.1");
+    Serial.println("3. Browser: http://192.168.100.1");
     Serial.println("4. Set WiFi & select city");
   }
 
