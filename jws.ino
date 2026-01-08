@@ -3561,6 +3561,12 @@ void ntpTask(void *parameter) {
 
         esp_task_wdt_reset();
         
+        if (restartTaskHandle != NULL || resetTaskHandle != NULL) {
+            Serial.println("\n[NTP Task] System restart detected - suspending");
+            vTaskSuspend(NULL);
+            continue;
+        }
+        
         if (notifyValue == 0) {
             esp_task_wdt_reset();
             continue;
@@ -3592,18 +3598,24 @@ void ntpTask(void *parameter) {
         const int retry_count = 40;
         
         while (timeinfo.tm_year < (2024 - 1900) && ++retry < retry_count) {
+            if (restartTaskHandle != NULL || resetTaskHandle != NULL) {
+                Serial.println("\n[NTP Task] Shutdown detected mid-sync - aborting");
+                ntpSyncInProgress = false;
+                ntpSyncCompleted = false;
+                vTaskSuspend(NULL);
+                break;
+            }
+            
             vTaskDelay(pdMS_TO_TICKS(250));
             
             time(&now);
             gmtime_r(&now, &timeinfo);
             
+            esp_task_wdt_reset();
+            
             if (retry % 4 == 0) {
                 Serial.printf("Waiting for NTP sync... (%d/%d) [%.1fs]\n", 
                              retry, retry_count, retry * 0.25);
-            }
-            
-            if (retry % 4 == 0) {
-                esp_task_wdt_reset();
             }
         }
 
@@ -3612,7 +3624,7 @@ void ntpTask(void *parameter) {
         syncSuccess = (timeinfo.tm_year >= (2024 - 1900));
         
         if (syncSuccess) {
-            ntpTime = now;  // This is UTC time
+            ntpTime = now;
             usedServer = String(ntpServers[0]);
             
             Serial.println("\n========================================");
@@ -3634,7 +3646,7 @@ void ntpTask(void *parameter) {
                 currentOffset = timezoneOffset;
                 xSemaphoreGive(settingsMutex);
             } else {
-                currentOffset = 7; // Default to UTC+7
+                currentOffset = 7;
                 Serial.println("WARNING: Cannot get timezone from settings, using default UTC+7");
             }
             
@@ -3714,7 +3726,6 @@ void ntpTask(void *parameter) {
                 
                 saveTimeToRTC();
                 
-                // Verify save
                 vTaskDelay(pdMS_TO_TICKS(500));
                 
                 if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -3758,7 +3769,7 @@ void ntpTask(void *parameter) {
             Serial.println("Consider installing DS3231 RTC module");
             Serial.println("========================================");
         }
-\
+
         if (syncSuccess && wifiConfig.isConnected) {
             Serial.println("\n========================================");
             Serial.println("AUTO PRAYER TIMES UPDATE - TRIGGER");
