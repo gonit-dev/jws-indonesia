@@ -1549,7 +1549,7 @@ void setupServerRoutes() {
 
     response -> addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     response -> addHeader("Pragma", "no-cache");
-    response -> addHeader("Expires", "0");;
+    response -> addHeader("Expires", "0");
     response -> addHeader("Content-Type", "text/css; charset=utf-8");
 
     request -> send(response);

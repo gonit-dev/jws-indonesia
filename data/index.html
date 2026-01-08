@@ -2305,7 +2305,7 @@
 						if (pass) savedWiFiConfig.apPassword = pass;
 
 						await showToastBeforeCountdown(
-							`Access Point "${ssid}" akan dimulai ulang dalam 60 detik...`, 
+							`Access Point berhasil disimpan ${ssid}`, 
 							'success'
 						);
 
@@ -2371,7 +2371,7 @@
 					if (response.ok) {
 						const networkMsg = apIP ? apIP : '192.168.4.1';
 						await showToastBeforeCountdown(
-							`Konfigurasi jaringan disimpan (IP: ${networkMsg}). Access Point akan dimulai ulang dalam 60 detik...`,
+							`Konfigurasi jaringan berhasil disimpan ${networkMsg}`,
 							'success'
 						);
 
@@ -2455,7 +2455,7 @@
 				.then(async response => {
 					if (response.ok) {
 						await showToastBeforeCountdown(
-							'Pengaturan mulai ulang. Perangkat akan dimulai ulang dalam 60 detik...',
+							'Pengaturan dihapus, perangkat akan dimulai ulang',
 							'success'
 						);
 
@@ -2926,7 +2926,7 @@
 				});
 
 				if (response.ok) {
-					await showToastBeforeCountdown('Memulai ulang perangkat dalam 60 detik...', 'success');
+					await showToastBeforeCountdown('Memulai ulang perangkat', 'success');
 					
 					btn.disabled = false;
 					btn.textContent = originalText;
