@@ -220,12 +220,12 @@ Partition Scheme: Default 4MB with spiffs
 ```
 AP SSID: "JWS Indonesia"
 Password: "12345678"
-URL: http://192.168.4.1
+URL: http://192.168.100.1
 ```
 
 ### Setup WiFi
 1. Sambungkan ke AP "JWS Indonesia"
-2. Buka browser → `http://192.168.4.1`
+2. Buka browser → `http://192.168.100.1`
 3. Tab **WIFI** → Input SSID dan Password WiFi rumah
 4. Klik **Simpan** → Tunggu ~30 detik
 
@@ -296,7 +296,7 @@ Tab **WAKTU** → Klik ikon edit (🕐) → Input offset → Klik 💾
 ### Tab RESET
 - **Factory Reset:** Countdown 60 detik dengan progress bar
 - Hapus semua konfigurasi, kembalikan ke default
-- Auto-redirect ke 192.168.4.1
+- Auto-redirect ke 192.168.100.1
 
 ---
 
@@ -672,7 +672,7 @@ JSON format looks valid
 
 AP SSID:     JWS Indonesia
 AP Password: 12345678
-AP IP:       192.168.4.1
+AP IP:       192.168.100.1
 ```
 
 ### Rekomendasi
