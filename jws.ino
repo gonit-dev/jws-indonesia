@@ -237,7 +237,7 @@ AdzanState adzanState = {false, "", 0, 0, false};
 SemaphoreHandle_t audioMutex = NULL;
 TaskHandle_t audioTaskHandle = NULL;
 DFRobotDFPlayerMini dfPlayer;
-HardwareSerial dfSerial(2); // Use UART2
+HardwareSerial dfSerial(2);
 bool dfPlayerAvailable = false;
 
 WiFiConfig wifiConfig;
@@ -1399,10 +1399,7 @@ bool initRTC() {
     
     Serial.println("RTC hardware test PASSED");
     Serial.println("RTC is working correctly");
-    
-    // ========================================
-    // CHECK BATTERY STATUS
-    // ========================================
+
     if (rtc.lostPower()) {
         Serial.println("\nWARNING: RTC lost power!");
         Serial.println("Battery may be dead or disconnected");
@@ -1524,9 +1521,6 @@ void sendJSONResponse(AsyncWebServerRequest *request, const String &json) {
 // Web Server Functions
 // ============================================
 void setupServerRoutes() {
-  // ========================================
-  // HALAMAN UTAMA & ASSETS
-  // ========================================
   server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
     if (!LittleFS.exists("/index.html")) {
       request -> send(404, "text/plain", "index.html not found");
@@ -1561,9 +1555,6 @@ void setupServerRoutes() {
     request -> send(response);
   });
 
-  // ========================================
-  // TAB BERANDA - DEVICE STATUS
-  // ========================================
   server.on("/devicestatus", HTTP_GET, [](AsyncWebServerRequest * request) {
     char timeStr[20];
     char dateStr[20];
@@ -1700,9 +1691,6 @@ void setupServerRoutes() {
       );
   });
 
-  // ========================================
-  // TAB WIFI - ROUTER & AP CONFIG
-  // ========================================
   server.on("/getwificonfig", HTTP_GET, [](AsyncWebServerRequest * request) {
     String json = "{";
 
@@ -1741,9 +1729,6 @@ void setupServerRoutes() {
   });
 
   server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest * request) {
-    // ============================================
-    // DEBOUNCING CHECK
-    // ============================================
     unsigned long now = millis();
     if (now - lastWiFiRestartRequest < RESTART_DEBOUNCE_MS) {
       unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastWiFiRestartRequest);
@@ -1772,7 +1757,6 @@ void setupServerRoutes() {
       Serial.println("========================================");
       Serial.println("New SSID: " + newSSID);
 
-      // Simpan ke memory dan file
       if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
         wifiConfig.routerSSID = newSSID;
         wifiConfig.routerPassword = newPassword;
@@ -1788,12 +1772,12 @@ void setupServerRoutes() {
       request -> send(200, "text/plain", "OK");
 
       xTaskCreate(
-        restartWiFiTask, // Function
-        "WiFiRestart", // Name
-        5120, // Stack size
-        NULL, // Parameter
-        1, // Priority (low)
-        NULL // Handle
+        restartWiFiTask,
+        "WiFiRestart",
+        5120,
+        NULL,
+        1,
+        NULL
       );
 
     } else {
@@ -1994,9 +1978,6 @@ void setupServerRoutes() {
     sendJSONResponse(request, json);
   });
 
-  // ========================================
-  // TAB WAKTU - TIME SYNC & TIMEZONE
-  // ========================================
   server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest * request) {
     if (request -> hasParam("y", true) &&
       request -> hasParam("m", true) &&
@@ -2118,9 +2099,6 @@ void setupServerRoutes() {
         Serial.println("Memory updated");
       }
 
-      // ========================================
-      // TRIGGER NTP SYNC
-      // ========================================
       bool ntpTriggered = false;
       bool prayerWillUpdate = false;
 
@@ -2185,9 +2163,6 @@ void setupServerRoutes() {
       Serial.println("========================================\n");
   });
 
-  // ========================================
-  // TAB LOKASI - CITY & METHOD
-  // ========================================
   server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest * request) {
     if (!LittleFS.exists("/cities.json")) {
       Serial.println("cities.json not found");
@@ -2867,9 +2842,6 @@ void setupServerRoutes() {
       );
   });
 
-  // ========================================
-  // API DATA - REAL-TIME ENDPOINT
-  // ========================================
   server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest * request) {
     char timeStr[20], dateStr[20], dayStr[15];
 
@@ -2964,9 +2936,6 @@ void setupServerRoutes() {
     sendJSONResponse(request, String(jsonBuffer));
   });
 
-  // ========================================
-  // COUNTDOWN STATUS API
-  // ========================================
   server.on("/api/countdown", HTTP_GET, [](AsyncWebServerRequest * request) {
       String json = "{";
 
@@ -2997,9 +2966,6 @@ void setupServerRoutes() {
       sendJSONResponse(request, json);
     });
 
-    // ========================================
-    // ERROR PAGES - 404 HANDLER
-    // ========================================
     server.on("/notfound", HTTP_GET, [](AsyncWebServerRequest * request) {
       String html = "<!DOCTYPE html><html><head>";
       html += "<meta charset='UTF-8'>";
@@ -3355,21 +3321,32 @@ void wifiTask(void *parameter) {
         if (bits & WIFI_DISCONNECTED_BIT) {
             xEventGroupClearBits(wifiEventGroup, WIFI_DISCONNECTED_BIT);
             
-            Serial.print("Handling disconnect event...");
+            Serial.println("\n========================================");
+            Serial.println("WiFi Disconnected Event");
+            Serial.println("========================================");
             
             // ============================================
-            // SAFETY
+            // SAFETY: SKIP EVENTS DURING RESTART
             // ============================================
             if (wifiRestartInProgress || apRestartInProgress) {
-                Serial.println("\nWiFi/AP restart in progress - skipping auto-reconnect");
+                Serial.println("WiFi/AP restart in progress - skipping auto-reconnect");
                 Serial.println("Reason: Avoid conflict with manual restart operation");
+                Serial.println("========================================\n");
                 vTaskDelay(pdMS_TO_TICKS(2000));
                 continue;
             }
             
+            if (autoUpdateDone) {
+                Serial.println("\n>>> RESET FLAG: autoUpdateDone = false <<<");
+                Serial.println("Reason: WiFi disconnected");
+                Serial.println("Effect: NTP & Prayer will re-trigger on next connect");
+                autoUpdateDone = false;
+            }
+            
             IPAddress apIP = WiFi.softAPIP();
             if (apIP == IPAddress(0, 0, 0, 0)) {
-                Serial.print("AP died during disconnect Restarting...");
+                Serial.println("WARNING: AP died during disconnect");
+                Serial.println("Restoring AP...");
                 
                 WiFi.softAPdisconnect(false);
                 vTaskDelay(pdMS_TO_TICKS(500));
@@ -3378,7 +3355,7 @@ void wifiTask(void *parameter) {
                 WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
                 vTaskDelay(pdMS_TO_TICKS(500));
                 
-                Serial.print("AP restored: " + WiFi.softAPIP().toString());
+                Serial.println("AP restored: " + WiFi.softAPIP().toString());
             } else {
                 Serial.println("AP still alive: " + apIP.toString());
             }
@@ -3387,12 +3364,24 @@ void wifiTask(void *parameter) {
             ntpSyncInProgress = false;
             ntpSyncCompleted = false;
             
+            wifiDisconnectedTime = millis();
+
+            if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                wifiConfig.isConnected = false;
+                wifiState = WIFI_IDLE;
+                xSemaphoreGive(wifiMutex);
+            }
+            
+            // Attempt reconnect
             if (wifiConfig.routerSSID.length() > 0) {
-                Serial.print("Attempting reconnect to: " + wifiConfig.routerSSID);
+                Serial.println("Attempting reconnect to: " + wifiConfig.routerSSID);
                 WiFi.begin(wifiConfig.routerSSID.c_str(), 
                           wifiConfig.routerPassword.c_str());
                 wifiState = WIFI_CONNECTING;
             }
+            
+            Serial.println("Will attempt reconnect...");
+            Serial.println("========================================\n");
         }
 
         // ========================================
@@ -3400,14 +3389,22 @@ void wifiTask(void *parameter) {
         // ========================================
         if (bits & WIFI_GOT_IP_BIT) {
             if (!autoUpdateDone && wifiConfig.isConnected) {
+                Serial.println("\n========================================");
+                Serial.println("AUTO-UPDATE SEQUENCE STARTED");
+                Serial.println("========================================");
+                Serial.println("Trigger: WiFi just connected");
+                Serial.println("autoUpdateDone: false (ready to sync)");
+                
                 // ============================================
                 // WAIT FOR NTP SYNC START
                 // ============================================
                 if (!ntpSyncInProgress && !ntpSyncCompleted) {
+                    Serial.println("Waiting for NTP Task to start...");
                     vTaskDelay(pdMS_TO_TICKS(1000));
                     
                     if (!ntpSyncInProgress && !ntpSyncCompleted) {
                         Serial.println("WARNING: NTP sync not started yet");
+                        Serial.println("Waiting additional 2 seconds...");
                         vTaskDelay(pdMS_TO_TICKS(2000));
                     }
                     continue;
@@ -3421,14 +3418,15 @@ void wifiTask(void *parameter) {
                     unsigned long waitStartTime = millis();
                     const unsigned long maxWaitTime = 30000; // 30 detik
                     
+                    Serial.println("Waiting for NTP sync to complete...");
+                    
                     while (ntpSyncInProgress && (millis() - waitStartTime < maxWaitTime)) {
                         vTaskDelay(pdMS_TO_TICKS(500));
                         ntpWaitCounter++;
                         
                         if (ntpWaitCounter % 10 == 0) {  // Log setiap 5 detik
-                            Serial.printf("Waiting for NTP sync to complete... (%lu ms)\n", 
+                            Serial.printf("NTP sync in progress... (%lu ms elapsed)\n", 
                                         millis() - waitStartTime);
-
                             esp_task_wdt_reset();
                         }
                         
@@ -3447,8 +3445,9 @@ void wifiTask(void *parameter) {
                 // ============================================
                 if (ntpSyncCompleted && timeConfig.ntpSynced) {
                     Serial.println("\n========================================");
-                    Serial.println("NTP SYNC COMPLETED - TRIGGER PRAYER UPDATE");
+                    Serial.println("NTP SYNC COMPLETED");
                     Serial.println("========================================");
+                    Serial.println("Next: Trigger Prayer Times Update");
 
                     vTaskDelay(pdMS_TO_TICKS(2000));
 
@@ -3477,11 +3476,11 @@ void wifiTask(void *parameter) {
                                 timeinfo.tm_mon + 1,
                                 timeinfo.tm_year + 1900);
 
-                        Serial.println("Verified Time: " + String(timeStr));
-                        Serial.println("Verified Date: " + String(dateStr));
+                        Serial.println("Current Time: " + String(timeStr));
+                        Serial.println("Current Date: " + String(dateStr));
                         
                         if (timeinfo.tm_year + 1900 >= 2024) {
-                            Serial.println("Time is valid - triggering prayer times update...");
+                            Serial.println("Time is VALID - triggering prayer update");
                             Serial.println("City: " + prayerConfig.selectedCity);
                             Serial.println("Coordinates: " + prayerConfig.latitude + 
                                         ", " + prayerConfig.longitude);
@@ -3495,7 +3494,10 @@ void wifiTask(void *parameter) {
                                 
                                 if (prayerTaskHandle != NULL) {
                                     xTaskNotifyGive(prayerTaskHandle);
-                                    Serial.println("Prayer Task triggered - will update in background");
+                                    Serial.println("Prayer Task TRIGGERED");
+                                    Serial.println("Status: Update in background");
+                                } else {
+                                    Serial.println("ERROR: Prayer Task handle NULL");
                                 }
                             }
                         } else {
@@ -3507,33 +3509,37 @@ void wifiTask(void *parameter) {
 
                     } else {
                         Serial.println("\n========================================");
-                        Serial.println("PRAYER TIMES AUTO-UPDATE SKIPPED");
+                        Serial.println("PRAYER UPDATE SKIPPED");
                         Serial.println("========================================");
                         Serial.println("Reason: No city coordinates available");
+                        Serial.println("Action: Configure city via web interface");
                         Serial.println("========================================\n");
                     }
 
                     autoUpdateDone = true;
+                    Serial.println(">>> autoUpdateDone = true <<<");
+                    Serial.println("Status: Auto-update cycle completed");
+                    Serial.println("Note: Will reset on next disconnect\n");
                 }
             }
-            
+
             if (millis() - lastMonitor > 60000) {
                 lastMonitor = millis();
-                Serial.printf("WiFi: Connected | RSSI: %d dBm | IP: %s\n",
+                Serial.printf("\n[WiFi Monitor] Connected | RSSI: %d dBm | IP: %s\n",
                             WiFi.RSSI(),
                             WiFi.localIP().toString().c_str());
             }
         }
 
         // ========================================
-        // Check if a first-time connection is required
+        // CHECK FIRST-TIME CONNECTION
         // ========================================
         if (wifiState == WIFI_IDLE && wifiConfig.routerSSID.length() > 0) {
             bool isConnected = (bits & WIFI_CONNECTED_BIT) != 0;
             
             if (!isConnected) {
-                Serial.print("Initial WiFi connect...");
-                Serial.print("   SSID: " + wifiConfig.routerSSID);
+                Serial.println("\n[WiFi Task] Initial connection attempt");
+                Serial.println("SSID: " + wifiConfig.routerSSID);
                 
                 WiFi.begin(wifiConfig.routerSSID.c_str(), 
                           wifiConfig.routerPassword.c_str());
@@ -3570,23 +3576,16 @@ void ntpTask(void *parameter) {
         bool syncSuccess = false;
         time_t ntpTime = 0;
         String usedServer = "";
-        
-        // ============================================
-        // SYNC WITH UTC+0 FIRST (NO TIMEZONE)
-        // ============================================
+
         Serial.println("Syncing with NTP servers (UTC+0)...");
         Serial.println("Reason: Get raw UTC time first, apply timezone AFTER success");
         Serial.println("");
         
-        // Use UTC+0 for initial sync - NO TIMEZONE YET!
         configTzTime("UTC0", 
                      ntpServers[0], 
                      ntpServers[1], 
                      ntpServers[2]);
         
-        // ============================================
-        // WAIT FOR NTP SYNC (UTC TIME ONLY)
-        // ============================================
         time_t now = 0;
         struct tm timeinfo = {0};
         int retry = 0;
@@ -3626,9 +3625,6 @@ void ntpTask(void *parameter) {
             Serial.printf("NTP Server: %s\n", usedServer.c_str());
             Serial.println("========================================");
             
-            // ============================================
-            // APPLY TIMEZONE OFFSET (AFTER SUCCESS)
-            // ============================================
             Serial.println("\n========================================");
             Serial.println("APPLYING TIMEZONE OFFSET");
             Serial.println("========================================");
@@ -3646,7 +3642,6 @@ void ntpTask(void *parameter) {
             Serial.printf("Offset: %+d hours (%+ld seconds)\n", 
                          currentOffset, (long)(currentOffset * 3600));
             
-            // Manual timezone adjustment to UTC time
             time_t localTime = ntpTime + (currentOffset * 3600);
             
             struct tm localTimeinfo;
@@ -3681,9 +3676,6 @@ void ntpTask(void *parameter) {
             Serial.println("========================================");
         }
         
-        // ============================================
-        // SAVE TIME TO SYSTEM (IF SUCCESS)
-        // ============================================
         if (syncSuccess) {
             Serial.println("\n========================================");
             Serial.println("SAVING TIME TO SYSTEM");
@@ -3711,9 +3703,6 @@ void ntpTask(void *parameter) {
             Serial.println("========================================");
         }
         
-        // ============================================
-        // SAVE TO RTC (IF AVAILABLE & SUCCESS)
-        // ============================================
         if (rtcAvailable && syncSuccess) {
             Serial.println("\n========================================");
             Serial.println("SAVING TIME TO RTC HARDWARE");
@@ -3769,10 +3758,7 @@ void ntpTask(void *parameter) {
             Serial.println("Consider installing DS3231 RTC module");
             Serial.println("========================================");
         }
-
-        // ============================================
-        // AUTO PRAYER TIMES UPDATE
-        // ============================================
+\
         if (syncSuccess && wifiConfig.isConnected) {
             Serial.println("\n========================================");
             Serial.println("AUTO PRAYER TIMES UPDATE - TRIGGER");
@@ -3956,7 +3942,6 @@ void webTask(void *parameter) {
     }
   }
 }
-
 
 void prayerTask(void *parameter) {
     esp_task_wdt_add(NULL);
@@ -4208,18 +4193,12 @@ void rtcSyncTask(void *parameter) {
     
     while (true) {
         if (rtcAvailable) {
-            // ================================
-            // CHECK RTC VALID FIRST
-            // ================================
             if (!isRTCValid()) {
                 Serial.println("\n[RTC Sync] Skipped - RTC invalid");
                 vTaskDelayUntil(&xLastWakeTime, xFrequency);
                 continue;
             }
             
-            // ================================
-            // READ RTC TIME
-            // ================================
             DateTime rtcTime;
             if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
                 rtcTime = rtc.now();
@@ -4229,10 +4208,7 @@ void rtcSyncTask(void *parameter) {
                 vTaskDelayUntil(&xLastWakeTime, xFrequency);
                 continue;
             }
-            
-            // ================================
-            // RTC TIME VALIDATION
-            // ================================
+
             if (!isRTCTimeValid(rtcTime)) {
                 Serial.println("\n[RTC Sync] Skipped - RTC time invalid");
                 Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
@@ -4241,10 +4217,7 @@ void rtcSyncTask(void *parameter) {
                 vTaskDelayUntil(&xLastWakeTime, xFrequency);
                 continue;
             }
-            
-            // ================================
-            // COMPARE WITH SYSTEM TIME
-            // ================================
+
             time_t systemTime;
             bool ntpSynced;
             
@@ -4259,10 +4232,7 @@ void rtcSyncTask(void *parameter) {
             
             time_t rtcUnix = rtcTime.unixtime();
             int timeDiff = abs(systemTime - rtcUnix);
-            
-            // ================================
-            // DECISION LOGIC
-            // ================================
+
             bool shouldSync = false;
             String reason = "";
             
@@ -4290,9 +4260,6 @@ void rtcSyncTask(void *parameter) {
                 reason = "RTC time more accurate, correcting system time";
             }
             
-            // ================================
-            // SYNC SYSTEM TIME FROM RTC
-            // ================================
             if (shouldSync) {
                 if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
                     timeConfig.currentTime = rtcUnix;
@@ -4333,16 +4300,12 @@ void clockTickTask(void *parameter) {
     
     while (true) {
         if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-            // ================================
-            // Prevent timestamp sebelum 01/01/2000
-            // ================================
             if (timeConfig.currentTime < EPOCH_2000) { 
                 Serial.println("\nCLOCK TASK WARNING:");
                 Serial.printf("  Invalid timestamp detected: %ld\n", timeConfig.currentTime);
                 Serial.println("  This is before 01/01/2000 00:00:00");
                 Serial.println("  Forcing reset to: 01/01/2000 00:00:00");
                 
-                // RESET KE 01/01/2000 00:00:00
                 setTime(0, 0, 0, 1, 1, 2000);
                 timeConfig.currentTime = now();
                 
@@ -4364,9 +4327,6 @@ void clockTickTask(void *parameter) {
             xQueueSend(displayQueue, &update, 0);
         }
 
-        // ================================
-        // AUTO NTP SYNC EVERY HOUR
-        // ================================
         if (wifiConfig.isConnected) {
             autoSyncCounter++;
             if (autoSyncCounter >= 3600) {  // 3600 seconds = 1 hour
