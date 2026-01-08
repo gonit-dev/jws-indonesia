@@ -1,9 +1,9 @@
 <!doctype html>
 <html class="no-js" lang="en">
 <head>
- <meta charset="utf-8" />
- <meta http-equiv="x-ua-compatible" content="ie=edge">
- <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Jadwal Shalat</title>
 	<link rel="stylesheet" href="css/foundation.min.css">
 	<style>
@@ -619,7 +619,7 @@
 																🗄️ Beberapa server cadangan </br>
 																🌐 Zona waktu: UTC
 																<span id="timezoneDisplayText">+7</span>
-																<input type="text" id="timezoneInput" value="+7" style="display: none; width: 60px; height: 25px; padding: 2px 5px; margin: 0 5px; text-align: center; font-weight: bold;" pattern="^[+-]?d+$" maxlength="3">
+																<input type="text" id="timezoneInput" value="+7" style="display: none; width: 60px; height: 25px; padding: 2px 5px; margin: 0 5px; text-align: center; font-weight: bold;" pattern="^[+-]?\d+$" maxlength="3">
 																<button id="timezoneBtn" onclick="toggleTimezoneEdit()" style="margin-left: -5px; padding: 5px 10px; line-height: 1;" title="Edit Zona Waktu"> 🕐 </button>
 																<button id="timezoneCancelBtn" onclick="cancelTimezoneEdit()" style="display: none; margin-left: -5px; padding: 5px 10px; line-height: 1;" title="Batal Edit"> ✖ </button>
 															</p>
@@ -692,14 +692,14 @@
 														<div class="medium-6 small-12 large-6 cell">
 															<label>Latitude (Lintang)</label>
 															<input type="text" id="latInput" placeholder="-6.2088"
-																pattern="^-?d+.?d*$">
+																pattern="^-?\d+\.?\d*$">
 															<p class="help-text">
 																Contoh: -6.2088
 															</p>
 														</div>
 														<div class="medium-6 small-12 large-6 cell">
 															<label>Longitude (Bujur)</label>
-															<input type="text" id="lonInput" placeholder="106.8456" pattern="^-?d+.?d*$">
+															<input type="text" id="lonInput" placeholder="106.8456" pattern="^-?\d+\.?\d*$">
 															<p class="help-text">
 																Contoh: 106.8456
 															</p>
@@ -752,7 +752,7 @@
 														<p class="help-text">
 															📍 Pilih lokasi untuk menghitung jadwal shalat </br>
 															📐 Pilih metode perhitungan </br>
-															🔄 Jadwal diperbarui otomatis setelah memilih lokasi
+															🔄 Jadwal akan diperbarui otomatis setelah memilih lokasi
 														</p>
 													</div>
 												</div>
@@ -820,7 +820,7 @@
 															📄 Nama berkas harus <code>cities.json</code> </br>
 															🧾 Format harus valid JSON array </br>
 															📦 Ukuran maksimal: 1 MB </br>
-															🔄 Dropdown lokasi otomatis diperbarui setelah berhasil
+															🔄 Dropdown lokasi akan otomatis diperbarui setelah berhasil
 														</p>
 													</div>
 												</div>
@@ -1016,7 +1016,7 @@
 												<div class="medium-12 small-12 large-12 cell">
 													<div class="callout secondary">
 														<p>
-															<strong>Peringatan</strong> Tindakan ini menghapus
+															<strong>Peringatan</strong> Tindakan ini akan menghapus
 															seluruh data dan tidak dapat dibatalkan
 														</p>
 														<p class="help-text">
@@ -1261,7 +1261,7 @@
 		// ================================
 		function extractLocationType(displayName) {
 			if (!displayName) return null;
-			const match = displayName.match(/(([^)]+))$/);
+			const match = displayName.match(/\(([^)]+)\)$/);
 			if (!match) return null;
 			const typeInBracket = match[1].toLowerCase().trim();
 			const typeMap = {
@@ -2455,7 +2455,7 @@
 				.then(async response => {
 					if (response.ok) {
 						await showToastBeforeCountdown(
-							'Pengaturan dihapus, perangkat dimulai ulang',
+							'Pengaturan dihapus, perangkat akan dimulai ulang',
 							'success'
 						);
 
@@ -3100,7 +3100,7 @@
 					showToast('Zona waktu berhasil disimpan', 'success');
 
 					setTimeout(() => {
-						showToast('NTP melakukan perbarui ulang dengan zona waktu baru...', 'warning');
+						showToast('NTP akan melakukan perbarui ulang dengan zona waktu baru...', 'warning');
 					}, 1500);
 
 				} else {
@@ -3332,7 +3332,7 @@
 			const subnetInput = document.getElementById('subnetMask');
 
 			function validateIPAddress(ip) {
-				const ipPattern = /^(d{1,3}).(d{1,3}).(d{1,3}).(d{1,3})$/;
+				const ipPattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
 				const match = ip.match(ipPattern);
 
 				if (!match) return false;
@@ -3363,7 +3363,7 @@
 
 					const char = e.key;
 					// Hanya izinkan angka dan titik
-					if (!/^[d.]$/.test(char)) {
+					if (!/^[\d\.]$/.test(char)) {
 						e.preventDefault();
 					}
 				});
@@ -3387,15 +3387,15 @@
 				input.addEventListener('input', function () {
 					const value = this.value;
 
-					if (/[^d.]/.test(value)) {
-						this.value = value.replace(/[^d.]/g, '');
+					if (/[^\d\.]/.test(value)) {
+						this.value = value.replace(/[^\d\.]/g, '');
 					}
 
-					if (/.{2,}/.test(value)) {
-						this.value = value.replace(/.{2,}/g, '.');
+					if (/\.{2,}/.test(value)) {
+						this.value = value.replace(/\.{2,}/g, '.');
 					}
 
-					const dots = (value.match(/./g) || []).length;
+					const dots = (value.match(/\./g) || []).length;
 					if (dots > 3) {
 						const parts = value.split('.');
 						this.value = parts.slice(0, 4).join('.');
@@ -3449,7 +3449,7 @@
 					}
 
 					const char = e.key;
-					if (!/^[d+-]$/.test(char)) {
+					if (!/^[\d\+\-]$/.test(char)) {
 						e.preventDefault();
 					}
 				});
@@ -3475,7 +3475,7 @@
 					}
 
 					const char = e.key;
-					if (!/^[d.+-]$/.test(char)) {
+					if (!/^[\d\.\+\-]$/.test(char)) {
 						e.preventDefault();
 					}
 				});
@@ -3507,7 +3507,7 @@
 					}
 
 					const char = e.key;
-					if (!/^[d.+-]$/.test(char)) {
+					if (!/^[\d\.\+\-]$/.test(char)) {
 						e.preventDefault();
 					}
 				});

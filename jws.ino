@@ -882,7 +882,7 @@ void loadWiFiCredentials() {
           ipStr.trim();
           wifiConfig.apIP.fromString(ipStr);
         } else {
-          wifiConfig.apIP = IPAddress(192, 168, 4, 1);
+          wifiConfig.apIP = IPAddress(192, 168, 100, 1);
         }
         
         if (file.available()) {
@@ -890,7 +890,7 @@ void loadWiFiCredentials() {
           gwStr.trim();
           wifiConfig.apGateway.fromString(gwStr);
         } else {
-          wifiConfig.apGateway = IPAddress(192, 168, 4, 1);
+          wifiConfig.apGateway = IPAddress(192, 168, 100, 1);
         }
         
         if (file.available()) {
@@ -910,8 +910,8 @@ void loadWiFiCredentials() {
     } else {
       strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
       strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
-      wifiConfig.apIP = IPAddress(192, 168, 4, 1);
-      wifiConfig.apGateway = IPAddress(192, 168, 4, 1);
+      wifiConfig.apIP = IPAddress(192, 168, 100, 1);
+      wifiConfig.apGateway = IPAddress(192, 168, 100, 1);
       wifiConfig.apSubnet = IPAddress(255, 255, 255, 0);
     }
     xSemaphoreGive(settingsMutex);
@@ -2741,8 +2741,8 @@ void setupServerRoutes() {
           
           strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
           strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
-          wifiConfig.apIP = IPAddress(192, 168, 4, 1);
-          wifiConfig.apGateway = IPAddress(192, 168, 4, 1);
+          wifiConfig.apIP = IPAddress(192, 168, 100, 1);
+          wifiConfig.apGateway = IPAddress(192, 168, 100, 1);
           wifiConfig.apSubnet = IPAddress(255, 255, 255, 0);
           
           xSemaphoreGive(settingsMutex);
@@ -4610,8 +4610,8 @@ void restartAPTask(void *parameter) {
         Serial.println("ERROR: Cannot load config - using defaults");
         strncpy(savedSSID, DEFAULT_AP_SSID, sizeof(savedSSID));
         strncpy(savedPassword, DEFAULT_AP_PASSWORD, sizeof(savedPassword));
-        savedAPIP = IPAddress(192, 168, 4, 1);
-        savedGateway = IPAddress(192, 168, 4, 1);
+        savedAPIP = IPAddress(192, 168, 100, 1);
+        savedGateway = IPAddress(192, 168, 100, 1);
         savedSubnet = IPAddress(255, 255, 255, 0);
     }
 
@@ -4658,8 +4658,8 @@ void restartAPTask(void *parameter) {
         
         strcpy(savedSSID, DEFAULT_AP_SSID);
         strcpy(savedPassword, DEFAULT_AP_PASSWORD);
-        savedAPIP = IPAddress(192, 168, 4, 1);
-        savedGateway = IPAddress(192, 168, 4, 1);
+        savedAPIP = IPAddress(192, 168, 100, 1);
+        savedGateway = IPAddress(192, 168, 100, 1);
         savedSubnet = IPAddress(255, 255, 255, 0);
         
         WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
@@ -5028,8 +5028,8 @@ void setup() {
   // LITTLEFS & LOAD SETTINGS
   // ================================
   if (wifiConfig.apIP == IPAddress(0, 0, 0, 0)) {
-    wifiConfig.apIP = IPAddress(192, 168, 4, 1);
-    wifiConfig.apGateway = IPAddress(192, 168, 4, 1);
+    wifiConfig.apIP = IPAddress(192, 168, 100, 1);
+    wifiConfig.apGateway = IPAddress(192, 168, 100, 1);
     wifiConfig.apSubnet = IPAddress(255, 255, 255, 0);
   }
 
