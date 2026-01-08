@@ -208,7 +208,7 @@ Upload Speed: 921600
 CPU Frequency: 240MHz
 Flash Frequency: 80MHz
 Flash Mode: QIO
-Flash Size: 4MB (3MB APP / 1MB SPIFFS)
+Flash Size: 4MB (2MB APP / 2MB SPIFFS)
 Partition Scheme: Default 4MB with spiffs
 ```
 
