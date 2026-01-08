@@ -1640,6 +1640,8 @@ void setupServerRoutes() {
       );
       
       bool isLocalAP = (apNetwork == clientNetwork);
+
+      vTaskDelay(pdMS_TO_TICKS(2000));
       
       startCountdown("device_restart", "Memulai Ulang Perangkat", 60);
       
@@ -1932,6 +1934,8 @@ void setupServerRoutes() {
       Serial.println("CLIENT INFO:");
       Serial.println("  IP: " + clientIP.toString());
       Serial.println("  Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
+
+      vTaskDelay(pdMS_TO_TICKS(2000));
 
       if (isLocalAP) {
           startCountdown("ap_restart", "Memulai Ulang Access Point", 60);
@@ -2794,6 +2798,8 @@ void setupServerRoutes() {
       );
       
       bool isLocalAP = (apNetwork == clientNetwork);
+
+      vTaskDelay(pdMS_TO_TICKS(2000));
       
       startCountdown("factory_reset", "Pengaturan Ulang Perangkat", 60);
       
