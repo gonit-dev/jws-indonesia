@@ -3372,9 +3372,11 @@ void wifiTask(void *parameter) {
                 xSemaphoreGive(wifiMutex);
             }
             
-            // Attempt reconnect
             if (wifiConfig.routerSSID.length() > 0) {
                 Serial.println("Attempting reconnect to: " + wifiConfig.routerSSID);
+                
+                esp_netif_set_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), "JWS-Indonesia");
+                
                 WiFi.begin(wifiConfig.routerSSID.c_str(), 
                           wifiConfig.routerPassword.c_str());
                 wifiState = WIFI_CONNECTING;
@@ -3540,6 +3542,8 @@ void wifiTask(void *parameter) {
             if (!isConnected) {
                 Serial.println("\n[WiFi Task] Initial connection attempt");
                 Serial.println("SSID: " + wifiConfig.routerSSID);
+                
+                esp_netif_set_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), "JWS-Indonesia");
                 
                 WiFi.begin(wifiConfig.routerSSID.c_str(), 
                           wifiConfig.routerPassword.c_str());
@@ -4967,16 +4971,10 @@ void setup() {
   Serial.println("VERSION 2.3 - HTTP TASK SEPARATED");
   Serial.println("========================================\n");
 
-  // ================================
-  // TURN OFF THE BACKLIGHT TOTALLY FIRST
-  // ================================
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, LOW);
   Serial.println("Backlight: OFF");
 
-  // ================================
-  // INIT TFT
-  // ================================
   pinMode(TOUCH_IRQ, INPUT_PULLUP);
 
   tft.begin();
@@ -4985,9 +4983,6 @@ void setup() {
 
   Serial.println("TFT initialized");
 
-  // ================================
-  // CREATE SEMAPHORES & QUEUE
-  // ================================
   displayMutex = xSemaphoreCreateMutex();
   timeMutex = xSemaphoreCreateMutex();
   wifiMutex = xSemaphoreCreateMutex();
@@ -5001,9 +4996,6 @@ void setup() {
   
   Serial.println("Semaphores & Queues created");
 
-  // ================================
-  // DFPLAYER INIT
-  // ================================
   dfPlayerAvailable = initDFPlayer();
 
   if (dfPlayerAvailable) {
@@ -5035,9 +5027,6 @@ void setup() {
     Serial.println("Adzan state cleaned - buzzer-only mode active");
   }
 
-  // ================================
-  // LITTLEFS & LOAD SETTINGS
-  // ================================
   if (wifiConfig.apIP == IPAddress(0, 0, 0, 0)) {
     wifiConfig.apIP = IPAddress(192, 168, 4, 1);
     wifiConfig.apGateway = IPAddress(192, 168, 4, 1);
@@ -5058,9 +5047,6 @@ void setup() {
   Wire.beginTransmission(0x68);
   Wire.endTransmission();
 
-  // ================================
-  // RTC DS3231 INIT
-  // ================================
   rtcAvailable = initRTC();
 
   if (rtcAvailable) {
@@ -5084,24 +5070,15 @@ void setup() {
       }
   }
 
-  // ================================
-  // TOUCH INIT
-  // ================================
   touchSPI.begin(TOUCH_CLK, TOUCH_MISO, TOUCH_MOSI, TOUCH_CS);
   touch.begin(touchSPI);
   touch.setRotation(1);
   Serial.println("Touch initialized");
 
-  // ================================
-  // BUZZER INIT
-  // ================================
   ledcAttach(BUZZER_PIN, BUZZER_FREQ, BUZZER_RESOLUTION);
   ledcWrite(BUZZER_CHANNEL, 0);
   Serial.println("Buzzer initialized (GPIO26)");
 
-  // ================================
-  // LVGL INIT
-  // ================================
   lv_init();
   lv_tick_set_cb([]() {
     return (uint32_t)millis();
@@ -5118,18 +5095,12 @@ void setup() {
 
   Serial.println("LVGL initialized");
 
-  // ================================
-  // EEZ UI INIT
-  // ================================
   ui_init();
   Serial.println("EEZ UI initialized");
 
   hideAllUIElements();
   Serial.println("UI elements hidden");
 
-  // ================================
-  // FORCE RENDER BLACK SCREEN
-  // ================================
   delay(100);
   lv_timer_handler();
   delay(100);
@@ -5146,34 +5117,37 @@ void setup() {
   ledcWrite(TFT_BL, TFT_BL_BRIGHTNESS);
   Serial.printf("Backlight ON: %d/255\n", TFT_BL_BRIGHTNESS);
 
-  // ================================
-  // WIFI CONFIGURATION
-  // ================================
   Serial.println("\n========================================");
   Serial.println("WIFI CONFIGURATION");
   Serial.println("========================================");
 
   setupWiFiEvents();
+
+  WiFi.mode(WIFI_OFF);
+  delay(500);
+
+  esp_netif_t *sta_netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+  if (sta_netif != NULL) {
+    esp_netif_set_hostname(sta_netif, "JWS-Indonesia");
+    Serial.println("Hostname set via ESP-IDF: JWS-Indonesia");
+  } else {
+    Serial.println("WARNING: Could not get STA netif handle");
+  }
+
   WiFi.mode(WIFI_AP_STA);
   delay(100);
 
+  WiFi.setHostname("JWS-Indonesia");
+
   Serial.println("Applying WiFi optimizations for router access...");
-  
+
   esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
   esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT40);
   WiFi.setTxPower(WIFI_POWER_19_5dBm);
-  
+
   Serial.println("  Protocol: 802.11 b/g/n");
   Serial.println("  Bandwidth: 40MHz (HT40)");
   Serial.println("  TX Power: 19.5dBm (max)");
-
-  // ================================
-  // SET HOSTNAME
-  // ================================
-  WiFi.setHostname("JWS-Indonesia");
-  delay(200);
-  Serial.print("Hostname: ");
-  Serial.println(WiFi.getHostname());
 
   WiFi.setSleep(WIFI_PS_NONE);
   esp_wifi_set_ps(WIFI_PS_NONE);
@@ -5202,15 +5176,9 @@ void setup() {
   Serial.println(WiFi.softAPIP());
   Serial.printf("AP MAC: %s\n", WiFi.softAPmacAddress().c_str());
 
-  // ================================
-  // TIME CONFIG INIT
-  // ================================
   timeConfig.ntpServer = "pool.ntp.org";
   timeConfig.ntpSynced = false;
 
-  // ================================
-  // DISPLAY LOADED CITY & PRAYER TIMES
-  // ================================
   if (prayerConfig.selectedCity.length() > 0) {
     Serial.println("\nSelected City: " + prayerConfig.selectedCity);
     Serial.println("\nLoaded Prayer Times:");
@@ -5231,9 +5199,6 @@ void setup() {
     Serial.println("Please select city via web interface");
   }
 
-  // ================================
-  // WATCHDOG CONFIGURATION
-  // ================================
   Serial.println("\nConfiguring Watchdog...");
 
   esp_task_wdt_deinit();
@@ -5251,16 +5216,10 @@ void setup() {
     Serial.printf("Watchdog init error: %s\n", esp_err_to_name(wdt_err));
   }
 
-  // ================================
-  // CREATE FREERTOS TASKS
-  // ================================
   Serial.println("\n========================================");
   Serial.println("STARTING FREERTOS TASKS");
   Serial.println("========================================");
 
-  // ================================
-  // UI TASK
-  // ================================
   xTaskCreatePinnedToCore(
     uiTask,
     "UI",
@@ -5457,9 +5416,6 @@ void setup() {
 
   vTaskDelay(pdMS_TO_TICKS(500));
 
-  // ================================
-  // REGISTER TASKS TO WATCHDOG
-  // ================================
   Serial.println("\nRegistering tasks to watchdog:");
   
   if (wifiTaskHandle) {
@@ -5477,9 +5433,6 @@ void setup() {
 
   Serial.println("========================================\n");
 
-  // ================================
-  // MEMORY & STACK REPORT
-  // ================================
   Serial.println("========================================");
   Serial.println("MEMORY REPORT");
   Serial.println("========================================");
