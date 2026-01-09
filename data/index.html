@@ -363,7 +363,7 @@
 		<div class="loader-content">
 			<div class="loader-icon">🕌</div>
 			<div class="loader-title">Jadwal Shalat</div>
-			<div class="loader-subtitle">Memuat halaman...</div>
+			<div class="loader-subtitle">Menyiapkan halaman...</div>
 			<div class="progress-container">
 				<div class="progress-bar" id="loadingProgress"></div>
 			</div>
@@ -435,7 +435,7 @@
 												<div class="medium-6 small-12 large-6 cell text-left">
 													<p>
 														<strong>Jaringan WiFi:</strong>
-														<span id="wifiName">Memuat...</span>
+														<span id="wifiName">Menyiapkan...</span>
 													</p>
 													<p>
 														<strong>Alamat IP:</strong>
@@ -1645,7 +1645,7 @@
 		// ================================
 		async function loadCities() {
 			const dropdown = document.getElementById('cityDropdown');
-			dropdown.innerHTML = '<option value="">Sedang memuat lokasi...</option>';
+			dropdown.innerHTML = '<option value="">Sedang menyiapkan lokasi...</option>';
 			try {
 				const controller = new AbortController();
 				const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -1710,8 +1710,8 @@
 						loadCities();
 					}, retryDelay);
 				} else {
-					dropdown.innerHTML = '<option value="">Gagal memuat lokasi - Silakan muat ulang halaman</option>';
-					showToast('Gagal memuat daftar lokasi. Muat ulang halaman untuk mencoba lagi', 'error');
+					dropdown.innerHTML = '<option value="">Gagal menyiapkan lokasi - Silakan muat ulang halaman</option>';
+					showToast('Gagal menyiapkan daftar lokasi. Muat ulang halaman untuk mencoba lagi', 'error');
 					loadAttempts = 0;
 				}
 				return false;
@@ -1884,7 +1884,7 @@
 					}
 				}
 			} catch (error) {
-				document.getElementById('currentCity').textContent = 'Terjadi kesalahan memuat';
+				document.getElementById('currentCity').textContent = 'Terjadi kesalahan';
 			}
 		}
 		async function saveCity() {
@@ -3183,8 +3183,8 @@
 			}, LOADING_TIMEOUT);
 
 			try {
-				if (status) status.textContent = 'Memuat halaman...';
-				await updateProgress(10, 'Memuat halaman...');
+				if (status) status.textContent = 'Menyiapkan halaman...';
+				await updateProgress(10, 'Menyiapkan halaman...');
 
 				await cssLoaded;
 				await updateProgress(50, 'Menyiapkan tampilan...');
