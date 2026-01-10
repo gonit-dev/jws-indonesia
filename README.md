@@ -218,13 +218,13 @@ Partition Scheme: Default 4MB with spiffs
 
 ### Boot Pertama
 ```
-AP SSID: "JWS Indonesia"
+AP SSID: "JWS-(id unik)"
 Password: "12345678"
 URL: http://192.168.100.1
 ```
 
 ### Setup WiFi
-1. Sambungkan ke AP "JWS Indonesia"
+1. Sambungkan ke AP "JWS-(id unik)"
 2. Buka browser → `http://192.168.100.1`
 3. Tab **WIFI** → Input SSID dan Password WiFi rumah
 4. Klik **Simpan** → Tunggu ~30 detik
@@ -670,7 +670,7 @@ JSON format looks valid
 ```
 ⚠️ GANTI SETELAH BOOT PERTAMA ⚠️
 
-AP SSID:     JWS Indonesia
+AP SSID:     JWS-(id unik)
 AP Password: 12345678
 AP IP:       192.168.100.1
 ```
