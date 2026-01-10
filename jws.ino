@@ -134,6 +134,7 @@ bool rtcAvailable = false;
 // ================================
 #define DEFAULT_AP_SSID "JWS Indonesia"
 #define DEFAULT_AP_PASSWORD "12345678"
+String hostname = "jws-Indonesia-" + String(ESP.getEfuseMac(), HEX);
 
 // ================================
 // WIFI EVENT GROUP - Event-Driven
@@ -3375,7 +3376,7 @@ void wifiTask(void *parameter) {
             if (wifiConfig.routerSSID.length() > 0) {
                 Serial.println("Attempting reconnect to: " + wifiConfig.routerSSID);
                 
-                esp_netif_set_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), wifiConfig.apSSID);
+                esp_netif_set_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), hostname.c_str());
                 
                 WiFi.begin(wifiConfig.routerSSID.c_str(), 
                           wifiConfig.routerPassword.c_str());
@@ -3543,7 +3544,7 @@ void wifiTask(void *parameter) {
                 Serial.println("\n[WiFi Task] Initial connection attempt");
                 Serial.println("SSID: " + wifiConfig.routerSSID);
                 
-                esp_netif_set_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), wifiConfig.apSSID);
+                esp_netif_set_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), hostname.c_str());
                 
                 WiFi.begin(wifiConfig.routerSSID.c_str(), 
                           wifiConfig.routerPassword.c_str());
@@ -4650,19 +4651,6 @@ void restartAPTask(void *parameter) {
         Serial.println("SSID: \"" + currentSSID + "\" (ACTIVE)");
         Serial.println("IP: " + newAPIP.toString());
         Serial.println("MAC: " + WiFi.softAPmacAddress());
-
-        Serial.println("\nUpdating STA hostname...");
-        esp_netif_t *sta_netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-        if (sta_netif != NULL) {
-            esp_err_t err = esp_netif_set_hostname(sta_netif, savedSSID);
-            if (err == ESP_OK) {
-                Serial.println("Hostname updated: " + String(savedSSID));
-            } else {
-                Serial.println("Hostname update failed: " + String(esp_err_to_name(err)));
-            }
-        } else {
-            Serial.println("WARNING: Could not get STA netif handle");
-        }
         
         if (WiFi.status() == WL_CONNECTED) {
             Serial.println("");
@@ -5141,9 +5129,9 @@ void setup() {
 
   esp_netif_t *sta_netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
   if (sta_netif != NULL) {
-    esp_netif_set_hostname(sta_netif, wifiConfig.apSSID);
+    esp_netif_set_hostname(sta_netif, hostname.c_str());
     Serial.print("Hostname set via ESP-IDF: ");
-    Serial.println(wifiConfig.apSSID);
+    Serial.println(hostname.c_str());
   } else {
     Serial.println("WARNING: Could not get STA netif handle");
   }
