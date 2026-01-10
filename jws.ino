@@ -132,9 +132,9 @@ bool rtcAvailable = false;
 // ================================
 // DEFAULT AP CONFIGURATION
 // ================================
-#define DEFAULT_AP_SSID "JWS Indonesia"
+String DEFAULT_AP_SSID = "JWS-" + String(ESP.getEfuseMac(), HEX);
 #define DEFAULT_AP_PASSWORD "12345678"
-String hostname = "jws-Indonesia-" + String(ESP.getEfuseMac(), HEX);
+String hostname = "JWS- " + String(ESP.getEfuseMac(), HEX);
 
 // ================================
 // WIFI EVENT GROUP - Event-Driven
@@ -909,7 +909,7 @@ void loadWiFiCredentials() {
         Serial.println("  IP: " + wifiConfig.apIP.toString());
       }
     } else {
-      strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
+      DEFAULT_AP_SSID.toCharArray(wifiConfig.apSSID, 33);
       strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
       wifiConfig.apIP = IPAddress(192, 168, 100, 1);
       wifiConfig.apGateway = IPAddress(192, 168, 100, 1);
@@ -2740,7 +2740,7 @@ void setupServerRoutes() {
           prayerConfig.latitude = "";
           prayerConfig.longitude = "";
           
-          strcpy(wifiConfig.apSSID, DEFAULT_AP_SSID);
+          DEFAULT_AP_SSID.toCharArray(wifiConfig.apSSID, 33);
           strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
           wifiConfig.apIP = IPAddress(192, 168, 100, 1);
           wifiConfig.apGateway = IPAddress(192, 168, 100, 1);
@@ -4624,7 +4624,7 @@ void restartAPTask(void *parameter) {
         Serial.println("  IP: " + savedAPIP.toString());
     } else {
         Serial.println("ERROR: Cannot load config - using defaults");
-        strncpy(savedSSID, DEFAULT_AP_SSID, sizeof(savedSSID));
+        DEFAULT_AP_SSID.toCharArray(savedSSID, sizeof(savedSSID));
         strncpy(savedPassword, DEFAULT_AP_PASSWORD, sizeof(savedPassword));
         savedAPIP = IPAddress(192, 168, 100, 1);
         savedGateway = IPAddress(192, 168, 100, 1);
@@ -4672,7 +4672,7 @@ void restartAPTask(void *parameter) {
         Serial.println("========================================");
         Serial.println("Rolling back to default AP...");
         
-        strcpy(savedSSID, DEFAULT_AP_SSID);
+        DEFAULT_AP_SSID.toCharArray(savedSSID, sizeof(savedSSID));
         strcpy(savedPassword, DEFAULT_AP_PASSWORD);
         savedAPIP = IPAddress(192, 168, 100, 1);
         savedGateway = IPAddress(192, 168, 100, 1);
