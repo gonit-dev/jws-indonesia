@@ -134,7 +134,7 @@ bool rtcAvailable = false;
 // ================================
 String DEFAULT_AP_SSID = "JWS-" + String(ESP.getEfuseMac(), HEX);
 #define DEFAULT_AP_PASSWORD "12345678"
-String hostname = "JWS- " + String(ESP.getEfuseMac(), HEX);
+String hostname = "JWS-" + String(ESP.getEfuseMac(), HEX);
 
 // ================================
 // WIFI EVENT GROUP - Event-Driven
