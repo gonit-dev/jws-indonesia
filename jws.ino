@@ -190,6 +190,14 @@ struct PrayerConfig {
   String selectedCityName;
   String latitude;
   String longitude;
+  
+  int tuneImsak = 0;
+  int tuneSubuh = 0;
+  int tuneTerbit = 0;
+  int tuneZuhur = 0;
+  int tuneAshar = 0;
+  int tuneMaghrib = 0;
+  int tuneIsya = 0;
 };
 
 struct MethodConfig {
@@ -1218,6 +1226,15 @@ void saveCitySelection() {
             file.println(prayerConfig.selectedCityName);
             file.println(prayerConfig.latitude);
             file.println(prayerConfig.longitude);
+            
+            file.println(prayerConfig.tuneImsak);
+            file.println(prayerConfig.tuneSubuh);
+            file.println(prayerConfig.tuneTerbit);
+            file.println(prayerConfig.tuneZuhur);
+            file.println(prayerConfig.tuneAshar);
+            file.println(prayerConfig.tuneMaghrib);
+            file.println(prayerConfig.tuneIsya);
+            
             file.flush();
             file.close();
         }
@@ -1247,16 +1264,66 @@ void loadCitySelection() {
         prayerConfig.selectedCityName.trim();
         prayerConfig.latitude.trim();
         prayerConfig.longitude.trim();
+        
+        // TAMBAHKAN INI: Load tune (jika ada)
+        if (file.available()) {
+          String tuneStr = file.readStringUntil('\n');
+          tuneStr.trim();
+          prayerConfig.tuneImsak = tuneStr.toInt();
+        }
+        if (file.available()) {
+          String tuneStr = file.readStringUntil('\n');
+          tuneStr.trim();
+          prayerConfig.tuneSubuh = tuneStr.toInt();
+        }
+        if (file.available()) {
+          String tuneStr = file.readStringUntil('\n');
+          tuneStr.trim();
+          prayerConfig.tuneTerbit = tuneStr.toInt();
+        }
+        if (file.available()) {
+          String tuneStr = file.readStringUntil('\n');
+          tuneStr.trim();
+          prayerConfig.tuneZuhur = tuneStr.toInt();
+        }
+        if (file.available()) {
+          String tuneStr = file.readStringUntil('\n');
+          tuneStr.trim();
+          prayerConfig.tuneAshar = tuneStr.toInt();
+        }
+        if (file.available()) {
+          String tuneStr = file.readStringUntil('\n');
+          tuneStr.trim();
+          prayerConfig.tuneMaghrib = tuneStr.toInt();
+        }
+        if (file.available()) {
+          String tuneStr = file.readStringUntil('\n');
+          tuneStr.trim();
+          prayerConfig.tuneIsya = tuneStr.toInt();
+        }
 
         file.close();
         Serial.println("City selection loaded: " + prayerConfig.selectedCity);
         Serial.println("Lat: " + prayerConfig.latitude + ", Lon: " + prayerConfig.longitude);
+        Serial.printf("Tune: Imsak=%d, Subuh=%d, Terbit=%d, Zuhur=%d, Ashar=%d, Maghrib=%d, Isya=%d\n",
+                     prayerConfig.tuneImsak, prayerConfig.tuneSubuh, prayerConfig.tuneTerbit,
+                     prayerConfig.tuneZuhur, prayerConfig.tuneAshar, prayerConfig.tuneMaghrib,
+                     prayerConfig.tuneIsya);
       }
     } else {
       prayerConfig.selectedCity = "";
       prayerConfig.selectedCityName = "";
       prayerConfig.latitude = "";
       prayerConfig.longitude = "";
+      
+      prayerConfig.tuneImsak = 0;
+      prayerConfig.tuneSubuh = 0;
+      prayerConfig.tuneTerbit = 0;
+      prayerConfig.tuneZuhur = 0;
+      prayerConfig.tuneAshar = 0;
+      prayerConfig.tuneMaghrib = 0;
+      prayerConfig.tuneIsya = 0;
+      
       Serial.println("No city selection found");
     }
     xSemaphoreGive(settingsMutex);
@@ -2192,7 +2259,18 @@ void setupServerRoutes() {
       json += "\"selectedCityApi\":\"" + prayerConfig.selectedCity + "\",";
       json += "\"latitude\":\"" + prayerConfig.latitude + "\",";
       json += "\"longitude\":\"" + prayerConfig.longitude + "\",";
-      json += "\"hasSelection\":" + String(hasSelection ? "true" : "false");
+      json += "\"hasSelection\":" + String(hasSelection ? "true" : "false") + ",";
+      
+      // TAMBAHKAN INI: Kirim tune data
+      json += "\"tune\":{";
+      json += "\"imsak\":" + String(prayerConfig.tuneImsak) + ",";
+      json += "\"subuh\":" + String(prayerConfig.tuneSubuh) + ",";
+      json += "\"terbit\":" + String(prayerConfig.tuneTerbit) + ",";
+      json += "\"zuhur\":" + String(prayerConfig.tuneZuhur) + ",";
+      json += "\"ashar\":" + String(prayerConfig.tuneAshar) + ",";
+      json += "\"maghrib\":" + String(prayerConfig.tuneMaghrib) + ",";
+      json += "\"isya\":" + String(prayerConfig.tuneIsya);
+      json += "}";
 
       xSemaphoreGive(settingsMutex);
     } else {
@@ -2200,7 +2278,8 @@ void setupServerRoutes() {
       json += "\"selectedCityApi\":\"\",";
       json += "\"latitude\":\"\",";
       json += "\"longitude\":\"\",";
-      json += "\"hasSelection\":false";
+      json += "\"hasSelection\":false,";
+      json += "\"tune\":{\"imsak\":0,\"subuh\":0,\"terbit\":0,\"zuhur\":0,\"ashar\":0,\"maghrib\":0,\"isya\":0}";
     }
 
     json += "}";
@@ -2224,6 +2303,28 @@ void setupServerRoutes() {
       String lon = request->hasParam("lon", true) 
           ? request->getParam("lon", true)->value() 
           : "";
+
+      int tuneImsak = request->hasParam("tuneImsak", true) 
+          ? request->getParam("tuneImsak", true)->value().toInt() 
+          : 0;
+      int tuneSubuh = request->hasParam("tuneSubuh", true) 
+          ? request->getParam("tuneSubuh", true)->value().toInt() 
+          : 0;
+      int tuneTerbit = request->hasParam("tuneTerbit", true) 
+          ? request->getParam("tuneTerbit", true)->value().toInt() 
+          : 0;
+      int tuneZuhur = request->hasParam("tuneZuhur", true) 
+          ? request->getParam("tuneZuhur", true)->value().toInt() 
+          : 0;
+      int tuneAshar = request->hasParam("tuneAshar", true) 
+          ? request->getParam("tuneAshar", true)->value().toInt() 
+          : 0;
+      int tuneMaghrib = request->hasParam("tuneMaghrib", true) 
+          ? request->getParam("tuneMaghrib", true)->value().toInt() 
+          : 0;
+      int tuneIsya = request->hasParam("tuneIsya", true) 
+          ? request->getParam("tuneIsya", true)->value().toInt() 
+          : 0;
 
       // Bounds checking
       if (cityApi.length() > 100) cityApi = cityApi.substring(0, 100);
@@ -2250,6 +2351,23 @@ void setupServerRoutes() {
           prayerConfig.selectedCityName = cityName;
           prayerConfig.latitude = lat;
           prayerConfig.longitude = lon;
+          xSemaphoreGive(settingsMutex);
+      }
+
+      if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+          prayerConfig.selectedCity = cityApi;
+          prayerConfig.selectedCityName = cityName;
+          prayerConfig.latitude = lat;
+          prayerConfig.longitude = lon;
+          
+          prayerConfig.tuneImsak = tuneImsak;
+          prayerConfig.tuneSubuh = tuneSubuh;
+          prayerConfig.tuneTerbit = tuneTerbit;
+          prayerConfig.tuneZuhur = tuneZuhur;
+          prayerConfig.tuneAshar = tuneAshar;
+          prayerConfig.tuneMaghrib = tuneMaghrib;
+          prayerConfig.tuneIsya = tuneIsya;
+          
           xSemaphoreGive(settingsMutex);
       }
 
@@ -2739,6 +2857,14 @@ void setupServerRoutes() {
           prayerConfig.selectedCityName = "";
           prayerConfig.latitude = "";
           prayerConfig.longitude = "";
+
+          prayerConfig.tuneImsak = 0;
+          prayerConfig.tuneSubuh = 0;
+          prayerConfig.tuneTerbit = 0;
+          prayerConfig.tuneZuhur = 0;
+          prayerConfig.tuneAshar = 0;
+          prayerConfig.tuneMaghrib = 0;
+          prayerConfig.tuneIsya = 0;
           
           DEFAULT_AP_SSID.toCharArray(wifiConfig.apSSID, 33);
           strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
@@ -4867,11 +4993,22 @@ void httpTask(void *parameter) {
       sprintf(dateStr, "%02d-%02d-%04d", day(now_t), month(now_t), year(now_t));
       
       int currentMethod = methodConfig.methodId;
+      String tuneParam = String(prayerConfig.tuneImsak) + "," +      // Imsak
+                        String(prayerConfig.tuneSubuh) + "," +       // Fajr
+                        String(prayerConfig.tuneTerbit) + "," +      // Sunrise
+                        String(prayerConfig.tuneZuhur) + "," +       // Dhuhr
+                        String(prayerConfig.tuneAshar) + "," +       // Asr
+                        String(prayerConfig.tuneMaghrib) + "," +     // Maghrib
+                        "0," +                                       // Sunset
+                        String(prayerConfig.tuneIsya) + "," +        // Isha
+                        "0";                                         // Midnight
+
       String url = "http://api.aladhan.com/v1/timings/" + String(dateStr) + 
-                   "?latitude=" + request.latitude + 
-                   "&longitude=" + request.longitude + 
-                   "&method=" + String(currentMethod);
-      
+                  "?latitude=" + request.latitude + 
+                  "&longitude=" + request.longitude + 
+                  "&method=" + String(currentMethod) +
+                  "&tune=" + tuneParam;
+
       Serial.println("URL: " + url);
       
       HTTPClient http;

@@ -704,11 +704,47 @@
 																Contoh: 106.8456
 															</p>
 														</div>
-														<div class="medium-6 small-6 large-6 cell">
-															<button class="button secondary expanded" onclick="resetToDefaultCoordinates()" title="Reset ke koordinat dari JSON"> Reset </button>
+														<div class="medium-12 small-12 large-12 cell">
+															<h5 style="margin-top: 20px;"><strong>⚙️ Fine Tuning (Opsional)</strong></h5>
+															<p class="help-text">Koreksi waktu shalat dalam menit (+ atau -)</p>
 														</div>
-														<div class="medium-6 small-6 large-6 cell">
-															<button class="button secondary expanded" onclick="cancelCoordinatesEdit()" title="Batalkan perubahan koordinat"> Batal </button>
+														<div class="medium-12 small-12 large-12 cell">
+															<div class="grid-x grid-margin-x align-center">
+																<div class="medium-3 small-12 large-3 cell">
+																	<label>Imsak</label>
+																	<input type="number" id="tuneImsak" placeholder="0" value="0" min="-99" max="99">
+																</div>
+																<div class="medium-3 small-12 large-3 cell">
+																	<label>Subuh</label>
+																	<input type="number" id="tuneSubuh" placeholder="0" value="0" min="-99" max="99">
+																</div>
+																<div class="medium-3 small-12 large-3 cell">
+																	<label>Terbit</label>
+																	<input type="number" id="tuneTerbit" placeholder="0" value="0" min="-99" max="99">
+																</div>
+																<div class="medium-3 small-12 large-3 cell">
+																	<label>Zuhur</label>
+																	<input type="number" id="tuneZuhur" placeholder="0" value="0" min="-99" max="99">
+																</div>
+																<div class="medium-3 small-12 large-3 cell">
+																	<label>Ashar</label>
+																	<input type="number" id="tuneAshar" placeholder="0" value="0" min="-99" max="99">
+																</div>
+																<div class="medium-3 small-12 large-3 cell">
+																	<label>Maghrib</label>
+																	<input type="number" id="tuneMaghrib" placeholder="0" value="0" min="-99" max="99">
+																</div>
+																<div class="medium-3 small-12 large-3 cell">
+																	<label>Isya</label>
+																	<input type="number" id="tuneIsya" placeholder="0" value="0" min="-99" max="99">
+																</div>
+																<div class="medium-6 small-6 large-6 cell">
+																	<button class="button secondary expanded" onclick="resetToDefaultCoordinates()" title="Reset ke koordinat dari JSON"> Reset </button>
+																</div>
+																<div class="medium-6 small-6 large-6 cell">
+																	<button class="button secondary expanded" onclick="cancelCoordinatesEdit()" title="Batalkan perubahan koordinat"> Batal </button>
+																</div>
+															</div>
 														</div>
 													</div>
 													<div class="grid-x grid-margin-x">
@@ -1172,6 +1208,15 @@
 			lat: '',
 			lon: ''
 		};
+		let tuneConfig = {
+			imsak: 0,
+			subuh: 0,
+			terbit: 0,
+			zuhur: 0,
+			ashar: 0,
+			maghrib: 0,
+			isya: 0
+		};
 		let timezoneConfig = {
 			offset: 7
 		};
@@ -1530,7 +1575,6 @@
 			isCountdownActive = true;
 			document.body.classList.add('countdown-active');
 
-			// Show loading bar
 			const loadingBar = document.getElementById('countdownLoading');
 			const titleElement = document.getElementById('countdownTitle');
 
@@ -1729,6 +1773,15 @@
 			const lonInput = document.getElementById('lonInput');
 			const defaultCoordsSpan = document.getElementById('defaultCoords');
 			const cityTypeLabel = document.getElementById('cityTypeLabel');
+			
+			const tuneImsak = document.getElementById('tuneImsak');
+			const tuneSubuh = document.getElementById('tuneSubuh');
+			const tuneTerbit = document.getElementById('tuneTerbit');
+			const tuneZuhur = document.getElementById('tuneZuhur');
+			const tuneAshar = document.getElementById('tuneAshar');
+			const tuneMaghrib = document.getElementById('tuneMaghrib');
+			const tuneIsya = document.getElementById('tuneIsya');
+			
 			if (!selectedCity || selectedCity === '') {
 				coordinatesForm.classList.add('hide');
 				latInput.value = '';
@@ -1737,18 +1790,29 @@
 				defaultCoordinates.lon = '';
 				defaultCoordsSpan.textContent = '';
 				if (cityTypeLabel) cityTypeLabel.textContent = '';
+				
+				if (tuneImsak) tuneImsak.value = 0;
+				if (tuneSubuh) tuneSubuh.value = 0;
+				if (tuneTerbit) tuneTerbit.value = 0;
+				if (tuneZuhur) tuneZuhur.value = 0;
+				if (tuneAshar) tuneAshar.value = 0;
+				if (tuneMaghrib) tuneMaghrib.value = 0;
+				if (tuneIsya) tuneIsya.value = 0;
 				return;
 			}
+			
 			const selectedOption = dropdown.options[dropdown.selectedIndex];
 			const lat = selectedOption.getAttribute('data-lat');
 			const lon = selectedOption.getAttribute('data-lon');
 			const typeLabel = selectedOption.getAttribute('data-type');
 			const typeEmoji = selectedOption.getAttribute('data-type-emoji');
+			
 			if (cityTypeLabel && typeLabel && typeEmoji) {
 				cityTypeLabel.textContent = `${typeEmoji} ${typeLabel}`;
 			} else if (cityTypeLabel) {
 				cityTypeLabel.textContent = '';
 			}
+			
 			if (lat && lon) {
 				defaultCoordinates.lat = lat;
 				defaultCoordinates.lon = lon;
@@ -1756,6 +1820,14 @@
 				latInput.value = lat;
 				lonInput.value = lon;
 				defaultCoordsSpan.textContent = `${parseFloat(lat).toFixed(4)}°, ${parseFloat(lon).toFixed(4)}°`;
+				
+				if (tuneImsak) tuneImsak.value = 0;
+				if (tuneSubuh) tuneSubuh.value = 0;
+				if (tuneTerbit) tuneTerbit.value = 0;
+				if (tuneZuhur) tuneZuhur.value = 0;
+				if (tuneAshar) tuneAshar.value = 0;
+				if (tuneMaghrib) tuneMaghrib.value = 0;
+				if (tuneIsya) tuneIsya.value = 0;
 			} else {
 				coordinatesForm.classList.add('hide');
 			}
@@ -1766,14 +1838,31 @@
 		function resetToDefaultCoordinates() {
 			const latInput = document.getElementById('latInput');
 			const lonInput = document.getElementById('lonInput');
+			
+			const tuneImsak = document.getElementById('tuneImsak');
+			const tuneSubuh = document.getElementById('tuneSubuh');
+			const tuneTerbit = document.getElementById('tuneTerbit');
+			const tuneZuhur = document.getElementById('tuneZuhur');
+			const tuneAshar = document.getElementById('tuneAshar');
+			const tuneMaghrib = document.getElementById('tuneMaghrib');
+			const tuneIsya = document.getElementById('tuneIsya');
+			
 			if (!defaultCoordinates.lat || !defaultCoordinates.lon) {
 				showToast('Tidak ada koordinat tersedia', 'warning');
 				return;
 			}
+			
 			latInput.value = defaultCoordinates.lat;
 			lonInput.value = defaultCoordinates.lon;
+			
+			if (tuneImsak) tuneImsak.value = 0;
+			if (tuneSubuh) tuneSubuh.value = 0;
+			if (tuneTerbit) tuneTerbit.value = 0;
+			if (tuneZuhur) tuneZuhur.value = 0;
+			if (tuneAshar) tuneAshar.value = 0;
+			if (tuneMaghrib) tuneMaghrib.value = 0;
+			if (tuneIsya) tuneIsya.value = 0;
 		}
-
 		function cancelCoordinatesEdit() {
 			const dropdown = document.getElementById('cityDropdown');
 			const latInput = document.getElementById('latInput');
@@ -1781,7 +1870,17 @@
 			const coordinatesForm = document.getElementById('coordinatesForm');
 			const defaultCoordsSpan = document.getElementById('defaultCoords');
 			const cityTypeLabel = document.getElementById('cityTypeLabel');
+			
+			const tuneImsak = document.getElementById('tuneImsak');
+			const tuneSubuh = document.getElementById('tuneSubuh');
+			const tuneTerbit = document.getElementById('tuneTerbit');
+			const tuneZuhur = document.getElementById('tuneZuhur');
+			const tuneAshar = document.getElementById('tuneAshar');
+			const tuneMaghrib = document.getElementById('tuneMaghrib');
+			const tuneIsya = document.getElementById('tuneIsya');
+			
 			const selectedCity = dropdown.value;
+			
 			if (!selectedCity || selectedCity === '') {
 				coordinatesForm.classList.add('hide');
 				latInput.value = '';
@@ -1790,32 +1889,84 @@
 				defaultCoordinates.lon = '';
 				defaultCoordsSpan.textContent = '';
 				if (cityTypeLabel) cityTypeLabel.textContent = '';
+				
+				if (tuneImsak) tuneImsak.value = 0;
+				if (tuneSubuh) tuneSubuh.value = 0;
+				if (tuneTerbit) tuneTerbit.value = 0;
+				if (tuneZuhur) tuneZuhur.value = 0;
+				if (tuneAshar) tuneAshar.value = 0;
+				if (tuneMaghrib) tuneMaghrib.value = 0;
+				if (tuneIsya) tuneIsya.value = 0;
+				
 				return;
 			}
+			
 			const selectedOption = dropdown.options[dropdown.selectedIndex];
 			const defaultLat = selectedOption.getAttribute('data-lat');
 			const defaultLon = selectedOption.getAttribute('data-lon');
+			
 			fetch('/getcityinfo', {
 				method: 'GET',
 				headers: {
-					'Accept': 'application/json'
+				'Accept': 'application/json'
 				}
-			}).then(response => response.json()).then(data => {
+			})
+			.then(response => response.json())
+			.then(data => {
 				if (data.hasSelection && data.selectedCityApi === selectedCity && data.latitude && data.longitude) {
-					latInput.value = data.latitude;
-					lonInput.value = data.longitude;
+				latInput.value = data.latitude;
+				lonInput.value = data.longitude;
+				
+				if (data.tune) {
+					if (tuneImsak) tuneImsak.value = data.tune.imsak || 0;
+					if (tuneSubuh) tuneSubuh.value = data.tune.subuh || 0;
+					if (tuneTerbit) tuneTerbit.value = data.tune.terbit || 0;
+					if (tuneZuhur) tuneZuhur.value = data.tune.zuhur || 0;
+					if (tuneAshar) tuneAshar.value = data.tune.ashar || 0;
+					if (tuneMaghrib) tuneMaghrib.value = data.tune.maghrib || 0;
+					if (tuneIsya) tuneIsya.value = data.tune.isya || 0;
+				} else {
+					if (tuneImsak) tuneImsak.value = 0;
+					if (tuneSubuh) tuneSubuh.value = 0;
+					if (tuneTerbit) tuneTerbit.value = 0;
+					if (tuneZuhur) tuneZuhur.value = 0;
+					if (tuneAshar) tuneAshar.value = 0;
+					if (tuneMaghrib) tuneMaghrib.value = 0;
+					if (tuneIsya) tuneIsya.value = 0;
+				}
+				
 				} else {
 					if (defaultLat && defaultLon) {
 						latInput.value = defaultLat;
 						lonInput.value = defaultLon;
+						
+						if (tuneImsak) tuneImsak.value = 0;
+						if (tuneSubuh) tuneSubuh.value = 0;
+						if (tuneTerbit) tuneTerbit.value = 0;
+						if (tuneZuhur) tuneZuhur.value = 0;
+						if (tuneAshar) tuneAshar.value = 0;
+						if (tuneMaghrib) tuneMaghrib.value = 0;
+						if (tuneIsya) tuneIsya.value = 0;
 					} else {
 						showToast('Tidak ada koordinat tersedia', 'warning');
 					}
 				}
-			}).catch(error => {
+			})
+			.catch(error => {
+				
 				if (defaultLat && defaultLon) {
 					latInput.value = defaultLat;
 					lonInput.value = defaultLon;
+					
+					if (tuneImsak) tuneImsak.value = 0;
+					if (tuneSubuh) tuneSubuh.value = 0;
+					if (tuneTerbit) tuneTerbit.value = 0;
+					if (tuneZuhur) tuneZuhur.value = 0;
+					if (tuneAshar) tuneAshar.value = 0;
+					if (tuneMaghrib) tuneMaghrib.value = 0;
+					if (tuneIsya) tuneIsya.value = 0;
+				
+					showToast('Menggunakan koordinat default', 'warning');
 				} else {
 					showToast('Tidak ada koordinat tersedia', 'warning');
 				}
@@ -1839,6 +1990,23 @@
 				const latInput = document.getElementById('latInput');
 				const lonInput = document.getElementById('lonInput');
 				const defaultCoordsSpan = document.getElementById('defaultCoords');
+				if (data.tune) {
+					const tuneImsak = document.getElementById('tuneImsak');
+					const tuneSubuh = document.getElementById('tuneSubuh');
+					const tuneTerbit = document.getElementById('tuneTerbit');
+					const tuneZuhur = document.getElementById('tuneZuhur');
+					const tuneAshar = document.getElementById('tuneAshar');
+					const tuneMaghrib = document.getElementById('tuneMaghrib');
+					const tuneIsya = document.getElementById('tuneIsya');
+					
+					if (tuneImsak) tuneImsak.value = data.tune.imsak || 0;
+					if (tuneSubuh) tuneSubuh.value = data.tune.subuh || 0;
+					if (tuneTerbit) tuneTerbit.value = data.tune.terbit || 0;
+					if (tuneZuhur) tuneZuhur.value = data.tune.zuhur || 0;
+					if (tuneAshar) tuneAshar.value = data.tune.ashar || 0;
+					if (tuneMaghrib) tuneMaghrib.value = data.tune.maghrib || 0;
+					if (tuneIsya) tuneIsya.value = data.tune.isya || 0;
+				}
 				if (data.hasSelection && data.selectedCityApi) {
 					let displayText = data.selectedCity;
 					if (data.latitude && data.longitude) {
@@ -1899,6 +2067,7 @@
 			const lonInput = document.getElementById('lonInput');
 			const typeLabel = selectedOption.getAttribute('data-type');
 			const typeEmoji = selectedOption.getAttribute('data-type-emoji');
+			
 			let lat = latInput.value.trim();
 			let lon = lonInput.value.trim();
 			if (!lat || !lon) {
@@ -1919,6 +2088,23 @@
 				showToast('Longitude harus antara -180 hingga 180', 'error');
 				return;
 			}
+			
+			const tuneImsak = parseInt(document.getElementById('tuneImsak').value) || 0;
+			const tuneSubuh = parseInt(document.getElementById('tuneSubuh').value) || 0;
+			const tuneTerbit = parseInt(document.getElementById('tuneTerbit').value) || 0;
+			const tuneZuhur = parseInt(document.getElementById('tuneZuhur').value) || 0;
+			const tuneAshar = parseInt(document.getElementById('tuneAshar').value) || 0;
+			const tuneMaghrib = parseInt(document.getElementById('tuneMaghrib').value) || 0;
+			const tuneIsya = parseInt(document.getElementById('tuneIsya').value) || 0;
+			
+			const tunes = [tuneImsak, tuneSubuh, tuneTerbit, tuneZuhur, tuneAshar, tuneMaghrib, tuneIsya];
+			for (let i = 0; i < tunes.length; i++) {
+				if (tunes[i] < -99 || tunes[i] > 99) {
+				showToast('Nilai tune harus antara -99 hingga 99', 'error');
+				return;
+				}
+			}
+			
 			const cityData = cityList.find(c => c.api === selectedCity);
 			const displayName = cityData ? cityData.display : selectedCity;
 			const btn = event.target;
@@ -1931,6 +2117,15 @@
 				formData.append('cityName', displayName);
 				formData.append('lat', lat);
 				formData.append('lon', lon);
+				
+				formData.append('tuneImsak', tuneImsak);
+				formData.append('tuneSubuh', tuneSubuh);
+				formData.append('tuneTerbit', tuneTerbit);
+				formData.append('tuneZuhur', tuneZuhur);
+				formData.append('tuneAshar', tuneAshar);
+				formData.append('tuneMaghrib', tuneMaghrib);
+				formData.append('tuneIsya', tuneIsya);
+				
 				if (typeLabel) {
 					formData.append('type', typeLabel);
 				}
@@ -1941,7 +2136,7 @@
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded',
 						'Accept': 'application/json'
-					},
+				},
 					body: formData.toString(),
 					signal: controller.signal
 				});
@@ -2013,7 +2208,6 @@
 		// ================================
 		let volumeSaveTimeout = null;
 		async function saveBuzzerVolume(volume) {
-			// Debounce - tunggu 500ms setelah user berhenti drag
 			clearTimeout(volumeSaveTimeout);
 
 			volumeSaveTimeout = setTimeout(async () => {
@@ -2040,7 +2234,6 @@
 			const countdownEl = document.getElementById('buzzerCountdown');
 			
 			if (buzzerTestInterval) {
-				// STOP TEST
 				clearInterval(buzzerTestInterval);
 				buzzerTestInterval = null;
 				
@@ -2070,7 +2263,6 @@
 				if (statusEl) statusEl.style.display = 'none';
 				
 			} else {
-				// START TEST
 				const volumeSlider = document.getElementById('volumeSlider');
 				const volume = volumeSlider ? volumeSlider.value : 50;
 				
@@ -3139,7 +3331,6 @@
 					this.parentElement.classList.add('is-active');
 					document.getElementById(targetId).classList.add('is-active');
 
-					// Load tab data
 					handleTabClick(targetId);
 				});
 			});
@@ -3202,7 +3393,6 @@
 						
 						LoadingManager.completeLoading();
 						
-						// Start countdown dengan data dari server
 						const clientNow = Date.now();
 						countdownEndTime = clientNow + (countdownData.remaining * 1000);
 						countdownReason = countdownData.reason;
@@ -3362,7 +3552,6 @@
 					}
 
 					const char = e.key;
-					// Hanya izinkan angka dan titik
 					if (!/^[\d\.]$/.test(char)) {
 						e.preventDefault();
 					}
@@ -3435,7 +3624,6 @@
 						cancelTimezoneEdit();
 					}
 
-					// Validasi ketik hanya + - dan angka, tapi izinkan keyboard shortcuts
 					if ([8, 9, 27, 13, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1 ||
 						(e.keyCode === 65 && e.ctrlKey === true) ||
 						(e.keyCode === 67 && e.ctrlKey === true) ||
@@ -3461,7 +3649,6 @@
 			const latInput = document.getElementById('latInput');
 			if (latInput) {
 				latInput.addEventListener('keydown', function (e) {
-					// Izinkan keyboard shortcuts dan navigation keys
 					if ([8, 9, 27, 13, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1 ||
 						(e.keyCode === 65 && e.ctrlKey === true) ||
 						(e.keyCode === 67 && e.ctrlKey === true) ||
@@ -3627,7 +3814,6 @@
 			// ================================
 			document.addEventListener('visibilitychange', function () {
 				if (document.hidden) {
-					// Do nothing
 				} else {
 					forceRemoveLoadingState();
 
