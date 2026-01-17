@@ -3709,6 +3709,118 @@
 					}
 				});
 			}
+						
+			// ================================
+			// FINE TUNING INPUT VALIDATION - IMPROVED
+			// ================================
+			const tuneInputs = [
+				'tuneImsak', 'tuneSubuh', 'tuneTerbit', 
+				'tuneZuhur', 'tuneAshar', 'tuneMaghrib', 'tuneIsya'
+			];
+
+			tuneInputs.forEach(inputId => {
+				const input = document.getElementById(inputId);
+				if (!input) return;
+				
+				function getDefaultValue() {
+					const tuneName = inputId.replace('tune', '').toLowerCase();
+					return tuneConfig[tuneName] || 0;
+				}
+				
+				input.addEventListener('keydown', function(e) {
+					if ([8, 9, 27, 13, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1 ||
+						(e.keyCode === 65 && e.ctrlKey === true) ||
+						(e.keyCode === 67 && e.ctrlKey === true) ||
+						(e.keyCode === 86 && e.ctrlKey === true) ||
+						(e.keyCode === 88 && e.ctrlKey === true) ||
+						(e.keyCode === 65 && e.metaKey === true) ||
+						(e.keyCode === 67 && e.metaKey === true) ||
+						(e.keyCode === 86 && e.metaKey === true) ||
+						(e.keyCode === 88 && e.metaKey === true)) {
+						return;
+					}
+					
+					const char = e.key;
+					if (!/^[\d\-]$/.test(char)) {
+						e.preventDefault();
+					}
+					
+					if (char === '-' && this.selectionStart !== 0) {
+						e.preventDefault();
+					}
+					
+					if (char === '-' && this.value.includes('-')) {
+						e.preventDefault();
+					}
+				});
+				
+				input.addEventListener('input', function() {
+					let value = this.value;
+					
+					value = value.replace(/[^\d\-]/g, '');
+					
+					if (value.indexOf('-') > 0) {
+						value = value.replace(/-/g, '');
+						if (value.charAt(0) !== '-') {
+							value = '-' + value;
+						}
+					}
+					
+					const minusCount = (value.match(/-/g) || []).length;
+					if (minusCount > 1) {
+						value = '-' + value.replace(/-/g, '');
+					}
+					
+					this.value = value;
+					
+					if (value !== '' && value !== '-') {
+						const numValue = parseInt(value);
+						if (!isNaN(numValue)) {
+							if (numValue < -99) {
+								this.value = '-99';
+							} else if (numValue > 99) {
+								this.value = '99';
+							}
+						}
+					}
+				});
+				
+				input.addEventListener('blur', function() {
+					let value = this.value.trim();
+					
+					if (value === '' || value === '-') {
+						this.value = getDefaultValue();
+						this.style.borderColor = '';
+						return;
+					}
+					
+					const numValue = parseInt(value);
+					
+					if (isNaN(numValue)) {
+						this.value = getDefaultValue();
+						this.style.borderColor = '';
+						return;
+					}
+					
+					if (numValue < -99 || numValue > 99) {
+						showToast('Nilai Fine Tuning harus antara -99 hingga 99', 'warning');
+						this.value = getDefaultValue();
+						this.style.borderColor = '#cc4b37';
+						
+						setTimeout(() => {
+							this.style.borderColor = '';
+						}, 2000);
+						return;
+					}
+					
+					this.style.borderColor = '';
+				});
+				
+				input.addEventListener('focus', function() {
+					this.style.borderColor = '';
+					this.select();
+				});
+			});
 
 			// ================================
 			// FILE INPUT - DRAG & DROP SUPPORT
