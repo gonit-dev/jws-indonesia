@@ -71,7 +71,7 @@
 ### Board: ESP32-2432S024
 - **MCU:** ESP32 Dual-Core @ 240MHz
 - **RAM:** 520KB SRAM
-- **Flash:** MIN 4MB, LittleFS 2MB sisanya APP
+- **Flash:** MIN 4MB, LittleFS MIN 2MB sisanya APP
 - **Display:** ILI9341 2.4" TFT (320x240)
 - **Touch:** XPT2046 Resistive
 - **WiFi:** 802.11 b/g/n (2.4GHz)
