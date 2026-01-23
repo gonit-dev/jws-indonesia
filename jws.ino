@@ -1415,18 +1415,13 @@ bool initRTC() {
     
     Serial.println("DS3231 detected on I2C");
     
-    Serial.println("Testing RTC functionality...");
-    rtc.adjust(DateTime(2024, 12, 16, 10, 30, 0));
-    delay(2000);
-    
     DateTime test = rtc.now();
     Serial.printf("Test result: %02d:%02d:%02d %02d/%02d/%04d\n",
                  test.hour(), test.minute(), test.second(),
                  test.day(), test.month(), test.year());
     
-    // Validasi hasil
     bool isValid = (
-        test.year() >= 2024 && test.year() <= 2025 &&
+        test.year() >= 2000 && test.year() <= 2100 &&
         test.month() >= 1 && test.month() <= 12 &&
         test.day() >= 1 && test.day() <= 31 &&
         test.hour() >= 0 && test.hour() <= 23 &&
@@ -1538,42 +1533,115 @@ bool isRTCValid() {
 
 void saveTimeToRTC() {
     if (!rtcAvailable) {
+        Serial.println("[RTC Save] Skipped - RTC not available");
         return;
     }
     
+    time_t currentTime;
     if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-        DateTime dt(year(timeConfig.currentTime),
-                   month(timeConfig.currentTime),
-                   day(timeConfig.currentTime),
-                   hour(timeConfig.currentTime),
-                   minute(timeConfig.currentTime),
-                   second(timeConfig.currentTime));
+        currentTime = timeConfig.currentTime;
+        xSemaphoreGive(timeMutex);
+    } else {
+        Serial.println("[RTC Save] Failed - Cannot acquire timeMutex");
+        return;
+    }
+    
+    if (currentTime < 946684800) {
+        Serial.println("[RTC Save] Skipped - Invalid timestamp (before 2000)");
+        Serial.printf("   Timestamp: %ld\n", currentTime);
+        return;
+    }
+    
+    uint16_t y = year(currentTime);
+    uint8_t m = month(currentTime);
+    uint8_t d = day(currentTime);
+    uint8_t h = hour(currentTime);
+    uint8_t min = minute(currentTime);
+    uint8_t sec = second(currentTime);
+    
+    Serial.println("\n========================================");
+    Serial.println("SAVING TIME TO RTC");
+    Serial.println("========================================");
+    Serial.printf("Time to save: %02d:%02d:%02d %02d/%02d/%04d\n",
+                 h, min, sec, d, m, y);
+    
+    if (y < 2000 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31 ||
+        h > 23 || min > 59 || sec > 59) {
+        Serial.println("ERROR: Invalid time components!");
+        Serial.println("   Cannot save to RTC");
+        Serial.println("========================================\n");
+        return;
+    }
+    
+    if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(2000)) == pdTRUE) {
+        DateTime dt(y, m, d, h, min, sec);
         
         rtc.adjust(dt);
         
-        xSemaphoreGive(timeMutex);
+        delay(100);
         
-        delay(500);
+        xSemaphoreGive(i2cMutex);
+        
+        Serial.println("Data written to RTC");
+    } else {
+        Serial.println("ERROR: Cannot acquire I2C mutex");
+        Serial.println("========================================\n");
+        return;
+    }
+    
+    delay(500);
+    
+    Serial.println("\nVerifying RTC write...");
+    
+    if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(2000)) == pdTRUE) {
         DateTime verify = rtc.now();
+        xSemaphoreGive(i2cMutex);
         
-        bool saved = (
-            verify.year() >= 2000 && verify.year() <= 2100 &&
-            verify.month() >= 1 && verify.month() <= 12 &&
-            verify.day() >= 1 && verify.day() <= 31 &&
-            verify.hour() >= 0 && verify.hour() <= 23
-        );
+        Serial.printf("RTC now reads: %02d:%02d:%02d %02d/%02d/%04d\n",
+                     verify.hour(), verify.minute(), verify.second(),
+                     verify.day(), verify.month(), verify.year());
         
-        if (saved) {
-            Serial.println("Time saved to RTC successfully");
+        bool yearOk = (verify.year() == y);
+        bool monthOk = (verify.month() == m);
+        bool dayOk = (verify.day() == d);
+        bool hourOk = (verify.hour() == h);
+        bool minOk = (verify.minute() == min || verify.minute() == min + 1);
+        
+        bool saveSuccess = yearOk && monthOk && dayOk && hourOk && minOk;
+        
+        if (saveSuccess) {
+            Serial.println("\nRTC SAVE SUCCESSFUL");
+            Serial.println("Time components match");
+            Serial.println("Time will persist across restarts");
+            Serial.println("========================================\n");
         } else {
-            Serial.println("WARNING: RTC save failed (hardware issue)");
-            Serial.println("RTC returned: " + String(verify.hour()) + ":" + 
-                          String(verify.minute()) + " " + 
-                          String(verify.day()) + "/" + String(verify.month()));
+            Serial.println("\nRTC SAVE FAILED");
+            Serial.println("Verification mismatch:");
+            if (!yearOk) Serial.printf("   Year: wrote %d, read %d\n", y, verify.year());
+            if (!monthOk) Serial.printf("   Month: wrote %d, read %d\n", m, verify.month());
+            if (!dayOk) Serial.printf("   Day: wrote %d, read %d\n", d, verify.day());
+            if (!hourOk) Serial.printf("   Hour: wrote %d, read %d\n", h, verify.hour());
+            if (!minOk) Serial.printf("   Minute: wrote %d, read %d\n", min, verify.minute());
             
-            rtcAvailable = false;
-            Serial.println("RTC disabled due to hardware failure");
+            Serial.println("\nPossible causes:");
+            Serial.println("  1. RTC battery weak/dead");
+            Serial.println("  2. Faulty RTC hardware");
+            Serial.println("  3. I2C communication issues");
+            Serial.println("  4. Counterfeit DS3231 chip");
+            Serial.println("\nRecommendation: Replace RTC module");
+            Serial.println("========================================\n");
+            
+            static int failCount = 0;
+            failCount++;
+            if (failCount >= 3) {
+                Serial.println("CRITICAL: RTC failed 3 times - disabling");
+                rtcAvailable = false;
+                failCount = 0;
+            }
         }
+    } else {
+        Serial.println("ERROR: Cannot acquire I2C mutex for verification");
+        Serial.println("========================================\n");
     }
 }
 
