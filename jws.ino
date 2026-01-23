@@ -1415,20 +1415,6 @@ bool initRTC() {
     
     Serial.println("DS3231 detected on I2C");
     
-    DateTime test = rtc.now();
-    Serial.printf("Test result: %02d:%02d:%02d %02d/%02d/%04d\n",
-                 test.hour(), test.minute(), test.second(),
-                 test.day(), test.month(), test.year());
-    
-    bool isValid = (
-        test.year() >= 2000 && test.year() <= 2100 &&
-        test.month() >= 1 && test.month() <= 12 &&
-        test.day() >= 1 && test.day() <= 31 &&
-        test.hour() >= 0 && test.hour() <= 23 &&
-        test.minute() >= 0 && test.minute() <= 59 &&
-        test.second() >= 0 && test.second() <= 59
-    );
-    
     if (!isValid) {
         Serial.println("\n*** RTC HARDWARE FAILURE ***");
         Serial.println("DS3231 chip is defective!");
