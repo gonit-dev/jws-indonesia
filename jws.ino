@@ -348,7 +348,7 @@ const unsigned long BLINK_DURATION = 60000;
 const unsigned long BLINK_INTERVAL = 500;
 
 // ================================
-// WIFI RESTART PROTECTION - TAMBAHAN BARU
+// WIFI RESTART PROTECTION
 // ================================
 static SemaphoreHandle_t wifiRestartMutex = NULL;
 static bool wifiRestartInProgress = false;
@@ -711,7 +711,6 @@ void handleBlinking() {
   
   if (currentMillis - blinkState.blinkStartTime >= BLINK_DURATION) {
     stopBlinking();
-    // Matikan buzzer
     ledcWrite(BUZZER_CHANNEL, 0);
     return;
   }
@@ -734,12 +733,10 @@ void handleBlinking() {
       if (targetLabel) {
         if (blinkState.currentVisible) {
           lv_obj_clear_flag(targetLabel, LV_OBJ_FLAG_HIDDEN);
-          // Buzzer ON
           int pwmValue = map(buzzerConfig.volume, 0, 100, 0, 255);
           ledcWrite(BUZZER_CHANNEL, pwmValue);
         } else {
           lv_obj_add_flag(targetLabel, LV_OBJ_FLAG_HIDDEN);
-          // Buzzer OFF
           ledcWrite(BUZZER_CHANNEL, 0);
         }
       }
@@ -1265,7 +1262,6 @@ void loadCitySelection() {
         prayerConfig.latitude.trim();
         prayerConfig.longitude.trim();
         
-        // TAMBAHKAN INI: Load tune (jika ada)
         if (file.available()) {
           String tuneStr = file.readStringUntil('\n');
           tuneStr.trim();
@@ -1401,9 +1397,8 @@ bool initRTC() {
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
             const time_t EPOCH_2000 = 946684800;
             setTime(0, 0, 0, 1, 1, 2000);
-            timeConfig.currentTime = EPOCH_2000;  // Force hardcoded UTC
+            timeConfig.currentTime = EPOCH_2000;
             
-            // Safety check
             if (timeConfig.currentTime < EPOCH_2000) {
                 timeConfig.currentTime = EPOCH_2000;
             }
@@ -1449,7 +1444,6 @@ bool initRTC() {
             setTime(0, 0, 0, 1, 1, 2000);
             timeConfig.currentTime = EPOCH_2000;
             
-            // Safety check
             if (timeConfig.currentTime < EPOCH_2000) {
                 timeConfig.currentTime = EPOCH_2000;
             }
@@ -1722,7 +1716,6 @@ void setupServerRoutes() {
     String ssid = isWiFiConnected ? WiFi.SSID() : "";
     String ip = isWiFiConnected ? wifiConfig.localIP.toString() : "0.0.0.0";
 
-    // Pre-allocate buffer
     char jsonBuffer[512];
     snprintf(jsonBuffer, sizeof(jsonBuffer),
       "{"
@@ -2244,7 +2237,6 @@ void setupServerRoutes() {
         Serial.println("========================================");
         Serial.println("Reason: Timezone changed to UTC" + String(offset >= 0 ? "+" : "") + String(offset));
 
-        // Check if prayer times will be updated
         if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
           Serial.println("City: " + prayerConfig.selectedCity);
           Serial.println("Coordinates: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
@@ -2329,7 +2321,6 @@ void setupServerRoutes() {
       json += "\"longitude\":\"" + prayerConfig.longitude + "\",";
       json += "\"hasSelection\":" + String(hasSelection ? "true" : "false") + ",";
       
-      // TAMBAHKAN INI: Kirim tune data
       json += "\"tune\":{";
       json += "\"imsak\":" + String(prayerConfig.tuneImsak) + ",";
       json += "\"subuh\":" + String(prayerConfig.tuneSubuh) + ",";
@@ -2394,7 +2385,6 @@ void setupServerRoutes() {
           ? request->getParam("tuneIsya", true)->value().toInt() 
           : 0;
 
-      // Bounds checking
       if (cityApi.length() > 100) cityApi = cityApi.substring(0, 100);
       if (cityName.length() > 100) cityName = cityName.substring(0, 100);
       if (lat.length() > 20) lat = lat.substring(0, 20);
@@ -2413,7 +2403,6 @@ void setupServerRoutes() {
 
       vTaskDelay(pdMS_TO_TICKS(50));
 
-      // Baru update internal state
       if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
           prayerConfig.selectedCity = cityApi;
           prayerConfig.selectedCityName = cityName;
@@ -3400,12 +3389,10 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data) {
             Serial.println("Action: Clearing adzan state immediately");
             Serial.println("========================================");
             
-            // Langsung matikan state
             adzanState.isPlaying = false;
             adzanState.canTouch = false;
             adzanState.currentPrayer = "";
             
-            // Simpan state kosong ke file
             saveAdzanState();
             
             Serial.println("Adzan state cleared - ready for next prayer time");
@@ -3613,7 +3600,7 @@ void wifiTask(void *parameter) {
                 if (ntpSyncInProgress) {
                     int ntpWaitCounter = 0;
                     unsigned long waitStartTime = millis();
-                    const unsigned long maxWaitTime = 30000; // 30 detik
+                    const unsigned long maxWaitTime = 30000;
                     
                     Serial.println("Waiting for NTP sync to complete...");
                     
@@ -3621,7 +3608,7 @@ void wifiTask(void *parameter) {
                         vTaskDelay(pdMS_TO_TICKS(500));
                         ntpWaitCounter++;
                         
-                        if (ntpWaitCounter % 10 == 0) {  // Log setiap 5 detik
+                        if (ntpWaitCounter % 10 == 0) {
                             Serial.printf("NTP sync in progress... (%lu ms elapsed)\n", 
                                         millis() - waitStartTime);
                             esp_task_wdt_reset();
@@ -4521,7 +4508,7 @@ void clockTickTask(void *parameter) {
                 
                 if (timeConfig.currentTime < EPOCH_2000) {
                     Serial.println("TimeLib.h issue - using hardcoded timestamp");
-                    timeConfig.currentTime = EPOCH_2000; // 946684800
+                    timeConfig.currentTime = EPOCH_2000;
                 }
                 
                 Serial.printf("Time corrected to: %ld (01/01/2000 00:00:00)\n\n", 
@@ -4539,7 +4526,7 @@ void clockTickTask(void *parameter) {
 
         if (wifiConfig.isConnected) {
             autoSyncCounter++;
-            if (autoSyncCounter >= 3600) {  // 3600 seconds = 1 hour
+            if (autoSyncCounter >= 3600) {
                 autoSyncCounter = 0;
                 if (ntpTaskHandle != NULL) {
                     Serial.println("\nAuto NTP sync (hourly)");
@@ -5198,7 +5185,7 @@ void setup() {
   audioMutex = xSemaphoreCreateMutex();
 
   displayQueue = xQueueCreate(20, sizeof(DisplayUpdate));
-  httpQueue = xQueueCreate(5, sizeof(HTTPRequest));  // ← BARU: Queue untuk HTTP
+  httpQueue = xQueueCreate(5, sizeof(HTTPRequest));
   
   Serial.println("Semaphores & Queues created");
 
@@ -5655,7 +5642,7 @@ void setup() {
   uint32_t totalStack = UI_TASK_STACK_SIZE + WIFI_TASK_STACK_SIZE + 
                         NTP_TASK_STACK_SIZE + WEB_TASK_STACK_SIZE + 
                         PRAYER_TASK_STACK_SIZE + CLOCK_TASK_STACK_SIZE +
-                        8192;  // HTTP Task
+                        8192;
   if (rtcAvailable) totalStack += RTC_TASK_STACK_SIZE;
   
   Serial.printf("Total:       %d bytes (%.2f KB)\n", totalStack, totalStack / 1024.0);
