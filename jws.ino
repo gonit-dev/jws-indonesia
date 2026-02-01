@@ -4,20 +4,20 @@
  * OPTIMIZED VERSION - Event-Driven + Built-in NTP
  */
 
-#include <WiFiClientSecure.h>
-#include <Wire.h>
-#include <RTClib.h>
-#include <lvgl.h>
-#include <TFT_eSPI.h>
-#include <XPT2046_Touchscreen.h>
-#include <SPI.h>
-#include <LittleFS.h>
-#include <FS.h>
+#include "WiFiClientSecure.h"
+#include "Wire.h"
+#include "RTClib.h"
+#include "lvgl.h"
+#include "TFT_eSPI.h"
+#include "XPT2046_Touchscreen.h"
+#include "SPI.h"
+#include "LittleFS.h"
+#include "FS.h"
 #include "ArduinoJson.h"
 #include "WiFi.h"
 #include "ESPAsyncWebServer.h"
 #include "TimeLib.h"
-#include <time.h>
+#include "time.h"
 #include "HTTPClient.h"
 #include "esp_task_wdt.h"
 #include "esp_wifi.h"
