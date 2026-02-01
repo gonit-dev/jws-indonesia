@@ -4,7 +4,6 @@
  * OPTIMIZED VERSION - Event-Driven + Built-in NTP
  */
 
-#include "WiFiClientSecure.h"
 #include "Wire.h"
 #include "RTClib.h"
 #include "lvgl.h"
