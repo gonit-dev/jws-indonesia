@@ -11,7 +11,6 @@
 #include "XPT2046_Touchscreen.h"
 #include "SPI.h"
 #include "LittleFS.h"
-#include "FS.h"
 #include "ArduinoJson.h"
 #include "WiFi.h"
 #include "ESPAsyncWebServer.h"
@@ -20,7 +19,6 @@
 #include "HTTPClient.h"
 #include "esp_task_wdt.h"
 #include "esp_wifi.h"
-#include "driver/i2s.h"
 #include "DFRobotDFPlayerMini.h"
 
 // EEZ generated files
