@@ -5678,6 +5678,28 @@ screen and (max-width:63.99875em) {
 	color: #0a0a0a
 }
 
+.info {
+  position: relative;
+  margin: 0 0 0 0;
+  padding: 1rem;
+  border-radius: 0px;
+  box-shadow: none;
+  border-top: none;
+  background: none;
+  color: #0a0a0a;
+}
+
+.info::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50%;
+  height: 1px;
+  background: #c0c0c0;
+}
+
 .callout.success {
 	background-color: rgb(225.45, 249.6, 234.45);
 	color: #0a0a0a
