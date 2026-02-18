@@ -5678,6 +5678,28 @@ screen and (max-width:63.99875em) {
 	color: #0a0a0a
 }
 
+.infoheader {
+  position: relative;
+  margin: 0 0 0.5rem 0;
+  padding: 1rem;
+  border-radius: 0px;
+  box-shadow: none;
+  border-top: none;
+  background: none;
+  color: #0a0a0a;
+}
+
+.infoheader::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50%;
+  height: 1px;
+  background: #1779ba;
+}
+
 .info {
   position: relative;
   margin: 0 0 0 0;
