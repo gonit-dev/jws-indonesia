@@ -486,101 +486,116 @@
                         <div class="grid-x grid-padding-x">
                             <div class="medium-12 small-12 large-12 text-center cell">
                                 <div class="callout">
-                                    <div class="grid-x grid-margin-x grid-margin-y align-center ">
-                                        <div class="medium-6 small-12 large-6 cell">
+                                    <div class="grid-x grid-margin-x grid-margin-y">
+                                        <div class="medium-12 small-12 large-12 cell">
                                             <div class="grid-x grid-padding-x">
-                                                <div class="medium-12 small-12 large-12 cell">
+                                                <div class="medium-12 small-12 large-12 text-center cell">
+                                                    <h5>
+                                                        <strong>🛜 WiFi</strong>
+                                                    </h5>
+                                                    <p class="help-text">
+                                                        Pengaturan jaringan WiFi
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="info"></div>
+                                            <div class="grid-x grid-margin-x grid-margin-y align-center ">
+                                                <div class="medium-6 small-12 large-6 cell">
+                                                    <div class="grid-x grid-padding-x">
+                                                        <div class="medium-12 small-12 large-12 cell">
+                                                            <div class="grid-x grid-padding-x">
+                                                                <div class="medium-12 small-12 large-12 text-center cell">
+                                                                    <h5>
+                                                                        <strong>📡 WiFi Router</strong>
+                                                                    </h5>
+                                                                    <p class="help-text">
+                                                                        Perbarui SSID WiFi untuk mendapatkan koneksi internet
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="info"></div>
+                                                            <div class="grid-x grid-margin-x">
+                                                                <div class="medium-12 small-12 large-12 cell">
+                                                                    <label>SSID WiFi Router</label>
+                                                                    <input type="text" id="wifiSSID" placeholder="Masukkan SSID WiFi" autocomplete="off" data-form="wifi-credentials">
+                                                                </div>
+                                                                <div class="medium-12 small-12 large-12 cell">
+                                                                    <label>Password WiFi</label>
+                                                                    <input type="password" id="wifiPassword" placeholder="Masukkan password WiFi" autocomplete="new-password" data-form="wifi-credentials">
+                                                                </div>
+                                                                <div class="medium-6 small-6 large-6 cell">
+                                                                    <button class="button secondary expanded" onclick="setWiFi()"> Simpan </button>
+                                                                </div>
+                                                                <div class="medium-6 small-6 large-6 cell">
+                                                                    <button class="button secondary expanded" onclick="clearWiFiForm()"> Batal </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="medium-6 small-12 large-6 cell">
                                                     <div class="grid-x grid-padding-x">
                                                         <div class="medium-12 small-12 large-12 text-center cell">
                                                             <h5>
-                                                                <strong>📡 WiFi Router</strong>
+                                                                <strong>📶 Access Point</strong>
                                                             </h5>
                                                             <p class="help-text">
-                                                                Perbarui SSID WiFi untuk mendapatkan koneksi internet
+                                                                Perbarui SSID Access Point untuk terlihat perangkat untuk mengatur
                                                             </p>
                                                         </div>
                                                     </div>
                                                     <div class="info"></div>
                                                     <div class="grid-x grid-margin-x">
                                                         <div class="medium-12 small-12 large-12 cell">
-                                                            <label>SSID WiFi Router</label>
-                                                            <input type="text" id="wifiSSID" placeholder="Masukkan SSID WiFi" autocomplete="off" data-form="wifi-credentials">
+                                                            <label>SSID Access Point</label>
+                                                            <input type="text" id="apSSID" placeholder="Masukkan SSID AP"
+                                                                autocomplete="off" data-form="ap-credentials">
                                                         </div>
                                                         <div class="medium-12 small-12 large-12 cell">
-                                                            <label>Password WiFi</label>
-                                                            <input type="password" id="wifiPassword" placeholder="Masukkan password WiFi" autocomplete="new-password" data-form="wifi-credentials">
+                                                            <label>Password Access Point</label>
+                                                            <input type="password" id="apPassword" placeholder="Masukkan password AP (minimal 8 karakter)" autocomplete="new-password" data-form="ap-credentials">
                                                         </div>
                                                         <div class="medium-6 small-6 large-6 cell">
-                                                            <button class="button secondary expanded" onclick="setWiFi()"> Simpan </button>
+                                                            <button class="button secondary expanded" onclick="setAP()"> Simpan
+                                                            </button>
                                                         </div>
                                                         <div class="medium-6 small-6 large-6 cell">
-                                                            <button class="button secondary expanded" onclick="clearWiFiForm()"> Batal </button>
+                                                            <button class="button secondary expanded" onclick="clearAPForm()"> Batal </button>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </div>
-                                        <div class="medium-6 small-12 large-6 cell">
-                                            <div class="grid-x grid-padding-x">
-                                                <div class="medium-12 small-12 large-12 text-center cell">
-                                                    <h5>
-                                                        <strong>📶 Access Point</strong>
-                                                    </h5>
-                                                    <p class="help-text">
-                                                        Perbarui SSID Access Point untuk terlihat perangkat untuk mengatur
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div class="info"></div>
-                                            <div class="grid-x grid-margin-x">
-                                                <div class="medium-12 small-12 large-12 cell">
-                                                    <label>SSID Access Point</label>
-                                                    <input type="text" id="apSSID" placeholder="Masukkan SSID AP"
-                                                        autocomplete="off" data-form="ap-credentials">
-                                                </div>
-                                                <div class="medium-12 small-12 large-12 cell">
-                                                    <label>Password Access Point</label>
-                                                    <input type="password" id="apPassword" placeholder="Masukkan password AP (minimal 8 karakter)" autocomplete="new-password" data-form="ap-credentials">
-                                                </div>
-                                                <div class="medium-6 small-6 large-6 cell">
-                                                    <button class="button secondary expanded" onclick="setAP()"> Simpan
-                                                    </button>
-                                                </div>
-                                                <div class="medium-6 small-6 large-6 cell">
-                                                    <button class="button secondary expanded" onclick="clearAPForm()"> Batal </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="medium-6 small-12 large-6 cell">
-                                            <div class="grid-x grid-padding-x">
-                                                <div class="medium-12 small-12 large-12 text-center cell">
-                                                    <h5>
-                                                        <strong>🌐 Konfigurasi Jaringan Access Point</strong>
-                                                    </h5>
-                                                    <p class="help-text">
-                                                        Perbarui IP Address server digunakan sebagai halaman pengaturan
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div class="info"></div>
-                                            <div class="grid-x grid-margin-x">
-                                                <div class="medium-12 small-12 large-12 cell">
-                                                    <label>IP Address Access Point</label>
-                                                    <input type="text" id="apIP" placeholder="192.168.100.1" autocomplete="off" data-form="network-config">
-                                                </div>
-                                                <div class="medium-12 small-12 large-12 cell">
-                                                    <label>Gateway</label>
-                                                    <input type="text" id="gatewayIP" placeholder="192.168.100.1" autocomplete="off" data-form="network-config">
-                                                </div>
-                                                <div class="medium-12 small-12 large-12 cell">
-                                                    <label>Subnet Mask</label>
-                                                    <input type="text" id="subnetMask" placeholder="255.255.255.0" autocomplete="off" data-form="network-config">
-                                                </div>
-                                                <div class="medium-6 small-6 large-6 cell">
-                                                    <button class="button secondary expanded" onclick="setAPNetwork()">Simpan</button>
-                                                </div>
-                                                <div class="medium-6 small-6 large-6 cell">
-                                                    <button class="button secondary expanded" onclick="clearDHCPForm()">Batal</button>
+                                                <div class="medium-6 small-12 large-6 cell">
+                                                    <div class="grid-x grid-padding-x">
+                                                        <div class="medium-12 small-12 large-12 text-center cell">
+                                                            <h5>
+                                                                <strong>🌐 Konfigurasi Jaringan Access Point</strong>
+                                                            </h5>
+                                                            <p class="help-text">
+                                                                Perbarui IP Address server digunakan sebagai halaman pengaturan
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="info"></div>
+                                                    <div class="grid-x grid-margin-x">
+                                                        <div class="medium-12 small-12 large-12 cell">
+                                                            <label>IP Address Access Point</label>
+                                                            <input type="text" id="apIP" placeholder="192.168.100.1" autocomplete="off" data-form="network-config">
+                                                        </div>
+                                                        <div class="medium-12 small-12 large-12 cell">
+                                                            <label>Gateway</label>
+                                                            <input type="text" id="gatewayIP" placeholder="192.168.100.1" autocomplete="off" data-form="network-config">
+                                                        </div>
+                                                        <div class="medium-12 small-12 large-12 cell">
+                                                            <label>Subnet Mask</label>
+                                                            <input type="text" id="subnetMask" placeholder="255.255.255.0" autocomplete="off" data-form="network-config">
+                                                        </div>
+                                                        <div class="medium-6 small-6 large-6 cell">
+                                                            <button class="button secondary expanded" onclick="setAPNetwork()">Simpan</button>
+                                                        </div>
+                                                        <div class="medium-6 small-6 large-6 cell">
+                                                            <button class="button secondary expanded" onclick="clearDHCPForm()">Batal</button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -616,6 +631,7 @@
                                                             Perbarui waktu dari perangkat Anda
                                                         </p>
                                                     </div>
+                                                    <div class="info"></div>
                                                     <div class="medium-12 small-12 large-12 cell">
                                                         <button class="button secondary expanded" onclick="syncTime()"> Perbarui Waktu </button>
                                                     </div>
@@ -630,6 +646,7 @@
                                                             Waktu diperbarui otomatis saat terhubung ke internet
                                                         </p>
                                                     </div>
+                                                    <div class="info"></div>
                                                     <div class="medium-12 small-12 large-12 cell">
                                                         <p class="help-text">
                                                             🔄 Perbarui otomatis setiap 1 jam <br>
