@@ -3150,26 +3150,28 @@ void setupServerRoutes() {
       String html = "<!DOCTYPE html><html><head>";
       html += "<meta charset='UTF-8'>";
       html += "<meta name='viewport' content='width=device-width,initial-scale=1.0'>";
-      html += "<title>404 - Not Found</title>";
+      html += "<title>404 - Halaman Tidak Ditemukan</title>";
       html += "<style>";
-      html += "body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}";
-      html += ".container{max-width:500px;margin:20px;background:white;padding:50px 40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}";
-      html += ".error-code{font-size:120px;font-weight:800;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0;line-height:1}";
-      html += "h2{color:#333;font-size:28px;margin:20px 0 10px;font-weight:600}";
-      html += "p{color:#666;font-size:16px;line-height:1.6;margin:20px 0 30px}";
-      html += ".btn{display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;text-decoration:none;border-radius:50px;font-weight:600;font-size:16px;transition:all 0.3s;box-shadow:0 4px 15px rgba(102,126,234,0.4)}";
-      html += ".btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(102,126,234,0.6)}";
-      html += ".icon{font-size:80px;margin-bottom:20px}";
+      html += "*{box-sizing:border-box;margin:0;padding:0}";
+      html += "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;min-height:100vh;display:flex;align-items:center;justify-content:center}";
+      html += ".wrap{display:flex;align-items:center;justify-content:center;padding:40px 20px}";
+      html += ".card{background:#fff;border-radius:16px;padding:50px 40px;max-width:480px;width:100%;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.08)}";
+      html += ".code{font-size:80px;font-weight:700;color:#4a90d9;line-height:1;margin-bottom:16px}";
+      html += ".divider{width:60px;height:3px;background:#4a90d9;border-radius:2px;margin:0 auto 20px}";
+      html += "h2{font-size:20px;color:#333;font-weight:600;margin-bottom:10px}";
+      html += "p{font-size:14px;color:#888;line-height:1.7;margin-bottom:30px}";
+      html += ".btn{display:inline-block;padding:11px 36px;background:#4a90d9;color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500;transition:background 0.2s}";
+      html += ".btn:hover{background:#357abd}";
       html += "</style></head><body>";
-      html += "<div class='container'>";
-      html += "<div class='icon'>Ã°Å¸â€Â</div>";
-      html += "<div class='error-code'>404</div>";
-      html += "<h2>Page Not Found</h2>";
-      html += "<p>The page you're looking for doesn't exist or you don't have permission to access it. Please return to the home page.</p>";
-      html += "<a href='/' class='btn'>Ã¢â€ Â Back to Home</a>";
-      html += "</div></body></html>";
-
-      request -> send(404, "text/html", html);
+      html += "<div class='wrap'><div class='card'>";
+      html += "<div class='code'>404</div>";
+      html += "<div class='divider'></div>";
+      html += "<h2>Halaman Tidak Ditemukan</h2>";
+      html += "<p>Halaman yang Anda cari tidak tersedia atau tidak memiliki izin untuk diakses. Silakan kembali ke halaman utama.</p>";
+      html += "<a href='/' class='btn'>Kembali ke Beranda</a>";
+      html += "</div></div>";
+      html += "</body></html>";
+      request->send(404, "text/html", html);
     });
 
     server.onNotFound([](AsyncWebServerRequest * request) {
