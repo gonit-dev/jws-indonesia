@@ -3661,7 +3661,7 @@ void wifiTask(void *parameter) {
                         Serial.println("Current Time: " + String(timeStr));
                         Serial.println("Current Date: " + String(dateStr));
                         
-                        if (timeinfo.tm_year + 1900 >= 2024) {
+                        if (timeinfo.tm_year + 1900 >= 2000) {
                             Serial.println("Time is VALID - triggering prayer update");
                             Serial.println("City: " + prayerConfig.selectedCity);
                             Serial.println("Coordinates: " + prayerConfig.latitude + 
@@ -3683,7 +3683,7 @@ void wifiTask(void *parameter) {
                                 }
                             }
                         } else {
-                            Serial.println("ERROR: Time still invalid (year < 2024)");
+                            Serial.println("ERROR: Time still invalid (year < 2000)");
                             Serial.println("Skipping prayer times update");
                         }
                         
@@ -3781,7 +3781,7 @@ void ntpTask(void *parameter) {
         int retry = 0;
         const int retry_count = 40;
         
-        while (timeinfo.tm_year < (2024 - 1900) && ++retry < retry_count) {
+        while (timeinfo.tm_year < (2000 - 1900) && ++retry < retry_count) {
             if (restartTaskHandle != NULL || resetTaskHandle != NULL) {
                 Serial.println("\n[NTP Task] Shutdown detected mid-sync - aborting");
                 ntpSyncInProgress = false;
@@ -3805,7 +3805,7 @@ void ntpTask(void *parameter) {
 
         esp_task_wdt_reset();
         
-        syncSuccess = (timeinfo.tm_year >= (2024 - 1900));
+        syncSuccess = (timeinfo.tm_year >= (2000 - 1900));
         
         if (syncSuccess) {
             ntpTime = now;
@@ -4314,7 +4314,7 @@ void prayerTask(void *parameter) {
                     if (prayerConfig.latitude.length() > 0 && 
                         prayerConfig.longitude.length() > 0) {
                         
-                        if (currentYear >= 2024 && currentTimestamp >= 946684800) {
+                        if (currentYear >= 2000 && currentTimestamp >= 946684800) {
                             Serial.println("Updating Prayer Times...");
                             Serial.println("Time Status: VALID");
                             Serial.println("City: " + prayerConfig.selectedCity);
@@ -4331,7 +4331,7 @@ void prayerTask(void *parameter) {
                             Serial.println("\nMidnight update sequence COMPLETED");
                         } else {
                             Serial.println("WARNING: Time is still invalid after NTP");
-                            Serial.printf("   Year: %d (min: 2024)\n", currentYear);
+                            Serial.printf("   Year: %d (min: 2000)\n", currentYear);
                             Serial.printf("   Timestamp: %ld (min: 946684800)\n", currentTimestamp);
                             Serial.println("   Using existing prayer times");
                         }
