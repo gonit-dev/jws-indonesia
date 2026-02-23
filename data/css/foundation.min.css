@@ -2348,6 +2348,10 @@ screen and (min-width:64em) {
 	margin-top: -.625rem;
 	margin-bottom: -.625rem
 }
+.grid-padding-y > .cell.no-padding-y {
+  padding-top: 0;
+  padding-bottom: 0;
+}
 
 @media print,
 screen and (min-width:40em) {
