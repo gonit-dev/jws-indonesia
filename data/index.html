@@ -435,7 +435,7 @@
                                                     <div class="infoheader"></div>
                                                 </div>
                                             </div>
-                                            <div class="grid-x grid-margin-x">
+                                            <div class="grid-x grid-margin-x grid-padding-y align-center ">
                                                 <div class="medium-6 small-12 large-6 cell text-left">
                                                     <p>
                                                         <strong>Jaringan WiFi:</strong>
@@ -617,7 +617,7 @@
                                                     <div class="infoheader"></div>
                                                 </div>
                                             </div>
-                                            <div class="grid-x grid-margin-x">
+                                            <div class="grid-x grid-margin-x grid-margin-y align-center">
                                                 <div class="medium-6 small-12 large-6 cell">
                                                     <div class="medium-12 small-12 large-12 cell">
                                                         <h6>
@@ -683,158 +683,160 @@
                                                     <div class="infoheader"></div>
                                                 </div>
                                             </div>
-                                            <div class="grid-x grid-margin-x">
+                                            <div class="grid-x grid-margin-x grid-margin-y align-center">
                                                 <div class="medium-12 small-12 large-12 cell">
-                                                    <p>
-                                                        <strong>📍 Lokasi Terpilih:</strong>
-                                                    </p>
-                                                    <h4 id="currentCity" class="text-primary">Pilih lokasi</h4>
-                                                    <p id="currentCityType" class="help-text" style="margin-top: -10px; font-size: 13px; color: #666;">
-                                                        <span id="cityTypeLabel"></span>
-                                                    </p>
-                                                    <p>
-                                                        <strong>Metode:</strong> <span id="currentMethodTop">Egyptian General Authority of Survey</span>
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div class="grid-x grid-margin-x">
-												<div class="medium-12 small-12 large-12 text-center cell">
-													<h5 style="margin-top: 20px;"><strong>🗺️ Lokasi</strong></h5>
-													<p class="help-text">Koreksi lokasi untuk jadwal akurat</p>
-												</div>
-												<div class="medium-12 small-12 large-12 cell">
-													<div class="info"></div>
-												</div>
-                                                <div class="medium-8 small-12 large-9 cell">
-                                                    <label>Pilih Lokasi</label>
-                                                    <select id="cityDropdown" onchange="handleCityChange()">
-                                                        <option value="">-- Pilih lokasi --</option>
-                                                    </select>
-                                                </div>
-                                                <div class="medium-4 small-12 large-3 cell">
-                                                    <label class="show-for-medium">&nbsp;</label>
-                                                    <button class="button secondary expanded" onclick="saveCity()"> Simpan </button>
-                                                </div>
-                                                <div id="coordinatesForm" class="medium-12 small-12 large-12 cell hide">
+                                                    <div class="grid-x grid-margin-x">
+                                                        <div class="medium-12 small-12 large-12 cell">
+                                                            <p>
+                                                                <strong>📍 Lokasi Terpilih:</strong>
+                                                            </p>
+                                                            <h4 id="currentCity" class="text-primary">Pilih lokasi</h4>
+                                                            <p id="currentCityType" class="help-text" style="margin-top: -10px; font-size: 13px; color: #666;">
+                                                                <span id="cityTypeLabel"></span>
+                                                            </p>
+                                                            <p>
+                                                                <strong>Metode:</strong> <span id="currentMethodTop">Egyptian General Authority of Survey</span>
+                                                            </p>
+                                                        </div>
+                                                    </div>
                                                     <div class="grid-x grid-padding-x">
                                                         <div class="medium-12 small-12 large-12 text-center cell">
-                                                            <h5>
-                                                                <strong>🌍 Ubah Koordinat</strong>
-                                                            </h5>
-                                                            <p class="help-text">
-                                                                Sesuaikan koordinat jika diperlukan
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="info"></div>
-                                                    <div class="grid-x grid-margin-x">
-                                                        <div class="medium-6 small-12 large-6 cell">
-                                                            <label>Latitude (Lintang)</label>
-                                                            <input type="text" id="latInput" placeholder="-6.2088"
-                                                                pattern="^-?\d+\.?\d*$">
-                                                            <p class="help-text">
-                                                                Contoh: -6.2088
-                                                            </p>
-                                                        </div>
-                                                        <div class="medium-6 small-12 large-6 cell">
-                                                            <label>Longitude (Bujur)</label>
-                                                            <input type="text" id="lonInput" placeholder="106.8456" pattern="^-?\d+\.?\d*$">
-                                                            <p class="help-text">
-                                                                Contoh: 106.8456
-                                                            </p>
-                                                        </div>
-														<div class="medium-12 small-12 large-12 text-center cell">
-															<h5 style="margin-top: 20px;"><strong>⚙️ Fine Tuning (Opsional)</strong></h5>
-															<p class="help-text">Koreksi waktu shalat dalam menit (+ atau -)</p>
+                                                            <h5 style="margin-top: 20px;"><strong>🗺️ Lokasi</strong></h5>
+                                                            <p class="help-text">Koreksi lokasi untuk jadwal akurat</p>
                                                             <div class="info"></div>
-														</div>
-														<div class="medium-12 small-12 large-12 cell">
-															<div class="grid-x grid-margin-x align-center">
-																<div class="medium-3 small-12 large-3 cell">
-																	<label>Imsak</label>
-																	<input type="number" id="tuneImsak" placeholder="0" value="0" min="-99" max="99">
-																</div>
-																<div class="medium-3 small-12 large-3 cell">
-																	<label>Subuh</label>
-																	<input type="number" id="tuneSubuh" placeholder="0" value="0" min="-99" max="99">
-																</div>
-																<div class="medium-3 small-12 large-3 cell">
-																	<label>Terbit</label>
-																	<input type="number" id="tuneTerbit" placeholder="0" value="0" min="-99" max="99">
-																</div>
-																<div class="medium-3 small-12 large-3 cell">
-																	<label>Zuhur</label>
-																	<input type="number" id="tuneZuhur" placeholder="0" value="0" min="-99" max="99">
-																</div>
-																<div class="medium-3 small-12 large-3 cell">
-																	<label>Ashar</label>
-																	<input type="number" id="tuneAshar" placeholder="0" value="0" min="-99" max="99">
-																</div>
-																<div class="medium-3 small-12 large-3 cell">
-																	<label>Maghrib</label>
-																	<input type="number" id="tuneMaghrib" placeholder="0" value="0" min="-99" max="99">
-																</div>
-																<div class="medium-3 small-12 large-3 cell">
-																	<label>Isya</label>
-																	<input type="number" id="tuneIsya" placeholder="0" value="0" min="-99" max="99">
-																</div>
-																<div class="medium-6 small-6 large-6 cell">
-																	<button class="button secondary expanded" onclick="resetToDefaultCoordinates()" title="Reset ke koordinat dari JSON"> Reset </button>
-																</div>
-																<div class="medium-6 small-6 large-6 cell">
-																	<button class="button secondary expanded" onclick="cancelCoordinatesEdit()" title="Batalkan perubahan koordinat"> Batal </button>
-																</div>
-															</div>
-														</div>
+                                                        </div>
                                                     </div>
                                                     <div class="grid-x grid-margin-x">
+                                                        <div class="medium-8 small-12 large-9 cell">
+                                                            <label>Pilih Lokasi</label>
+                                                            <select id="cityDropdown" onchange="handleCityChange()">
+                                                                <option value="">-- Pilih lokasi --</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="medium-4 small-12 large-3 cell">
+                                                            <label class="show-for-medium">&nbsp;</label>
+                                                            <button class="button secondary expanded" onclick="saveCity()"> Simpan </button>
+                                                        </div>
+                                                        <div id="coordinatesForm" class="medium-12 small-12 large-12 cell hide">
+                                                            <div class="grid-x grid-padding-x">
+                                                                <div class="medium-12 small-12 large-12 text-center cell">
+                                                                    <h5>
+                                                                        <strong>🌍 Ubah Koordinat</strong>
+                                                                    </h5>
+                                                                    <p class="help-text">
+                                                                        Sesuaikan koordinat jika diperlukan
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="info"></div>
+                                                            <div class="grid-x grid-margin-x">
+                                                                <div class="medium-6 small-12 large-6 cell">
+                                                                    <label>Latitude (Lintang)</label>
+                                                                    <input type="text" id="latInput" placeholder="-6.2088"
+                                                                        pattern="^-?\d+\.?\d*$">
+                                                                    <p class="help-text">
+                                                                        Contoh: -6.2088
+                                                                    </p>
+                                                                </div>
+                                                                <div class="medium-6 small-12 large-6 cell">
+                                                                    <label>Longitude (Bujur)</label>
+                                                                    <input type="text" id="lonInput" placeholder="106.8456" pattern="^-?\d+\.?\d*$">
+                                                                    <p class="help-text">
+                                                                        Contoh: 106.8456
+                                                                    </p>
+                                                                </div>
+                                                                <div class="medium-12 small-12 large-12 text-center cell">
+                                                                    <h5 style="margin-top: 20px;"><strong>⚙️ Fine Tuning (Opsional)</strong></h5>
+                                                                    <p class="help-text">Koreksi waktu shalat dalam menit (+ atau -)</p>
+                                                                    <div class="info"></div>
+                                                                </div>
+                                                                <div class="medium-12 small-12 large-12 cell">
+                                                                    <div class="grid-x grid-margin-x align-center">
+                                                                        <div class="medium-3 small-12 large-3 cell">
+                                                                            <label>Imsak</label>
+                                                                            <input type="number" id="tuneImsak" placeholder="0" value="0" min="-99" max="99">
+                                                                        </div>
+                                                                        <div class="medium-3 small-12 large-3 cell">
+                                                                            <label>Subuh</label>
+                                                                            <input type="number" id="tuneSubuh" placeholder="0" value="0" min="-99" max="99">
+                                                                        </div>
+                                                                        <div class="medium-3 small-12 large-3 cell">
+                                                                            <label>Terbit</label>
+                                                                            <input type="number" id="tuneTerbit" placeholder="0" value="0" min="-99" max="99">
+                                                                        </div>
+                                                                        <div class="medium-3 small-12 large-3 cell">
+                                                                            <label>Zuhur</label>
+                                                                            <input type="number" id="tuneZuhur" placeholder="0" value="0" min="-99" max="99">
+                                                                        </div>
+                                                                        <div class="medium-3 small-12 large-3 cell">
+                                                                            <label>Ashar</label>
+                                                                            <input type="number" id="tuneAshar" placeholder="0" value="0" min="-99" max="99">
+                                                                        </div>
+                                                                        <div class="medium-3 small-12 large-3 cell">
+                                                                            <label>Maghrib</label>
+                                                                            <input type="number" id="tuneMaghrib" placeholder="0" value="0" min="-99" max="99">
+                                                                        </div>
+                                                                        <div class="medium-3 small-12 large-3 cell">
+                                                                            <label>Isya</label>
+                                                                            <input type="number" id="tuneIsya" placeholder="0" value="0" min="-99" max="99">
+                                                                        </div>
+                                                                        <div class="medium-6 small-6 large-6 cell">
+                                                                            <button class="button secondary expanded" onclick="resetToDefaultCoordinates()" title="Reset ke koordinat dari JSON"> Reset </button>
+                                                                        </div>
+                                                                        <div class="medium-6 small-6 large-6 cell">
+                                                                            <button class="button secondary expanded" onclick="cancelCoordinatesEdit()" title="Batalkan perubahan koordinat"> Batal </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="grid-x grid-margin-x">
+                                                                <div class="medium-12 small-12 large-12 cell">
+                                                                    <div class="callout secondary">
+                                                                        <p class="help-text">
+                                                                            📍 Koordinat <span id="defaultCoords">-</span> <br>
+                                                                            🧮 Gunakan format angka dengan titik desimal <br>
+                                                                            🌐 Latitude: -90 hingga 90 | Longitude: -180 hingga 180
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="medium-12 small-12 large-12 text-center cell">
+                                                            <h5 style="margin-top: 20px;"><strong>⛯ Metode</strong></h5>
+                                                            <p class="help-text">Koreksi metode dari organisasi lokal</p>
+                                                            <div class="info"></div>
+                                                        </div>
+                                                        <div class="medium-8 small-12 large-9 cell">
+                                                            <label>Metode Kalkulasi Jadwal Shalat</label>
+                                                            <select id="methodDropdown">
+                                                                <option value="20">Kementerian Agama Indonesia (Kemenag)
+                                                                </option>
+                                                                <option value="3">Muslim World League (MWL)</option>
+                                                                <option value="5" selected>Egyptian General Authority of Survey
+                                                                </option>
+                                                                <option value="2">Islamic Society of North America (ISNA)
+                                                                </option>
+                                                                <option value="0">Shia Ithna-Ashari</option>
+                                                                <option value="1">University of Islamic Sciences, Karachi
+                                                                </option>
+                                                                <option value="4">Umm Al-Qura University, Makkah</option>
+                                                                <option value="7">Institute of Geophysics, University of Tehran
+                                                                </option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="medium-4 small-12 large-3 cell">
+                                                            <label class="show-for-medium">&nbsp;</label>
+                                                            <button class="button secondary expanded" onclick="saveMethod()"> Simpan </button>
+                                                        </div>
                                                         <div class="medium-12 small-12 large-12 cell">
                                                             <div class="callout secondary">
                                                                 <p class="help-text">
-                                                                    📍 Koordinat <span id="defaultCoords">-</span> <br>
-                                                                    🧮 Gunakan format angka dengan titik desimal <br>
-                                                                    🌐 Latitude: -90 hingga 90 | Longitude: -180 hingga 180
+                                                                    📍 Pilih lokasi untuk menghitung jadwal shalat <br>
+                                                                    📐 Pilih metode perhitungan <br>
+                                                                    🔄 Jadwal diperbarui otomatis setelah memilih lokasi
                                                                 </p>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                </div>
-												<div class="medium-12 small-12 large-12 text-center cell">
-													<h5 style="margin-top: 20px;"><strong>⛯ Metode</strong></h5>
-													<p class="help-text">Koreksi metode dari organisasi lokal</p>
-                                                    <div class="info"></div>
-												</div>
-                                                <div class="medium-8 small-12 large-9 cell">
-                                                    <label>Metode Kalkulasi Jadwal Shalat</label>
-                                                    <select id="methodDropdown">
-                                                        <option value="20">Kementerian Agama Indonesia (Kemenag)
-                                                        </option>
-                                                        <option value="3">Muslim World League (MWL)</option>
-                                                        <option value="5" selected>Egyptian General Authority of Survey
-                                                        </option>
-                                                        <option value="2">Islamic Society of North America (ISNA)
-                                                        </option>
-                                                        <option value="0">Shia Ithna-Ashari</option>
-                                                        <option value="1">University of Islamic Sciences, Karachi
-                                                        </option>
-                                                        <option value="4">Umm Al-Qura University, Makkah</option>
-                                                        <option value="7">Institute of Geophysics, University of Tehran
-                                                        </option>
-                                                    </select>
-                                                </div>
-                                                <div class="medium-4 small-12 large-3 cell">
-                                                    <label class="show-for-medium">&nbsp;</label>
-                                                    <button class="button secondary expanded" onclick="saveMethod()"> Simpan </button>
-                                                </div>
-                                            </div>
-                                            <div class="grid-x grid-margin-x">
-                                                <div class="medium-12 small-12 large-12 cell">
-                                                    <div class="callout secondary">
-                                                        <p class="help-text">
-                                                            📍 Pilih lokasi untuk menghitung jadwal shalat <br>
-                                                            📐 Pilih metode perhitungan <br>
-                                                            🔄 Jadwal diperbarui otomatis setelah memilih lokasi
-                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -857,7 +859,7 @@
                                                     <div class="infoheader"></div>
                                                 </div>
                                             </div>
-                                            <div class="grid-x grid-margin-x">
+                                            <div class="grid-x grid-margin-x grid-margin-y align-center">
                                                 <div class="medium-12 small-12 large-12 cell">
                                                     <p>
                                                         <strong>Kapan perlu unggah cities.json?</strong>
@@ -868,32 +870,30 @@
                                                         📄 Berkas <code>cities.json</code> rusak atau hilang
                                                     </p>
                                                 </div>
-                                            </div>
-                                            <div class="medium-8 small-12 large-8 cell">
-                                                <label for="citiesFileInput" class="button hollow expanded">
-                                                    📁 Pilih berkas cities.json <input type="file" id="citiesFileInput" accept=".json" class="show-for-sr" onchange="handleCitiesFileSelect(event)">
-                                                </label>
-                                                <p id="selectedFileName" class="help-text">
-                                                    Tidak ada berkas yang dipilih
-                                                </p>
-                                            </div>
-                                            <div class="medium-4 small-12 large-4 cell">
-                                                <button id="uploadBtn" class="button primary expanded" onclick="uploadCitiesFile()" disabled> 📤 Unggah Berkas </button>
-                                                <button id="clearFileBtn" class="button primary expanded" onclick="clearSelectedFile()" style="display: none; margin-top: 10px;"> ✖ Batal </button>
-                                            </div>
-                                            <div id="uploadProgress" class="hide">
-                                                <div class="progress" role="progressbar">
-                                                    <div id="uploadProgressBar" class="progress-meter" style="width: 0%">
-                                                        <p class="progress-meter-text">
-                                                            0%
-                                                        </p>
-                                                    </div>
+                                                <div class="medium-8 small-12 large-8 cell">
+                                                    <label for="citiesFileInput" class="button hollow expanded">
+                                                        📁 Pilih berkas cities.json <input type="file" id="citiesFileInput" accept=".json" class="show-for-sr" onchange="handleCitiesFileSelect(event)">
+                                                    </label>
+                                                    <p id="selectedFileName" class="help-text">
+                                                        Tidak ada berkas yang dipilih
+                                                    </p>
                                                 </div>
-                                                <p id="uploadStatus" class="help-text">
-                                                    Mulai mengunggah…
-                                                </p>
-                                            </div>
-                                            <div class="grid-x grid-margin-x">
+                                                <div class="medium-4 small-12 large-4 cell">
+                                                    <button id="uploadBtn" class="button primary expanded" onclick="uploadCitiesFile()" disabled> 📤 Unggah Berkas </button>
+                                                    <button id="clearFileBtn" class="button primary expanded" onclick="clearSelectedFile()" style="display: none; margin-top: 10px;"> ✖ Batal </button>
+                                                </div>
+                                                <div id="uploadProgress" class="hide">
+                                                    <div class="progress" role="progressbar">
+                                                        <div id="uploadProgressBar" class="progress-meter" style="width: 0%">
+                                                            <p class="progress-meter-text">
+                                                                0%
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <p id="uploadStatus" class="help-text">
+                                                        Mulai mengunggah…
+                                                    </p>
+                                                </div>
                                                 <div class="medium-12 small-12 large-12 cell">
                                                     <div class="callout secondary">
                                                         <p>
@@ -931,150 +931,152 @@
                                                     <div class="infoheader"></div>
                                                 </div>
                                             </div>
-                                            <div class="grid-x grid-margin-x">
+                                            <div class="grid-x grid-margin-x grid-margin-y align-center">
                                                 <div class="medium-12 small-12 large-12 cell">
-                                                    <table class="unstriped hover">
-                                                        <tbody>
-                                                            <tr>
-                                                                <td class="text-left">
-                                                                    <div class="switch tiny">
-                                                                        <strong>🌙 Imsak</strong>
-                                                                        <input class="switch-input buzzer-toggle" id="toggle-imsak" type="checkbox" name="buzzer-imsak" data-prayer="imsak">
-                                                                        <label class="switch-paddle" for="toggle-imsak">
-                                                                            <span class="switch-active" aria-hidden="true">ON</span>
-                                                                            <span class="switch-inactive" aria-hidden="true">OFF</span>
-                                                                        </label>
-                                                                    </div>
-                                                                </td>
-                                                                <td class="text-right">
-                                                                    <h5 id="imsakTime">00:00</h5>
-                                                                </td>
-                                                            </tr>
-                                                            <tr>
-                                                                <td class="text-left">
-                                                                    <div class="switch tiny">
-                                                                        <strong>🌅 Subuh</strong>
-                                                                        <input class="switch-input buzzer-toggle" id="toggle-subuh" type="checkbox" name="buzzer-subuh" data-prayer="subuh">
-                                                                        <label class="switch-paddle" for="toggle-subuh">
-                                                                            <span class="switch-active" aria-hidden="true">ON</span>
-                                                                            <span class="switch-inactive" aria-hidden="true">OFF</span>
-                                                                        </label>
-                                                                    </div>
-                                                                </td>
-                                                                <td class="text-right">
-                                                                    <h5 id="subuhTime">00:00</h5>
-                                                                </td>
-                                                            </tr>
-                                                            <tr>
-                                                                <td class="text-left">
-                                                                    <div class="switch tiny">
-                                                                        <strong>🌄 Terbit</strong>
-                                                                        <input class="switch-input buzzer-toggle" id="toggle-terbit" type="checkbox" name="buzzer-terbit" data-prayer="terbit">
-                                                                        <label class="switch-paddle" for="toggle-terbit">
-                                                                            <span class="switch-active" aria-hidden="true">ON</span>
-                                                                            <span class="switch-inactive" aria-hidden="true">OFF</span>
-                                                                        </label>
-                                                                    </div>
-                                                                </td>
-                                                                <td class="text-right">
-                                                                    <h5 id="terbitTime">00:00</h5>
-                                                                </td>
-                                                            </tr>
-                                                            <tr>
-                                                                <td class="text-left">
-                                                                    <div class="switch tiny">
-                                                                        <strong>☀️ Zuhur</strong>
-                                                                        <input class="switch-input buzzer-toggle" id="toggle-zuhur" type="checkbox" name="buzzer-zuhur" data-prayer="zuhur">
-                                                                        <label class="switch-paddle" for="toggle-zuhur">
-                                                                            <span class="switch-active" aria-hidden="true">ON</span>
-                                                                            <span class="switch-inactive" aria-hidden="true">OFF</span>
-                                                                        </label>
-                                                                    </div>
-                                                                </td>
-                                                                <td class="text-right">
-                                                                    <h5 id="zuhurTime">00:00</h5>
-                                                                </td>
-                                                            </tr>
-                                                            <tr>
-                                                                <td class="text-left">
-                                                                    <div class="switch tiny">
-                                                                        <strong>🌤️ Ashar</strong>
-                                                                        <input class="switch-input buzzer-toggle" id="toggle-ashar" type="checkbox" name="buzzer-ashar" data-prayer="ashar">
-                                                                        <label class="switch-paddle" for="toggle-ashar">
-                                                                            <span class="switch-active" aria-hidden="true">ON</span>
-                                                                            <span class="switch-inactive" aria-hidden="true">OFF</span>
-                                                                        </label>
-                                                                    </div>
-                                                                </td>
-                                                                <td class="text-right">
-                                                                    <h5 id="asharTime">00:00</h5>
-                                                                </td>
-                                                            </tr>
-                                                            <tr>
-                                                                <td class="text-left">
-                                                                    <div class="switch tiny">
-                                                                        <strong>🌆 Maghrib</strong>
-                                                                        <input class="switch-input buzzer-toggle" id="toggle-maghrib" type="checkbox" name="buzzer-maghrib" data-prayer="maghrib">
-                                                                        <label class="switch-paddle" for="toggle-maghrib">
-                                                                            <span class="switch-active" aria-hidden="true">ON</span>
-                                                                            <span class="switch-inactive" aria-hidden="true">OFF</span>
-                                                                        </label>
-                                                                    </div>
-                                                                </td>
-                                                                <td class="text-right">
-                                                                    <h5 id="maghribTime">00:00</h5>
-                                                                </td>
-                                                            </tr>
-                                                            <tr>
-                                                                <td class="text-left">
-                                                                    <div class="switch tiny">
-                                                                        <strong>🌙 Isya</strong>
-                                                                        <input class="switch-input buzzer-toggle" id="toggle-isya" type="checkbox" name="buzzer-isya" data-prayer="isya">
-                                                                        <label class="switch-paddle" for="toggle-isya">
-                                                                            <span class="switch-active" aria-hidden="true">ON</span>
-                                                                            <span class="switch-inactive" aria-hidden="true">OFF</span>
-                                                                        </label>
-                                                                    </div>
-                                                                </td>
-                                                                <td class="text-right">
-                                                                    <h5 id="isyaTime">00:00</h5>
-                                                                </td>
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
-                                                    <!-- Volume Control - Native HTML5 Slider -->
-                                                    <div class="medium-12 small-12 large-12 cell" style="margin-top: 20px;">
-                                                        <strong>🔊 VOLUME BUZZER</strong>
-                                                        <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
-                                                            <span>0</span>
-                                                            <input type="range" id="volumeSlider" min="0" max="100" value="50" style="flex: 1;">
-                                                            <span>100</span>
-                                                            <span id="volumeValue" style="font-weight: bold; color: #1779ba;">50%</span>
-                                                        </div>
-                                                        <div style="margin-top: 15px;">
-                                                            <button id="testBuzzerBtn" class="button secondary" onclick="toggleTestBuzzer()">
-                                                                🔔 Test Buzzer
-                                                            </button>
-                                                            <p id="buzzerTestStatus" class="help-text" style="margin-top: 10px; display: none; color: #cc4b37;">
-                                                                <span class="label warning">⏱️ Test berjalan: <span id="buzzerCountdown">30</span> detik</span>
-                                                            </p>
+                                                    <div class="grid-x grid-margin-x">
+                                                        <div class="medium-12 small-12 large-12 cell">
+                                                            <table class="unstriped hover">
+                                                                <tbody>
+                                                                    <tr>
+                                                                        <td class="text-left">
+                                                                            <div class="switch tiny">
+                                                                                <strong>🌙 Imsak</strong>
+                                                                                <input class="switch-input buzzer-toggle" id="toggle-imsak" type="checkbox" name="buzzer-imsak" data-prayer="imsak">
+                                                                                <label class="switch-paddle" for="toggle-imsak">
+                                                                                    <span class="switch-active" aria-hidden="true">ON</span>
+                                                                                    <span class="switch-inactive" aria-hidden="true">OFF</span>
+                                                                                </label>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td class="text-right">
+                                                                            <h5 id="imsakTime">00:00</h5>
+                                                                        </td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="text-left">
+                                                                            <div class="switch tiny">
+                                                                                <strong>🌅 Subuh</strong>
+                                                                                <input class="switch-input buzzer-toggle" id="toggle-subuh" type="checkbox" name="buzzer-subuh" data-prayer="subuh">
+                                                                                <label class="switch-paddle" for="toggle-subuh">
+                                                                                    <span class="switch-active" aria-hidden="true">ON</span>
+                                                                                    <span class="switch-inactive" aria-hidden="true">OFF</span>
+                                                                                </label>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td class="text-right">
+                                                                            <h5 id="subuhTime">00:00</h5>
+                                                                        </td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="text-left">
+                                                                            <div class="switch tiny">
+                                                                                <strong>🌄 Terbit</strong>
+                                                                                <input class="switch-input buzzer-toggle" id="toggle-terbit" type="checkbox" name="buzzer-terbit" data-prayer="terbit">
+                                                                                <label class="switch-paddle" for="toggle-terbit">
+                                                                                    <span class="switch-active" aria-hidden="true">ON</span>
+                                                                                    <span class="switch-inactive" aria-hidden="true">OFF</span>
+                                                                                </label>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td class="text-right">
+                                                                            <h5 id="terbitTime">00:00</h5>
+                                                                        </td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="text-left">
+                                                                            <div class="switch tiny">
+                                                                                <strong>☀️ Zuhur</strong>
+                                                                                <input class="switch-input buzzer-toggle" id="toggle-zuhur" type="checkbox" name="buzzer-zuhur" data-prayer="zuhur">
+                                                                                <label class="switch-paddle" for="toggle-zuhur">
+                                                                                    <span class="switch-active" aria-hidden="true">ON</span>
+                                                                                    <span class="switch-inactive" aria-hidden="true">OFF</span>
+                                                                                </label>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td class="text-right">
+                                                                            <h5 id="zuhurTime">00:00</h5>
+                                                                        </td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="text-left">
+                                                                            <div class="switch tiny">
+                                                                                <strong>🌤️ Ashar</strong>
+                                                                                <input class="switch-input buzzer-toggle" id="toggle-ashar" type="checkbox" name="buzzer-ashar" data-prayer="ashar">
+                                                                                <label class="switch-paddle" for="toggle-ashar">
+                                                                                    <span class="switch-active" aria-hidden="true">ON</span>
+                                                                                    <span class="switch-inactive" aria-hidden="true">OFF</span>
+                                                                                </label>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td class="text-right">
+                                                                            <h5 id="asharTime">00:00</h5>
+                                                                        </td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="text-left">
+                                                                            <div class="switch tiny">
+                                                                                <strong>🌆 Maghrib</strong>
+                                                                                <input class="switch-input buzzer-toggle" id="toggle-maghrib" type="checkbox" name="buzzer-maghrib" data-prayer="maghrib">
+                                                                                <label class="switch-paddle" for="toggle-maghrib">
+                                                                                    <span class="switch-active" aria-hidden="true">ON</span>
+                                                                                    <span class="switch-inactive" aria-hidden="true">OFF</span>
+                                                                                </label>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td class="text-right">
+                                                                            <h5 id="maghribTime">00:00</h5>
+                                                                        </td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="text-left">
+                                                                            <div class="switch tiny">
+                                                                                <strong>🌙 Isya</strong>
+                                                                                <input class="switch-input buzzer-toggle" id="toggle-isya" type="checkbox" name="buzzer-isya" data-prayer="isya">
+                                                                                <label class="switch-paddle" for="toggle-isya">
+                                                                                    <span class="switch-active" aria-hidden="true">ON</span>
+                                                                                    <span class="switch-inactive" aria-hidden="true">OFF</span>
+                                                                                </label>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td class="text-right">
+                                                                            <h5 id="isyaTime">00:00</h5>
+                                                                        </td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                            <!-- Volume Control - Native HTML5 Slider -->
+                                                            <div class="medium-12 small-12 large-12 cell" style="margin-top: 20px;">
+                                                                <strong>🔊 VOLUME BUZZER</strong>
+                                                                <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                                                                    <span>0</span>
+                                                                    <input type="range" id="volumeSlider" min="0" max="100" value="50" style="flex: 1;">
+                                                                    <span>100</span>
+                                                                    <span id="volumeValue" style="font-weight: bold; color: #1779ba;">50%</span>
+                                                                </div>
+                                                                <div style="margin-top: 15px;">
+                                                                    <button id="testBuzzerBtn" class="button secondary" onclick="toggleTestBuzzer()">
+                                                                        🔔 Test Buzzer
+                                                                    </button>
+                                                                    <p id="buzzerTestStatus" class="help-text" style="margin-top: 10px; display: none; color: #cc4b37;">
+                                                                        <span class="label warning">⏱️ Test berjalan: <span id="buzzerCountdown">30</span> detik</span>
+                                                                    </p>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </div>
-                                            <div class="grid-x grid-margin-x">
-                                                <div class="medium-12 small-12 large-12 cell">
-                                                    <div class="callout secondary">
-                                                        <p class="help-text">
-                                                            🕌 Jadwal shalat berdasarkan lokasi yang dipilih <br>
-                                                            🔄 Diperbarui otomatis setiap tengah malam <br>
-                                                            ⚡ Diperbarui otomatis saat terhubung ke internet <br>
-                                                            📐 <span id="currentMethodBottom">Egyptian General Authority of Survey</span> <br>
-                                                            ⏏️ Tombol ON/OFF notifikasi kedip LCD saat adzan <br>
-                                                            🔊 Buzzer dan pengaturan Volume <br>
-                                                            📱 Layar sentuh pengaktif adzan <br>
-                                                            ⏱️ Delay 10 menit sentuh adzan aktif di LCD
-                                                        </p>
+                                                    <div class="medium-12 small-12 large-12 cell">
+                                                        <div class="callout secondary">
+                                                            <p class="help-text">
+                                                                🕌 Jadwal shalat berdasarkan lokasi yang dipilih <br>
+                                                                🔄 Diperbarui otomatis setiap tengah malam <br>
+                                                                ⚡ Diperbarui otomatis saat terhubung ke internet <br>
+                                                                📐 <span id="currentMethodBottom">Egyptian General Authority of Survey</span> <br>
+                                                                ⏏️ Tombol ON/OFF notifikasi kedip LCD saat adzan <br>
+                                                                🔊 Buzzer dan pengaturan Volume <br>
+                                                                📱 Layar sentuh pengaktif adzan <br>
+                                                                ⏱️ Delay 10 menit sentuh adzan aktif di LCD
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1101,7 +1103,7 @@
                                                     <div class="infoheader"></div>
                                                 </div>
                                             </div>
-                                            <div class="grid-x grid-margin-x">
+                                            <div class="grid-x grid-margin-x grid-margin-y align-center">
                                                 <div class="medium-12 small-12 large-12 cell">
                                                     <p>
                                                         <strong>Peringatan</strong> Tindakan ini menghapus
@@ -1115,10 +1117,10 @@
                                                         ⏱️ Waktu dan tanggal
                                                     </p>
                                                 </div>
-                                            </div>
-                                            <div class="medium-12 small-12 large-12 cell">
-                                                <button class="button secondary expanded" onclick="resetSettings()">
-                                                    Reset </button>
+                                                <div class="medium-12 small-12 large-12 cell">
+                                                    <button class="button secondary expanded" onclick="resetSettings()">
+                                                        Reset </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
