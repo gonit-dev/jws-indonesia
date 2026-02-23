@@ -9,13 +9,13 @@
 ## 📸 Preview
 
 <div align="center">
+<img width="150" src="https://github.com/user-attachments/assets/8a1992b6-167f-4c7f-b73a-44a8e97e4fd6" />
+<img width="150" src="https://github.com/user-attachments/assets/0fe80198-d629-43bb-b748-19a1aafea05e" />
+<img width="150" src="https://github.com/user-attachments/assets/e769b542-6f93-498c-8e5e-7e797fb66ed1" />
+<img width="150" src="https://github.com/user-attachments/assets/a710a3fc-e5c5-4fa0-9faa-6807dac766f4" />
+<img width="150" src="https://github.com/user-attachments/assets/734da9e8-efeb-4bae-b0e4-07221976d3ab" />
+<img width="150" src="https://github.com/user-attachments/assets/006afab9-db2d-48d8-924a-3e8af70637c2" />
 
-<img src="https://github.com/user-attachments/assets/d0e64d2a-2a00-4a62-b92b-9aa36d95f4b8" alt="Home" width="150">
-<img src="https://github.com/user-attachments/assets/55d84d62-d986-460a-b2b2-3ac4d2b4aaf1" alt="WiFi" width="150">
-<img src="https://github.com/user-attachments/assets/b9f1db1c-83f2-4492-aef8-7b62997da9a9" alt="Time" width="150">
-<img src="https://github.com/user-attachments/assets/84408e8e-ef1b-4ee5-aa42-9c0f965bb031" alt="City" width="150">
-<img src="https://github.com/user-attachments/assets/6479dfd9-99b9-4034-a0d2-29453d6c46d9" alt="Coords" width="150">
-<img src="https://github.com/user-attachments/assets/1f105d28-80a6-490c-a4a9-d7f8174a3c3e" alt="Prayer" width="150">
 
 </div>
 
