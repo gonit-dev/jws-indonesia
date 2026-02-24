@@ -344,6 +344,11 @@ const unsigned long BLINK_DURATION = 60000;
 const unsigned long BLINK_INTERVAL = 500;
 
 // ================================
+// BLINK TRIGGER GUARD
+// ================================
+static int lastBlinkMinute = -1;  // Format: jam*60 + menit
+
+// ================================
 // WIFI RESTART PROTECTION
 // ================================
 static SemaphoreHandle_t wifiRestartMutex = NULL;
@@ -355,52 +360,30 @@ static unsigned long lastWiFiRestartRequest = 0;
 static unsigned long lastAPRestartRequest = 0;
 const unsigned long RESTART_DEBOUNCE_MS = 3000;
 
-// ============================================
-// FORWARD DECLARATIONS
-// ============================================
-
-// ============================================
-// Display & UI Functions
-// ============================================
 void updateCityDisplay();
 void updateTimeDisplay();
 void updatePrayerDisplay();
 void hideAllUIElements();
 void showAllUIElements();
 
-// ============================================
-// Countdown Helper Functions
-// ============================================
 void startCountdown(String reason, String message, int seconds);
 void stopCountdown();
 int getRemainingSeconds();
 
-// ============================================
-// Prayer Time Blink Functions
-// ============================================
 void checkPrayerTime();
 void startBlinking(String prayerName);
 void stopBlinking();
 void handleBlinking();
 
-// ============================================
-// Prayer Times API Functions
-// ============================================
 void getPrayerTimesByCoordinates(String lat, String lon);
 void savePrayerTimes();
 void loadPrayerTimes();
 
-// ============================================
-// WiFi Functions
-// ============================================
 void saveWiFiCredentials();
 void loadWiFiCredentials();
 void saveAPCredentials();
 void setupWiFiEvents();
 
-// ============================================
-// Settings & Configuration Functions
-// ============================================
 void saveTimezoneConfig();
 void loadTimezoneConfig();
 void saveBuzzerConfig();
@@ -413,35 +396,20 @@ void loadCitySelection();
 void saveMethodSelection();
 void loadMethodSelection();
 
-// ============================================
-// RTC Functions
-// ============================================
 bool initRTC();
 bool isRTCValid();
 bool isRTCTimeValid(DateTime dt);
 void saveTimeToRTC();
 
-// ============================================
-// Web Server Functions
-// ============================================
 void setupServerRoutes();
 void sendJSONResponse(AsyncWebServerRequest *request, const String &json);
 
-// ============================================
-// Utility Functions
-// ============================================
 bool init_littlefs();
 void printStackReport();
 
-// ============================================
-// LVGL Callback Functions
-// ============================================
 void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map);
 void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data);
 
-// ============================================
-// FreeRTOS Task Functions
-// ============================================
 void uiTask(void *parameter);
 void wifiTask(void *parameter);
 void ntpTask(void *parameter);
@@ -451,15 +419,9 @@ void rtcSyncTask(void *parameter);
 void clockTickTask(void *parameter);
 void audioTask(void *parameter);
 
-// ============================================
-// WiFi & AP Restart Tasks
-// ============================================
 void restartWiFiTask(void *parameter);
 void restartAPTask(void *parameter);
 
-// ============================================
-// DFPlayer Functions
-// ============================================
 bool initDFPlayer();
 void setDFPlayerVolume(int vol);
 void playDFPlayerAdzan(String prayerName);
@@ -629,7 +591,13 @@ void checkPrayerTime() {
   char currentTime[6];
   sprintf(currentTime, "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
   
-  if (timeinfo.tm_sec == 0 && !blinkState.isBlinking && !adzanState.canTouch) {
+  int currentMinuteKey = timeinfo.tm_hour * 60 + timeinfo.tm_min;
+  
+  if (timeinfo.tm_sec < 5                    // Window 5 detik (bukan hanya sec==0)
+      && currentMinuteKey != lastBlinkMinute  // Belum di-trigger menit ini
+      && !blinkState.isBlinking 
+      && !adzanState.canTouch) {
+    
     String current = String(currentTime);
     String prayerName = "";
     
@@ -642,15 +610,23 @@ void checkPrayerTime() {
     else if (current == prayerConfig.isyaTime && buzzerConfig.isyaEnabled) prayerName = "isya";
     
     if (prayerName.length() > 0) {
+      lastBlinkMinute = currentMinuteKey;  // Tandai sudah trigger menit ini
       startBlinking(prayerName);
       
-      adzanState.canTouch = true;
-      adzanState.currentPrayer = prayerName;
-      adzanState.startTime = now_t;
-      adzanState.deadlineTime = now_t + 600;
-      saveAdzanState();
+      bool isAdzanPrayer = (prayerName != "imsak" && prayerName != "terbit");
       
-      Serial.println("ADZAN AKTIF: " + prayerName + " (10 menit)");
+      if (isAdzanPrayer && dfPlayerAvailable) {
+        adzanState.canTouch = true;
+        adzanState.currentPrayer = prayerName;
+        adzanState.startTime = now_t;
+        adzanState.deadlineTime = now_t + 600;
+        saveAdzanState();
+        Serial.println("ADZAN AKTIF: " + prayerName + " - sentuh layar untuk putar (10 menit)");
+      } else {
+        adzanState.canTouch = false;
+        adzanState.currentPrayer = "";
+        Serial.println("NOTIF AKTIF: " + prayerName + " - buzzer+blink only (no touch needed)");
+      }
     }
   }
   
@@ -658,7 +634,9 @@ void checkPrayerTime() {
     Serial.println("ADZAN EXPIRED: " + adzanState.currentPrayer);
     adzanState.canTouch = false;
     adzanState.currentPrayer = "";
+    adzanState.isPlaying = false;
     saveAdzanState();
+    lastBlinkMinute = -1;
   }
 }
 
@@ -685,7 +663,9 @@ void stopBlinking() {
     blinkState.isBlinking = false;
     blinkState.activePrayer = "";
     
-    if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+    ledcWrite(BUZZER_CHANNEL, 0);
+    
+    if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
       if (objects.imsak_time) lv_obj_clear_flag(objects.imsak_time, LV_OBJ_FLAG_HIDDEN);
       if (objects.subuh_time) lv_obj_clear_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
       if (objects.terbit_time) lv_obj_clear_flag(objects.terbit_time, LV_OBJ_FLAG_HIDDEN);
@@ -694,6 +674,8 @@ void stopBlinking() {
       if (objects.maghrib_time) lv_obj_clear_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
       if (objects.isya_time) lv_obj_clear_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
       xSemaphoreGive(displayMutex);
+    } else {
+      Serial.println("[stopBlinking] WARNING: displayMutex timeout - elemen mungkin masih hidden");
     }
     
     Serial.println("Flashing finished - all prayer times appear normal");
@@ -707,15 +689,14 @@ void handleBlinking() {
   
   if (currentMillis - blinkState.blinkStartTime >= BLINK_DURATION) {
     stopBlinking();
-    ledcWrite(BUZZER_CHANNEL, 0);
-    return;
+    return;  // stopBlinking() sudah matikan buzzer
   }
   
   if (currentMillis - blinkState.lastBlinkToggle >= BLINK_INTERVAL) {
     blinkState.lastBlinkToggle = currentMillis;
     blinkState.currentVisible = !blinkState.currentVisible;
     
-    if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+    if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(150)) == pdTRUE) {
       lv_obj_t *targetLabel = NULL;
       
       if (blinkState.activePrayer == "imsak") targetLabel = objects.imsak_time;
@@ -730,14 +711,16 @@ void handleBlinking() {
         if (blinkState.currentVisible) {
           lv_obj_clear_flag(targetLabel, LV_OBJ_FLAG_HIDDEN);
           int pwmValue = map(buzzerConfig.volume, 0, 100, 0, 255);
-          ledcWrite(BUZZER_CHANNEL, pwmValue);
+          ledcWrite(BUZZER_CHANNEL, pwmValue);  // Buzzer ON sinkron dengan LCD tampil
         } else {
           lv_obj_add_flag(targetLabel, LV_OBJ_FLAG_HIDDEN);
-          ledcWrite(BUZZER_CHANNEL, 0);
+          ledcWrite(BUZZER_CHANNEL, 0);          // Buzzer OFF sinkron dengan LCD hilang
         }
       }
       
       xSemaphoreGive(displayMutex);
+    } else {
+      blinkState.currentVisible = !blinkState.currentVisible;
     }
   }
 }
@@ -3369,8 +3352,6 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data) {
           
           Serial.println("TOUCH ADZAN: " + areas[i].name);
           
-          if (blinkState.isBlinking) stopBlinking();
-          
           if (audioTaskHandle != NULL) {
             Serial.println("Audio system available - triggering playback");
             
@@ -3452,7 +3433,6 @@ void uiTask(void *parameter) {
         switch (update.type) {
           case DisplayUpdate::TIME_UPDATE:
             updateTimeDisplay();
-            checkPrayerTime();
             break;
           case DisplayUpdate::PRAYER_UPDATE:
             updatePrayerDisplay();
@@ -3462,6 +3442,10 @@ void uiTask(void *parameter) {
             break;
         }
         xSemaphoreGive(displayMutex);
+      }
+      
+      if (update.type == DisplayUpdate::TIME_UPDATE) {
+        checkPrayerTime();
       }
     }
     
@@ -4519,7 +4503,7 @@ void clockTickTask(void *parameter) {
             
             DisplayUpdate update;
             update.type = DisplayUpdate::TIME_UPDATE;
-            xQueueSend(displayQueue, &update, 0);
+            xQueueSend(displayQueue, &update, pdMS_TO_TICKS(100));
         }
 
         if (wifiConfig.isConnected) {
@@ -4689,9 +4673,6 @@ void restartWiFiTask(void *parameter) {
     vTaskDelete(NULL);
 }
 
-// ============================================
-// WiFi & AP Restart Tasks
-// ============================================
 void restartAPTask(void *parameter) {
     unsigned long now = millis();
     if (now - lastAPRestartRequest < RESTART_DEBOUNCE_MS) {
