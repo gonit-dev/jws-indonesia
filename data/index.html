@@ -2491,11 +2491,9 @@
                     if (password) {
                         savedWiFiConfig.routerPassword = password;
                     }
+                    document.getElementById('wifiSSID').value = ssid;
+                    if (password) document.getElementById('wifiPassword').value = password;
                     showToast('Pengaturan WiFi berhasil disimpan', 'success');
-                    setTimeout(() => {
-                        loadWiFiConfig();
-                    }, 1000);
-
                     btn.disabled = false;
                     btn.textContent = originalText;
                 } else {
@@ -2562,12 +2560,13 @@
                         savedWiFiConfig.apSSID = ssid;
                         if (pass) savedWiFiConfig.apPassword = pass;
 
+                        document.getElementById('apSSID').value = ssid;
+                        if (pass) document.getElementById('apPassword').value = pass;
+
                         await showToastBeforeCountdown(
                             `Access Point berhasil disimpan ${ssid}`,
                             'success'
                         );
-
-                        setTimeout(() => loadWiFiConfig(), 1000);
 
                         btn.disabled = false;
                         btn.textContent = originalText;
@@ -2627,13 +2626,15 @@
             })
                 .then(async response => {
                     if (response.ok) {
+                        if (apIP) document.getElementById('apIP').value = apIP;
+                        if (gateway) document.getElementById('gatewayIP').value = gateway;
+                        if (subnet) document.getElementById('subnetMask').value = subnet;
+
                         const networkMsg = apIP ? apIP : '192.168.100.1';
                         await showToastBeforeCountdown(
                             `Konfigurasi jaringan berhasil disimpan ${networkMsg}`,
                             'success'
                         );
-
-                        setTimeout(() => loadWiFiConfig(), 1000);
 
                         btn.disabled = false;
                         btn.textContent = originalText;
