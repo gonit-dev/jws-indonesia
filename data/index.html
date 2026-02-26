@@ -260,25 +260,6 @@
             overflow: hidden !important;
         }
 
-        /* Timezone inline edit styling */
-        #timezoneInput {
-            font-family: monospace;
-            border: 2px solid #1779ba;
-            border-radius: 4px;
-        }
-
-        #timezoneInput:focus {
-            outline: none;
-            border-color: #14679e;
-            box-shadow: 0 0 5px rgba(23, 121, 186, 0.5);
-        }
-
-        #timezoneDisplayText {
-            font-weight: bold;
-            color: #1779ba;
-            padding: 0 5px;
-        }
-
         @keyframes spinner {
             to {
                 transform: rotate(360deg);
@@ -293,66 +274,6 @@
             border-radius: 50%;
             border-top-color: #1779ba;
             animation: spinner 1s ease-in-out infinite;
-        }
-
-        /* Volume Slider - Custom Style */
-        #volumeSlider {
-            -webkit-appearance: none;
-            appearance: none;
-            height: 8px;
-            border-radius: 5px;
-            background: #e6e6e6;
-            outline: none;
-        }
-
-        #volumeSlider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: #1779ba;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
-
-        #volumeSlider::-moz-range-thumb {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: #1779ba;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
-
-        #volumeSlider::-webkit-slider-thumb:hover {
-            background: #14679e;
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        #volumeSlider::-moz-range-thumb:hover {
-            background: #14679e;
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        /* Update slider background saat nilai berubah */
-        #volumeSlider::-webkit-slider-runnable-track {
-            background: linear-gradient(to right, #1779ba 0%, #1779ba var(--slider-value, 50%), #e6e6e6 var(--slider-value, 50%), #e6e6e6 100%);
-            height: 8px;
-            border-radius: 5px;
-        }
-
-        #volumeSlider::-moz-range-track {
-            background: #e6e6e6;
-            height: 8px;
-            border-radius: 5px;
-        }
-
-        #volumeSlider::-moz-range-progress {
-            background: #1779ba;
-            height: 8px;
-            border-radius: 5px;
         }
     </style>
 </head>
@@ -1060,102 +981,74 @@
                                                                 </tbody>
                                                             </table>
                                                             <div class="medium-12 small-12 large-12 cell">
-                                                                <div class="grid-x grid-margin-x">
-                                                                    <div class="medium-12 small-12 large-12 cell">
-                                                                        <p>
-                                                                            <strong>⏱️ Atur Alarm</strong>
-                                                                        </p>
-                                                                        <p class="help-text">
-                                                                            Ubah jadwal alarm
-                                                                        </p>
-                                                                        <div class="info"></div>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="grid-x grid-margin-x grid-margin-y align-center">
-                                                            	    <div class="picker-card theme-frosted" id="p4b">
-                                                                        <div class="medium-12 small-12 large-12 cell">
-                                                                            <div class="time-picker">
-                                                                                <div class="digit-col">
-                                                                                    <button class="btn-arrow" onclick="step('p4b','h1',1)">▲</button>
-                                                                                    <div class="digit-scroll" data-picker="p4b" data-digit="h1">
-                                                                                        <div class="digit-scroll-inner"></div>
-                                                                                    </div>
-                                                                                    <button class="btn-arrow" onclick="step('p4b','h1',-1)">▼</button>
-                                                                                </div>
-                                                                                <div class="digit-col">
-                                                                                    <button class="btn-arrow" onclick="step('p4b','h2',1)">▲</button>
-                                                                                    <div class="digit-scroll" data-picker="p4b" data-digit="h2">
-                                                                                        <div class="digit-scroll-inner"></div>
-                                                                                    </div>
-                                                                                    <button class="btn-arrow" onclick="step('p4b','h2',-1)">▼</button>
-                                                                                </div>
-                                                                                <div class="separator">:</div>
-                                                                                <div class="digit-col">
-                                                                                    <button class="btn-arrow" onclick="step('p4b','m1',1)">▲</button>
-                                                                                    <div class="digit-scroll" data-picker="p4b" data-digit="m1">
-                                                                                        <div class="digit-scroll-inner"></div>
-                                                                                    </div>
-                                                                                    <button class="btn-arrow" onclick="step('p4b','m1',-1)">▼</button>
-                                                                                </div>
-                                                                                <div class="digit-col">
-                                                                                    <button class="btn-arrow" onclick="step('p4b','m2',1)">▲</button>
-                                                                                    <div class="digit-scroll" data-picker="p4b" data-digit="m2">
-                                                                                        <div class="digit-scroll-inner"></div>
-                                                                                    </div>
-                                                                                    <button class="btn-arrow" onclick="step('p4b','m2',-1)">▼</button>
-                                                                                </div>
-                                                                            </div>
-                                                                            <div class="scroll-hint">scroll ↕ mouse · tap ▲▼</div>
-                                                                            <div class="medium-12 small-12 large-12 cell">
-                                                                                <div class="grid-x grid-margin-x align-middle">
-                                                                                    <div class="medium-12 small-12 large-12 cell">
-                                                                                        <div class="switch tiny">
-                                                                                            <input class="switch-input buzzer-toggle" id="toggle-alarm" type="checkbox" name="buzzer-alarm" data-prayer="alarm">
-                                                                                            <label class="switch-paddle" for="toggle-alarm">
-                                                                                                <span class="switch-active" aria-hidden="true">ON</span>
-                                                                                                <span class="switch-inactive" aria-hidden="true">OFF</span>
-                                                                                            </label>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    <div class="medium-12 small-12 large-12 cell">
-                                                                                        <button class="button secondary" onclick="applyPickerTimeFrom('p4b')">Simpan Alarm</button>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
+                                                            	<div class="picker-card theme-frosted" id="p4b" style="border-color:rgba(255,255,255,0.08); background: rgba(255,255,255,0.03)">
+                                                            		<div class="picker-theme" style="color:#8a8a8a">⏱ Atur Alarm</div>
+                                                            		<div class="time-picker">
+                                                            			<div class="digit-col">
+                                                            				<button class="btn-arrow" onclick="step('p4b','h1',1)">▲</button>
+                                                            				<div class="digit-scroll" data-picker="p4b" data-digit="h1">
+                                                            					<div class="digit-scroll-inner"></div>
+                                                            				</div>
+                                                            				<button class="btn-arrow" onclick="step('p4b','h1',-1)">▼</button>
+                                                            			</div>
+                                                            			<div class="digit-col">
+                                                            				<button class="btn-arrow" onclick="step('p4b','h2',1)">▲</button>
+                                                            				<div class="digit-scroll" data-picker="p4b" data-digit="h2">
+                                                            					<div class="digit-scroll-inner"></div>
+                                                            				</div>
+                                                            				<button class="btn-arrow" onclick="step('p4b','h2',-1)">▼</button>
+                                                            			</div>
+                                                            			<div class="separator">:</div>
+                                                            			<div class="digit-col">
+                                                            				<button class="btn-arrow" onclick="step('p4b','m1',1)">▲</button>
+                                                            				<div class="digit-scroll" data-picker="p4b" data-digit="m1">
+                                                            					<div class="digit-scroll-inner"></div>
+                                                            				</div>
+                                                            				<button class="btn-arrow" onclick="step('p4b','m1',-1)">▼</button>
+                                                            			</div>
+                                                            			<div class="digit-col">
+                                                            				<button class="btn-arrow" onclick="step('p4b','m2',1)">▲</button>
+                                                            				<div class="digit-scroll" data-picker="p4b" data-digit="m2">
+                                                            					<div class="digit-scroll-inner"></div>
+                                                            				</div>
+                                                            				<button class="btn-arrow" onclick="step('p4b','m2',-1)">▼</button>
+                                                            			</div>
+                                                            		</div>
+                                                            		<div class="scroll-hint">scroll ↕ mouse · tap ▲▼</div>
+                                                            		<div class="medium-12 small-12 large-12 cell">
+                                                            			<div class="grid-x grid-margin-x align-middle align-center">
+                                                            				<div class=" small-6 medium-4 large-3 cell">
+                                                            					<button class="button secondary" onclick="applyPickerTimeFrom('p4b')">Simpan Alarm</button>
+                                                            				</div>
+                                                            				<div class="small-6 medium-46 large-3 cell">
+                                                            					<div class="switch tiny">
+                                                            						<input class="switch-input buzzer-toggle" id="toggle-alarm" type="checkbox" name="buzzer-alarm" data-prayer="alarm">
+                                                            						<label class="switch-paddle" for="toggle-alarm">
+                                                            							<span class="switch-active" aria-hidden="true">ON</span>
+                                                            							<span class="switch-inactive" aria-hidden="true">OFF</span>
+                                                            						</label>
+                                                            					</div>
+                                                            				</div>
+                                                            			</div>
+                                                            		</div>
                                                             	</div>
                                                             </div>
                                                             <!-- Volume Control - Native HTML5 Slider -->
-                                                            <div class="grid-x grid-margin-x">
-                                                                <div class="medium-12 small-12 large-12 cell">
-                                                                    <p>
-                                                                        <strong>🔊 Volume Buzzer</strong>
-                                                                    </p>
-                                                                    <p class="help-text">
-                                                                        Ubah volume buzzer
-                                                                    </p>
-                                                                    <div class="info"></div>
+                                                            <div class="medium-12 small-12 large-12 cell" style="margin-top: 20px;">
+                                                                <strong>🔊 VOLUME BUZZER</strong>
+                                                                <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                                                                    <span>0</span>
+                                                                    <input type="range" id="volumeSlider" min="0" max="100" value="50" style="flex: 1;">
+                                                                    <span>100</span>
+                                                                    <span id="volumeValue" style="font-weight: bold; color: #1779ba;">50%</span>
                                                                 </div>
-                                                            </div>
-                                                            <div class="grid-x grid-margin-x grid-margin-y align-center">
-                                                                <div class="medium-12 small-12 large-12 cell">
-                                                                    <div class="medium-12 small-12 large-12 cell">
-                                                                        <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
-                                                                            <span>0</span>
-                                                                            <input type="range" id="volumeSlider" min="0" max="100" value="50" style="flex: 1;">
-                                                                            <span>100</span>
-                                                                            <span id="volumeValue" style="font-weight: bold; color: #1779ba;">50%</span>
-                                                                        </div>
-                                                                        <div style="margin-top: 15px;">
-                                                                            <button id="testBuzzerBtn" class="button secondary" onclick="toggleTestBuzzer()">
-                                                                                🔔 Test Buzzer
-                                                                            </button>
-                                                                            <p id="buzzerTestStatus" class="help-text" style="margin-top: 10px; display: none; color: #cc4b37;">
-                                                                                <span class="label warning">⏱️ Test berjalan: <span id="buzzerCountdown">30</span> detik</span>
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
+                                                                <div style="margin-top: 15px;">
+                                                                    <button id="testBuzzerBtn" class="button secondary" onclick="toggleTestBuzzer()">
+                                                                        🔔 Test Buzzer
+                                                                    </button>
+                                                                    <p id="buzzerTestStatus" class="help-text" style="margin-top: 10px; display: none; color: #cc4b37;">
+                                                                        <span class="label warning">⏱️ Test berjalan: <span id="buzzerCountdown">30</span> detik</span>
+                                                                    </p>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1170,8 +1063,7 @@
                                                                 ⏏️ Tombol ON/OFF notifikasi kedip LCD saat adzan <br>
                                                                 🔊 Buzzer dan pengaturan Volume <br>
                                                                 📱 Layar sentuh pengaktif adzan <br>
-                                                                ⏱️ Delay 10 menit sentuh adzan aktif di LCD <br>
-                                                                ⏱️ Setting alarm berjalan <br>
+                                                                ⏱️ Delay 10 menit sentuh adzan aktif di LCD
                                                             </p>
                                                         </div>
                                                     </div>
@@ -4195,7 +4087,7 @@
             const vals = getDigitRange(id, digit);
             let idx = vals.indexOf(pickerState[id][digit]);
             if (idx === -1) idx = 0;
-            idx = (idx - dir + vals.length) % vals.length;
+            idx = (idx + dir + vals.length) % vals.length;
             pickerState[id][digit] = vals[idx];
 
             // clamp h2 jika h1 berubah ke 2
@@ -4228,7 +4120,7 @@
                     e.preventDefault();
                     acc += e.deltaY;
                     if (Math.abs(acc) >= 40) {
-                        step(id, el.dataset.digit, acc > 0 ? -1 : 1);
+                        step(id, el.dataset.digit, acc > 0 ? 1 : -1);
                         acc = 0;
                     }
                 }, { passive: false });
@@ -4240,7 +4132,7 @@
                     e.preventDefault();
                     const dy = startY - e.touches[0].clientY;
                     if (Math.abs(dy) >= 25) {
-                        step(id, el.dataset.digit, dy > 0 ? -1 : 1);
+                        step(id, el.dataset.digit, dy > 0 ? 1 : -1);
                         startY = e.touches[0].clientY;
                     }
                 }, { passive: false });
