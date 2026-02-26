@@ -635,6 +635,7 @@
                                                     <div class="medium-12 small-12 large-12 cell">
                                                         <button class="button secondary expanded" onclick="syncTime()"> Perbarui Waktu </button>
                                                     </div>
+
                                                 </div>
                                                 <div class="medium-6 small-12 large-6 cell">
                                                     <div class="medium-12 small-12 large-12 cell">
@@ -1058,22 +1059,103 @@
                                                                     </tr>
                                                                 </tbody>
                                                             </table>
-                                                            <!-- Volume Control - Native HTML5 Slider -->
-                                                            <div class="medium-12 small-12 large-12 cell" style="margin-top: 20px;">
-                                                                <strong>🔊 VOLUME BUZZER</strong>
-                                                                <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
-                                                                    <span>0</span>
-                                                                    <input type="range" id="volumeSlider" min="0" max="100" value="50" style="flex: 1;">
-                                                                    <span>100</span>
-                                                                    <span id="volumeValue" style="font-weight: bold; color: #1779ba;">50%</span>
+                                                            <div class="medium-12 small-12 large-12 cell">
+                                                                <div class="grid-x grid-margin-x">
+                                                                    <div class="medium-12 small-12 large-12 cell">
+                                                                        <p>
+                                                                            <strong>⏱ Atur Alarm</strong>
+                                                                        </p>
+                                                                        <p class="help-text">
+                                                                            Ubah jadwal alarm
+                                                                        </p>
+                                                                        <div class="info"></div>
+                                                                    </div>
                                                                 </div>
-                                                                <div style="margin-top: 15px;">
-                                                                    <button id="testBuzzerBtn" class="button secondary" onclick="toggleTestBuzzer()">
-                                                                        🔔 Test Buzzer
-                                                                    </button>
-                                                                    <p id="buzzerTestStatus" class="help-text" style="margin-top: 10px; display: none; color: #cc4b37;">
-                                                                        <span class="label warning">⏱️ Test berjalan: <span id="buzzerCountdown">30</span> detik</span>
+                                                                <div class="grid-x grid-margin-x grid-margin-y align-center">
+                                                            	    <div class="picker-card theme-frosted" id="p4b">
+                                                                        <div class="medium-12 small-12 large-12 cell">
+                                                                            <div class="time-picker">
+                                                                                <div class="digit-col">
+                                                                                    <button class="btn-arrow" onclick="step('p4b','h1',1)">▲</button>
+                                                                                    <div class="digit-scroll" data-picker="p4b" data-digit="h1">
+                                                                                        <div class="digit-scroll-inner"></div>
+                                                                                    </div>
+                                                                                    <button class="btn-arrow" onclick="step('p4b','h1',-1)">▼</button>
+                                                                                </div>
+                                                                                <div class="digit-col">
+                                                                                    <button class="btn-arrow" onclick="step('p4b','h2',1)">▲</button>
+                                                                                    <div class="digit-scroll" data-picker="p4b" data-digit="h2">
+                                                                                        <div class="digit-scroll-inner"></div>
+                                                                                    </div>
+                                                                                    <button class="btn-arrow" onclick="step('p4b','h2',-1)">▼</button>
+                                                                                </div>
+                                                                                <div class="separator">:</div>
+                                                                                <div class="digit-col">
+                                                                                    <button class="btn-arrow" onclick="step('p4b','m1',1)">▲</button>
+                                                                                    <div class="digit-scroll" data-picker="p4b" data-digit="m1">
+                                                                                        <div class="digit-scroll-inner"></div>
+                                                                                    </div>
+                                                                                    <button class="btn-arrow" onclick="step('p4b','m1',-1)">▼</button>
+                                                                                </div>
+                                                                                <div class="digit-col">
+                                                                                    <button class="btn-arrow" onclick="step('p4b','m2',1)">▲</button>
+                                                                                    <div class="digit-scroll" data-picker="p4b" data-digit="m2">
+                                                                                        <div class="digit-scroll-inner"></div>
+                                                                                    </div>
+                                                                                    <button class="btn-arrow" onclick="step('p4b','m2',-1)">▼</button>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="scroll-hint">scroll ↕ mouse · tap ▲▼</div>
+                                                                            <div class="medium-12 small-12 large-12 cell">
+                                                                                <div class="grid-x grid-margin-x align-middle">
+                                                                                    <div class="medium-12 small-12 large-12 cell">
+                                                                                        <div class="switch tiny">
+                                                                                            <input class="switch-input buzzer-toggle" id="toggle-alarm" type="checkbox" name="buzzer-alarm" data-prayer="alarm">
+                                                                                            <label class="switch-paddle" for="toggle-alarm">
+                                                                                                <span class="switch-active" aria-hidden="true">ON</span>
+                                                                                                <span class="switch-inactive" aria-hidden="true">OFF</span>
+                                                                                            </label>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="medium-12 small-12 large-12 cell">
+                                                                                        <button class="button secondary" onclick="applyPickerTimeFrom('p4b')">Simpan Alarm</button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                            	</div>
+                                                            </div>
+                                                            <!-- Volume Control - Native HTML5 Slider -->
+                                                            <div class="grid-x grid-margin-x">
+                                                                <div class="medium-12 small-12 large-12 cell">
+                                                                    <p>
+                                                                        <strong>⏱ Volume Buzzer</strong>
                                                                     </p>
+                                                                    <p class="help-text">
+                                                                        Ubah volume buzzer
+                                                                    </p>
+                                                                    <div class="info"></div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="grid-x grid-margin-x grid-margin-y align-center">
+                                                                <div class="medium-12 small-12 large-12 cell">
+                                                                    <div class="medium-12 small-12 large-12 cell">
+                                                                        <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                                                                            <span>0</span>
+                                                                            <input type="range" id="volumeSlider" min="0" max="100" value="50" style="flex: 1;">
+                                                                            <span>100</span>
+                                                                            <span id="volumeValue" style="font-weight: bold; color: #1779ba;">50%</span>
+                                                                        </div>
+                                                                        <div style="margin-top: 15px;">
+                                                                            <button id="testBuzzerBtn" class="button secondary" onclick="toggleTestBuzzer()">
+                                                                                🔔 Test Buzzer
+                                                                            </button>
+                                                                            <p id="buzzerTestStatus" class="help-text" style="margin-top: 10px; display: none; color: #cc4b37;">
+                                                                                <span class="label warning">⏱️ Test berjalan: <span id="buzzerCountdown">30</span> detik</span>
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -2241,12 +2323,55 @@
                 document.getElementById('toggle-maghrib').checked = data.maghrib;
                 document.getElementById('toggle-isya').checked = data.isya;
 
+                // Load alarm state
+                if (typeof data.alarm !== 'undefined') {
+                    document.getElementById('toggle-alarm').checked = data.alarm;
+                }
+                // Load alarm time ke picker p4b
+                if (data.alarmTime && data.alarmTime.length === 5 && pickerState['p4b']) {
+                    const parts = data.alarmTime.split(':');
+                    const h = parseInt(parts[0]);
+                    const m = parseInt(parts[1]);
+                    pickerState['p4b'].h1 = Math.floor(h / 10);
+                    pickerState['p4b'].h2 = h % 10;
+                    pickerState['p4b'].m1 = Math.floor(m / 10);
+                    pickerState['p4b'].m2 = m % 10;
+                    renderAllDigits('p4b');
+                }
+
                 const volumeSlider = document.getElementById('volumeSlider');
                 const volumeValue = document.getElementById('volumeValue');
                 volumeSlider.value = data.volume;
                 volumeValue.textContent = data.volume + '%';
 
             } catch (error) {
+            }
+        }
+
+        // ================================
+        // SIMPAN ALARM (dari picker)
+        // ================================
+        async function applyPickerTimeFrom(id) {
+            if (!pickerState[id]) return;
+            const h = pickerState[id].h1 * 10 + pickerState[id].h2;
+            const m = pickerState[id].m1 * 10 + pickerState[id].m2;
+            const timeStr = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+
+            try {
+                const formData = new URLSearchParams();
+                formData.append('alarmTime', timeStr);
+                const response = await fetch('/setalarmconfig', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData.toString()
+                });
+                if (response.ok) {
+                    showToast('Alarm disimpan: ' + timeStr, 'success');
+                } else {
+                    showToast('Gagal menyimpan alarm', 'error');
+                }
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
             }
         }
 
@@ -4030,6 +4155,109 @@
             window.addEventListener('offline', function () {
             });
         });
+
+        // ================================================
+        // FROSTED GLASS SCROLL TIME PICKER — JS
+        // ================================================
+        const pickerState = {};
+
+        function getDigitRange(id, digit) {
+            if (digit === 'h1') return [0, 1, 2];
+            if (digit === 'h2') return pickerState[id].h1 < 2 ? [0,1,2,3,4,5,6,7,8,9] : [0,1,2,3];
+            if (digit === 'm1') return [0,1,2,3,4,5];
+            if (digit === 'm2') return [0,1,2,3,4,5,6,7,8,9];
+            if (digit === 's1') return [0,1,2,3,4,5];
+            if (digit === 's2') return [0,1,2,3,4,5,6,7,8,9];
+            return [0];
+        }
+
+        function renderDigit(id, digit) {
+            const el = document.querySelector(`[data-picker="${id}"][data-digit="${digit}"]`);
+            if (!el) return;
+            const inner = el.querySelector('.digit-scroll-inner');
+            const vals = getDigitRange(id, digit);
+            const cur = pickerState[id][digit];
+            const curIdx = vals.indexOf(cur) === -1 ? 0 : vals.indexOf(cur);
+
+            inner.innerHTML = vals.map((v, i) =>
+                `<div class="digit-item ${i === curIdx ? 'active' : ''}">${v}</div>`
+            ).join('');
+
+            inner.style.transform = `translateY(${-(curIdx * 72)}px)`;
+        }
+
+        function renderAllDigits(id) {
+            ['h1','h2','m1','m2','s1','s2'].forEach(d => renderDigit(id, d));
+        }
+
+        function step(id, digit, dir) {
+            const vals = getDigitRange(id, digit);
+            let idx = vals.indexOf(pickerState[id][digit]);
+            if (idx === -1) idx = 0;
+            idx = (idx - dir + vals.length) % vals.length;
+            pickerState[id][digit] = vals[idx];
+
+            // clamp h2 jika h1 berubah ke 2
+            if (digit === 'h1') {
+                const h2range = getDigitRange(id, 'h2');
+                if (!h2range.includes(pickerState[id].h2)) {
+                    pickerState[id].h2 = h2range[h2range.length - 1];
+                }
+                renderDigit(id, 'h2');
+            }
+            renderDigit(id, digit);
+        }
+
+        function initPicker(id) {
+            const now = new Date();
+            pickerState[id] = {
+                h1: Math.floor(now.getHours() / 10),
+                h2: now.getHours() % 10,
+                m1: Math.floor(now.getMinutes() / 10),
+                m2: now.getMinutes() % 10,
+                s1: Math.floor(now.getSeconds() / 10),
+                s2: now.getSeconds() % 10
+            };
+            renderAllDigits(id);
+
+            // Mouse wheel scroll per digit
+            document.querySelectorAll(`[data-picker="${id}"]`).forEach(el => {
+                let acc = 0;
+                el.addEventListener('wheel', function(e) {
+                    e.preventDefault();
+                    acc += e.deltaY;
+                    if (Math.abs(acc) >= 40) {
+                        step(id, el.dataset.digit, acc > 0 ? -1 : 1);
+                        acc = 0;
+                    }
+                }, { passive: false });
+
+                // Touch swipe
+                let startY = 0;
+                el.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
+                el.addEventListener('touchmove', function(e) {
+                    e.preventDefault();
+                    const dy = startY - e.touches[0].clientY;
+                    if (Math.abs(dy) >= 25) {
+                        step(id, el.dataset.digit, dy > 0 ? -1 : 1);
+                        startY = e.touches[0].clientY;
+                    }
+                }, { passive: false });
+            });
+        }
+
+
+        // Inisialisasi picker saat DOM siap
+        document.addEventListener('DOMContentLoaded', function() {
+            initPicker('p4b');
+        });
+        // Fallback jika DOMContentLoaded sudah lewat
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            setTimeout(() => { initPicker('p4b'); }, 100);
+        }
+        // ================================================
+        // END FROSTED GLASS SCROLL TIME PICKER
+        // ================================================
     </script>
 </body>
 </html>

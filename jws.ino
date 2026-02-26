@@ -212,6 +212,34 @@ struct BuzzerConfig {
   int volume;
 };
 
+struct AlarmConfig {
+  char alarmTime[6]; // "HH:MM"
+  bool alarmEnabled;
+};
+
+// ================================
+// ALARM STATE
+// ================================
+struct AlarmState {
+  bool isRinging;           // Alarm sedang berbunyi
+  unsigned long lastToggle; // Untuk kedip jam
+  bool clockVisible;        // Status kedip jam
+  // Simpan state notif shalat saat alarm aktif
+  bool savedBlinkState;
+  bool savedAdzanCanTouch;
+};
+
+AlarmState alarmState = {
+  .isRinging = false,
+  .lastToggle = 0,
+  .clockVisible = true,
+  .savedBlinkState = false,
+  .savedAdzanCanTouch = false
+};
+
+SemaphoreHandle_t alarmMutex = NULL;
+static int lastAlarmMinute = -1; // Cegah trigger berulang menit sama
+
 struct CountdownState {
   bool isActive;
   unsigned long startTime;
@@ -254,6 +282,11 @@ int timezoneOffset = 7;
 BuzzerConfig buzzerConfig = {
   false, false, false, false, false, false, false,
   50
+};
+
+AlarmConfig alarmConfig = {
+  "00:00",  // alarmTime
+  false     // alarmEnabled
 };
 
 volatile bool needPrayerUpdate = false;
@@ -391,6 +424,12 @@ void loadBuzzerConfig();
 void saveAdzanState();
 void loadAdzanState();
 int getAdzanRemainingSeconds();
+
+void saveAlarmConfig();
+void loadAlarmConfig();
+void checkAlarmTime();
+void stopAlarm();
+void handleAlarmBlink();
 void saveCitySelection();
 void loadCitySelection();
 void saveMethodSelection();
@@ -584,6 +623,9 @@ int getRemainingSeconds() {
 // Prayer Time Blink Functions
 // ============================================
 void checkPrayerTime() {
+  // Jika alarm sedang aktif, tunda notif shalat
+  if (alarmState.isRinging) return;
+
   time_t now_t = timeConfig.currentTime;
   struct tm timeinfo;
   localtime_r(&now_t, &timeinfo);
@@ -1116,6 +1158,161 @@ void loadBuzzerConfig() {
       }
     }
     xSemaphoreGive(settingsMutex);
+  }
+}
+
+// ============================================
+// ALARM CONFIG - Save / Load
+// ============================================
+void saveAlarmConfig() {
+  if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+    fs::File file = LittleFS.open("/alarm_config.txt", "w");
+    if (file) {
+      file.println(alarmConfig.alarmTime);
+      file.println(alarmConfig.alarmEnabled ? "1" : "0");
+      file.flush();
+      file.close();
+      Serial.println("Konfigurasi alarm disimpan: " + String(alarmConfig.alarmTime) + 
+                     " | " + (alarmConfig.alarmEnabled ? "ON" : "OFF"));
+    }
+    xSemaphoreGive(settingsMutex);
+  }
+}
+
+void loadAlarmConfig() {
+  if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+    if (LittleFS.exists("/alarm_config.txt")) {
+      fs::File file = LittleFS.open("/alarm_config.txt", "r");
+      if (file) {
+        String timeStr = file.readStringUntil('\n');
+        timeStr.trim();
+        if (timeStr.length() == 5) {
+          strncpy(alarmConfig.alarmTime, timeStr.c_str(), 5);
+          alarmConfig.alarmTime[5] = '\0';
+        }
+        String enabledStr = file.readStringUntil('\n');
+        enabledStr.trim();
+        alarmConfig.alarmEnabled = (enabledStr == "1");
+        file.close();
+        Serial.println("Konfigurasi alarm dimuat: " + String(alarmConfig.alarmTime) + 
+                       " | " + (alarmConfig.alarmEnabled ? "ON" : "OFF"));
+      }
+    }
+    xSemaphoreGive(settingsMutex);
+  }
+}
+
+// ============================================
+// ALARM - Stop (dipanggil saat layar disentuh)
+// ============================================
+void stopAlarm() {
+  if (!alarmState.isRinging) return;
+
+  Serial.println("\n========================================");
+  Serial.println("ALARM DIHENTIKAN (layar disentuh)");
+  Serial.println("========================================");
+
+  alarmState.isRinging = false;
+  ledcWrite(BUZZER_CHANNEL, 0);
+
+  // Kembalikan tampilan jam normal
+  if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
+    if (objects.time_now) lv_obj_clear_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
+    xSemaphoreGive(displayMutex);
+  }
+  alarmState.clockVisible = true;
+
+  // Kembalikan state notif shalat yang tadi dimatikan
+  // (blinkState & adzanState sudah di-restore secara otomatis karena kita tidak menghapusnya,
+  //  hanya memblokir handleBlinking() selama alarm aktif)
+  Serial.println("Notif shalat dikembalikan");
+  Serial.println("========================================\n");
+}
+
+// ============================================
+// ALARM - Check apakah saatnya berbunyi
+// ============================================
+void checkAlarmTime() {
+  if (!alarmConfig.alarmEnabled) return;
+  if (alarmState.isRinging) return;
+
+  time_t now_t = timeConfig.currentTime;
+  struct tm timeinfo;
+  localtime_r(&now_t, &timeinfo);
+
+  // Hanya trigger sekali per menit
+  int currentMinuteKey = timeinfo.tm_hour * 60 + timeinfo.tm_min;
+  if (currentMinuteKey == lastAlarmMinute) return;
+  if (timeinfo.tm_sec >= 5) return; // Hanya 5 detik pertama menit
+
+  char currentTime[6];
+  sprintf(currentTime, "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
+
+  if (strcmp(currentTime, alarmConfig.alarmTime) == 0) {
+    lastAlarmMinute = currentMinuteKey;
+
+    Serial.println("\n========================================");
+    Serial.println("ALARM AKTIF: " + String(alarmConfig.alarmTime));
+    Serial.println("========================================");
+    Serial.println("Kedip jam + buzzer dimulai");
+    Serial.println("Notif shalat ditangguhkan sampai alarm mati");
+    Serial.println("========================================\n");
+
+    // Simpan state shalat yang sedang aktif (blinking & adzan)
+    alarmState.savedBlinkState  = blinkState.isBlinking;
+    alarmState.savedAdzanCanTouch = adzanState.canTouch;
+
+    // Pause notif shalat: paksa stop blinking & adzan sementara
+    if (blinkState.isBlinking) {
+      // Hentikan kedip shalat (tampilkan semua waktu shalat kembali)
+      blinkState.isBlinking = false;
+      blinkState.activePrayer = "";
+      if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
+        if (objects.imsak_time) lv_obj_clear_flag(objects.imsak_time, LV_OBJ_FLAG_HIDDEN);
+        if (objects.subuh_time) lv_obj_clear_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
+        if (objects.terbit_time) lv_obj_clear_flag(objects.terbit_time, LV_OBJ_FLAG_HIDDEN);
+        if (objects.zuhur_time) lv_obj_clear_flag(objects.zuhur_time, LV_OBJ_FLAG_HIDDEN);
+        if (objects.ashar_time) lv_obj_clear_flag(objects.ashar_time, LV_OBJ_FLAG_HIDDEN);
+        if (objects.maghrib_time) lv_obj_clear_flag(objects.maghrib_time, LV_OBJ_FLAG_HIDDEN);
+        if (objects.isya_time) lv_obj_clear_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
+        xSemaphoreGive(displayMutex);
+      }
+    }
+    // Pause adzan touch juga
+    if (adzanState.canTouch) {
+      adzanState.canTouch = false;
+    }
+
+    alarmState.isRinging = true;
+    alarmState.lastToggle = millis();
+    alarmState.clockVisible = true;
+  }
+}
+
+// ============================================
+// ALARM - Handle kedip jam + buzzer
+// ============================================
+void handleAlarmBlink() {
+  if (!alarmState.isRinging) return;
+
+  unsigned long currentMillis = millis();
+  if (currentMillis - alarmState.lastToggle >= 500) { // Kedip 500ms
+    alarmState.lastToggle = currentMillis;
+    alarmState.clockVisible = !alarmState.clockVisible;
+
+    if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(150)) == pdTRUE) {
+      if (objects.time_now) {
+        if (alarmState.clockVisible) {
+          lv_obj_clear_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
+          int pwmValue = map(buzzerConfig.volume, 0, 100, 0, 255);
+          ledcWrite(BUZZER_CHANNEL, pwmValue); // Buzzer ON
+        } else {
+          lv_obj_add_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
+          ledcWrite(BUZZER_CHANNEL, 0); // Buzzer OFF
+        }
+      }
+      xSemaphoreGive(displayMutex);
+    }
   }
 }
 
@@ -2713,6 +2910,8 @@ void setupServerRoutes() {
     json += "\"ashar\":" + String(buzzerConfig.asharEnabled ? "true" : "false") + ",";
     json += "\"maghrib\":" + String(buzzerConfig.maghribEnabled ? "true" : "false") + ",";
     json += "\"isya\":" + String(buzzerConfig.isyaEnabled ? "true" : "false") + ",";
+    json += "\"alarm\":" + String(alarmConfig.alarmEnabled ? "true" : "false") + ",";
+    json += "\"alarmTime\":\"" + String(alarmConfig.alarmTime) + "\",";
     json += "\"volume\":" + String(buzzerConfig.volume);
     json += "}";
 
@@ -2735,6 +2934,13 @@ void setupServerRoutes() {
     else if (prayer == "ashar") buzzerConfig.asharEnabled = enabled;
     else if (prayer == "maghrib") buzzerConfig.maghribEnabled = enabled;
     else if (prayer == "isya") buzzerConfig.isyaEnabled = enabled;
+    else if (prayer == "alarm") {
+      alarmConfig.alarmEnabled = enabled;
+      lastAlarmMinute = -1; // reset trigger guard
+      saveAlarmConfig();
+      request->send(200, "text/plain", "OK");
+      return;
+    }
 
     saveBuzzerConfig();
     request -> send(200, "text/plain", "OK");
@@ -2835,6 +3041,44 @@ void setupServerRoutes() {
       
       request->send(200, "text/plain", "OK");
       Serial.println("Buzzer stopped successfully\n");
+  });
+
+  // ========================================
+  // ALARM CONFIG ROUTES
+  // ========================================
+  server.on("/getalarmconfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{";
+    json += "\"alarmTime\":\"" + String(alarmConfig.alarmTime) + "\",";
+    json += "\"alarmEnabled\":" + String(alarmConfig.alarmEnabled ? "true" : "false");
+    json += "}";
+    sendJSONResponse(request, json);
+  });
+
+  server.on("/setalarmconfig", HTTP_POST, [](AsyncWebServerRequest *request) {
+    bool changed = false;
+
+    if (request->hasParam("alarmTime", true)) {
+      String t = request->getParam("alarmTime", true)->value();
+      t.trim();
+      if (t.length() == 5 && t[2] == ':') {
+        strncpy(alarmConfig.alarmTime, t.c_str(), 5);
+        alarmConfig.alarmTime[5] = '\0';
+        changed = true;
+        Serial.println("Alarm time set: " + t);
+      }
+    }
+
+    if (request->hasParam("alarmEnabled", true)) {
+      String en = request->getParam("alarmEnabled", true)->value();
+      alarmConfig.alarmEnabled = (en == "true" || en == "1");
+      changed = true;
+      Serial.println("Alarm enabled: " + String(alarmConfig.alarmEnabled ? "ON" : "OFF"));
+      // Reset trigger guard saat setting diubah
+      lastAlarmMinute = -1;
+    }
+
+    if (changed) saveAlarmConfig();
+    request->send(200, "application/json", "{\"success\":true}");
   });
 
   // ========================================
@@ -3336,6 +3580,19 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data) {
       xSemaphoreGive(spiMutex);
     }
 
+    if (validTouch && !touchPressed) {
+      // ======================================
+      // PRIORITAS 1: Matikan alarm dengan sentuh LCD manapun
+      // ======================================
+      if (alarmState.isRinging) {
+        stopAlarm();
+        // Jangan proses sentuhan lain
+        data->state = LV_INDEV_STATE_PR;
+        touchPressed = true;
+        return;
+      }
+    }
+
     if (validTouch && adzanState.canTouch && !touchPressed) {
       struct {String name; int x1,y1,x2,y2;} areas[] = {
         {"subuh",   200, 70,  310, 95},
@@ -3446,10 +3703,12 @@ void uiTask(void *parameter) {
       
       if (update.type == DisplayUpdate::TIME_UPDATE) {
         checkPrayerTime();
+        checkAlarmTime();
       }
     }
     
     handleBlinking();
+    handleAlarmBlink();
     
     vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
@@ -5161,6 +5420,7 @@ void setup() {
   spiMutex = xSemaphoreCreateMutex();
   i2cMutex = xSemaphoreCreateMutex();
   audioMutex = xSemaphoreCreateMutex();
+  alarmMutex = xSemaphoreCreateMutex();
 
   displayQueue = xQueueCreate(20, sizeof(DisplayUpdate));
   httpQueue = xQueueCreate(5, sizeof(HTTPRequest));
@@ -5211,6 +5471,7 @@ void setup() {
   loadMethodSelection();
   loadTimezoneConfig();
   loadBuzzerConfig();
+  loadAlarmConfig();
 
   Wire.begin(/*RTC_SDA, RTC_SCL*/);
   delay(500);
