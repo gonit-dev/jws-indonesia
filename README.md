@@ -56,6 +56,17 @@
   - Touch aktif 10 menit setelah waktu sholat
 - **Speaker Passive** - 3-5W (4-8Ω) atau line-out ke amplifier
 
+### ⏱️ Alarm
+- **Alarm Sekali** - Atur jam dan menit via picker di web interface
+- **Switch ON/OFF** - Aktifkan atau nonaktifkan tanpa menghapus waktu yang sudah diset
+- **Kedip Jam** - Saat alarm berbunyi, label jam di LCD berkedip (bukan tanggal)
+- **Buzzer Alarm** - Bunyi sinkron dengan kedip, volume mengikuti setting buzzer
+- **Tanpa Batas** - Alarm berbunyi terus tanpa auto-stop
+- **Stop via Sentuh** - Sentuh LCD mana saja untuk mematikan alarm
+- **Prioritas Tinggi** - Saat alarm aktif, notif shalat ditangguhkan sementara
+- **Auto-Resume** - Setelah alarm dimatikan, notif shalat kembali normal
+- **Persistent** - Waktu dan status alarm tersimpan di LittleFS, tidak hilang saat restart
+
 ### 💾 Penyimpanan
 - **LittleFS** - Semua konfigurasi persistent
 - **Auto-Save** - Simpan otomatis setelah perubahan
@@ -255,6 +266,20 @@ Tab **WAKTU** → Klik ikon edit (🕐) → Input offset → Klik 💾
    - Reboot perangkat
    - **Play:** Tap label waktu sholat saat blink
 
+### Setup Alarm
+1. Tab **JADWAL** → Scroll ke bagian **⏱ Atur Alarm**
+2. Putar picker untuk set jam dan menit yang diinginkan
+3. Klik **Simpan Alarm** → waktu tersimpan ke perangkat
+4. Nyalakan switch **ON** di sebelah tombol simpan
+5. Alarm aktif — saat waktunya tiba, jam di LCD akan berkedip dan buzzer berbunyi
+6. **Matikan:** Sentuh LCD mana saja untuk menghentikan alarm
+
+**Catatan:**
+- Simpan waktu dan toggle ON/OFF adalah dua aksi terpisah
+- Volume alarm mengikuti slider volume buzzer
+- Alarm tersimpan permanen, tidak hilang saat restart
+- Default waktu: `00:00` dengan status OFF
+
 ---
 
 ## 🌐 Web Interface
@@ -290,11 +315,43 @@ Tab **WAKTU** → Klik ikon edit (🕐) → Input offset → Klik 💾
 - **Volume:** Slider 0-100% dengan preview
 - **Test Buzzer:** Play/stop manual (auto-timeout 30s)
 - **Touch Adzan:** Tap label saat blink untuk play audio
+- **Atur Alarm:** Picker jam:menit, tombol Simpan Alarm, switch ON/OFF
 
 ### Tab RESET
 - **Factory Reset:** Countdown 60 detik dengan progress bar
 - Hapus semua konfigurasi, kembalikan ke default
 - Auto-redirect ke 192.168.100.1
+
+---
+
+## ⏱️ Alarm — Detail Perilaku
+
+### Cara Kerja
+1. Setiap detik sistem membandingkan waktu sekarang dengan `alarmTime`
+2. Jika cocok dan alarm ON → `alarmState.isRinging = true`
+3. Label jam (`time_now`) mulai berkedip setiap 500ms — **hanya jam, bukan tanggal**
+4. Buzzer berbunyi sinkron dengan kedip (ON saat jam tampil, OFF saat jam hilang)
+5. Alarm berjalan **tanpa batas waktu** sampai layar disentuh
+6. Sentuh LCD mana saja → alarm berhenti, jam tampil normal kembali
+
+### Prioritas vs Notif Shalat
+| Kondisi | Notif Shalat | Alarm |
+|---------|-------------|-------|
+| Alarm OFF, jam sholat masuk | ✅ Berjalan normal | Diam |
+| Alarm ON, belum waktunya | ✅ Berjalan normal | Diam |
+| Alarm ON, waktunya tiba | ⏸️ Ditangguhkan | ✅ Berbunyi |
+| Alarm dimatikan (sentuh LCD) | ✅ Kembali normal | Diam |
+
+### Jika Alarm dan Waktu Sholat Bersamaan
+Alarm mengambil prioritas — notif shalat di menit yang sama tidak akan muncul. Ini perilaku yang disengaja, bukan bug.
+
+### Penyimpanan
+Konfigurasi alarm disimpan di `/alarm_config.txt` di LittleFS:
+```
+06:00       ← alarmTime (HH:MM)
+1           ← alarmEnabled (1=ON, 0=OFF)
+```
+File ini tidak terhapus saat restart, hanya terhapus saat Factory Reset.
 
 ---
 
@@ -438,6 +495,44 @@ Decision: Use existing prayer times
 
 **Manual Update:**
 - Tab LOKASI → Klik **Simpan** (force update)
+
+---
+
+### Alarm Tidak Berbunyi
+
+**Pemeriksaan:**
+1. Switch alarm sudah ON di Tab JADWAL
+2. Waktu alarm sudah di-**Simpan** (bukan hanya diatur di picker)
+3. Volume buzzer tidak 0%
+4. Waktu sistem sudah benar (cek Tab BERANDA)
+
+**Debug Serial Monitor:**
+```
+✅ NORMAL:
+Konfigurasi alarm dimuat: 06:00 | ON
+ALARM AKTIF: 06:00
+Kedip jam + buzzer dimulai
+
+❌ TIDAK BERBUNYI:
+Konfigurasi alarm dimuat: 06:00 | OFF  → Switch belum ON
+```
+
+**Catatan:** Simpan Alarm dan switch ON/OFF adalah dua aksi terpisah. Pastikan keduanya dilakukan.
+
+---
+
+### Alarm Tidak Bisa Dimatikan
+
+**Solusi:**
+- Sentuh bagian mana saja di layar LCD dengan tekanan cukup (touch resistive)
+- Bersihkan layar jika kotor
+- Pastikan tidak ada objek di atas layar
+
+---
+
+### Alarm Mengganggu Notif Sholat
+
+Ini perilaku normal jika alarm berbunyi di menit yang sama dengan waktu sholat — alarm selalu menang. Solusinya set alarm di waktu yang berbeda dari waktu sholat.
 
 ---
 
@@ -729,6 +824,12 @@ Status countdown restart/reset:
 - `/synctime` - Manual time sync
 - `/restart` - Restart perangkat (countdown 60s)
 - `/reset` - Factory reset (countdown 60s)
+- `/setalarmconfig` - Set waktu alarm (`alarmTime=HH:MM`)
+- `/setbuzzertoggle` - Toggle alarm ON/OFF (`prayer=alarm&enabled=true/false`)
+
+### GET Endpoints
+- `/getalarmconfig` - Baca konfigurasi alarm saat ini
+- `/getbuzzerconfig` - Baca semua konfigurasi buzzer termasuk alarm
 
 ---
 
