@@ -3093,30 +3093,15 @@ void setupServerRoutes() {
       
       Serial.println("FACTORY RESET STARTED");
       
-      if (LittleFS.exists("/wifi_creds.txt")) {
-          LittleFS.remove("/wifi_creds.txt");
-      }
-      if (LittleFS.exists("/prayer_times.txt")) {
-          LittleFS.remove("/prayer_times.txt");
-      }
-      if (LittleFS.exists("/ap_creds.txt")) {
-          LittleFS.remove("/ap_creds.txt");
-      }
-      if (LittleFS.exists("/city_selection.txt")) {
-          LittleFS.remove("/city_selection.txt");
-      }
-      if (LittleFS.exists("/method_selection.txt")) {
-          LittleFS.remove("/method_selection.txt");
-      }
-      if (LittleFS.exists("/timezone.txt")) {
-          LittleFS.remove("/timezone.txt");
-      }
-      if (LittleFS.exists("/buzzer_config.txt")) {
-          LittleFS.remove("/buzzer_config.txt");
-      }
-      if (LittleFS.exists("/adzan_state.txt")) {
-          LittleFS.remove("/adzan_state.txt");
-      }
+      if (LittleFS.exists("/wifi_creds.txt"))       LittleFS.remove("/wifi_creds.txt");
+      if (LittleFS.exists("/prayer_times.txt"))     LittleFS.remove("/prayer_times.txt");
+      if (LittleFS.exists("/ap_creds.txt"))         LittleFS.remove("/ap_creds.txt");
+      if (LittleFS.exists("/city_selection.txt"))   LittleFS.remove("/city_selection.txt");
+      if (LittleFS.exists("/method_selection.txt")) LittleFS.remove("/method_selection.txt");
+      if (LittleFS.exists("/timezone.txt"))         LittleFS.remove("/timezone.txt");
+      if (LittleFS.exists("/buzzer_config.txt"))    LittleFS.remove("/buzzer_config.txt");
+      if (LittleFS.exists("/adzan_state.txt"))      LittleFS.remove("/adzan_state.txt");
+      if (LittleFS.exists("/alarm_config.txt"))     LittleFS.remove("/alarm_config.txt");
       
       if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
           methodConfig.methodId = 5;
@@ -3154,6 +3139,14 @@ void setupServerRoutes() {
           
           xSemaphoreGive(settingsMutex);
       }
+      
+      // Reset alarm ke default  ← TAMBAHAN
+      strncpy(alarmConfig.alarmTime, "00:00", 5);
+      alarmConfig.alarmTime[5] = '\0';
+      alarmConfig.alarmEnabled = false;
+      alarmState.isRinging = false;
+      lastAlarmMinute = -1;
+      ledcWrite(BUZZER_CHANNEL, 0);
       
       timezoneOffset = 7;
       
