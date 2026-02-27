@@ -4,6 +4,8 @@
  * OPTIMIZED VERSION - Event-Driven + Built-in NTP
  */
 
+#define PRODUCTION 1  // 1 = matikan serial print, 0 = aktifkan serial print
+
 #include "Wire.h"
 #include "RTClib.h"
 #include "lvgl.h"
@@ -5383,8 +5385,10 @@ void httpTask(void *parameter) {
 // SETUP - ESP32 CORE 3.x
 // ================================
 void setup() {
+#if !PRODUCTION
   Serial.begin(115200);
   delay(1000);
+#endif
 
   Serial.println("\n\n");
   Serial.println("========================================");
