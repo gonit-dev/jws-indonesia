@@ -4,7 +4,7 @@
  * OPTIMIZED VERSION - Event-Driven + Built-in NTP
  */
 
-#define PRODUCTION 1  // 1 = matikan serial print, 0 = aktifkan serial print
+#define PRODUCTION 0  // 1 = matikan serial print, 0 = aktifkan serial print
 
 #include "Wire.h"
 #include "RTClib.h"
