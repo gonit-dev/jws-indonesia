@@ -31,7 +31,7 @@
 - **Auto-Update** - Tengah malam (00:00-00:05) otomatis update jadwal
 
 ### ⏰ Manajemen Waktu
-- **NTP Auto-Sync** setiap 1 jam dengan multiple fallback server
+- **NTP Auto-Sync** setiap 1 jam dengan 3 fallback server (`pool.ntp.org`, `time.google.com`, `time.windows.com`)
 - **Zona Waktu** - Dukungan UTC-12 hingga UTC+14 (WIB/WITA/WIT)
 - **RTC Backup** - DS3231 opsional untuk persistensi waktu
 - **Manual Sync** - Sync dari browser jika diperlukan
@@ -299,7 +299,7 @@ Tab **WAKTU** → Klik ikon edit (🕐) → Input offset → Klik 💾
 
 ### Tab WAKTU
 - **Manual Sync:** Sync dari browser
-- **Auto NTP:** Sync setiap 1 jam, multiple fallback server
+- **Auto NTP:** Sync setiap 1 jam, 3 fallback server (`pool.ntp.org`, `time.google.com`, `time.windows.com`)
 - **Zona Waktu:** Inline edit UTC-12 hingga UTC+14
 - Auto-trigger NTP saat zona waktu berubah
 
@@ -715,9 +715,9 @@ DS3231 chip is defective!
 
 **Serial Monitor:**
 ```
-CRITICAL: PRAYER TASK CRASHED
-Action: Auto-restarting task...
-Prayer Task restarted successfully
+KRITIS: TUGAS SHALAT CRASH
+Aksi: Memulai ulang tugas otomatis...
+Tugas Shalat berhasil dimulai ulang
 ```
 
 **Sistem auto-recovery - task restart otomatis!**
