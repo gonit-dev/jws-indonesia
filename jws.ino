@@ -152,7 +152,7 @@ const char *ntpServers[] = {
   "time.google.com",
   "time.windows.com"
 };
-const int NTP_SERVER_COUNT = 5;
+const int NTP_SERVER_COUNT = 3;
 
 // ================================
 // CONFIGURATION STRUCTURES
