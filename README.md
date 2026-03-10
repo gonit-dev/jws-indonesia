@@ -508,13 +508,14 @@ Memory status: Normal
 | `/restart` | — | Restart perangkat (countdown 60s) |
 | `/reset` | — | Factory reset (countdown 60s) |
 | `/setwifi` | `ssid`, `password` | Set kredensial router |
-| `/setap` | `ssid`, `password`, `ip`, `gateway`, `subnet` | Set konfigurasi AP |
+| `/setap` | Mode 1 (SSID/Pass): `ssid`, `password` | Set SSID dan password AP |
+| `/setap` | Mode 2 (Network): `updateNetworkConfig=true`, `apIP`, `gateway`, `subnet` | Set IP, Gateway, Subnet AP |
 | `/synctime` | — | Manual NTP sync |
 | `/settimezone` | `offset` | Set UTC offset |
-| `/setcity` | `city`, `cityName`, `lat`, `lon`, `method`, `tune*` | Set lokasi + tune |
+| `/setcity` | `city`, `cityName`, `lat`, `lon`, `tuneImsak`, `tuneSubuh`, `tuneTerbit`, `tuneZuhur`, `tuneAshar`, `tuneMaghrib`, `tuneIsya` | Set lokasi + tune per waktu |
 | `/setmethod` | `methodId`, `methodName` | Set metode kalkulasi |
-| `/setbuzzertoggle` | `prayer`, `enabled` | Toggle notif per-waktu |
-| `/setbuzzervolume` | `volume` | Set volume buzzer (0–100) |
+| `/setbuzzertoggle` | `prayer` (imsak/subuh/terbit/zuhur/ashar/maghrib/isya/alarm), `enabled` (true/false) | Toggle notif per-waktu atau alarm |
+| `/setbuzzervolume` | `volume` (0–100) | Set volume buzzer |
 | `/testbuzzer` | — | Test buzzer (auto-stop 30 detik) |
 | `/stopbuzzer` | — | Stop test buzzer manual |
 | `/setalarmconfig` | `alarmTime` (HH:MM) | Set waktu alarm |
