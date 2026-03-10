@@ -498,7 +498,7 @@ Memory status: Normal
 | `/getbuzzerconfig` | Konfigurasi buzzer + alarm |
 | `/getalarmconfig` | Konfigurasi alarm saja |
 | `/api/data` | Data real-time (IoT/Home Assistant) |
-| `/api/countdown` | Status countdown restart/reset |
+| `/api/countdown` | Status countdown restart/reset/AP restart |
 | `/api/connection-type` | Tipe koneksi client (AP/STA) |
 
 ### POST Endpoints
@@ -554,6 +554,14 @@ Memory status: Normal
   "reason": "device_restart"
 }
 ```
+
+Nilai `reason` yang mungkin:
+
+| reason | Keterangan |
+|--------|-----------|
+| `device_restart` | Restart perangkat penuh |
+| `factory_reset` | Reset ke pengaturan pabrik |
+| `ap_restart` | Restart Access Point saja |
 
 ---
 
