@@ -54,9 +54,9 @@
 #define BUZZER_RESOLUTION 8
 
 // RGB LED Pins (Common Anode / Active LOW)
-#define RGB_R_PIN      4
-#define RGB_G_PIN      16
-#define RGB_B_PIN      17
+#define RGB_R_PIN      17
+#define RGB_G_PIN      4
+#define RGB_B_PIN      16
 
 // PWM Backlight Configuration
 #define TFT_BL_CHANNEL 0
@@ -449,13 +449,38 @@ void handleRGBLed() {
     return;
   }
 
-  // Prioritas 2: WiFi terkoneksi ke router → hijau nyala
-  if (wifiConfig.isConnected) {
-    rgbSetColor(false, true, false);
+  // Prioritas 2: status WiFi router
+  if (wifiConfig.routerSSID.length() > 0) {
+    switch (wifiState) {
+      case WIFI_CONNECTED:
+        // Konek penuh → hijau nyala
+        rgbSetColor(false, true, false);
+        break;
+
+      case WIFI_CONNECTING:
+        // Sedang konek → merah kedip lambat
+        if (now - rgbLastToggle >= 500) {
+          rgbLastToggle = now;
+          rgbLedState = !rgbLedState;
+          rgbSetColor(false, rgbLedState, false);
+        }
+        break;
+
+      case WIFI_FAILED:
+        // Gagal konek → merah nyala
+        rgbSetColor(true, false, false);
+        break;
+
+      case WIFI_IDLE:
+      default:
+        // Idle (belum coba konek) → LED mati
+        rgbOff();
+        break;
+    }
     return;
   }
 
-  // Default: LED mati
+  // Default: tidak ada router dikonfigurasi → LED mati
   rgbOff();
 }
 
