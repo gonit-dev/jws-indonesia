@@ -53,16 +53,10 @@
 #define BUZZER_FREQ 2000
 #define BUZZER_RESOLUTION 8
 
-// RGB LED Pins (Common Cathode / Active HIGH) + PWM
-#define RGB_R_PIN      17
-#define RGB_G_PIN      4
-#define RGB_B_PIN      16
-#define RGB_R_CHANNEL  2
-#define RGB_G_CHANNEL  3
-#define RGB_B_CHANNEL  4
-#define RGB_FREQ       5000
-#define RGB_RESOLUTION 8
-#define RGB_BRIGHTNESS 128  // 50% dari 255
+// RGB LED Pins (Common Anode / Active LOW)
+#define RGB_R_PIN      4
+#define RGB_G_PIN      16
+#define RGB_B_PIN      17
 
 // PWM Backlight Configuration
 #define TFT_BL_CHANNEL 0
@@ -414,16 +408,30 @@ static unsigned long rgbLastToggle = 0;
 static bool rgbLedState = false;          // State on/off saat kedip
 
 // ============================================
-// RGB LED Functions
+// RGB LED Functions (Common Anode / Active LOW)
 // ============================================
-void rgbSetColor(int r, int g, int b) {
-  ledcWrite(RGB_R_CHANNEL, r);
-  ledcWrite(RGB_G_CHANNEL, g);
-  ledcWrite(RGB_B_CHANNEL, b);
+void rgbSetColor(bool r, bool g, bool b) {
+  digitalWrite(RGB_R_PIN, r ? LOW : HIGH);
+  digitalWrite(RGB_G_PIN, g ? LOW : HIGH);
+  digitalWrite(RGB_B_PIN, b ? LOW : HIGH);
 }
 
 void rgbOff() {
-  rgbSetColor(0, 0, 0);
+  digitalWrite(RGB_R_PIN, HIGH);
+  digitalWrite(RGB_G_PIN, HIGH);
+  digitalWrite(RGB_B_PIN, HIGH);
+}
+
+// Task sementara khusus kedip merah saat booting
+void rgbBootBlinkTask(void *parameter) {
+  while (rgbBootBlinking) {
+    rgbSetColor(true, false, false);  // Merah ON
+    vTaskDelay(pdMS_TO_TICKS(300));
+    rgbOff();
+    vTaskDelay(pdMS_TO_TICKS(300));
+  }
+  rgbOff();
+  vTaskDelete(NULL);
 }
 
 // Dipanggil dari uiTask setiap ~50ms
@@ -433,38 +441,28 @@ void handleRGBLed() {
   // Prioritas 1: countdown device_restart atau factory_reset → kedip merah
   if (countdownState.isActive &&
       (countdownState.reason == "device_restart" || countdownState.reason == "factory_reset")) {
-    rgbBootBlinking = false;
     if (now - rgbLastToggle >= 500) {
       rgbLastToggle = now;
       rgbLedState = !rgbLedState;
-      rgbSetColor(rgbLedState ? RGB_BRIGHTNESS : 0, 0, 0);
+      rgbSetColor(rgbLedState, false, false);
     }
     return;
   }
 
-  // Prioritas 2: masih booting → kedip merah cepat
-  if (rgbBootBlinking) {
-    if (now - rgbLastToggle >= 300) {
-      rgbLastToggle = now;
-      rgbLedState = !rgbLedState;
-      rgbSetColor(rgbLedState ? RGB_BRIGHTNESS : 0, 0, 0);
-    }
-    return;
-  }
-
-  // Prioritas 3: WiFi terkoneksi ke router → hijau nyala
+  // Prioritas 2: WiFi terkoneksi ke router → hijau nyala
   if (wifiConfig.isConnected) {
-    rgbSetColor(0, RGB_BRIGHTNESS, 0);
+    rgbSetColor(false, true, false);
     return;
   }
 
-  // Default: LED mati (WiFi tidak konek, tidak ada countdown, tidak booting)
+  // Default: LED mati
   rgbOff();
 }
 
 // Dipanggil di akhir setup() - tandai booting selesai
 void rgbBootDone() {
   rgbBootBlinking = false;
+  vTaskDelay(pdMS_TO_TICKS(100));
   rgbOff();
   Serial.println("RGB LED: Boot selesai - LED mati");
 }
@@ -5595,12 +5593,13 @@ void setup() {
   Serial.println("Backlight: OFF");
 
   // RGB LED init - mulai kedip merah (booting)
-  ledcAttach(RGB_R_PIN, RGB_FREQ, RGB_RESOLUTION);
-  ledcAttach(RGB_G_PIN, RGB_FREQ, RGB_RESOLUTION);
-  ledcAttach(RGB_B_PIN, RGB_FREQ, RGB_RESOLUTION);
+  pinMode(RGB_R_PIN, OUTPUT);
+  pinMode(RGB_G_PIN, OUTPUT);
+  pinMode(RGB_B_PIN, OUTPUT);
   rgbOff();
   rgbBootBlinking = true;
-  Serial.println("RGB LED: Boot blink aktif (merah 50%)");
+  xTaskCreate(rgbBootBlinkTask, "RGBBoot", 1024, NULL, 1, NULL);
+  Serial.println("RGB LED: Boot blink aktif (merah)");
 
   pinMode(TOUCH_IRQ, INPUT_PULLUP);
 
