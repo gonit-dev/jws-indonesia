@@ -446,6 +446,7 @@ void setupServerRoutes();
 void sendJSONResponse(AsyncWebServerRequest *request, const String &json);
 
 bool init_littlefs();
+void createDefaultConfigFiles();
 void printStackReport();
 
 void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map);
@@ -3430,6 +3431,122 @@ bool init_littlefs() {
   return true;
 }
 
+// ============================================
+// DEFAULT CONFIG FILES - Buat saat boot jika belum ada
+// ============================================
+void createDefaultConfigFiles() {
+  Serial.println("\n========================================");
+  Serial.println("CEK DEFAULT CONFIG FILES");
+  Serial.println("========================================");
+
+  // ----------------------------------------
+  // 1. /ap_creds.txt
+  // ----------------------------------------
+  if (!LittleFS.exists("/ap_creds.txt")) {
+    fs::File f = LittleFS.open("/ap_creds.txt", "w");
+    if (f) {
+      f.println(DEFAULT_AP_SSID);          // SSID: JWS-<MAC>
+      f.println(DEFAULT_AP_PASSWORD);      // Password: 12345678
+      f.println("192.168.100.1");          // AP IP
+      f.println("192.168.100.1");          // AP Gateway
+      f.println("255.255.255.0");          // AP Subnet
+      f.flush();
+      f.close();
+      Serial.println("[DIBUAT] /ap_creds.txt");
+      Serial.println("  SSID    : " + DEFAULT_AP_SSID);
+      Serial.println("  Password: " + String(DEFAULT_AP_PASSWORD));
+      Serial.println("  IP      : 192.168.100.1");
+    } else {
+      Serial.println("[ERROR] Gagal membuat /ap_creds.txt");
+    }
+  } else {
+    Serial.println("[ADA]   /ap_creds.txt - dilewati");
+  }
+
+  // ----------------------------------------
+  // 2. /timezone.txt
+  // ----------------------------------------
+  if (!LittleFS.exists("/timezone.txt")) {
+    fs::File f = LittleFS.open("/timezone.txt", "w");
+    if (f) {
+      f.println("7");   // Default UTC+7 (WIB)
+      f.flush();
+      f.close();
+      Serial.println("[DIBUAT] /timezone.txt");
+      Serial.println("  Timezone: UTC+7 (WIB)");
+    } else {
+      Serial.println("[ERROR] Gagal membuat /timezone.txt");
+    }
+  } else {
+    Serial.println("[ADA]   /timezone.txt - dilewati");
+  }
+
+  // ----------------------------------------
+  // 3. /buzzer_config.txt
+  // ----------------------------------------
+  if (!LittleFS.exists("/buzzer_config.txt")) {
+    fs::File f = LittleFS.open("/buzzer_config.txt", "w");
+    if (f) {
+      f.println("0");   // imsakEnabled  = OFF
+      f.println("0");   // subuhEnabled  = OFF
+      f.println("0");   // terbitEnabled = OFF
+      f.println("0");   // zuhurEnabled  = OFF
+      f.println("0");   // asharEnabled  = OFF
+      f.println("0");   // maghribEnabled= OFF
+      f.println("0");   // isyaEnabled   = OFF
+      f.println("50");  // volume        = 50
+      f.flush();
+      f.close();
+      Serial.println("[DIBUAT] /buzzer_config.txt");
+      Serial.println("  Semua notif: OFF | Volume: 50");
+    } else {
+      Serial.println("[ERROR] Gagal membuat /buzzer_config.txt");
+    }
+  } else {
+    Serial.println("[ADA]   /buzzer_config.txt - dilewati");
+  }
+
+  // ----------------------------------------
+  // 4. /alarm_config.txt
+  // ----------------------------------------
+  if (!LittleFS.exists("/alarm_config.txt")) {
+    fs::File f = LittleFS.open("/alarm_config.txt", "w");
+    if (f) {
+      f.println("00:00");  // alarmTime    = 00:00
+      f.println("0");      // alarmEnabled = OFF
+      f.flush();
+      f.close();
+      Serial.println("[DIBUAT] /alarm_config.txt");
+      Serial.println("  Alarm: 00:00 | Status: OFF");
+    } else {
+      Serial.println("[ERROR] Gagal membuat /alarm_config.txt");
+    }
+  } else {
+    Serial.println("[ADA]   /alarm_config.txt - dilewati");
+  }
+
+  // ----------------------------------------
+  // 5. /method_selection.txt
+  // ----------------------------------------
+  if (!LittleFS.exists("/method_selection.txt")) {
+    fs::File f = LittleFS.open("/method_selection.txt", "w");
+    if (f) {
+      f.println("5");                                  // methodId   = 5
+      f.println("Egyptian General Authority of Survey"); // methodName
+      f.flush();
+      f.close();
+      Serial.println("[DIBUAT] /method_selection.txt");
+      Serial.println("  Method: 5 - Egyptian General Authority of Survey");
+    } else {
+      Serial.println("[ERROR] Gagal membuat /method_selection.txt");
+    }
+  } else {
+    Serial.println("[ADA]   /method_selection.txt - dilewati");
+  }
+
+  Serial.println("========================================\n");
+}
+
 void printStackReport() {
   Serial.println("\n========================================");
   Serial.println("ANALISIS PENGGUNAAN STACK");
@@ -5462,6 +5579,7 @@ void setup() {
   }
 
   init_littlefs();
+  createDefaultConfigFiles();
   loadWiFiCredentials();
   loadPrayerTimes();
   loadCitySelection();
