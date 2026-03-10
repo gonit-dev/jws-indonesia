@@ -7,7 +7,7 @@
 //#define ILI9341_2_DRIVER  // Coba ini jika yang atas tidak bekerja
 
 // ESP32 Pins untuk ESP32-2432S024
-#define TFT_MISO 17
+//#define TFT_MISO // Tidak ada maka tidak ditulis
 #define TFT_MOSI 13
 #define TFT_SCLK 14
 #define TFT_CS   15  // Chip select control pin

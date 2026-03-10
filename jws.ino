@@ -53,6 +53,17 @@
 #define BUZZER_FREQ 2000
 #define BUZZER_RESOLUTION 8
 
+// RGB LED Pins (Common Cathode / Active HIGH) + PWM
+#define RGB_R_PIN      17
+#define RGB_G_PIN      4
+#define RGB_B_PIN      16
+#define RGB_R_CHANNEL  2
+#define RGB_G_CHANNEL  3
+#define RGB_B_CHANNEL  4
+#define RGB_FREQ       5000
+#define RGB_RESOLUTION 8
+#define RGB_BRIGHTNESS 128  // 50% dari 255
+
 // PWM Backlight Configuration
 #define TFT_BL_CHANNEL 0
 #define TFT_BL_FREQ 5000
@@ -394,6 +405,69 @@ static bool apRestartInProgress = false;
 static unsigned long lastWiFiRestartRequest = 0;
 static unsigned long lastAPRestartRequest = 0;
 const unsigned long RESTART_DEBOUNCE_MS = 3000;
+
+// ================================
+// RGB LED STATE
+// ================================
+static bool rgbBootBlinking = true;       // Kedip merah saat booting
+static unsigned long rgbLastToggle = 0;
+static bool rgbLedState = false;          // State on/off saat kedip
+
+// ============================================
+// RGB LED Functions
+// ============================================
+void rgbSetColor(int r, int g, int b) {
+  ledcWrite(RGB_R_CHANNEL, r);
+  ledcWrite(RGB_G_CHANNEL, g);
+  ledcWrite(RGB_B_CHANNEL, b);
+}
+
+void rgbOff() {
+  rgbSetColor(0, 0, 0);
+}
+
+// Dipanggil dari uiTask setiap ~50ms
+void handleRGBLed() {
+  unsigned long now = millis();
+
+  // Prioritas 1: countdown device_restart atau factory_reset → kedip merah
+  if (countdownState.isActive &&
+      (countdownState.reason == "device_restart" || countdownState.reason == "factory_reset")) {
+    rgbBootBlinking = false;
+    if (now - rgbLastToggle >= 500) {
+      rgbLastToggle = now;
+      rgbLedState = !rgbLedState;
+      rgbSetColor(rgbLedState ? RGB_BRIGHTNESS : 0, 0, 0);
+    }
+    return;
+  }
+
+  // Prioritas 2: masih booting → kedip merah cepat
+  if (rgbBootBlinking) {
+    if (now - rgbLastToggle >= 300) {
+      rgbLastToggle = now;
+      rgbLedState = !rgbLedState;
+      rgbSetColor(rgbLedState ? RGB_BRIGHTNESS : 0, 0, 0);
+    }
+    return;
+  }
+
+  // Prioritas 3: WiFi terkoneksi ke router → hijau nyala
+  if (wifiConfig.isConnected) {
+    rgbSetColor(0, RGB_BRIGHTNESS, 0);
+    return;
+  }
+
+  // Default: LED mati (WiFi tidak konek, tidak ada countdown, tidak booting)
+  rgbOff();
+}
+
+// Dipanggil di akhir setup() - tandai booting selesai
+void rgbBootDone() {
+  rgbBootBlinking = false;
+  rgbOff();
+  Serial.println("RGB LED: Boot selesai - LED mati");
+}
 
 void updateCityDisplay();
 void updateTimeDisplay();
@@ -3821,6 +3895,7 @@ void uiTask(void *parameter) {
     
     handleBlinking();
     handleAlarmBlink();
+    handleRGBLed();
     
     vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
@@ -5519,6 +5594,14 @@ void setup() {
   digitalWrite(TFT_BL, LOW);
   Serial.println("Backlight: OFF");
 
+  // RGB LED init - mulai kedip merah (booting)
+  ledcAttach(RGB_R_PIN, RGB_FREQ, RGB_RESOLUTION);
+  ledcAttach(RGB_G_PIN, RGB_FREQ, RGB_RESOLUTION);
+  ledcAttach(RGB_B_PIN, RGB_FREQ, RGB_RESOLUTION);
+  rgbOff();
+  rgbBootBlinking = true;
+  Serial.println("RGB LED: Boot blink aktif (merah 50%)");
+
   pinMode(TOUCH_IRQ, INPUT_PULLUP);
 
   tft.begin();
@@ -6034,6 +6117,7 @@ void setup() {
   }
 
   Serial.println("\nBoot selesai - Siap menerima koneksi");
+  rgbBootDone();
   Serial.println("Log pemantauan akan muncul di bawah:");
   Serial.println("  - Laporan penggunaan stack setiap 60 detik");
   Serial.println("  - Pemeriksaan kesehatan Tugas Shalat setiap 30 detik");
