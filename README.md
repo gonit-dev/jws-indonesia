@@ -13,7 +13,7 @@
 <img width="150" src="https://github.com/user-attachments/assets/e769b542-6f93-498c-8e5e-7e797fb66ed1" />
 <img width="150" src="https://github.com/user-attachments/assets/8a1992b6-167f-4c7f-b73a-44a8e97e4fd6" />
 <img width="150" src="https://github.com/user-attachments/assets/006afab9-db2d-48d8-924a-3e8af70637c2" />
-<img width="150" src="https://github.com/user-attachments/assets/8d868967-0f09-4dcf-a712-5e53ea7de482" /
+<img width="150" src="https://github.com/user-attachments/assets/8d868967-0f09-4dcf-a712-5e53ea7de482" />
 <img width="150" src="https://github.com/user-attachments/assets/0fe80198-d629-43bb-b748-19a1aafea05e" />
 </div>
 
@@ -24,54 +24,71 @@
 ### 🕌 Waktu Sholat
 - **Jadwal Otomatis** via Aladhan API dengan 8 metode kalkulasi
 - **500+ Kota Indonesia** dengan koordinat GPS akurat
-- **Notifikasi Visual** - LCD blink 1 menit saat waktu sholat masuk
-- **Notifikasi Audio** - Buzzer atau DFPlayer Mini (MP3)
-- **Touch Adzan** - Tap waktu sholat saat blink untuk play audio adzan (timeout 10 menit)
-- **Toggle Individual** - Aktifkan/nonaktifkan buzzer per-waktu sholat
-- **Auto-Update** - Tengah malam (00:00-00:05) otomatis update jadwal
+- **Tune/Offset Per Waktu** — sesuaikan maju/mundur tiap waktu sholat dalam menit
+- **Notifikasi Visual** — LCD blink 1 menit saat waktu sholat masuk
+- **Notifikasi Audio** — Buzzer atau DFPlayer Mini (MP3)
+- **Touch Adzan** — Tap waktu sholat saat blink untuk play audio adzan (timeout 10 menit)
+- **Toggle Individual** — Aktifkan/nonaktifkan buzzer per-waktu sholat
+- **Auto-Update** — Tengah malam (00:00–00:05) otomatis update jadwal
 
 ### ⏰ Manajemen Waktu
 - **NTP Auto-Sync** setiap 1 jam dengan 3 fallback server (`pool.ntp.org`, `time.google.com`, `time.windows.com`)
-- **Zona Waktu** - Dukungan UTC-12 hingga UTC+14 (WIB/WITA/WIT)
-- **RTC Backup** - DS3231 opsional untuk persistensi waktu
-- **Manual Sync** - Sync dari browser jika diperlukan
+- **Zona Waktu** — Dukungan UTC-12 hingga UTC+14 (WIB/WITA/WIT)
+- **RTC Backup** — DS3231 opsional untuk persistensi waktu
+- **Manual Sync** — Sync dari browser jika diperlukan
 
 ### 🌐 Fitur Jaringan
-- **Dual WiFi Mode** - AP + STA bersamaan (bisa diakses via router dan AP)
-- **Auto-Reconnect** - Event-driven tanpa polling
-- **Custom AP** - Konfigurasi SSID, Password, IP, Gateway, Subnet
-- **WiFi Sleep Disabled** - Performa maksimal, response time cepat
+- **Dual WiFi Mode** — AP + STA bersamaan (bisa diakses via router dan AP)
+- **Auto-Reconnect** — Event-driven tanpa polling
+- **Custom AP** — Konfigurasi SSID, Password, IP, Gateway, Subnet
+- **WiFi Sleep Disabled** — Performa maksimal, response time cepat
+- **Connection Type Detection** — Deteksi otomatis apakah client akses via AP atau router
+
+### 🔴 RGB LED Status Indicator
+- **Boot** — Merah kedip cepat selama proses booting berlangsung
+- **WiFi Connecting** — Hijau kedip saat sedang menghubungkan ke router
+- **WiFi Connected** — Hijau nyala saat terkoneksi ke router
+- **WiFi Failed** — Merah nyala saat gagal konek
+- **Restart/Reset Countdown** — Merah kedip saat countdown `device_restart` atau `factory_reset`
 
 ### 🖥️ Antarmuka
-- **Touchscreen UI** - LVGL 9.2.0 @ 320x240 resolusi
-- **Web Interface** - Responsive design, mobile-friendly
-- **Real-time Display** - Jam, tanggal, kota, waktu sholat
-- **Countdown Safety** - Visual progress bar untuk restart/reset (60 detik)
+- **Touchscreen UI** — LVGL 9.2.0 @ 320x240 resolusi
+- **Web Interface** — Responsive design, mobile-friendly
+- **Real-time Display** — Jam, tanggal, kota, waktu sholat
+- **Countdown Safety** — Visual progress bar untuk restart/reset (60 detik)
 
 ### 🔊 Audio & Buzzer
-- **Buzzer PWM** - Volume 0-100%, test mode dengan auto-timeout
-- **DFPlayer Mini** (opsional) - Play MP3 adzan dari SD Card
-  - Volume 0-30 independen dari buzzer
+- **Buzzer PWM** — Volume 0–100%, test mode dengan auto-timeout
+- **DFPlayer Mini** (opsional) — Play MP3 adzan dari SD Card
+  - Volume 0–30 independen dari buzzer
   - Format: `0001.mp3` hingga `0005.mp3` (Subuh, Zuhur, Ashar, Maghrib, Isya)
   - Touch aktif 10 menit setelah waktu sholat
-- **Speaker Passive** - 3-5W (4-8Ω) atau line-out ke amplifier
+  - State adzan persistent — bertahan saat restart
+- **Speaker Passive** — 3–5W (4–8Ω) atau line-out ke amplifier
 
 ### ⏱️ Alarm
-- **Alarm Sekali** - Atur jam dan menit via picker di web interface
-- **Switch ON/OFF** - Aktifkan atau nonaktifkan tanpa menghapus waktu yang sudah diset
-- **Kedip Jam** - Saat alarm berbunyi, label jam di LCD berkedip (bukan tanggal)
-- **Buzzer Alarm** - Bunyi sinkron dengan kedip, volume mengikuti setting buzzer
-- **Tanpa Batas** - Alarm berbunyi terus tanpa auto-stop
-- **Stop via Sentuh** - Sentuh LCD mana saja untuk mematikan alarm
-- **Prioritas Tinggi** - Saat alarm aktif, notif shalat ditangguhkan sementara
-- **Auto-Resume** - Setelah alarm dimatikan, notif shalat kembali normal
-- **Persistent** - Waktu dan status alarm tersimpan di LittleFS, tidak hilang saat restart
+- **Alarm Sekali** — Atur jam dan menit via picker di web interface
+- **Switch ON/OFF** — Aktifkan atau nonaktifkan tanpa menghapus waktu yang sudah diset
+- **Kedip Jam** — Saat alarm berbunyi, label jam di LCD berkedip (bukan tanggal)
+- **Buzzer Alarm** — Bunyi sinkron dengan kedip, volume mengikuti setting buzzer
+- **Tanpa Batas** — Alarm berbunyi terus tanpa auto-stop
+- **Stop via Sentuh** — Sentuh LCD mana saja untuk mematikan alarm
+- **Prioritas Tinggi** — Saat alarm aktif, notif shalat ditangguhkan sementara
+- **Auto-Resume** — Setelah alarm dimatikan, notif shalat kembali normal
+- **Persistent** — Waktu dan status alarm tersimpan di LittleFS, tidak hilang saat restart
 
 ### 💾 Penyimpanan
-- **LittleFS** - Semua konfigurasi persistent
-- **Auto-Save** - Simpan otomatis setelah perubahan
-- **Upload Cities** - Web interface untuk update daftar kota (max 1MB)
-- **Factory Reset** - Kembalikan ke default dengan safety countdown
+- **LittleFS** — Semua konfigurasi persistent
+- **Auto-Create Default** — File konfigurasi default dibuat otomatis saat boot pertama
+- **Auto-Save** — Simpan otomatis setelah perubahan
+- **Upload Cities** — Web interface untuk update daftar kota (max 1MB)
+- **Factory Reset** — Kembalikan ke default dengan safety countdown
+
+### 🛡️ Stabilitas Sistem
+- **Prayer Task Watchdog** — Monitor task sholat setiap 30 detik, auto-restart jika crash
+- **Stack Monitoring** — Laporan penggunaan stack setiap 60 detik
+- **Memory Monitoring** — Laporan heap setiap 30 detik, deteksi memory leak
+- **Hardware Watchdog** — ESP32 WDT dengan timeout 100 detik
 
 ---
 
@@ -87,6 +104,27 @@
 - **Power:** 5V USB (minimal 2A)
 
 ### Komponen Opsional
+
+#### RGB LED (Indikator Status)
+**Wiring:**
+```
+LED RGB Common Anode
+Anoda (+) → 3.3V (melalui resistor)
+R (Merah) → GPIO4
+G (Hijau) → GPIO16
+B (Biru)  → GPIO17
+```
+
+| Kondisi | Warna | Mode |
+|---------|-------|------|
+| Booting | Merah | Kedip cepat (300ms) |
+| Boot selesai, WiFi tidak dikonfigurasi | — | Mati |
+| Sedang connecting ke router | Hijau | Kedip (500ms) |
+| Terkoneksi ke router | Hijau | Nyala |
+| Gagal konek ke router | Merah | Nyala |
+| Countdown restart/factory reset | Merah | Kedip (500ms) |
+
+> **Catatan:** Countdown `ap_restart` tidak mempengaruhi LED.
 
 #### RTC DS3231 (Sangat Disarankan)
 **Wiring:**
@@ -130,13 +168,13 @@ DAC_R/L      →    Line-out ke Amplifier
    - `0004.mp3` = Adzan Maghrib
    - `0005.mp3` = Adzan Isya
 4. Masukkan SD Card ke DFPlayer
-5. Sambungkan speaker passive (3-5W, 4-8Ω)
+5. Sambungkan speaker passive (3–5W, 4–8Ω)
 
 **⚠️ PENTING:**
-- **Jangan gunakan speaker aktif** (amplifier built-in) - akan rusak
+- **Jangan gunakan speaker aktif** (amplifier built-in) — akan rusak
 - **File naming harus exact:** 4 digit dengan leading zero
-- **Folder harus root** - bukan `/mp3/` atau `/adzan/`
-- **Format MP3:** 128-320 kbps, sample rate bebas
+- **Folder harus root** — bukan `/mp3/` atau `/adzan/`
+- **Format MP3:** 128–320 kbps, sample rate bebas
 
 ---
 
@@ -232,6 +270,8 @@ Password: "12345678"
 URL: http://192.168.100.1
 ```
 
+> **LED saat boot pertama:** Merah kedip → setelah setup selesai LED mati → hijau nyala saat WiFi berhasil konek ke router.
+
 ### Setup WiFi
 1. Sambungkan ke AP "JWS-(id unik)"
 2. Buka browser → `http://192.168.100.1`
@@ -241,8 +281,9 @@ URL: http://192.168.100.1
 ### Setup Lokasi
 1. Tab **LOKASI** → Pilih provinsi → Pilih kota
 2. (Opsional) Edit koordinat GPS jika perlu
-3. Pilih metode kalkulasi (default: Egyptian General Authority)
-4. Klik **Simpan** → Jadwal otomatis update
+3. (Opsional) Atur **Tune** per waktu sholat jika jadwal kurang akurat
+4. Pilih metode kalkulasi (default: Egyptian General Authority)
+5. Klik **Simpan** → Jadwal otomatis update
 
 ### Setup Zona Waktu
 ```
@@ -258,7 +299,7 @@ Tab **WAKTU** → Klik ikon edit (🕐) → Input offset → Klik 💾
 
 ### Setup Buzzer & Audio
 1. Tab **JADWAL** → Toggle ON/OFF per-waktu sholat
-2. Atur slider volume (0-100%)
+2. Atur slider volume (0–100%)
 3. Klik **Test Buzzer** untuk tes
 4. **Setup Audio** (jika ada DFPlayer):
    - Format SD Card (FAT32)
@@ -306,13 +347,14 @@ Tab **WAKTU** → Klik ikon edit (🕐) → Input offset → Klik 💾
 ### Tab LOKASI
 - **Dropdown:** 500+ kota Indonesia, grouping per-provinsi
 - **Edit Koordinat:** Manual input lat/lon dengan validasi
+- **Tune Offset:** Sesuaikan waktu sholat maju/mundur per-waktu (satuan menit)
 - **Metode:** 8 pilihan kalkulasi (Kemenag, MWL, Egyptian, ISNA, dll)
 - **Upload:** Drag & drop cities.json (max 1MB, validasi otomatis)
 
 ### Tab JADWAL
 - **Waktu Sholat:** Imsak, Subuh, Terbit, Zuhur, Ashar, Maghrib, Isya
 - **Toggle Buzzer:** ON/OFF per-waktu
-- **Volume:** Slider 0-100% dengan preview
+- **Volume:** Slider 0–100% dengan preview
 - **Test Buzzer:** Play/stop manual (auto-timeout 30s)
 - **Touch Adzan:** Tap label saat blink untuk play audio
 - **Atur Alarm:** Picker jam:menit, tombol Simpan Alarm, switch ON/OFF
@@ -324,7 +366,42 @@ Tab **WAKTU** → Klik ikon edit (🕐) → Input offset → Klik 💾
 
 ---
 
-## ⏱️ Alarm — Detail Perilaku
+## ⚙️ Konfigurasi Default (Auto-Create saat Boot)
+
+Setiap boot, sistem otomatis mengecek dan membuat file konfigurasi jika belum ada. File yang sudah ada **tidak akan ditimpa**.
+
+| File | Isi Default |
+|------|-------------|
+| `/ap_creds.txt` | SSID: `JWS-<MAC>`, Password: `12345678`, IP: `192.168.100.1` |
+| `/timezone.txt` | `7` (UTC+7 / WIB) |
+| `/buzzer_config.txt` | Semua OFF, volume 50 |
+| `/alarm_config.txt` | `00:00`, disabled |
+| `/method_selection.txt` | ID: 5, Egyptian General Authority of Survey |
+
+File berikut **tidak dibuat otomatis** karena harus diisi/dipilih user:
+
+| File | Alasan |
+|------|--------|
+| `/wifi_creds.txt` | Diisi user via web interface |
+| `/city_selection.txt` | Harus dipilih user via web interface |
+| `/prayer_times.txt` | Diisi otomatis setelah fetch API |
+| `/adzan_state.txt` | Runtime state, dibuat/dihapus otomatis |
+
+**Serial Monitor saat boot:**
+```
+========================================
+CEK DEFAULT CONFIG FILES
+========================================
+[DIBUAT] /ap_creds.txt        ← Boot pertama
+[ADA]   /timezone.txt - dilewati    ← Boot berikutnya
+[ADA]   /buzzer_config.txt - dilewati
+...
+========================================
+```
+
+---
+
+## ⏱ Alarm — Detail Perilaku
 
 ### Cara Kerja
 1. Setiap detik sistem membandingkan waktu sekarang dengan `alarmTime`
@@ -342,16 +419,141 @@ Tab **WAKTU** → Klik ikon edit (🕐) → Input offset → Klik 💾
 | Alarm ON, waktunya tiba | ⏸️ Ditangguhkan | ✅ Berbunyi |
 | Alarm dimatikan (sentuh LCD) | ✅ Kembali normal | Diam |
 
-### Jika Alarm dan Waktu Sholat Bersamaan
-Alarm mengambil prioritas — notif shalat di menit yang sama tidak akan muncul. Ini perilaku yang disengaja, bukan bug.
-
 ### Penyimpanan
-Konfigurasi alarm disimpan di `/alarm_config.txt` di LittleFS:
 ```
+/alarm_config.txt:
 06:00       ← alarmTime (HH:MM)
 1           ← alarmEnabled (1=ON, 0=OFF)
 ```
-File ini tidak terhapus saat restart, hanya terhapus saat Factory Reset.
+
+---
+
+## 🕐 Tune / Offset Waktu Sholat
+
+Setiap waktu sholat dapat disesuaikan maju atau mundur dalam satuan menit.
+
+- Nilai **positif** → waktu dimajukan
+- Nilai **negatif** → waktu dimundurkan
+- Default semua = `0`
+
+Tune dikirim ke Aladhan API sebagai parameter `tune` sehingga perhitungan langsung disesuaikan dari server. Nilai disimpan di `/city_selection.txt`.
+
+**Contoh penggunaan:** Jika Subuh di daerah Anda selalu 2 menit lebih cepat dari hasil API, set tuneSubuh = `-2`.
+
+---
+
+## 🛡️ Stabilitas Sistem
+
+### Prayer Task Watchdog
+Task sholat dipantau setiap 30 detik oleh task `PrayerWatchdog`. Jika crash terdeteksi, task di-restart otomatis beserta re-registrasi WDT hardware.
+
+```
+KRITIS: TUGAS SHALAT CRASH
+Aksi: Memulai ulang tugas otomatis...
+Tugas Shalat berhasil dimulai ulang
+WDT: Re-registered
+```
+
+### Stack & Memory Monitoring
+
+**Stack Report (setiap 60 detik):**
+```
+UI        :  8192/12288 (66.7%) [Free:  4096] FIT
+Web       :  2048/ 4096 (50.0%) [Free:  2048] OPTIMAL
+Prayer    :  2500/ 4096 (61.0%) [Free:  1596] FIT
+```
+
+| Persentase | Status |
+|-----------|--------|
+| < 40% | BOROS |
+| 40–60% | OPTIMAL |
+| 60–75% | FIT |
+| 75–90% | HIGH — monitor terus |
+| 90–95% | DANGER — harus ditambah |
+| > 95% | CRITICAL |
+
+**Memory Report (setiap 30 detik):**
+```
+Sekarang:  245632 byte (239.88 KB)
+Terendah:  243520 byte (238.00 KB)
+Memory status: Normal
+```
+
+---
+
+## 📊 API Endpoints Lengkap
+
+### GET Endpoints
+
+| Endpoint | Deskripsi |
+|----------|-----------|
+| `/` | Web interface utama |
+| `/devicestatus` | Status lengkap perangkat |
+| `/getwificonfig` | Konfigurasi WiFi & AP |
+| `/gettimezone` | Offset timezone aktif |
+| `/getcities` | Daftar kota dari `cities.json` |
+| `/getcityinfo` | Info kota yang sedang dipilih |
+| `/getmethod` | Metode kalkulasi aktif |
+| `/getprayertimes` | Waktu sholat hari ini |
+| `/getbuzzerconfig` | Konfigurasi buzzer + alarm |
+| `/getalarmconfig` | Konfigurasi alarm saja |
+| `/api/data` | Data real-time (IoT/Home Assistant) |
+| `/api/countdown` | Status countdown restart/reset |
+| `/api/connection-type` | Tipe koneksi client (AP/STA) |
+
+### POST Endpoints
+
+| Endpoint | Parameter | Deskripsi |
+|----------|-----------|-----------|
+| `/restart` | — | Restart perangkat (countdown 60s) |
+| `/reset` | — | Factory reset (countdown 60s) |
+| `/setwifi` | `ssid`, `password` | Set kredensial router |
+| `/setap` | `ssid`, `password`, `ip`, `gateway`, `subnet` | Set konfigurasi AP |
+| `/synctime` | — | Manual NTP sync |
+| `/settimezone` | `offset` | Set UTC offset |
+| `/setcity` | `city`, `cityName`, `lat`, `lon`, `method`, `tune*` | Set lokasi + tune |
+| `/setmethod` | `methodId`, `methodName` | Set metode kalkulasi |
+| `/setbuzzertoggle` | `prayer`, `enabled` | Toggle notif per-waktu |
+| `/setbuzzervolume` | `volume` | Set volume buzzer (0–100) |
+| `/testbuzzer` | — | Test buzzer (auto-stop 30 detik) |
+| `/stopbuzzer` | — | Stop test buzzer manual |
+| `/setalarmconfig` | `alarmTime` (HH:MM) | Set waktu alarm |
+| `/uploadcities` | file `cities.json` | Upload daftar kota (max 1MB) |
+
+### Contoh Response `/api/data`
+```json
+{
+  "time": "14:35:22",
+  "date": "19/12/2024",
+  "prayerTimes": {
+    "subuh": "04:07",
+    "zuhur": "11:54",
+    "ashar": "15:12",
+    "maghrib": "17:58",
+    "isya": "19:08"
+  },
+  "location": {
+    "city": "Jakarta",
+    "latitude": "-6.2088",
+    "longitude": "106.8456"
+  },
+  "device": {
+    "wifiConnected": true,
+    "ntpSynced": true,
+    "uptime": 3600
+  }
+}
+```
+
+### Contoh Response `/api/countdown`
+```json
+{
+  "active": true,
+  "remaining": 45,
+  "message": "Memulai Ulang Perangkat",
+  "reason": "device_restart"
+}
+```
 
 ---
 
@@ -364,15 +566,22 @@ File ini tidak terhapus saat restart, hanya terhapus saat Factory Reset.
 - Router hanya 5GHz (ESP32 hanya 2.4GHz)
 - MAC filtering aktif
 - Sinyal terlalu lemah
-- Channel WiFi >11 (coba 1-11)
+- Channel WiFi >11
 
 **Solusi:**
 1. Cek SSID dan password (huruf besar/kecil)
 2. Pastikan router broadcast 2.4GHz
 3. Tambahkan MAC ESP32 ke whitelist
 4. Dekatkan ke router
-5. Ganti channel router ke 1-11
+5. Ganti channel router ke 1–11
 6. Factory reset → konfigurasi ulang
+
+**Indikator LED:**
+```
+Hijau kedip  → Sedang connecting
+Merah nyala  → Gagal konek (WIFI_FAILED)
+LED mati     → Tidak ada konfigurasi WiFi
+```
 
 **Serial Monitor:**
 ```
@@ -395,31 +604,19 @@ WiFi Disconnected | Reason Code: 15                  → ❌ Gagal
 
 1. **Edit Koordinat GPS:**
    - Buka Google Maps → Klik lokasi → Salin koordinat
-   - Tab LOKASI → Edit Koordinat → Paste
-   - Klik **Simpan**
+   - Tab LOKASI → Edit Koordinat → Paste → Simpan
 
-2. **Ganti Metode:**
+2. **Gunakan Tune/Offset:**
+   - Tab LOKASI → Atur nilai tune per-waktu sholat
+   - Contoh: Subuh selalu terlambat 3 menit → tuneSubuh = `-3`
+
+3. **Ganti Metode:**
    - Tab LOKASI → Dropdown Metode
-   - Coba: **Kemenag** (Metode 20) - paling akurat Indonesia
-   - Atau: **Egyptian** (Metode 5) - alternatif bagus
-   - Klik **Simpan**
+   - Coba: **Kemenag** (Metode 20) — paling akurat Indonesia
+   - Atau: **Egyptian** (Metode 5) — alternatif bagus
 
-3. **Cek Zona Waktu:**
+4. **Cek Zona Waktu:**
    - Tab WAKTU → Pastikan sesuai lokasi (WIB/WITA/WIT)
-
-4. **Bandingkan:**
-   - Download app Muslim Pro/Adzan
-   - Bandingkan dengan jadwal masjid
-   - Adjust koordinat jika perlu (±0.01° ≈ ±1km)
-
-**Serial Monitor:**
-```
-Fetching prayer times...
-Response code: 200              → ✅ OK
-Prayer times updated successfully
-City: Jakarta
-Subuh: 04:07  Zuhur: 11:54
-```
 
 ---
 
@@ -432,36 +629,25 @@ Subuh: 04:07  Zuhur: 11:54
 - RTC hardware failure
 
 **Solusi:**
+1. Sambungkan WiFi — NTP sync otomatis dalam 10–30 detik
+2. Pasang RTC DS3231 + baterai CR2032
+3. Tab WAKTU → Tombol "Perbarui Waktu" (temporary fix)
 
-1. **Sambungkan WiFi:**
-   - NTP akan sync otomatis dalam 10-30 detik
-
-2. **Pasang RTC DS3231:**
-   - Wiring: VCC→3.3V, GND→GND, SDA→GPIO21, SCL→GPIO22
-   - Pasang baterai CR2032
-   - Reboot perangkat
-
-3. **RTC Rusak:**
+**RTC Rusak:**
 ```
-Serial Monitor:
 *** RTC HARDWARE FAILURE ***
->>> SOLUTION: BUY NEW DS3231 MODULE <
+DS3231 chip is defective!
+>>> SOLUTION: BUY NEW DS3231 MODULE <<<
 ```
-Ganti modul baru - tidak bisa diperbaiki.
-
-4. **Temporary Fix:**
-   - Tab WAKTU → Tombol "Perbarui Waktu"
-   - Atau tunggu WiFi connect → NTP auto-sync
-
-**⚠️ Tanpa RTC:** Waktu reset setiap restart/mati lampu.
+Ganti modul baru — tidak bisa diperbaiki.
 
 ---
 
 ### Waktu Sholat Tidak Update Tengah Malam
 
-**Serial Monitor (00:00-00:05):**
+**Serial Monitor (00:00–00:05):**
 
-**✅ NORMAL:**
+✅ **Normal:**
 ```
 MIDNIGHT DETECTED - STARTING SEQUENCE
 Triggering NTP Sync...
@@ -470,31 +656,12 @@ Updating Prayer Times...
 Prayer times updated successfully
 ```
 
-**❌ GAGAL:**
+❌ **Gagal:**
+- WiFi tidak connect → Cek Tab BERANDA
+- Kota belum dipilih → Tab LOKASI → Pilih kota → Simpan
+- NTP timeout → Akan retry di 00:01, 00:02, dst
 
-1. **WiFi Tidak Connect:**
-```
-ERROR: NTP Task handle NULL
-Skipping midnight update
-```
-**Fix:** Cek Tab BERANDA → Status WiFi
-
-2. **Kota Belum Dipilih:**
-```
-WARNING: No city coordinates
-Using existing prayer times
-```
-**Fix:** Tab LOKASI → Pilih kota → Simpan
-
-3. **NTP Timeout:**
-```
-NTP SYNC TIMEOUT
-Decision: Use existing prayer times
-```
-**Fix:** Akan retry di 00:01, 00:02, dst. Cek internet.
-
-**Manual Update:**
-- Tab LOKASI → Klik **Simpan** (force update)
+**Manual Update:** Tab LOKASI → Klik **Simpan**
 
 ---
 
@@ -504,100 +671,16 @@ Decision: Use existing prayer times
 1. Switch alarm sudah ON di Tab JADWAL
 2. Waktu alarm sudah di-**Simpan** (bukan hanya diatur di picker)
 3. Volume buzzer tidak 0%
-4. Waktu sistem sudah benar (cek Tab BERANDA)
+4. Waktu sistem sudah benar
 
-**Debug Serial Monitor:**
+**Debug:**
 ```
-✅ NORMAL:
+✅ Normal:
 Konfigurasi alarm dimuat: 06:00 | ON
 ALARM AKTIF: 06:00
-Kedip jam + buzzer dimulai
 
-❌ TIDAK BERBUNYI:
+❌ Tidak berbunyi:
 Konfigurasi alarm dimuat: 06:00 | OFF  → Switch belum ON
-```
-
-**Catatan:** Simpan Alarm dan switch ON/OFF adalah dua aksi terpisah. Pastikan keduanya dilakukan.
-
----
-
-### Alarm Tidak Bisa Dimatikan
-
-**Solusi:**
-- Sentuh bagian mana saja di layar LCD dengan tekanan cukup (touch resistive)
-- Bersihkan layar jika kotor
-- Pastikan tidak ada objek di atas layar
-
----
-
-### Alarm Mengganggu Notif Sholat
-
-Ini perilaku normal jika alarm berbunyi di menit yang sama dengan waktu sholat — alarm selalu menang. Solusinya set alarm di waktu yang berbeda dari waktu sholat.
-
----
-
-### Web Interface Lambat/Timeout
-
-**Penyebab:**
-- WiFi sleep aktif (bug)
-- Sinyal lemah
-- Multiple client (>3)
-- Cache browser
-
-**Solusi:**
-
-1. **Cek WiFi Sleep (Serial Monitor saat boot):**
-```
-WiFi Sleep: DOUBLE DISABLED
-  Arduino: WIFI_PS_NONE    → ✅ OK
-  ESP-IDF: WIFI_PS_NONE    → ✅ OK
-```
-
-2. **Dekatkan ke Router:**
-   - RSSI harus > -60 dBm
-
-3. **Clear Cache:**
-   - Chrome: Ctrl+Shift+Delete → Cache
-   - Atau: Mode Incognito (Ctrl+Shift+N)
-
-4. **Batasi Client:**
-   - Max 3 client untuk performa optimal
-
-5. **Restart:**
-   - Tab BERANDA → Mulai Ulang Perangkat
-
-**Memory Status (Serial Monitor tiap 2 menit):**
-```
-STACK USAGE ANALYSIS
-Prayer    :  9887/16384 (60.3%) [Free:  6497] OPTIMAL → ✅ Sehat
-
-MEMORY STATUS:
-Current:  245632 bytes (239.88 KB)
-Lowest:   243520 bytes (238.00 KB)
-Memory status: Normal
-```
-
-**Jika ada LEAK:**
-```
-LEAK DETECTED: 1024 bytes lost
-```
-**Fix:** Restart, report ke developer.
-
----
-
-### Touch Tidak Responsif
-
-**Penyebab:**
-- Layar kotor
-- Tekanan kurang
-- Konflik pin audio
-
-**Solusi:**
-1. Bersihkan layar microfiber
-2. Sentuh lebih kuat (resistive touch)
-3. Cek Serial Monitor:
-```
-Touch initialized    → ✅ OK
 ```
 
 ---
@@ -606,154 +689,54 @@ Touch initialized    → ✅ OK
 
 **Serial Monitor saat boot:**
 ```
-✅ NORMAL:
+✅ Normal:
 INITIALIZING DFPlayer Mini
-UART2: TX=GPIO25, RX=GPIO32
 DFPlayer initialized successfully!
-Files on SD: 7
+Files on SD: 5
 
-❌ GAGAL:
+❌ Gagal:
 DFPlayer connection FAILED!
 Check wiring
 ```
 
 **Checklist:**
+1. Wiring silang: DFPlayer TX → GPIO32, DFPlayer RX → GPIO25
+2. SD Card format FAT32, file di root: `0001.mp3` s/d `0005.mp3`
+3. Speaker passive 3–5W (4–8Ω) — JANGAN speaker aktif
+4. Cara play: Tunggu waktu sholat → label blink → tap label
 
-1. **Wiring (HARUS SILANG):**
-   - DFPlayer TX → ESP32 GPIO32 (RX) ✅
-   - DFPlayer RX → ESP32 GPIO25 (TX) ✅
-   - VCC → 5V, GND → GND
-
-2. **SD Card:**
-   - Format: FAT32 (max 32GB)
-   - Files di root: `0001.mp3` s/d `0005.mp3`
-   - Naming: 4 digit dengan leading zero
-
-3. **Speaker:**
-   - Passive 3-5W (4-8Ω)
-   - JANGAN speaker aktif!
-
-4. **Cara Play:**
-   - Tunggu waktu sholat → Label blink
-   - Tap area label (misal tap "SUBUH")
-   - Audio play otomatis
-
-5. **Timeout:** 10 menit setelah waktu masuk
-
-**Debug:**
-```
-✅ NORMAL:
-TOUCH ADZAN: subuh
-PLAYING ADZAN: subuh
-Track: 1, File: /0001.mp3
-Adzan playback completed
-
-❌ ERROR:
-WARNING: Audio system not available
-Reason: SD Card not detected
-```
-
----
-
-### Buzzer Tidak Bunyi
-
-**Pemeriksaan:**
-- Toggle aktif di Tab JADWAL
-- Volume tidak 0%
-- Pin GPIO26 OK
-
-**Test Manual:**
-- Tab JADWAL → Test Buzzer
-- Harus bunyi beep-beep 30 detik
-
-**Debug Serial:**
-```
-PRAYER TIME ENTER: SUBUH
-Starting to blink for 1 minute...
-```
-
-**Solusi:**
-1. Test buzzer di Tab JADWAL
-2. Cek wiring: Buzzer(+)→GPIO26, (-)→GND
-3. Ganti buzzer jika rusak
-
----
-
-### Display Flicker/Tearing
-
-**Penyebab:**
-- Power supply <2A
-- Kabel USB jelek
-- SPI speed tinggi
-
-**Solusi:**
-1. Gunakan adaptor 5V 2A minimum
-2. Kabel USB pendek (<1m, kualitas bagus)
-3. Tambah kapasitor 100-470µF di VIN-GND
-
----
-
-### RTC Time Invalid
-
-**Serial Monitor:**
-```
-*** RTC HARDWARE FAILURE ***
-DS3231 chip is defective!
->>> SOLUTION: BUY NEW DS3231 MODULE <
-```
-
-**Tidak bisa diperbaiki - ganti modul baru!**
-
-**Tanpa RTC:**
-- Sistem tetap jalan
-- NTP sync otomatis saat WiFi connect
-- Waktu reset setiap restart
+**Timeout:** Touch adzan aktif 10 menit setelah waktu masuk.
 
 ---
 
 ### Prayer Task Crash
 
-**Serial Monitor:**
 ```
 KRITIS: TUGAS SHALAT CRASH
 Aksi: Memulai ulang tugas otomatis...
 Tugas Shalat berhasil dimulai ulang
 ```
 
-**Sistem auto-recovery - task restart otomatis!**
-
-**Jika crash berulang:**
-```
-ERROR: Insufficient stack for HTTP request!
-Stack available: 1800 bytes → ⚠️ Terlalu kecil
-```
-
-Increase stack size di kode atau report ke developer.
+**Sistem auto-recovery** — task restart otomatis. Jika crash berulang, laporkan ke developer.
 
 ---
 
-### Upload cities.json Gagal
+### Web Interface Lambat/Timeout
 
-**Error:**
-- "Invalid filename" → Nama harus `cities.json`
-- "File too large" → Max 1MB
-- "Invalid JSON" → Format rusak
+**Solusi:**
+1. Dekatkan ke router (RSSI > -60 dBm)
+2. Clear cache browser (Ctrl+Shift+Delete)
+3. Batasi max 3 client bersamaan
+4. Tab BERANDA → Mulai Ulang Perangkat
 
-**Validasi:**
-1. Nama: `cities.json` (lowercase, no space)
-2. Size: Max 1MB
-3. Format: Valid JSON array
-4. Required fields: `api`, `display`, `province`
+---
 
-**Debug Serial:**
-```
-CITIES.JSON UPLOAD STARTED
-Progress: 5120 bytes (5.0 KB)
-Upload complete
-Total size: 45632 bytes
-File verified: 45632 bytes
-JSON format looks valid
-```
+### Display Flicker/Tearing
+
+**Solusi:**
+1. Gunakan adaptor 5V 2A minimum
+2. Kabel USB pendek (<1m, kualitas bagus)
+3. Tambah kapasitor 100–470µF di VIN-GND
 
 ---
 
@@ -769,67 +752,12 @@ AP IP:       192.168.100.1
 ```
 
 ### Rekomendasi
-1. **Ganti SSID dan Password AP** segera
+1. **Ganti SSID dan Password AP** segera setelah setup
 2. **Gunakan WPA2/WPA3** di router
-3. **Jangan ekspos ke internet** - hanya akses lokal
-4. **Monitor akses fisik** - Serial port bisa untuk debug/hack
-5. **Backup konfigurasi** - Screenshot semua setting
-6. **Update firmware** - Check repository berkala
-
----
-
-## 📊 API Endpoints
-
-### GET `/api/data`
-Real-time data untuk integrasi IoT:
-```json
-{
-  "time": "14:35:22",
-  "date": "19/12/2024",
-  "prayerTimes": {
-    "subuh": "04:07",
-    "zuhur": "11:54",
-    ...
-  },
-  "location": {
-    "city": "Jakarta",
-    "latitude": "-6.2088",
-    "longitude": "106.8456"
-  },
-  "device": {
-    "wifiConnected": true,
-    "ntpSynced": true,
-    "uptime": 3600
-  }
-}
-```
-
-**Use Case:** Home Assistant, Node-RED, Mobile App
-
-### GET `/api/countdown`
-Status countdown restart/reset:
-```json
-{
-  "active": true,
-  "remaining": 45,
-  "message": "Memulai Ulang Perangkat",
-  "reason": "device_restart"
-}
-```
-
-### POST Endpoints
-- `/setwifi` - Set WiFi credentials
-- `/setap` - Set AP config
-- `/setcity` - Set lokasi dan koordinat
-- `/synctime` - Manual time sync
-- `/restart` - Restart perangkat (countdown 60s)
-- `/reset` - Factory reset (countdown 60s)
-- `/setalarmconfig` - Set waktu alarm (`alarmTime=HH:MM`)
-- `/setbuzzertoggle` - Toggle alarm ON/OFF (`prayer=alarm&enabled=true/false`)
-
-### GET Endpoints
-- `/getalarmconfig` - Baca konfigurasi alarm saat ini
-- `/getbuzzerconfig` - Baca semua konfigurasi buzzer termasuk alarm
+3. **Jangan ekspos ke internet** — hanya akses lokal
+4. **Monitor akses fisik** — Serial port bisa untuk debug
+5. **Backup konfigurasi** — Screenshot semua setting
+6. **Update firmware** — Check repository berkala
 
 ---
 
@@ -838,15 +766,15 @@ Status countdown restart/reset:
 **Developer:** GONIT - Global Network Identification Technology
 
 **Libraries:**
-- LVGL Team - https://lvgl.io/
-- Espressif Systems - ESP32 Arduino Core
-- Bodmer - TFT_eSPI
-- Benoit Blanchon - ArduinoJson
-- me-no-dev - ESPAsyncWebServer
-- Adafruit - RTClib
-- DFRobot - DFPlayerMini
+- LVGL Team — https://lvgl.io/
+- Espressif Systems — ESP32 Arduino Core
+- Bodmer — TFT_eSPI
+- Benoit Blanchon — ArduinoJson
+- me-no-dev — ESPAsyncWebServer
+- Adafruit — RTClib
+- DFRobot — DFPlayerMini
 
-**API:** Aladhan API - https://aladhan.com/
+**API:** Aladhan API — https://aladhan.com/
 
 ---
 
