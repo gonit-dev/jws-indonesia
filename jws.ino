@@ -54,9 +54,9 @@
 #define BUZZER_RESOLUTION 8
 
 // RGB LED Pins (Common Anode / Active LOW)
-#define RGB_R_PIN      4
-#define RGB_G_PIN      16
-#define RGB_B_PIN      17
+#define RGB_R_PIN      17
+#define RGB_G_PIN      4
+#define RGB_B_PIN      16
 
 // PWM Backlight Configuration
 #define TFT_BL_CHANNEL 0
@@ -404,6 +404,7 @@ const unsigned long RESTART_DEBOUNCE_MS = 3000;
 // RGB LED STATE
 // ================================
 static bool rgbBootBlinking = true;       // Kedip merah saat booting
+static bool internetAvailable = false;    // Status koneksi internet
 static unsigned long rgbLastToggle = 0;
 static bool rgbLedState = false;          // State on/off saat kedip
 
@@ -453,13 +454,22 @@ void handleRGBLed() {
   if (wifiConfig.routerSSID.length() > 0) {
     switch (wifiState) {
       case WIFI_CONNECTED:
-        // Konek penuh → hijau nyala
-        rgbSetColor(false, true, false);
+        if (internetAvailable) {
+          // WiFi konek + internet OK → hijau nyala solid
+          rgbSetColor(false, true, false);
+        } else {
+          // WiFi konek tapi internet mati → hijau kedip (seperti router LAN hilang)
+          if (now - rgbLastToggle >= 500) {
+            rgbLastToggle = now;
+            rgbLedState = !rgbLedState;
+            rgbSetColor(false, rgbLedState, false);
+          }
+        }
         break;
 
       case WIFI_CONNECTING:
-        // Sedang konek → merah kedip lambat
-        if (now - rgbLastToggle >= 500) {
+        // Sedang konek ke router → hijau kedip cepat
+        if (now - rgbLastToggle >= 300) {
           rgbLastToggle = now;
           rgbLedState = !rgbLedState;
           rgbSetColor(false, rgbLedState, false);
@@ -473,7 +483,6 @@ void handleRGBLed() {
 
       case WIFI_IDLE:
       default:
-        // Idle (belum coba konek) → LED mati
         rgbOff();
         break;
     }
@@ -560,6 +569,7 @@ void audioTask(void *parameter);
 
 void restartWiFiTask(void *parameter);
 void restartAPTask(void *parameter);
+void internetCheckTask(void *parameter);
 
 bool initDFPlayer();
 void setDFPlayerVolume(int vol);
@@ -4937,6 +4947,39 @@ void rtcSyncTask(void *parameter) {
     }
 }
 
+// ============================================
+// Internet Check Task - Cek koneksi internet setiap 30 detik
+// ============================================
+void internetCheckTask(void *parameter) {
+  const TickType_t checkInterval = pdMS_TO_TICKS(30000);
+
+  Serial.println("Internet Check Task dimulai (interval 30 detik)");
+
+  while (true) {
+    vTaskDelay(checkInterval);
+
+    // Hanya cek jika WiFi terkonek ke router
+    if (wifiState != WIFI_CONNECTED) {
+      internetAvailable = false;
+      continue;
+    }
+
+    // Cek internet via socket TCP ke 8.8.8.8:53 (DNS Google)
+    WiFiClient client;
+    bool result = client.connect(IPAddress(8, 8, 8, 8), 53, 3000); // timeout 3 detik
+    if (result) {
+      client.stop();
+    }
+
+    if (result != internetAvailable) {
+      internetAvailable = result;
+      Serial.println(internetAvailable
+        ? "[Internet] Koneksi internet tersedia"
+        : "[Internet] Koneksi internet terputus (WiFi masih konek)");
+    }
+  }
+}
+
 void clockTickTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xFrequency = pdMS_TO_TICKS(1000);
@@ -5977,6 +6020,19 @@ void setup() {
     0  // Core 0
   );
   Serial.printf("Task Jam (Core 0) - Stack: %d byte\n", CLOCK_TASK_STACK_SIZE);
+
+  // ================================
+  // INTERNET CHECK TASK
+  // ================================
+  xTaskCreate(
+    internetCheckTask,
+    "InternetCheck",
+    3072,
+    NULL,
+    1,
+    NULL
+  );
+  Serial.println("Task Internet Check (Core any) - Stack: 3072 byte");
 
   // ================================
   // RTC SYNC TASK
