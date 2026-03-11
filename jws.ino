@@ -18,6 +18,7 @@
 #include "ESPAsyncWebServer.h"
 #include "TimeLib.h"
 #include "time.h"
+#include "HTTPClient.h"
 #include "esp_task_wdt.h"
 #include "esp_wifi.h"
 #include "DFRobotDFPlayerMini.h"
