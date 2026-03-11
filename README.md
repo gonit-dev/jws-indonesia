@@ -40,6 +40,8 @@
 
 ### 🌐 Fitur Jaringan
 - **Dual WiFi Mode** — AP + STA bersamaan (bisa diakses via router dan AP)
+- **Smart AP Selection** — Saat konek/reconnect, sistem scan semua channel terlebih dahulu lalu otomatis memilih BSSID dengan sinyal RSSI terkuat. Berguna untuk jaringan dengan banyak AP (WISP, WDS, mesh)
+- **Scan Hanya Saat Diperlukan** — Scan hanya terjadi saat boot, koneksi terputus, atau retry. Tidak scan saat koneksi sedang aktif, mengikuti standar perilaku router WISP/WDS
 - **Auto-Reconnect** — Event-driven tanpa polling, hingga 5 percobaan
 - **WiFi Failed + Exponential Backoff** — Setelah 5x gagal, retry otomatis dengan jeda makin panjang (10s → 20s → 40s → 60s → 120s maks), retry selamanya sampai berhasil
 - **Custom AP** — Konfigurasi SSID, Password, IP, Gateway, Subnet
@@ -453,9 +455,31 @@ Tune dikirim ke Aladhan API sebagai parameter `tune` sehingga perhitungan langsu
 
 ## 🌐 WiFi & Koneksi Internet
 
+### Smart AP Selection (Multi-AP / WISP / WDS)
+
+Saat konek atau reconnect, sistem **tidak langsung konek** ke AP manapun. Sistem melakukan scan async terlebih dahulu ke semua channel, lalu memilih BSSID dengan RSSI terkuat dari SSID yang dikonfigurasi.
+
+```
+[WIFI] MEMINDAI AP TERKUAT (ASYNC)...
+  [0] BSSID: AA:BB:CC:DD:EE:01 | RSSI: -72 dBm | CH: 6
+  [1] BSSID: AA:BB:CC:DD:EE:02 | RSSI: -45 dBm | CH: 11
+[WIFI] AP TERPILIH: AA:BB:CC:DD:EE:02 | RSSI: -45 dBm
+```
+
+**Kapan scan terjadi:**
+- Boot pertama
+- WiFi terputus → reconnect
+- Retry setelah WIFI_FAILED
+- Restart WiFi manual dari web interface
+
+**Kapan scan TIDAK terjadi:**
+- Saat koneksi sedang aktif/hidup
+
+> Ini mengikuti standar perilaku router WISP/WDS — scan hanya saat diperlukan, tidak mengganggu koneksi yang sedang berjalan. Jika AP terdekat mati lalu hidup kembali, ESP32 akan berpindah ke AP tersebut saat koneksi berikutnya terputus dan reconnect.
+
 ### Mekanisme Reconnect
 
-Saat WiFi terputus, sistem mencoba reconnect secara otomatis hingga **5 kali**. Jika semua gagal, state berubah ke `WIFI_FAILED` dan sistem masuk mode **exponential backoff retry**:
+Saat WiFi terputus, sistem mencoba reconnect secara otomatis hingga **5 kali**. Setiap percobaan didahului scan untuk memilih AP terkuat. Jika semua gagal, state berubah ke `WIFI_FAILED` dan sistem masuk mode **exponential backoff retry**:
 
 | Retry ke- | Jeda Tunggu |
 |-----------|------------|
@@ -465,7 +489,7 @@ Saat WiFi terputus, sistem mencoba reconnect secara otomatis hingga **5 kali**. 
 | 4 | 60 detik |
 | 5+ | 120 detik (maksimal, retry selamanya) |
 
-Saat WiFi hidup kembali, sistem otomatis terkoneksi dan semua counter direset. LED berubah dari merah nyala ke hijau solid (jika internet OK) atau hijau kedip (jika internet belum tersedia).
+Saat WiFi hidup kembali, sistem otomatis scan → pilih AP terkuat → koneksi, dan semua counter direset. LED berubah dari merah nyala ke hijau solid (jika internet OK) atau hijau kedip (jika internet belum tersedia).
 
 ### Cek Internet
 Setiap 30 detik sistem cek koneksi internet via **TCP connect ke `8.8.8.8:53`** (DNS Google). Tidak ada data yang dikirim — hanya handshake untuk verifikasi routing aktif. Jika WiFi putus, status internet otomatis direset ke false.
@@ -695,18 +719,22 @@ LED mati           → Tidak ada konfigurasi WiFi
 
 **Mekanisme Retry Otomatis saat WIFI_FAILED:**
 ```
-Attempt 1–5  → Connecting langsung (WIFI_CONNECTING)
+Attempt 1–5  → Scan AP terkuat → Connecting (WIFI_CONNECTING)
 Gagal semua  → WIFI_FAILED, LED merah nyala
-Retry #1     → Tunggu 10 detik → coba lagi
-Retry #2     → Tunggu 20 detik → coba lagi
-Retry #3     → Tunggu 40 detik → coba lagi
-Retry #4     → Tunggu 60 detik → coba lagi
-Retry #5+    → Tunggu 120 detik → coba lagi (selamanya)
+Retry #1     → Scan AP terkuat → Tunggu 10 detik → coba lagi
+Retry #2     → Scan AP terkuat → Tunggu 20 detik → coba lagi
+Retry #3     → Scan AP terkuat → Tunggu 40 detik → coba lagi
+Retry #4     → Scan AP terkuat → Tunggu 60 detik → coba lagi
+Retry #5+    → Scan AP terkuat → Tunggu 120 detik → coba lagi (selamanya)
 Berhasil     → WIFI_CONNECTED, LED hijau solid/kedip
 ```
 
 **Serial Monitor:**
 ```
+[WIFI] MEMINDAI AP TERKUAT (ASYNC)...
+  [0] BSSID: AA:BB:CC:DD:EE:01 | RSSI: -72 dBm | CH: 6
+  [1] BSSID: AA:BB:CC:DD:EE:02 | RSSI: -45 dBm | CH: 11
+[WIFI] AP TERPILIH: AA:BB:CC:DD:EE:02 | RSSI: -45 dBm
 WiFi: Connected | RSSI: -45 dBm | IP: 192.168.1.100  → ✅ Baik
 WiFi: Connected | RSSI: -75 dBm                      → ⚠️ Lemah
 WiFi Disconnected | Reason Code: 15                  → ❌ Gagal
@@ -719,6 +747,25 @@ WIFI_FAILED: Retry #1 (backoff 10s)                  → 🔄 Mencoba lagi
 - -60 dBm: Baik
 - -70 dBm: Cukup
 - -80 dBm: Lemah (terlalu jauh)
+
+---
+
+### Jaringan Multi-AP / WISP / WDS
+
+**Gejala:** Perangkat selalu konek ke AP dengan sinyal lemah meskipun ada AP lebih dekat dengan SSID yang sama.
+
+**Penjelasan:** Sistem sudah menangani ini secara otomatis — setiap kali konek atau reconnect, sistem scan semua AP dengan SSID yang sama lalu memilih yang RSSI-nya terkuat.
+
+**Catatan Penting:** Jika AP terdekat mati lalu hidup kembali saat ESP32 sudah konek ke AP lain, ESP32 **tidak akan berpindah otomatis** selama koneksi masih aktif. Perpindahan baru terjadi saat koneksi berikutnya terputus. Ini adalah perilaku normal, sama seperti router WISP/WDS pada umumnya.
+
+**Serial Monitor saat konek ke multi-AP:**
+```
+[WIFI] MEMINDAI AP TERKUAT (ASYNC)...
+  [0] BSSID: AA:BB:CC:11:22:33 | RSSI: -80 dBm | CH: 1   ← AP jauh
+  [1] BSSID: AA:BB:CC:44:55:66 | RSSI: -42 dBm | CH: 6   ← AP dekat
+  [2] BSSID: AA:BB:CC:77:88:99 | RSSI: -65 dBm | CH: 11  ← AP sedang
+[WIFI] AP TERPILIH: AA:BB:CC:44:55:66 | RSSI: -42 dBm    ← Pilih terkuat
+```
 
 ---
 
