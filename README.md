@@ -334,6 +334,8 @@ Tab **WAKTU** → Klik ikon edit (🕐) → Input offset → Klik 💾
 
 ### Tab BERANDA
 - Status koneksi WiFi dan IP
+- **Status WiFi** — badge realtime: Terhubung / Menghubungkan... / Gagal / Tidak terkonfigurasi
+- **Sinyal** — kekuatan sinyal dalam dBm + label kualitas (Sangat Baik / Baik / Cukup / Lemah)
 - Status NTP dan server yang digunakan
 - Waktu dan tanggal real-time
 - Uptime perangkat
@@ -562,23 +564,60 @@ Memory status: Normal
 {
   "time": "14:35:22",
   "date": "19/12/2024",
+  "day": "Wednesday",
+  "timestamp": 1734614122,
   "prayerTimes": {
-    "subuh": "04:07",
+    "imsak": "04:07",
+    "subuh": "04:17",
+    "terbit": "05:32",
     "zuhur": "11:54",
     "ashar": "15:12",
     "maghrib": "17:58",
     "isya": "19:08"
   },
   "location": {
-    "city": "Jakarta",
+    "city": "jakarta",
+    "cityId": "jakarta",
+    "displayName": "Jakarta",
     "latitude": "-6.2088",
     "longitude": "106.8456"
   },
   "device": {
     "wifiConnected": true,
+    "wifiState": "connected",
+    "rssi": -52,
+    "apIP": "192.168.100.1",
     "ntpSynced": true,
+    "ntpServer": "pool.ntp.org",
+    "freeHeap": 245632,
     "uptime": 3600
   }
+}
+```
+
+Nilai `wifiState` yang mungkin:
+
+| wifiState | Keterangan |
+|-----------|-----------|
+| `idle` | WiFi belum dikonfigurasi |
+| `connecting` | Sedang menghubungkan ke router |
+| `connected` | Terhubung ke router |
+| `failed` | Gagal konek (sedang exponential backoff retry) |
+
+### Contoh Response `/devicestatus`
+```json
+{
+  "connected": true,
+  "wifiState": "connected",
+  "ssid": "NamaWiFi",
+  "ip": "192.168.1.100",
+  "rssi": -52,
+  "ntpSynced": true,
+  "ntpServer": "pool.ntp.org",
+  "currentTime": "14:35:22",
+  "currentDate": "19/12/2024",
+  "uptime": 3600,
+  "freeHeap": "245632"
 }
 ```
 
