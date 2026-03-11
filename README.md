@@ -30,6 +30,7 @@
 - **Touch Adzan** — Tap waktu sholat saat blink untuk play audio adzan (timeout 10 menit)
 - **Toggle Individual** — Aktifkan/nonaktifkan buzzer per-waktu sholat
 - **Auto-Update** — Tengah malam (00:00–00:05) otomatis update jadwal
+- **Guard Data Kosong** — Notifikasi tidak jalan jika semua waktu sholat masih `00:00` (belum ada data dari API)
 
 ### ⏰ Manajemen Waktu
 - **NTP Auto-Sync** setiap 1 jam dengan 3 fallback server (`pool.ntp.org`, `time.google.com`, `time.windows.com`)
@@ -39,17 +40,19 @@
 
 ### 🌐 Fitur Jaringan
 - **Dual WiFi Mode** — AP + STA bersamaan (bisa diakses via router dan AP)
-- **Auto-Reconnect** — Event-driven tanpa polling
+- **Auto-Reconnect** — Event-driven tanpa polling, hingga 5 percobaan
+- **WiFi Failed + Exponential Backoff** — Setelah 5x gagal, retry otomatis dengan jeda makin panjang (10s → 20s → 40s → 60s → 120s maks), retry selamanya sampai berhasil
 - **Custom AP** — Konfigurasi SSID, Password, IP, Gateway, Subnet
 - **WiFi Sleep Disabled** — Performa maksimal, response time cepat
 - **Connection Type Detection** — Deteksi otomatis apakah client akses via AP atau router
+- **Internet Check** — Cek koneksi internet setiap 30 detik via TCP ke `8.8.8.8:53`
 
 ### 🔴 RGB LED Status Indicator
 - **Boot** — Merah kedip cepat selama proses booting berlangsung
 - **WiFi Connecting** — Hijau kedip cepat (300ms) saat sedang menghubungkan ke router
 - **WiFi Connected + Internet OK** — Hijau nyala solid
 - **WiFi Connected + Internet Putus** — Hijau kedip lambat (500ms), seperti router saat LAN hilang
-- **WiFi Failed** — Merah nyala saat gagal konek ke router
+- **WiFi Failed** — Merah nyala saat gagal konek ke router (setelah 5x percobaan)
 - **Restart/Reset Countdown** — Merah kedip saat countdown `device_restart` atau `factory_reset`
 
 > Cek internet dilakukan setiap 30 detik via TCP connect ke `8.8.8.8:53` (DNS Google) — ringan, tidak ada data yang dikirim.
@@ -125,7 +128,7 @@ B (Biru)  → GPIO17
 | Sedang connecting ke router | Hijau | Kedip cepat (300ms) |
 | Terkoneksi ke router + internet OK | Hijau | Nyala solid |
 | Terkoneksi ke router + internet putus | Hijau | Kedip lambat (500ms) |
-| Gagal konek ke router | Merah | Nyala |
+| Gagal konek ke router (WIFI_FAILED) | Merah | Nyala |
 | Countdown restart/factory reset | Merah | Kedip (500ms) |
 
 > **Cek Internet:** Setiap 30 detik via TCP connect ke `8.8.8.8:53`. Jika WiFi putus, status internet otomatis direset ke false. Countdown `ap_restart` tidak mempengaruhi LED.
@@ -446,6 +449,27 @@ Tune dikirim ke Aladhan API sebagai parameter `tune` sehingga perhitungan langsu
 
 ---
 
+## 🌐 WiFi & Koneksi Internet
+
+### Mekanisme Reconnect
+
+Saat WiFi terputus, sistem mencoba reconnect secara otomatis hingga **5 kali**. Jika semua gagal, state berubah ke `WIFI_FAILED` dan sistem masuk mode **exponential backoff retry**:
+
+| Retry ke- | Jeda Tunggu |
+|-----------|------------|
+| 1 | 10 detik |
+| 2 | 20 detik |
+| 3 | 40 detik |
+| 4 | 60 detik |
+| 5+ | 120 detik (maksimal, retry selamanya) |
+
+Saat WiFi hidup kembali, sistem otomatis terkoneksi dan semua counter direset. LED berubah dari merah nyala ke hijau solid (jika internet OK) atau hijau kedip (jika internet belum tersedia).
+
+### Cek Internet
+Setiap 30 detik sistem cek koneksi internet via **TCP connect ke `8.8.8.8:53`** (DNS Google). Tidak ada data yang dikirim — hanya handshake untuk verifikasi routing aktif. Jika WiFi putus, status internet otomatis direset ke false.
+
+---
+
 ## 🛡️ Stabilitas Sistem
 
 ### Prayer Task Watchdog
@@ -457,6 +481,14 @@ Aksi: Memulai ulang tugas otomatis...
 Tugas Shalat berhasil dimulai ulang
 WDT: Re-registered
 ```
+
+### Guard Data Waktu Sholat
+Notifikasi sholat (LCD blink, buzzer, adzan) **tidak akan jalan** jika semua waktu sholat masih `00:00`. Kondisi ini terjadi saat:
+- Setelah factory reset sebelum restart
+- Boot pertama sebelum kota dipilih dan data di-fetch dari API
+- Setelah restart sebelum internet tersedia
+
+Notifikasi baru aktif setelah data berhasil diambil dari API dan minimal satu waktu sholat berbeda dari `00:00`.
 
 ### Stack & Memory Monitoring
 
@@ -596,7 +628,7 @@ Nilai `reason` yang mungkin:
 
 ---
 
-### WiFi Tidak Connect
+### WiFi Tidak Connect / WIFI_FAILED
 
 **Penyebab:**
 - SSID/Password salah (case-sensitive)
@@ -615,11 +647,23 @@ Nilai `reason` yang mungkin:
 
 **Indikator LED:**
 ```
-Hijau kedip cepat  → Sedang connecting
+Hijau kedip cepat  → Sedang connecting (maks 5x percobaan)
 Hijau solid        → Konek + internet OK
 Hijau kedip lambat → Konek tapi internet putus
-Merah nyala        → Gagal konek (WIFI_FAILED)
+Merah nyala        → Gagal konek (WIFI_FAILED) — retry otomatis
 LED mati           → Tidak ada konfigurasi WiFi
+```
+
+**Mekanisme Retry Otomatis saat WIFI_FAILED:**
+```
+Attempt 1–5  → Connecting langsung (WIFI_CONNECTING)
+Gagal semua  → WIFI_FAILED, LED merah nyala
+Retry #1     → Tunggu 10 detik → coba lagi
+Retry #2     → Tunggu 20 detik → coba lagi
+Retry #3     → Tunggu 40 detik → coba lagi
+Retry #4     → Tunggu 60 detik → coba lagi
+Retry #5+    → Tunggu 120 detik → coba lagi (selamanya)
+Berhasil     → WIFI_CONNECTED, LED hijau solid/kedip
 ```
 
 **Serial Monitor:**
@@ -627,6 +671,8 @@ LED mati           → Tidak ada konfigurasi WiFi
 WiFi: Connected | RSSI: -45 dBm | IP: 192.168.1.100  → ✅ Baik
 WiFi: Connected | RSSI: -75 dBm                      → ⚠️ Lemah
 WiFi Disconnected | Reason Code: 15                  → ❌ Gagal
+Max reconnect attempts tercapai → WIFI_FAILED         → 🔴 Backoff aktif
+WIFI_FAILED: Retry #1 (backoff 10s)                  → 🔄 Mencoba lagi
 ```
 
 **RSSI Guide:**
@@ -656,6 +702,19 @@ WiFi Disconnected | Reason Code: 15                  → ❌ Gagal
 
 4. **Cek Zona Waktu:**
    - Tab WAKTU → Pastikan sesuai lokasi (WIB/WITA/WIT)
+
+---
+
+### Notifikasi Sholat Tidak Jalan Setelah Reset
+
+**Gejala:** Setelah factory reset atau boot pertama, sudah jam sholat tapi tidak ada notifikasi.
+
+**Penyebab Normal:** Sistem sengaja tidak menjalankan notifikasi jika semua waktu sholat masih `00:00` — ini adalah fitur keamanan untuk mencegah notifikasi palsu sebelum data tersedia.
+
+**Solusi:**
+1. Sambungkan WiFi → pilih kota → Simpan
+2. Tunggu data jadwal di-fetch dari API
+3. Notifikasi aktif otomatis setelah data tersedia
 
 ---
 
