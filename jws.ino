@@ -54,9 +54,9 @@
 #define BUZZER_RESOLUTION 8
 
 // RGB LED Pins (Common Anode / Active LOW)
-#define RGB_R_PIN      17
-#define RGB_G_PIN      4
-#define RGB_B_PIN      16
+#define RGB_R_PIN      4
+#define RGB_G_PIN      16
+#define RGB_B_PIN      17
 
 // PWM Backlight Configuration
 #define TFT_BL_CHANNEL 0
