@@ -54,9 +54,9 @@
 #define BUZZER_RESOLUTION 8
 
 // RGB LED Pins (Common Anode / Active LOW)
-#define RGB_R_PIN      4
-#define RGB_G_PIN      16
-#define RGB_B_PIN      17
+#define RGB_R_PIN      17
+#define RGB_G_PIN      4
+#define RGB_B_PIN      16
 
 // PWM Backlight Configuration
 #define TFT_BL_CHANNEL 0
@@ -735,6 +735,17 @@ int getRemainingSeconds() {
 void checkPrayerTime() {
   // Jika alarm sedang aktif, tunda notif shalat
   if (alarmState.isRinging) return;
+
+  // Jika semua waktu shalat masih 00:00 (belum ada data), skip notifikasi
+  if (prayerConfig.imsakTime   == "00:00" &&
+      prayerConfig.subuhTime   == "00:00" &&
+      prayerConfig.terbitTime  == "00:00" &&
+      prayerConfig.zuhurTime   == "00:00" &&
+      prayerConfig.asharTime   == "00:00" &&
+      prayerConfig.maghribTime == "00:00" &&
+      prayerConfig.isyaTime    == "00:00") {
+    return;
+  }
 
   time_t now_t = timeConfig.currentTime;
   struct tm timeinfo;
