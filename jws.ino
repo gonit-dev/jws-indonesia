@@ -54,9 +54,9 @@
 #define BUZZER_RESOLUTION 8
 
 // RGB LED Pins (Common Anode / Active LOW)
-#define RGB_R_PIN      4
-#define RGB_G_PIN      16
-#define RGB_B_PIN      17
+#define RGB_R_PIN      17
+#define RGB_G_PIN      4
+#define RGB_B_PIN      16
 
 // PWM Backlight Configuration
 #define TFT_BL_CHANNEL 0
@@ -5931,8 +5931,9 @@ void setup() {
 
   esp_wifi_set_max_tx_power(78);
 
-  WiFi.setAutoReconnect(true);
+  WiFi.setAutoReconnect(false); // Reconnect ditangani manual dengan setSortMethod
   WiFi.persistent(false);
+  WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL); // Selalu pilih sinyal terkuat
 
   Serial.println("Mode WiFi: AP + STA");
   Serial.println("WiFi Sleep: DOUBLE DISABLED");
