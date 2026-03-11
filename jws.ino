@@ -18,7 +18,6 @@
 #include "ESPAsyncWebServer.h"
 #include "TimeLib.h"
 #include "time.h"
-#include "HTTPClient.h"
 #include "esp_task_wdt.h"
 #include "esp_wifi.h"
 #include "DFRobotDFPlayerMini.h"
@@ -304,6 +303,8 @@ unsigned long lastWiFiCheck = 0;
 const unsigned long WIFI_CHECK_INTERVAL = 5000;
 int reconnectAttempts = 0;
 const int MAX_RECONNECT_ATTEMPTS = 5;
+unsigned long wifiFailedTime = 0;
+int wifiRetryCount = 0; // Hitung berapa kali sudah retry dari WIFI_FAILED
 unsigned long wifiDisconnectedTime = 0;
 
 bool fastReconnectMode = false;
@@ -1138,6 +1139,7 @@ void setupWiFiEvents() {
                     wifiConfig.localIP = WiFi.localIP();
                     wifiState = WIFI_CONNECTED;
                     reconnectAttempts = 0;
+                    wifiRetryCount = 0;
                     xSemaphoreGive(wifiMutex);
                 }
                 
@@ -4027,13 +4029,25 @@ void wifiTask(void *parameter) {
             }
             
             if (wifiConfig.routerSSID.length() > 0) {
-                Serial.println("Attempting reconnect to: " + wifiConfig.routerSSID);
-                
-                esp_netif_set_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), hostname.c_str());
-                
-                WiFi.begin(wifiConfig.routerSSID.c_str(), 
-                          wifiConfig.routerPassword.c_str());
-                wifiState = WIFI_CONNECTING;
+                reconnectAttempts++;
+                Serial.printf("Reconnect attempt %d/%d ke: %s\n",
+                    reconnectAttempts, MAX_RECONNECT_ATTEMPTS,
+                    wifiConfig.routerSSID.c_str());
+
+                if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
+                    // Habis attempt → WIFI_FAILED, mulai exponential backoff
+                    wifiRetryCount = 0;
+                    unsigned long firstRetry = 10000; // mulai dari 10 detik
+                    Serial.println("Max reconnect attempts tercapai → WIFI_FAILED");
+                    Serial.printf("Retry pertama dalam %lu detik\n", firstRetry / 1000);
+                    wifiState = WIFI_FAILED;
+                    wifiFailedTime = millis();
+                } else {
+                    esp_netif_set_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), hostname.c_str());
+                    WiFi.begin(wifiConfig.routerSSID.c_str(),
+                              wifiConfig.routerPassword.c_str());
+                    wifiState = WIFI_CONNECTING;
+                }
             }
             
             Serial.println("Akan mencoba menghubungkan kembali...");
@@ -4606,6 +4620,32 @@ void webTask(void *parameter) {
         delay(100);
         WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
         WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
+      }
+    }
+
+    // Retry otomatis dari WIFI_FAILED dengan exponential backoff
+    if (wifiState == WIFI_FAILED && wifiConfig.routerSSID.length() > 0) {
+      // Hitung interval: 10s, 20s, 40s, 60s, 120s (max)
+      unsigned long backoff = 10000UL * (1UL << min(wifiRetryCount, 4));
+      if (backoff > 120000UL) backoff = 120000UL;
+
+      if (now - wifiFailedTime >= backoff) {
+        wifiRetryCount++;
+        Serial.println("\n========================================");
+        Serial.printf("WIFI_FAILED: Retry #%d (backoff %lus)\n",
+            wifiRetryCount, backoff / 1000);
+
+        // Hitung interval berikutnya untuk info
+        unsigned long nextBackoff = 10000UL * (1UL << min(wifiRetryCount, 4));
+        if (nextBackoff > 120000UL) nextBackoff = 120000UL;
+        Serial.printf("Jika gagal lagi, retry berikutnya dalam %lus\n", nextBackoff / 1000);
+        Serial.println("========================================");
+
+        reconnectAttempts = 0;
+        esp_netif_set_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), hostname.c_str());
+        WiFi.begin(wifiConfig.routerSSID.c_str(), wifiConfig.routerPassword.c_str());
+        wifiState = WIFI_CONNECTING;
+        wifiFailedTime = now;
       }
     }
   }
