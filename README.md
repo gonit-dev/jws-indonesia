@@ -46,10 +46,13 @@
 
 ### 🔴 RGB LED Status Indicator
 - **Boot** — Merah kedip cepat selama proses booting berlangsung
-- **WiFi Connecting** — Hijau kedip saat sedang menghubungkan ke router
-- **WiFi Connected** — Hijau nyala saat terkoneksi ke router
-- **WiFi Failed** — Merah nyala saat gagal konek
+- **WiFi Connecting** — Hijau kedip cepat (300ms) saat sedang menghubungkan ke router
+- **WiFi Connected + Internet OK** — Hijau nyala solid
+- **WiFi Connected + Internet Putus** — Hijau kedip lambat (500ms), seperti router saat LAN hilang
+- **WiFi Failed** — Merah nyala saat gagal konek ke router
 - **Restart/Reset Countdown** — Merah kedip saat countdown `device_restart` atau `factory_reset`
+
+> Cek internet dilakukan setiap 30 detik via TCP connect ke `8.8.8.8:53` (DNS Google) — ringan, tidak ada data yang dikirim.
 
 ### 🖥️ Antarmuka
 - **Touchscreen UI** — LVGL 9.2.0 @ 320x240 resolusi
@@ -119,12 +122,13 @@ B (Biru)  → GPIO17
 |---------|-------|------|
 | Booting | Merah | Kedip cepat (300ms) |
 | Boot selesai, WiFi tidak dikonfigurasi | — | Mati |
-| Sedang connecting ke router | Hijau | Kedip (500ms) |
-| Terkoneksi ke router | Hijau | Nyala |
+| Sedang connecting ke router | Hijau | Kedip cepat (300ms) |
+| Terkoneksi ke router + internet OK | Hijau | Nyala solid |
+| Terkoneksi ke router + internet putus | Hijau | Kedip lambat (500ms) |
 | Gagal konek ke router | Merah | Nyala |
 | Countdown restart/factory reset | Merah | Kedip (500ms) |
 
-> **Catatan:** Countdown `ap_restart` tidak mempengaruhi LED.
+> **Cek Internet:** Setiap 30 detik via TCP connect ke `8.8.8.8:53`. Jika WiFi putus, status internet otomatis direset ke false. Countdown `ap_restart` tidak mempengaruhi LED.
 
 #### RTC DS3231 (Sangat Disarankan)
 **Wiring:**
@@ -568,6 +572,30 @@ Nilai `reason` yang mungkin:
 
 ## 🔍 Troubleshooting
 
+### Internet Putus (WiFi Masih Konek)
+
+**Gejala:** LED hijau kedip lambat, WiFi masih terhubung tapi jadwal sholat tidak update dan NTP gagal sync.
+
+**Penyebab:**
+- Kabel LAN router putus
+- ISP down
+- Router restart
+- DNS bermasalah
+
+**Cek Status (Serial Monitor):**
+```
+[Internet] Koneksi internet terputus (WiFi masih konek)  → ❌ Internet mati
+[Internet] Koneksi internet tersedia                     → ✅ Internet OK
+```
+
+**Solusi:**
+1. Cek kabel LAN ke router/modem
+2. Restart modem/router
+3. Tunggu — sistem cek ulang otomatis setiap 30 detik
+4. Saat internet kembali, LED otomatis berubah ke hijau solid
+
+---
+
 ### WiFi Tidak Connect
 
 **Penyebab:**
@@ -587,9 +615,11 @@ Nilai `reason` yang mungkin:
 
 **Indikator LED:**
 ```
-Hijau kedip  → Sedang connecting
-Merah nyala  → Gagal konek (WIFI_FAILED)
-LED mati     → Tidak ada konfigurasi WiFi
+Hijau kedip cepat  → Sedang connecting
+Hijau solid        → Konek + internet OK
+Hijau kedip lambat → Konek tapi internet putus
+Merah nyala        → Gagal konek (WIFI_FAILED)
+LED mati           → Tidak ada konfigurasi WiFi
 ```
 
 **Serial Monitor:**
