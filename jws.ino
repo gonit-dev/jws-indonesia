@@ -4,7 +4,7 @@
  * OPTIMIZED VERSION - Event-Driven + Built-in NTP
  */
 
-#define PRODUCTION 1  // 1 = matikan serial print, 0 = aktifkan serial print
+#define PRODUCTION 1  // 1 = NONAKTIFKAN SERIAL PRINT, 0 = AKTIFKAN SERIAL PRINT
 
 #include "Wire.h"
 #include "RTClib.h"
@@ -23,7 +23,6 @@
 #include "esp_wifi.h"
 #include "DFRobotDFPlayerMini.h"
 
-// EEZ generated files
 #include "src/ui.h"
 #include "src/screens.h"
 #include "src/fonts.h"
@@ -43,28 +42,24 @@
 //#define RTC_SDA    21
 //#define RTC_SCL    22
 
-// Pin DFPlayer Mini (Hardware Serial)
-#define DFPLAYER_TX 25  // ESP32 TX → DFPlayer RX
-#define DFPLAYER_RX 32  // ESP32 RX → DFPlayer TX
+#define DFPLAYER_TX 25  // ESP32 TX → DFPLAYER RX
+#define DFPLAYER_RX 32  // ESP32 RX → DFPLAYER TX
 
-// Pin & PWM config
 #define BUZZER_PIN 26
 #define BUZZER_CHANNEL 1
 #define BUZZER_FREQ 2000
 #define BUZZER_RESOLUTION 8
 
-// RGB LED Pins (Common Anode / Active LOW)
-#define RGB_R_PIN      17
-#define RGB_G_PIN      4
-#define RGB_B_PIN      16
+// PIN RGB LED (COMMON ANODE / AKTIF RENDAH)
+#define RGB_R_PIN      4
+#define RGB_G_PIN      16
+#define RGB_B_PIN      17
 
-// PWM Backlight Configuration
 #define TFT_BL_CHANNEL 0
 #define TFT_BL_FREQ 5000
 #define TFT_BL_RESOLUTION 8
 #define TFT_BL_BRIGHTNESS 180  // 0-255 (180 = ~70%)
 
-// Touch Calibration
 #define TS_MIN_X 370
 #define TS_MAX_X 3700
 #define TS_MIN_Y 470
@@ -73,27 +68,24 @@
 // ================================
 // RTOS CONFIGURATION
 // ================================
-// Task Stack Sizes (in bytes)
-#define UI_TASK_STACK_SIZE 12288       // LVGL + EEZ rendering
-#define WIFI_TASK_STACK_SIZE 3072      // Event-driven + reconnect (small headroom)
-#define NTP_TASK_STACK_SIZE 4096       // Hanya NTP sync
-#define WEB_TASK_STACK_SIZE 4096       // AsyncWebServer
-#define PRAYER_TASK_STACK_SIZE 4096    // HTTP + JSON parsing
-#define RTC_TASK_STACK_SIZE 2048       // Simple I2C
-#define CLOCK_TASK_STACK_SIZE 2048     // Simple time increment
-#define AUDIO_TASK_STACK_SIZE 4096     // Audio adzan
+#define UI_TASK_STACK_SIZE 12288       // LVGL + EEZ RENDERING
+#define WIFI_TASK_STACK_SIZE 3072      // EVENT-DRIVEN + RECONNECT
+#define NTP_TASK_STACK_SIZE 4096       // HANYA SINKRONISASI NTP
+#define WEB_TASK_STACK_SIZE 4096       // ASYNC WEB SERVER
+#define PRAYER_TASK_STACK_SIZE 4096    // HTTP + PARSING JSON
+#define RTC_TASK_STACK_SIZE 2048       // KOMUNIKASI I2C
+#define CLOCK_TASK_STACK_SIZE 2048     // INCREMENT WAKTU
+#define AUDIO_TASK_STACK_SIZE 4096     // AUDIO ADZAN
 
-// Task Priorities (0 = lowest, higher number = higher priority)
-#define UI_TASK_PRIORITY 3             // Highest (display responsiveness)
-#define WIFI_TASK_PRIORITY 2           // High (network stability)
-#define NTP_TASK_PRIORITY 2            // High (time sync)
-#define WEB_TASK_PRIORITY 1            // Low (background web server)
-#define PRAYER_TASK_PRIORITY 1         // Low (daily update)
-#define RTC_TASK_PRIORITY 1            // Low (backup sync)
-#define CLOCK_TASK_PRIORITY 2          // High (time accuracy)
-#define AUDIO_TASK_PRIORITY 0          // Low (Audio adzan)
+#define UI_TASK_PRIORITY 3             // TERTINGGI - RESPONSIVITAS LAYAR
+#define WIFI_TASK_PRIORITY 2           // TINGGI - STABILITAS JARINGAN
+#define NTP_TASK_PRIORITY 2            // TINGGI - SINKRONISASI WAKTU
+#define WEB_TASK_PRIORITY 1            // RENDAH - WEB SERVER LATAR
+#define PRAYER_TASK_PRIORITY 1         // RENDAH - PEMBARUAN HARIAN
+#define RTC_TASK_PRIORITY 1            // RENDAH - SINKRONISASI CADANGAN
+#define CLOCK_TASK_PRIORITY 2          // TINGGI - AKURASI WAKTU
+#define AUDIO_TASK_PRIORITY 0          // RENDAH - AUDIO ADZAN
 
-// Task Handles
 TaskHandle_t rtcTaskHandle = NULL;
 TaskHandle_t uiTaskHandle = NULL;
 TaskHandle_t wifiTaskHandle = NULL;
@@ -102,7 +94,7 @@ TaskHandle_t webTaskHandle = NULL;
 TaskHandle_t httpTaskHandle = NULL;
 TaskHandle_t prayerTaskHandle = NULL;
 TaskHandle_t clockTaskHandle = NULL;
-TaskHandle_t buzzerTestTaskHandle = NULL; 
+TaskHandle_t buzzerTestTaskHandle = NULL;
 
 // ================================
 // SEMAPHORES & MUTEXES
@@ -114,9 +106,8 @@ SemaphoreHandle_t settingsMutex;
 SemaphoreHandle_t spiMutex;
 SemaphoreHandle_t i2cMutex;
 
-// Queue for display updates
 QueueHandle_t displayQueue;
-QueueHandle_t httpQueue; 
+QueueHandle_t httpQueue;
 
 // ================================
 // GLOBAL OBJECTS
@@ -140,11 +131,10 @@ String DEFAULT_AP_SSID = "JWS-" + String(ESP.getEfuseMac(), HEX);
 String hostname = "JWS-" + String(ESP.getEfuseMac(), HEX);
 
 // ================================
-// WIFI EVENT GROUP - Event-Driven
+// GRUP EVENT WIFI - EVENT-DRIVEN
 // ================================
 EventGroupHandle_t wifiEventGroup;
 
-// Event bits untuk WiFi status
 #define WIFI_CONNECTED_BIT    BIT0
 #define WIFI_DISCONNECTED_BIT BIT1
 #define WIFI_GOT_IP_BIT       BIT2
@@ -193,7 +183,7 @@ struct PrayerConfig {
   String selectedCityName;
   String latitude;
   String longitude;
-  
+
   int tuneImsak = 0;
   int tuneSubuh = 0;
   int tuneTerbit = 0;
@@ -220,7 +210,7 @@ struct BuzzerConfig {
 };
 
 struct AlarmConfig {
-  char alarmTime[6]; // "HH:MM"
+  char alarmTime[6]; // FORMAT "HH:MM"
   bool alarmEnabled;
 };
 
@@ -228,10 +218,9 @@ struct AlarmConfig {
 // ALARM STATE
 // ================================
 struct AlarmState {
-  bool isRinging;           // Alarm sedang berbunyi
-  unsigned long lastToggle; // Untuk kedip jam
-  bool clockVisible;        // Status kedip jam
-  // Simpan state notif shalat saat alarm aktif
+  bool isRinging;
+  unsigned long lastToggle;
+  bool clockVisible;
   bool savedBlinkState;
   bool savedAdzanCanTouch;
 };
@@ -245,14 +234,14 @@ AlarmState alarmState = {
 };
 
 SemaphoreHandle_t alarmMutex = NULL;
-static int lastAlarmMinute = -1; // Cegah trigger berulang menit sama
+static int lastAlarmMinute = -1;
 
 struct CountdownState {
   bool isActive;
   unsigned long startTime;
   int totalSeconds;
   String message;
-  String reason; // "ap_restart", "device_restart", "factory_reset"
+  String reason; // "AP_RESTART", "DEVICE_RESTART", "FACTORY_RESET"
 };
 
 CountdownState countdownState = {
@@ -292,8 +281,8 @@ BuzzerConfig buzzerConfig = {
 };
 
 AlarmConfig alarmConfig = {
-  "00:00",  // alarmTime
-  false     // alarmEnabled
+  "00:00",
+  false
 };
 
 volatile bool needPrayerUpdate = false;
@@ -305,7 +294,7 @@ const unsigned long WIFI_CHECK_INTERVAL = 5000;
 int reconnectAttempts = 0;
 const int MAX_RECONNECT_ATTEMPTS = 5;
 unsigned long wifiFailedTime = 0;
-int wifiRetryCount = 0; // Hitung berapa kali sudah retry dari WIFI_FAILED
+int wifiRetryCount = 0;
 unsigned long wifiDisconnectedTime = 0;
 
 bool fastReconnectMode = false;
@@ -388,7 +377,7 @@ const unsigned long BLINK_INTERVAL = 500;
 // ================================
 // BLINK TRIGGER GUARD
 // ================================
-static int lastBlinkMinute = -1;  // Format: jam*60 + menit
+static int lastBlinkMinute = -1;
 
 // ================================
 // WIFI RESTART PROTECTION
@@ -397,7 +386,6 @@ static SemaphoreHandle_t wifiRestartMutex = NULL;
 static bool wifiRestartInProgress = false;
 static bool apRestartInProgress = false;
 
-// Debouncing timestamps
 static unsigned long lastWiFiRestartRequest = 0;
 static unsigned long lastAPRestartRequest = 0;
 const unsigned long RESTART_DEBOUNCE_MS = 3000;
@@ -405,13 +393,13 @@ const unsigned long RESTART_DEBOUNCE_MS = 3000;
 // ================================
 // RGB LED STATE
 // ================================
-static bool rgbBootBlinking = true;       // Kedip merah saat booting
-static bool internetAvailable = false;    // Status koneksi internet
+static bool rgbBootBlinking = true;
+static bool internetAvailable = false;
 static unsigned long rgbLastToggle = 0;
-static bool rgbLedState = false;          // State on/off saat kedip
+static bool rgbLedState = false;
 
 // ============================================
-// RGB LED Functions (Common Anode / Active LOW)
+// FUNGSI RGB LED (COMMON ANODE / AKTIF RENDAH)
 // ============================================
 void rgbSetColor(bool r, bool g, bool b) {
   digitalWrite(RGB_R_PIN, r ? LOW : HIGH);
@@ -425,10 +413,9 @@ void rgbOff() {
   digitalWrite(RGB_B_PIN, HIGH);
 }
 
-// Task sementara khusus kedip merah saat booting
 void rgbBootBlinkTask(void *parameter) {
   while (rgbBootBlinking) {
-    rgbSetColor(true, false, false);  // Merah ON
+    rgbSetColor(true, false, false);
     vTaskDelay(pdMS_TO_TICKS(300));
     rgbOff();
     vTaskDelay(pdMS_TO_TICKS(300));
@@ -437,11 +424,9 @@ void rgbBootBlinkTask(void *parameter) {
   vTaskDelete(NULL);
 }
 
-// Dipanggil dari uiTask setiap ~50ms
 void handleRGBLed() {
   unsigned long now = millis();
 
-  // Prioritas 1: countdown device_restart atau factory_reset → kedip merah
   if (countdownState.isActive &&
       (countdownState.reason == "device_restart" || countdownState.reason == "factory_reset")) {
     if (now - rgbLastToggle >= 500) {
@@ -452,15 +437,12 @@ void handleRGBLed() {
     return;
   }
 
-  // Prioritas 2: status WiFi router
   if (wifiConfig.routerSSID.length() > 0) {
     switch (wifiState) {
       case WIFI_CONNECTED:
         if (internetAvailable) {
-          // WiFi konek + internet OK → hijau nyala solid
           rgbSetColor(false, true, false);
         } else {
-          // WiFi konek tapi internet mati → hijau kedip (seperti router LAN hilang)
           if (now - rgbLastToggle >= 500) {
             rgbLastToggle = now;
             rgbLedState = !rgbLedState;
@@ -470,7 +452,6 @@ void handleRGBLed() {
         break;
 
       case WIFI_CONNECTING:
-        // Sedang konek ke router → hijau kedip cepat
         if (now - rgbLastToggle >= 300) {
           rgbLastToggle = now;
           rgbLedState = !rgbLedState;
@@ -479,7 +460,6 @@ void handleRGBLed() {
         break;
 
       case WIFI_FAILED:
-        // Gagal konek → merah nyala
         rgbSetColor(true, false, false);
         break;
 
@@ -491,16 +471,14 @@ void handleRGBLed() {
     return;
   }
 
-  // Default: tidak ada router dikonfigurasi → LED mati
   rgbOff();
 }
 
-// Dipanggil di akhir setup() - tandai booting selesai
 void rgbBootDone() {
   rgbBootBlinking = false;
   vTaskDelay(pdMS_TO_TICKS(100));
   rgbOff();
-  Serial.println("RGB LED: Boot selesai - LED mati");
+  Serial.println("RGB LED: BOOT SELESAI - LED MATI");
 }
 
 void updateCityDisplay();
@@ -579,27 +557,27 @@ void playDFPlayerAdzan(String prayerName);
 bool isDFPlayerPlaying();
 
 // ============================================
-// Display & UI Functions
+// FUNGSI LAYAR DAN ANTARMUKA
 // ============================================
 void updateCityDisplay() {
   char displayText[64] = "--";
-  
+
   if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
     if (prayerConfig.selectedCity.length() > 0) {
       size_t len = prayerConfig.selectedCity.length();
       if (len >= sizeof(displayText)) {
         len = sizeof(displayText) - 1;
       }
-      
+
       strncpy(displayText, prayerConfig.selectedCity.c_str(), len);
       displayText[len] = '\0';
-      
+
       char* pos = strstr(displayText, "Kabupaten ");
       if (pos) {
         memmove(pos + 4, pos + 10, strlen(pos + 10) + 1);
         memcpy(pos, "Kab ", 4);
       }
-      
+
       pos = strstr(displayText, "District ");
       if (pos) {
         memmove(pos + 5, pos + 9, strlen(pos + 9) + 1);
@@ -619,7 +597,7 @@ void updateTimeDisplay() {
   if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
     char timeStr[10];
     char dateStr[15];
-    
+
     time_t now_t = timeConfig.currentTime;
     struct tm timeinfo;
     localtime_r(&now_t, &timeinfo);
@@ -682,13 +660,13 @@ void showAllUIElements() {
 }
 
 // ============================================
-// Countdown Helper Functions
+// COUNTDOWN HELPER FUNCTIONS
 // ============================================
 void startCountdown(String reason, String message, int seconds) {
   if (countdownMutex == NULL) {
     countdownMutex = xSemaphoreCreateMutex();
   }
-  
+
   if (xSemaphoreTake(countdownMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
     countdownState.isActive = true;
     countdownState.startTime = millis();
@@ -696,13 +674,13 @@ void startCountdown(String reason, String message, int seconds) {
     countdownState.message = message;
     countdownState.reason = reason;
     xSemaphoreGive(countdownMutex);
-    
+
     Serial.println("\n========================================");
-    Serial.println("COUNTDOWN STARTED");
+    Serial.println("HITUNG MUNDUR DIMULAI");
     Serial.println("========================================");
-    Serial.println("Alasan: " + reason);
-    Serial.println("Pesan: " + message);
-    Serial.println("Durasi: " + String(seconds) + " detik");
+    Serial.println("ALASAN: " + reason);
+    Serial.println("PESAN: " + message);
+    Serial.println("DURASI: " + String(seconds) + " DETIK");
     Serial.println("========================================\n");
   }
 }
@@ -712,33 +690,31 @@ void stopCountdown() {
     countdownState.isActive = false;
     countdownState.reason = "";
     xSemaphoreGive(countdownMutex);
-    
-    Serial.println("Hitung mundur dihentikan");
+
+    Serial.println("HITUNG MUNDUR DIHENTIKAN");
   }
 }
 
 int getRemainingSeconds() {
   if (!countdownState.isActive) return 0;
-  
+
   unsigned long elapsed = (millis() - countdownState.startTime) / 1000;
   int remaining = countdownState.totalSeconds - elapsed;
-  
+
   if (remaining <= 0) {
     stopCountdown();
     return 0;
   }
-  
+
   return remaining;
 }
 
 // ============================================
-// Prayer Time Blink Functions
+// PRAYER TIME BLINK FUNCTIONS
 // ============================================
 void checkPrayerTime() {
-  // Jika alarm sedang aktif, tunda notif shalat
   if (alarmState.isRinging) return;
 
-  // Jika semua waktu shalat masih 00:00 (belum ada data), skip notifikasi
   if (prayerConfig.imsakTime   == "00:00" &&
       prayerConfig.subuhTime   == "00:00" &&
       prayerConfig.terbitTime  == "00:00" &&
@@ -752,20 +728,20 @@ void checkPrayerTime() {
   time_t now_t = timeConfig.currentTime;
   struct tm timeinfo;
   localtime_r(&now_t, &timeinfo);
-  
+
   char currentTime[6];
   sprintf(currentTime, "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
-  
+
   int currentMinuteKey = timeinfo.tm_hour * 60 + timeinfo.tm_min;
-  
-  if (timeinfo.tm_sec < 5                    // Window 5 detik (bukan hanya sec==0)
-      && currentMinuteKey != lastBlinkMinute  // Belum di-trigger menit ini
-      && !blinkState.isBlinking 
+
+  if (timeinfo.tm_sec < 5
+      && currentMinuteKey != lastBlinkMinute
+      && !blinkState.isBlinking
       && !adzanState.canTouch) {
-    
+
     String current = String(currentTime);
     String prayerName = "";
-    
+
     if (current == prayerConfig.imsakTime && buzzerConfig.imsakEnabled) prayerName = "imsak";
     else if (current == prayerConfig.subuhTime && buzzerConfig.subuhEnabled) prayerName = "subuh";
     else if (current == prayerConfig.terbitTime && buzzerConfig.terbitEnabled) prayerName = "terbit";
@@ -773,30 +749,30 @@ void checkPrayerTime() {
     else if (current == prayerConfig.asharTime && buzzerConfig.asharEnabled) prayerName = "ashar";
     else if (current == prayerConfig.maghribTime && buzzerConfig.maghribEnabled) prayerName = "maghrib";
     else if (current == prayerConfig.isyaTime && buzzerConfig.isyaEnabled) prayerName = "isya";
-    
+
     if (prayerName.length() > 0) {
-      lastBlinkMinute = currentMinuteKey;  // Tandai sudah trigger menit ini
+      lastBlinkMinute = currentMinuteKey;
       startBlinking(prayerName);
-      
+
       bool isAdzanPrayer = (prayerName != "imsak" && prayerName != "terbit");
-      
+
       if (isAdzanPrayer && dfPlayerAvailable) {
         adzanState.canTouch = true;
         adzanState.currentPrayer = prayerName;
         adzanState.startTime = now_t;
         adzanState.deadlineTime = now_t + 600;
         saveAdzanState();
-        Serial.println("ADZAN AKTIF: " + prayerName + " - sentuh layar untuk putar (10 menit)");
+        Serial.println("ADZAN AKTIF: " + prayerName + " - SENTUH LAYAR UNTUK PUTAR (10 MENIT)");
       } else {
         adzanState.canTouch = false;
         adzanState.currentPrayer = "";
-        Serial.println("NOTIF AKTIF: " + prayerName + " - buzzer+blink only (no touch needed)");
+        Serial.println("NOTIFIKASI AKTIF: " + prayerName + " - BUZZER+KEDIP SAJA (TIDAK PERLU SENTUH)");
       }
     }
   }
-  
+
   if (adzanState.canTouch && getAdzanRemainingSeconds() <= 0) {
-    Serial.println("ADZAN EXPIRED: " + adzanState.currentPrayer);
+    Serial.println("ADZAN KEDALUWARSA: " + adzanState.currentPrayer);
     adzanState.canTouch = false;
     adzanState.currentPrayer = "";
     adzanState.isPlaying = false;
@@ -811,15 +787,15 @@ void startBlinking(String prayerName) {
   blinkState.lastBlinkToggle = millis();
   blinkState.currentVisible = true;
   blinkState.activePrayer = prayerName;
-  
+
   String upperName = prayerName;
   upperName.toUpperCase();
-  
+
   Serial.println("\n========================================");
   Serial.print("WAKTU SHALAT: ");
   Serial.println(upperName);
   Serial.println("========================================");
-  Serial.println("Mulai berkedip selama 1 menit...");
+  Serial.println("MULAI BERKEDIP SELAMA 1 MENIT...");
   Serial.println("========================================\n");
 }
 
@@ -827,9 +803,9 @@ void stopBlinking() {
   if (blinkState.isBlinking) {
     blinkState.isBlinking = false;
     blinkState.activePrayer = "";
-    
+
     ledcWrite(BUZZER_CHANNEL, 0);
-    
+
     if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
       if (objects.imsak_time) lv_obj_clear_flag(objects.imsak_time, LV_OBJ_FLAG_HIDDEN);
       if (objects.subuh_time) lv_obj_clear_flag(objects.subuh_time, LV_OBJ_FLAG_HIDDEN);
@@ -840,30 +816,30 @@ void stopBlinking() {
       if (objects.isya_time) lv_obj_clear_flag(objects.isya_time, LV_OBJ_FLAG_HIDDEN);
       xSemaphoreGive(displayMutex);
     } else {
-      Serial.println("[stopBlinking] WARNING: displayMutex timeout - elemen mungkin masih hidden");
+      Serial.println("[STOPBLINKING] PERINGATAN: TIMEOUT DISPLAYMUTEX - ELEMEN MUNGKIN MASIH TERSEMBUNYI");
     }
-    
-    Serial.println("Kedip selesai - semua waktu shalat tampak normal");
+
+    Serial.println("KEDIP SELESAI - SEMUA WAKTU SHALAT TAMPIL NORMAL");
   }
 }
 
 void handleBlinking() {
   if (!blinkState.isBlinking) return;
-  
+
   unsigned long currentMillis = millis();
-  
+
   if (currentMillis - blinkState.blinkStartTime >= BLINK_DURATION) {
     stopBlinking();
-    return;  // stopBlinking() sudah matikan buzzer
+    return;
   }
-  
+
   if (currentMillis - blinkState.lastBlinkToggle >= BLINK_INTERVAL) {
     blinkState.lastBlinkToggle = currentMillis;
     blinkState.currentVisible = !blinkState.currentVisible;
-    
+
     if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(150)) == pdTRUE) {
       lv_obj_t *targetLabel = NULL;
-      
+
       if (blinkState.activePrayer == "imsak") targetLabel = objects.imsak_time;
       else if (blinkState.activePrayer == "subuh") targetLabel = objects.subuh_time;
       else if (blinkState.activePrayer == "terbit") targetLabel = objects.terbit_time;
@@ -871,18 +847,18 @@ void handleBlinking() {
       else if (blinkState.activePrayer == "ashar") targetLabel = objects.ashar_time;
       else if (blinkState.activePrayer == "maghrib") targetLabel = objects.maghrib_time;
       else if (blinkState.activePrayer == "isya") targetLabel = objects.isya_time;
-      
+
       if (targetLabel) {
         if (blinkState.currentVisible) {
           lv_obj_clear_flag(targetLabel, LV_OBJ_FLAG_HIDDEN);
           int pwmValue = map(buzzerConfig.volume, 0, 100, 0, 255);
-          ledcWrite(BUZZER_CHANNEL, pwmValue);  // Buzzer ON sinkron dengan LCD tampil
+          ledcWrite(BUZZER_CHANNEL, pwmValue);
         } else {
           lv_obj_add_flag(targetLabel, LV_OBJ_FLAG_HIDDEN);
-          ledcWrite(BUZZER_CHANNEL, 0);          // Buzzer OFF sinkron dengan LCD hilang
+          ledcWrite(BUZZER_CHANNEL, 0);
         }
       }
-      
+
       xSemaphoreGive(displayMutex);
     } else {
       blinkState.currentVisible = !blinkState.currentVisible;
@@ -891,19 +867,19 @@ void handleBlinking() {
 }
 
 // ============================================
-// Prayer Times API Functions
+// PRAYER TIMES API FUNCTIONS
 // ============================================
-void getPrayerTimesByCoordinates(String lat, String lon) {  
-  Serial.println("\n[Tugas Shalat] Mengirim permintaan HTTP ke antrian...");
-  
+void getPrayerTimesByCoordinates(String lat, String lon) {
+  Serial.println("\n[TUGAS SHALAT] MENGIRIM PERMINTAAN HTTP KE ANTRIAN...");
+
   HTTPRequest request;
   request.latitude = lat;
   request.longitude = lon;
-  
+
   if (xQueueSend(httpQueue, &request, pdMS_TO_TICKS(100)) == pdTRUE) {
-    Serial.println("[Tugas Shalat] Permintaan HTTP berhasil diantrekan");
+    Serial.println("[TUGAS SHALAT] PERMINTAAN HTTP BERHASIL DIANTREKAN");
   } else {
-    Serial.println("[Tugas Shalat] Gagal mengantrekan permintaan HTTP (antrian penuh)");
+    Serial.println("[TUGAS SHALAT] GAGAL MENGANTREKAN PERMINTAAN HTTP (ANTRIAN PENUH)");
   }
 }
 
@@ -923,14 +899,14 @@ void savePrayerTimes() {
       file.println(prayerConfig.selectedCityName);
       file.flush();
       file.close();
-      Serial.println("Waktu shalat tersimpan");
+      Serial.println("WAKTU SHALAT TERSIMPAN");
 
       vTaskDelay(pdMS_TO_TICKS(100));
       if (LittleFS.exists("/prayer_times.txt")) {
-        Serial.println("File waktu shalat terverifikasi");
+        Serial.println("FILE WAKTU SHALAT TERVERIFIKASI");
       }
     } else {
-      Serial.println("Gagal membuka prayer_times.txt untuk ditulis");
+      Serial.println("GAGAL MEMBUKA PRAYER_TIMES.TXT UNTUK DITULIS");
     }
     xSemaphoreGive(settingsMutex);
   }
@@ -972,8 +948,8 @@ void loadPrayerTimes() {
         }
 
         file.close();
-        Serial.println("Waktu shalat dimuat");
-        Serial.println("Kota: " + prayerConfig.selectedCity);
+        Serial.println("WAKTU SHALAT DIMUAT");
+        Serial.println("KOTA: " + prayerConfig.selectedCity);
       }
     }
     xSemaphoreGive(settingsMutex);
@@ -981,7 +957,7 @@ void loadPrayerTimes() {
 }
 
 // ============================================
-// WiFi Functions
+// WIFI FUNCTIONS
 // ============================================
 void saveWiFiCredentials() {
   if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
@@ -991,14 +967,14 @@ void saveWiFiCredentials() {
       file.println(wifiConfig.routerPassword);
       file.flush();
       file.close();
-      Serial.println("WiFi credentials saved");
+      Serial.println("KREDENSIAL WIFI TERSIMPAN");
 
       vTaskDelay(pdMS_TO_TICKS(100));
       if (LittleFS.exists("/wifi_creds.txt")) {
-        Serial.println("File WiFi terverifikasi");
+        Serial.println("FILE WIFI TERVERIFIKASI");
       }
     } else {
-      Serial.println("Gagal membuka wifi_creds.txt untuk ditulis");
+      Serial.println("GAGAL MEMBUKA WIFI_CREDS.TXT UNTUK DITULIS");
     }
     xSemaphoreGive(settingsMutex);
   }
@@ -1014,7 +990,7 @@ void loadWiFiCredentials() {
         wifiConfig.routerSSID.trim();
         wifiConfig.routerPassword.trim();
         file.close();
-        Serial.println("WiFi credentials loaded");
+        Serial.println("KREDENSIAL WIFI DIMUAT");
       }
     }
     if (LittleFS.exists("/ap_creds.txt")) {
@@ -1026,7 +1002,7 @@ void loadWiFiCredentials() {
         pass.trim();
         ssid.toCharArray(wifiConfig.apSSID, 33);
         pass.toCharArray(wifiConfig.apPassword, 65);
-        
+
         if (file.available()) {
           String ipStr = file.readStringUntil('\n');
           ipStr.trim();
@@ -1034,7 +1010,7 @@ void loadWiFiCredentials() {
         } else {
           wifiConfig.apIP = IPAddress(192, 168, 100, 1);
         }
-        
+
         if (file.available()) {
           String gwStr = file.readStringUntil('\n');
           gwStr.trim();
@@ -1042,7 +1018,7 @@ void loadWiFiCredentials() {
         } else {
           wifiConfig.apGateway = IPAddress(192, 168, 100, 1);
         }
-        
+
         if (file.available()) {
           String snStr = file.readStringUntil('\n');
           snStr.trim();
@@ -1050,10 +1026,10 @@ void loadWiFiCredentials() {
         } else {
           wifiConfig.apSubnet = IPAddress(255, 255, 255, 0);
         }
-        
+
         file.close();
-        
-        Serial.println("AP config loaded:");
+
+        Serial.println("KONFIGURASI AP DIMUAT:");
         Serial.println("  SSID: " + String(wifiConfig.apSSID));
         Serial.println("  IP: " + wifiConfig.apIP.toString());
       }
@@ -1074,25 +1050,25 @@ void saveAPCredentials() {
     if (file) {
       file.println(wifiConfig.apSSID);
       file.println(wifiConfig.apPassword);
-      
+
       file.println(wifiConfig.apIP.toString());
       file.println(wifiConfig.apGateway.toString());
       file.println(wifiConfig.apSubnet.toString());
-      
+
       file.flush();
       file.close();
-      Serial.println("AP credentials saved");
+      Serial.println("KREDENSIAL AP TERSIMPAN");
       Serial.println("  SSID: " + String(wifiConfig.apSSID));
       Serial.println("  IP: " + wifiConfig.apIP.toString());
-      Serial.println("  Gateway: " + wifiConfig.apGateway.toString());
-      Serial.println("  Subnet: " + wifiConfig.apSubnet.toString());
+      Serial.println("  GATEWAY: " + wifiConfig.apGateway.toString());
+      Serial.println("  SUBNET: " + wifiConfig.apSubnet.toString());
 
       vTaskDelay(pdMS_TO_TICKS(100));
       if (LittleFS.exists("/ap_creds.txt")) {
-        Serial.println("File AP terverifikasi");
+        Serial.println("FILE AP TERVERIFIKASI");
       }
     } else {
-      Serial.println("Gagal membuka ap_creds.txt untuk ditulis");
+      Serial.println("GAGAL MEMBUKA AP_CREDS.TXT UNTUK DITULIS");
     }
     xSemaphoreGive(settingsMutex);
   }
@@ -1100,7 +1076,7 @@ void saveAPCredentials() {
 
 void setupWiFiEvents() {
     wifiEventGroup = xEventGroupCreate();
-    
+
     WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
         // ============================================
         // SAFETY: SKIP EVENTS DURING RESTART
@@ -1109,32 +1085,32 @@ void setupWiFiEvents() {
 
             return;
         }
-        
-        Serial.print(String("[WiFi-Event] ") + String(event));
+
+        Serial.print(String("[WIFI-EVENT] ") + String(event));
 
         switch (event) {
             case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-                Serial.print("STA Terhubung ke AP");
+                Serial.print("STA TERHUBUNG KE AP");
                 xEventGroupSetBits(wifiEventGroup, WIFI_CONNECTED_BIT);
                 break;
 
             case ARDUINO_EVENT_WIFI_STA_GOT_IP: {
                 Serial.println("\n========================================");
-                Serial.println("WiFi Connected Successfully");
+                Serial.println("WIFI BERHASIL TERHUBUNG");
                 Serial.println("========================================");
                 Serial.println("IP: " + WiFi.localIP().toString());
-                Serial.println("Gateway: " + WiFi.gatewayIP().toString());
-                Serial.println("RSSI: " + String(WiFi.RSSI()) + " dBm");
-                
+                Serial.println("GATEWAY: " + WiFi.gatewayIP().toString());
+                Serial.println("RSSI: " + String(WiFi.RSSI()) + " DBM");
+
                 int rssi = WiFi.RSSI();
-                String quality = rssi >= -50 ? "Sangat Baik" : 
-                                rssi >= -60 ? "Baik" : 
+                String quality = rssi >= -50 ? "Sangat Baik" :
+                                rssi >= -60 ? "Baik" :
                                 rssi >= -70 ? "Cukup" : "Lemah";
-                Serial.println("Sinyal: " + quality);
+                Serial.println("SINYAL: " + quality);
                 Serial.println("========================================\n");
-                
+
                 xEventGroupSetBits(wifiEventGroup, WIFI_GOT_IP_BIT);
-                
+
                 if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
                     wifiConfig.isConnected = true;
                     wifiConfig.localIP = WiFi.localIP();
@@ -1143,9 +1119,9 @@ void setupWiFiEvents() {
                     wifiRetryCount = 0;
                     xSemaphoreGive(wifiMutex);
                 }
-                
+
                 if (ntpTaskHandle != NULL) {
-                    Serial.print("Memicu sinkronisasi NTP...");
+                    Serial.print("MEMICU SINKRONISASI NTP...");
                     ntpSyncInProgress = false;
                     ntpSyncCompleted = false;
                     xTaskNotifyGive(ntpTaskHandle);
@@ -1155,34 +1131,34 @@ void setupWiFiEvents() {
 
             case ARDUINO_EVENT_WIFI_STA_DISCONNECTED: {
                 Serial.println("\n========================================");
-                Serial.println("WiFi Disconnected");
+                Serial.println("WIFI TERPUTUS");
                 Serial.println("========================================");
-                Serial.printf("Kode alasan: %d", info.wifi_sta_disconnected.reason);
+                Serial.printf("KODE ALASAN: %d", info.wifi_sta_disconnected.reason);
 
                 xEventGroupClearBits(wifiEventGroup, WIFI_CONNECTED_BIT | WIFI_GOT_IP_BIT);
                 xEventGroupSetBits(wifiEventGroup, WIFI_DISCONNECTED_BIT);
 
                 switch (info.wifi_sta_disconnected.reason) {
                     case WIFI_REASON_AUTH_EXPIRE:
-                        Serial.println("Detail: Autentikasi kedaluwarsa");
+                        Serial.println("DETAIL: AUTENTIKASI KEDALUWARSA");
                         break;
                     case WIFI_REASON_AUTH_LEAVE:
-                        Serial.println("Detail: Terputus autentikasi");
+                        Serial.println("DETAIL: TERPUTUS DARI AUTENTIKASI");
                         break;
                     case WIFI_REASON_ASSOC_LEAVE:
-                        Serial.println("Detail: Koneksi diputus");
+                        Serial.println("DETAIL: KONEKSI DIPUTUS");
                         break;
                     case WIFI_REASON_BEACON_TIMEOUT:
-                        Serial.println("Detail: Timeout beacon (router tidak terjangkau)");
+                        Serial.println("DETAIL: TIMEOUT BEACON (ROUTER TIDAK TERJANGKAU)");
                         break;
                     case WIFI_REASON_NO_AP_FOUND:
-                        Serial.println("Detail: AP tidak ditemukan");
+                        Serial.println("DETAIL: AP TIDAK DITEMUKAN");
                         break;
                     case WIFI_REASON_HANDSHAKE_TIMEOUT:
-                        Serial.println("Detail: Timeout handshake");
+                        Serial.println("DETAIL: TIMEOUT HANDSHAKE");
                         break;
                     default:
-                        Serial.printf("Detail: Alasan tidak diketahui (%d)", 
+                        Serial.printf("DETAIL: ALASAN TIDAK DIKETAHUI (%d)",
                                      info.wifi_sta_disconnected.reason);
                 }
 
@@ -1193,34 +1169,34 @@ void setupWiFiEvents() {
                     wifiState = WIFI_IDLE;
                     xSemaphoreGive(wifiMutex);
                 }
-                
-                Serial.println("Akan mencoba menghubungkan kembali...");
+
+                Serial.println("AKAN MENCOBA MENGHUBUNGKAN KEMBALI...");
                 Serial.println("========================================\n");
                 break;
             }
 
             case ARDUINO_EVENT_WIFI_AP_START:
-                Serial.print("AP Dimulai: " + String(WiFi.softAPSSID()));
+                Serial.print("AP DIMULAI: " + String(WiFi.softAPSSID()));
                 Serial.print("   IP AP: " + WiFi.softAPIP().toString());
                 break;
 
             case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
-                Serial.print("Klien terhubung ke AP");
-                Serial.print(String("   Total stations: ") + String(WiFi.softAPgetStationNum()));
+                Serial.print("KLIEN TERHUBUNG KE AP");
+                Serial.print(String("   TOTAL STASIUN: ") + String(WiFi.softAPgetStationNum()));
                 break;
 
             case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
-                Serial.print("Klien terputus dari AP");
-                Serial.print(String("   Total stations: ") + String(WiFi.softAPgetStationNum()));
+                Serial.print("KLIEN TERPUTUS DARI AP");
+                Serial.print(String("   TOTAL STASIUN: ") + String(WiFi.softAPgetStationNum()));
                 break;
         }
     });
 
-    Serial.print("WiFi Event Handler terdaftar (dengan proteksi restart)");
+    Serial.print("WIFI EVENT HANDLER TERDAFTAR (DENGAN PROTEKSI RESTART)");
 }
 
 // ============================================
-// Settings & Configuration Functions
+// SETTINGS & CONFIGURATION FUNCTIONS
 // ============================================
 void saveTimezoneConfig() {
   if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
@@ -1229,13 +1205,13 @@ void saveTimezoneConfig() {
       file.println(timezoneOffset);
       file.flush();
       file.close();
-      Serial.println("Timezone saved: UTC" + String(timezoneOffset >= 0 ? "+" : "") + String(timezoneOffset));
+      Serial.println("TIMEZONE TERSIMPAN: UTC" + String(timezoneOffset >= 0 ? "+" : "") + String(timezoneOffset));
     } else {
-      Serial.println("Gagal menyimpan timezone");
+      Serial.println("GAGAL MENYIMPAN TIMEZONE");
     }
     xSemaphoreGive(settingsMutex);
   }
-  
+
   vTaskDelay(pdMS_TO_TICKS(50));
 }
 
@@ -1249,16 +1225,16 @@ void loadTimezoneConfig() {
         timezoneOffset = offsetStr.toInt();
 
         if (timezoneOffset < -12 || timezoneOffset > 14) {
-          Serial.println("Offset timezone tidak valid di file, menggunakan default +7");
+          Serial.println("OFFSET TIMEZONE TIDAK VALID DI FILE, MENGGUNAKAN DEFAULT +7");
           timezoneOffset = 7;
         }
 
         file.close();
-        Serial.println("Timezone loaded: UTC" + String(timezoneOffset >= 0 ? "+" : "") + String(timezoneOffset));
+        Serial.println("TIMEZONE DIMUAT: UTC" + String(timezoneOffset >= 0 ? "+" : "") + String(timezoneOffset));
       }
     } else {
       timezoneOffset = 7;
-      Serial.println("Konfigurasi timezone tidak ditemukan - menggunakan default (UTC+7)");
+      Serial.println("KONFIGURASI TIMEZONE TIDAK DITEMUKAN - MENGGUNAKAN DEFAULT (UTC+7)");
     }
     xSemaphoreGive(settingsMutex);
   }
@@ -1278,7 +1254,7 @@ void loadBuzzerConfig() {
         buzzerConfig.isyaEnabled = file.readStringUntil('\n').toInt() == 1;
         buzzerConfig.volume = file.readStringUntil('\n').toInt();
         file.close();
-        Serial.println("Konfigurasi buzzer dimuat");
+        Serial.println("KONFIGURASI BUZZER DIMUAT");
       }
     }
     xSemaphoreGive(settingsMutex);
@@ -1286,7 +1262,7 @@ void loadBuzzerConfig() {
 }
 
 // ============================================
-// ALARM CONFIG - Save / Load
+// ALARM CONFIG - SAVE / LOAD
 // ============================================
 void saveAlarmConfig() {
   if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
@@ -1296,7 +1272,7 @@ void saveAlarmConfig() {
       file.println(alarmConfig.alarmEnabled ? "1" : "0");
       file.flush();
       file.close();
-      Serial.println("Konfigurasi alarm disimpan: " + String(alarmConfig.alarmTime) + 
+      Serial.println("KONFIGURASI ALARM TERSIMPAN: " + String(alarmConfig.alarmTime) +
                      " | " + (alarmConfig.alarmEnabled ? "ON" : "OFF"));
     }
     xSemaphoreGive(settingsMutex);
@@ -1318,7 +1294,7 @@ void loadAlarmConfig() {
         enabledStr.trim();
         alarmConfig.alarmEnabled = (enabledStr == "1");
         file.close();
-        Serial.println("Konfigurasi alarm dimuat: " + String(alarmConfig.alarmTime) + 
+        Serial.println("KONFIGURASI ALARM DIMUAT: " + String(alarmConfig.alarmTime) +
                        " | " + (alarmConfig.alarmEnabled ? "ON" : "OFF"));
       }
     }
@@ -1327,34 +1303,30 @@ void loadAlarmConfig() {
 }
 
 // ============================================
-// ALARM - Stop (dipanggil saat layar disentuh)
+// ALARM - BERHENTI (DIPANGGIL SAAT LAYAR DISENTUH)
 // ============================================
 void stopAlarm() {
   if (!alarmState.isRinging) return;
 
   Serial.println("\n========================================");
-  Serial.println("ALARM DIHENTIKAN (layar disentuh)");
+  Serial.println("ALARM DIHENTIKAN (LAYAR DISENTUH)");
   Serial.println("========================================");
 
   alarmState.isRinging = false;
   ledcWrite(BUZZER_CHANNEL, 0);
 
-  // Kembalikan tampilan jam normal
   if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
     if (objects.time_now) lv_obj_clear_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
     xSemaphoreGive(displayMutex);
   }
   alarmState.clockVisible = true;
 
-  // Kembalikan state notif shalat yang tadi dimatikan
-  // (blinkState & adzanState sudah di-restore secara otomatis karena kita tidak menghapusnya,
-  //  hanya memblokir handleBlinking() selama alarm aktif)
-  Serial.println("Notif shalat dikembalikan");
+  Serial.println("NOTIFIKASI SHALAT DIKEMBALIKAN");
   Serial.println("========================================\n");
 }
 
 // ============================================
-// ALARM - Check apakah saatnya berbunyi
+// ALARM - CEK APAKAH WAKTUNYA BERBUNYI
 // ============================================
 void checkAlarmTime() {
   if (!alarmConfig.alarmEnabled) return;
@@ -1364,10 +1336,9 @@ void checkAlarmTime() {
   struct tm timeinfo;
   localtime_r(&now_t, &timeinfo);
 
-  // Hanya trigger sekali per menit
   int currentMinuteKey = timeinfo.tm_hour * 60 + timeinfo.tm_min;
   if (currentMinuteKey == lastAlarmMinute) return;
-  if (timeinfo.tm_sec >= 5) return; // Hanya 5 detik pertama menit
+  if (timeinfo.tm_sec >= 5) return;
 
   char currentTime[6];
   sprintf(currentTime, "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
@@ -1378,17 +1349,14 @@ void checkAlarmTime() {
     Serial.println("\n========================================");
     Serial.println("ALARM AKTIF: " + String(alarmConfig.alarmTime));
     Serial.println("========================================");
-    Serial.println("Kedip jam + buzzer dimulai");
-    Serial.println("Notif shalat ditangguhkan sampai alarm mati");
+    Serial.println("KEDIP JAM + BUZZER DIMULAI");
+    Serial.println("NOTIFIKASI SHALAT DITANGGUHKAN SAMPAI ALARM MATI");
     Serial.println("========================================\n");
 
-    // Simpan state shalat yang sedang aktif (blinking & adzan)
     alarmState.savedBlinkState  = blinkState.isBlinking;
     alarmState.savedAdzanCanTouch = adzanState.canTouch;
 
-    // Pause notif shalat: paksa stop blinking & adzan sementara
     if (blinkState.isBlinking) {
-      // Hentikan kedip shalat (tampilkan semua waktu shalat kembali)
       blinkState.isBlinking = false;
       blinkState.activePrayer = "";
       if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
@@ -1402,7 +1370,6 @@ void checkAlarmTime() {
         xSemaphoreGive(displayMutex);
       }
     }
-    // Pause adzan touch juga
     if (adzanState.canTouch) {
       adzanState.canTouch = false;
     }
@@ -1414,13 +1381,13 @@ void checkAlarmTime() {
 }
 
 // ============================================
-// ALARM - Handle kedip jam + buzzer
+// ALARM - TANGANI KEDIP JAM DAN BUZZER
 // ============================================
 void handleAlarmBlink() {
   if (!alarmState.isRinging) return;
 
   unsigned long currentMillis = millis();
-  if (currentMillis - alarmState.lastToggle >= 500) { // Kedip 500ms
+  if (currentMillis - alarmState.lastToggle >= 500) {
     alarmState.lastToggle = currentMillis;
     alarmState.clockVisible = !alarmState.clockVisible;
 
@@ -1429,10 +1396,10 @@ void handleAlarmBlink() {
         if (alarmState.clockVisible) {
           lv_obj_clear_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
           int pwmValue = map(buzzerConfig.volume, 0, 100, 0, 255);
-          ledcWrite(BUZZER_CHANNEL, pwmValue); // Buzzer ON
+          ledcWrite(BUZZER_CHANNEL, pwmValue);
         } else {
           lv_obj_add_flag(objects.time_now, LV_OBJ_FLAG_HIDDEN);
-          ledcWrite(BUZZER_CHANNEL, 0); // Buzzer OFF
+          ledcWrite(BUZZER_CHANNEL, 0);
         }
       }
       xSemaphoreGive(displayMutex);
@@ -1454,7 +1421,7 @@ void saveBuzzerConfig() {
       file.println(buzzerConfig.volume);
       file.flush();
       file.close();
-      Serial.println("Konfigurasi buzzer disimpan");
+      Serial.println("KONFIGURASI BUZZER TERSIMPAN");
     }
     xSemaphoreGive(settingsMutex);
   }
@@ -1473,38 +1440,38 @@ void saveAdzanState() {
 
 void loadAdzanState() {
   if (!LittleFS.exists("/adzan_state.txt")) return;
-  
+
   fs::File file = LittleFS.open("/adzan_state.txt", "r");
   if (!file) return;
-  
+
   adzanState.currentPrayer = file.readStringUntil('\n');
   adzanState.currentPrayer.trim();
-  
+
   String touchStr = file.readStringUntil('\n');
   touchStr.trim();
-  
+
   String startStr = file.readStringUntil('\n');
   startStr.trim();
   adzanState.startTime = (time_t)startStr.toInt();
-  
+
   String deadlineStr = file.readStringUntil('\n');
   deadlineStr.trim();
   adzanState.deadlineTime = (time_t)deadlineStr.toInt();
-  
+
   file.close();
-  
+
   if (touchStr == "1" && adzanState.currentPrayer.length() > 0) {
     time_t now = timeConfig.currentTime;
     int remaining = getAdzanRemainingSeconds();
-    
+
     if (remaining > 0) {
       adzanState.canTouch = true;
-      Serial.println("ADZAN RESTORED: " + adzanState.currentPrayer);
-      Serial.printf("Sisa: %d detik (%d menit)\n", remaining, remaining/60);
+      Serial.println("ADZAN DIPULIHKAN: " + adzanState.currentPrayer);
+      Serial.printf("SISA: %d DETIK (%d MENIT)\n", remaining, remaining/60);
     } else {
       adzanState.canTouch = false;
       adzanState.currentPrayer = "";
-      Serial.println("ADZAN EXPIRED");
+      Serial.println("ADZAN KEDALUWARSA");
     }
   }
 }
@@ -1523,7 +1490,7 @@ void saveCitySelection() {
             file.println(prayerConfig.selectedCityName);
             file.println(prayerConfig.latitude);
             file.println(prayerConfig.longitude);
-            
+
             file.println(prayerConfig.tuneImsak);
             file.println(prayerConfig.tuneSubuh);
             file.println(prayerConfig.tuneTerbit);
@@ -1531,7 +1498,7 @@ void saveCitySelection() {
             file.println(prayerConfig.tuneAshar);
             file.println(prayerConfig.tuneMaghrib);
             file.println(prayerConfig.tuneIsya);
-            
+
             file.flush();
             file.close();
         }
@@ -1539,7 +1506,7 @@ void saveCitySelection() {
     }
 
     vTaskDelay(pdMS_TO_TICKS(50));
-    
+
     if (displayQueue != NULL) {
         DisplayUpdate update;
         update.type = DisplayUpdate::PRAYER_UPDATE;
@@ -1561,7 +1528,7 @@ void loadCitySelection() {
         prayerConfig.selectedCityName.trim();
         prayerConfig.latitude.trim();
         prayerConfig.longitude.trim();
-        
+
         if (file.available()) {
           String tuneStr = file.readStringUntil('\n');
           tuneStr.trim();
@@ -1599,9 +1566,9 @@ void loadCitySelection() {
         }
 
         file.close();
-        Serial.println("Pemilihan kota dimuat: " + prayerConfig.selectedCity);
-        Serial.println("Lat: " + prayerConfig.latitude + ", Lon: " + prayerConfig.longitude);
-        Serial.printf("Tune: Imsak=%d, Subuh=%d, Terbit=%d, Zuhur=%d, Ashar=%d, Maghrib=%d, Isya=%d\n",
+        Serial.println("PEMILIHAN KOTA DIMUAT: " + prayerConfig.selectedCity);
+        Serial.println("LAT: " + prayerConfig.latitude + ", LON: " + prayerConfig.longitude);
+        Serial.printf("TUNE: IMSAK=%d, SUBUH=%d, TERBIT=%d, ZUHUR=%d, ASHAR=%d, MAGHRIB=%d, ISYA=%d\n",
                      prayerConfig.tuneImsak, prayerConfig.tuneSubuh, prayerConfig.tuneTerbit,
                      prayerConfig.tuneZuhur, prayerConfig.tuneAshar, prayerConfig.tuneMaghrib,
                      prayerConfig.tuneIsya);
@@ -1611,7 +1578,7 @@ void loadCitySelection() {
       prayerConfig.selectedCityName = "";
       prayerConfig.latitude = "";
       prayerConfig.longitude = "";
-      
+
       prayerConfig.tuneImsak = 0;
       prayerConfig.tuneSubuh = 0;
       prayerConfig.tuneTerbit = 0;
@@ -1619,8 +1586,8 @@ void loadCitySelection() {
       prayerConfig.tuneAshar = 0;
       prayerConfig.tuneMaghrib = 0;
       prayerConfig.tuneIsya = 0;
-      
-      Serial.println("Pemilihan kota tidak ditemukan");
+
+      Serial.println("PEMILIHAN KOTA TIDAK DITEMUKAN");
     }
     xSemaphoreGive(settingsMutex);
 
@@ -1636,15 +1603,15 @@ void saveMethodSelection() {
       file.println(methodConfig.methodName);
       file.flush();
       file.close();
-      Serial.println("Pemilihan metode tersimpan:");
+      Serial.println("PEMILIHAN METODE TERSIMPAN:");
       Serial.println("ID: " + String(methodConfig.methodId));
-      Serial.println("Nama: " + methodConfig.methodName);
+      Serial.println("NAMA: " + methodConfig.methodName);
     } else {
-      Serial.println("Gagal menyimpan pemilihan metode");
+      Serial.println("GAGAL MENYIMPAN PEMILIHAN METODE");
     }
     xSemaphoreGive(settingsMutex);
   }
-  
+
   vTaskDelay(pdMS_TO_TICKS(50));
 }
 
@@ -1663,58 +1630,58 @@ void loadMethodSelection() {
         }
 
         file.close();
-        Serial.println("Pemilihan metode dimuat:");
+        Serial.println("PEMILIHAN METODE DIMUAT:");
         Serial.println("ID: " + String(methodConfig.methodId));
-        Serial.println("Nama: " + methodConfig.methodName);
+        Serial.println("NAMA: " + methodConfig.methodName);
       }
     } else {
       methodConfig.methodId = 5;
       methodConfig.methodName = "Egyptian General Authority of Survey";
-      Serial.println("Pemilihan metode tidak ditemukan - menggunakan default (Mesir)");
+      Serial.println("PEMILIHAN METODE TIDAK DITEMUKAN - MENGGUNAKAN DEFAULT (MESIR)");
     }
     xSemaphoreGive(settingsMutex);
   }
 }
 
 // ============================================
-// RTC Functions
+// RTC FUNCTIONS
 // ============================================
 bool initRTC() {
     Serial.println("\n========================================");
-    Serial.println("INITIALIZING DS3231 RTC");
+    Serial.println("INISIALISASI DS3231 RTC");
     Serial.println("========================================");
-    
+
     if (!rtc.begin()) {
-        Serial.println("DS3231 tidak ditemukan!");
-        Serial.println("Koneksi kabel:");
+        Serial.println("DS3231 TIDAK DITEMUKAN!");
+        Serial.println("KONEKSI KABEL:");
         Serial.println("  SDA -> GPIO21");
         Serial.println("  SCL -> GPIO22");
         Serial.println("  VCC -> 3.3V");
         Serial.println("  GND -> GND");
-        Serial.println("\nRunning without RTC");
+        Serial.println("\nBERJALAN TANPA RTC");
         Serial.println("========================================\n");
-        
+
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
             const time_t EPOCH_2000 = 946684800;
             setTime(0, 0, 0, 1, 1, 2000);
             timeConfig.currentTime = EPOCH_2000;
-            
+
             if (timeConfig.currentTime < EPOCH_2000) {
                 timeConfig.currentTime = EPOCH_2000;
             }
-            
+
             xSemaphoreGive(timeMutex);
         }
         return false;
     }
-    
-    Serial.println("DS3231 detected on I2C");
-    
+
+    Serial.println("DS3231 TERDETEKSI DI I2C");
+
     DateTime test = rtc.now();
-    Serial.printf("Hasil uji: %02d:%02d:%02d %02d/%02d/%04d",
+    Serial.printf("HASIL UJI: %02d:%02d:%02d %02d/%02d/%04d",
                  test.hour(), test.minute(), test.second(),
                  test.day(), test.month(), test.year());
-    
+
     bool isValid = (
         test.year() >= 2000 && test.year() <= 2100 &&
         test.month() >= 1 && test.month() <= 12 &&
@@ -1723,63 +1690,63 @@ bool initRTC() {
         test.minute() >= 0 && test.minute() <= 59 &&
         test.second() >= 0 && test.second() <= 59
     );
-    
+
     if (!isValid) {
-        Serial.println("\n*** RTC HARDWARE FAILURE ***");
-        Serial.println("Chip DS3231 rusak!");
-        Serial.println("Register waktu mengembalikan data rusak");
-        Serial.println("Sensor suhu berfungsi: " + String(rtc.getTemperature()) + " °C");
-        Serial.println("\nPossible causes:");
-        Serial.println("  1. Counterfeit/clone DS3231 chip");
-        Serial.println("  2. Crystal oscillator failure");
-        Serial.println("  3. Internal SRAM corruption");
+        Serial.println("\n*** KERUSAKAN HARDWARE RTC ***");
+        Serial.println("CHIP DS3231 RUSAK!");
+        Serial.println("REGISTER WAKTU MENGEMBALIKAN DATA RUSAK");
+        Serial.println("SENSOR SUHU BERFUNGSI: " + String(rtc.getTemperature()) + " °C");
+        Serial.println("\nKEMUNGKINAN PENYEBAB:");
+        Serial.println("  1. CHIP DS3231 PALSU/TIRUAN");
+        Serial.println("  2. KERUSAKAN OSILATOR KRISTAL");
+        Serial.println("  3. KERUSAKAN SRAM INTERNAL");
         Serial.println("\n>>> SOLUSI: BELI MODUL DS3231 BARU <<<");
-        Serial.println("\nSistem akan berjalan tanpa RTC");
-        Serial.println("Waktu akan direset ke 01/01/2000 setiap restart");
-        Serial.println("Sinkronisasi NTP akan memperbaiki waktu saat WiFi terhubung");
+        Serial.println("\nSISTEM AKAN BERJALAN TANPA RTC");
+        Serial.println("WAKTU AKAN DIRESET KE 01/01/2000 SETIAP RESTART");
+        Serial.println("SINKRONISASI NTP AKAN MEMPERBAIKI WAKTU SAAT WIFI TERHUBUNG");
         Serial.println("========================================\n");
-        
+
         if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
             const time_t EPOCH_2000 = 946684800;
             setTime(0, 0, 0, 1, 1, 2000);
             timeConfig.currentTime = EPOCH_2000;
-            
+
             if (timeConfig.currentTime < EPOCH_2000) {
                 timeConfig.currentTime = EPOCH_2000;
             }
-            
+
             xSemaphoreGive(timeMutex);
         }
-        
+
         return false;
     }
-    
-    Serial.println("RTC hardware test PASSED");
-    Serial.println("RTC berfungsi dengan benar");
+
+    Serial.println("UJI HARDWARE RTC BERHASIL");
+    Serial.println("RTC BERFUNGSI DENGAN BENAR");
 
     if (rtc.lostPower()) {
-        Serial.println("\nWARNING: RTC lost power!");
-        Serial.println("Baterai mungkin habis atau terputus");
-        Serial.println("Waktu akan diatur dari sinkronisasi NTP");
-        
+        Serial.println("\nPERINGATAN: RTC KEHILANGAN DAYA!");
+        Serial.println("BATERAI MUNGKIN HABIS ATAU TERPUTUS");
+        Serial.println("WAKTU AKAN DIATUR DARI SINKRONISASI NTP");
+
         rtc.adjust(DateTime(2000, 1, 1, 0, 0, 0));
     } else {
-        Serial.println("\nBaterai cadangan RTC baik");
+        Serial.println("\nBATERAI CADANGAN RTC BAIK");
     }
-    
+
     if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
         setTime(test.hour(), test.minute(), test.second(),
                test.day(), test.month(), test.year());
         timeConfig.currentTime = now();
         xSemaphoreGive(timeMutex);
-        
+
         if (displayQueue != NULL) {
             DisplayUpdate update;
             update.type = DisplayUpdate::TIME_UPDATE;
             xQueueSend(displayQueue, &update, 0);
         }
     }
-    
+
     Serial.println("========================================\n");
     return true;
 }
@@ -1799,142 +1766,142 @@ bool isRTCValid() {
     if (!rtcAvailable) {
         return false;
     }
-    
+
     if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
         if (rtc.lostPower()) {
             xSemaphoreGive(i2cMutex);
-            Serial.println("Cek RTC: Baterai habis/kehilangan daya");
+            Serial.println("CEK RTC: BATERAI HABIS/KEHILANGAN DAYA");
             return false;
         }
-        
+
         DateTime rtcNow = rtc.now();
         xSemaphoreGive(i2cMutex);
-        
+
         if (!isRTCTimeValid(rtcNow)) {
-            Serial.println("Cek RTC: Waktu tidak valid");
+            Serial.println("CEK RTC: WAKTU TIDAK VALID");
             Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d",
                          rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
                          rtcNow.day(), rtcNow.month(), rtcNow.year());
             return false;
         }
-        
+
         return true;
     }
-    
-    Serial.println("Cek RTC: Tidak dapat mendapatkan mutex I2C");
+
+    Serial.println("CEK RTC: TIDAK DAPAT MENDAPATKAN MUTEX I2C");
     return false;
 }
 
 void saveTimeToRTC() {
     if (!rtcAvailable) {
-        Serial.println("[Simpan RTC] Dilewati - RTC tidak tersedia");
+        Serial.println("[SIMPAN RTC] DILEWATI - RTC TIDAK TERSEDIA");
         return;
     }
-    
+
     time_t currentTime;
     if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         currentTime = timeConfig.currentTime;
         xSemaphoreGive(timeMutex);
     } else {
-        Serial.println("[Simpan RTC] Gagal - Tidak dapat mendapatkan timeMutex");
+        Serial.println("[SIMPAN RTC] GAGAL - TIDAK DAPAT MENDAPATKAN TIMEMUTEX");
         return;
     }
-    
+
     if (currentTime < 946684800) {
-        Serial.println("[Simpan RTC] Dilewati - Timestamp tidak valid (sebelum 2000)");
-        Serial.printf("   Timestamp: %ld\n", currentTime);
+        Serial.println("[SIMPAN RTC] DILEWATI - TIMESTAMP TIDAK VALID (SEBELUM 2000)");
+        Serial.printf("   TIMESTAMP: %ld\n", currentTime);
         return;
     }
-    
+
     uint16_t y = year(currentTime);
     uint8_t m = month(currentTime);
     uint8_t d = day(currentTime);
     uint8_t h = hour(currentTime);
     uint8_t min = minute(currentTime);
     uint8_t sec = second(currentTime);
-    
+
     Serial.println("\n========================================");
     Serial.println("MENYIMPAN WAKTU KE RTC");
     Serial.println("========================================");
-    Serial.printf("Waktu yang disimpan: %02d:%02d:%02d %02d/%02d/%04d",
+    Serial.printf("WAKTU YANG DISIMPAN: %02d:%02d:%02d %02d/%02d/%04d",
                  h, min, sec, d, m, y);
-    
+
     if (y < 2000 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31 ||
         h > 23 || min > 59 || sec > 59) {
-        Serial.println("ERROR: Komponen waktu tidak valid!");
-        Serial.println("   Tidak dapat menyimpan ke RTC");
+        Serial.println("ERROR: KOMPONEN WAKTU TIDAK VALID!");
+        Serial.println("   TIDAK DAPAT MENYIMPAN KE RTC");
         Serial.println("========================================\n");
         return;
     }
-    
+
     if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(2000)) == pdTRUE) {
         DateTime dt(y, m, d, h, min, sec);
-        
+
         rtc.adjust(dt);
-        
+
         delay(100);
-        
+
         xSemaphoreGive(i2cMutex);
-        
-        Serial.println("Data ditulis ke RTC");
+
+        Serial.println("DATA DITULIS KE RTC");
     } else {
-        Serial.println("ERROR: Tidak dapat mendapatkan mutex I2C");
+        Serial.println("ERROR: TIDAK DAPAT MENDAPATKAN MUTEX I2C");
         Serial.println("========================================\n");
         return;
     }
-    
+
     delay(500);
-    
-    Serial.println("\nVerifying RTC write...");
-    
+
+    Serial.println("\nMEMVERIFIKASI PENULISAN RTC...");
+
     if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(2000)) == pdTRUE) {
         DateTime verify = rtc.now();
         xSemaphoreGive(i2cMutex);
-        
-        Serial.printf("RTC sekarang menunjukkan: %02d:%02d:%02d %02d/%02d/%04d",
+
+        Serial.printf("RTC SEKARANG MENUNJUKKAN: %02d:%02d:%02d %02d/%02d/%04d",
                      verify.hour(), verify.minute(), verify.second(),
                      verify.day(), verify.month(), verify.year());
-        
+
         bool yearOk = (verify.year() == y);
         bool monthOk = (verify.month() == m);
         bool dayOk = (verify.day() == d);
         bool hourOk = (verify.hour() == h);
         bool minOk = (verify.minute() == min || verify.minute() == min + 1);
-        
+
         bool saveSuccess = yearOk && monthOk && dayOk && hourOk && minOk;
-        
+
         if (saveSuccess) {
             Serial.println("\nSIMPAN RTC BERHASIL");
-            Serial.println("Komponen waktu cocok");
-            Serial.println("Waktu akan bertahan saat restart");
+            Serial.println("KOMPONEN WAKTU COCOK");
+            Serial.println("WAKTU AKAN BERTAHAN SAAT RESTART");
             Serial.println("========================================\n");
         } else {
             Serial.println("\nSIMPAN RTC GAGAL");
-            Serial.println("Verifikasi tidak cocok:");
-            if (!yearOk) Serial.printf("   Tahun: ditulis %d, dibaca %d", y, verify.year());
-            if (!monthOk) Serial.printf("   Bulan: ditulis %d, dibaca %d", m, verify.month());
-            if (!dayOk) Serial.printf("   Hari: ditulis %d, dibaca %d", d, verify.day());
-            if (!hourOk) Serial.printf("   Jam: ditulis %d, dibaca %d", h, verify.hour());
-            if (!minOk) Serial.printf("   Menit: ditulis %d, dibaca %d", min, verify.minute());
-            
-            Serial.println("\nPossible causes:");
-            Serial.println("  1. RTC battery weak/dead");
-            Serial.println("  2. Faulty RTC hardware");
-            Serial.println("  3. I2C communication issues");
-            Serial.println("  4. Counterfeit DS3231 chip");
-            Serial.println("\nRecommendation: Replace RTC module");
+            Serial.println("VERIFIKASI TIDAK COCOK:");
+            if (!yearOk) Serial.printf("   TAHUN: DITULIS %d, DIBACA %d", y, verify.year());
+            if (!monthOk) Serial.printf("   BULAN: DITULIS %d, DIBACA %d", m, verify.month());
+            if (!dayOk) Serial.printf("   HARI: DITULIS %d, DIBACA %d", d, verify.day());
+            if (!hourOk) Serial.printf("   JAM: DITULIS %d, DIBACA %d", h, verify.hour());
+            if (!minOk) Serial.printf("   MENIT: DITULIS %d, DIBACA %d", min, verify.minute());
+
+            Serial.println("\nKEMUNGKINAN PENYEBAB:");
+            Serial.println("  1. BATERAI RTC LEMAH/HABIS");
+            Serial.println("  2. HARDWARE RTC RUSAK");
+            Serial.println("  3. MASALAH KOMUNIKASI I2C");
+            Serial.println("  4. CHIP DS3231 PALSU");
+            Serial.println("\nREKOMENDASI: GANTI MODUL RTC");
             Serial.println("========================================\n");
-            
+
             static int failCount = 0;
             failCount++;
             if (failCount >= 3) {
-                Serial.println("CRITICAL: RTC failed 3 times - disabling");
+                Serial.println("KRITIS: RTC GAGAL 3 KALI - DINONAKTIFKAN");
                 rtcAvailable = false;
                 failCount = 0;
             }
         }
     } else {
-        Serial.println("ERROR: Tidak dapat mendapatkan mutex I2C untuk verifikasi");
+        Serial.println("ERROR: TIDAK DAPAT MENDAPATKAN MUTEX I2C UNTUK VERIFIKASI");
         Serial.println("========================================\n");
     }
 }
@@ -1948,7 +1915,7 @@ void sendJSONResponse(AsyncWebServerRequest *request, const String &json) {
 }
 
 // ============================================
-// Web Server Functions
+// WEB SERVER FUNCTIONS
 // ============================================
 void setupServerRoutes() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
@@ -2017,7 +1984,6 @@ void setupServerRoutes() {
     String ip = isWiFiConnected ? wifiConfig.localIP.toString() : "0.0.0.0";
     int rssi = isWiFiConnected ? WiFi.RSSI() : 0;
 
-    // Terjemahkan wifiState ke string
     String wifiStateStr;
     switch (wifiState) {
       case WIFI_IDLE:       wifiStateStr = "idle"; break;
@@ -2064,38 +2030,38 @@ void setupServerRoutes() {
           restartTaskHandle = NULL;
           vTaskDelay(pdMS_TO_TICKS(100));
       }
-      
+
       IPAddress clientIP = request->client()->remoteIP();
       IPAddress apIP = WiFi.softAPIP();
       IPAddress apSubnet = WiFi.softAPSubnetMask();
-      
+
       IPAddress apNetwork(
           apIP[0] & apSubnet[0],
           apIP[1] & apSubnet[1],
           apIP[2] & apSubnet[2],
           apIP[3] & apSubnet[3]
       );
-      
+
       IPAddress clientNetwork(
           clientIP[0] & apSubnet[0],
           clientIP[1] & apSubnet[1],
           clientIP[2] & apSubnet[2],
           clientIP[3] & apSubnet[3]
       );
-      
+
       bool isLocalAP = (apNetwork == clientNetwork);
 
       startCountdown("device_restart", "Memulai Ulang Perangkat", 60);
-      
+
       request->send(200, "text/plain", "OK");
-      
+
       xTaskCreate(
           [](void* param) {
               for (int i = 60; i > 0; i--) {
                   if (i == 35) {
                       WiFi.mode(WIFI_OFF);
                       vTaskDelay(pdMS_TO_TICKS(500));
-                      
+
                       if (prayerTaskHandle != NULL) {
                           vTaskSuspend(prayerTaskHandle);
                       }
@@ -2106,23 +2072,23 @@ void setupServerRoutes() {
                           vTaskSuspend(wifiTaskHandle);
                       }
                       vTaskDelay(pdMS_TO_TICKS(1000));
-                      
+
                       server.end();
                       vTaskDelay(pdMS_TO_TICKS(500));
-                      
+
                       if (rtcAvailable) {
                           saveTimeToRTC();
                       }
                       vTaskDelay(pdMS_TO_TICKS(500));
-                      
+
                       ledcWrite(TFT_BL, 0);
                       tft.fillScreen(TFT_BLACK);
                       vTaskDelay(pdMS_TO_TICKS(500));
                   }
-                  
+
                   vTaskDelay(pdMS_TO_TICKS(1000));
               }
-              
+
               Serial.flush();
               delay(1000);
               ESP.restart();
@@ -2182,10 +2148,10 @@ void setupServerRoutes() {
         " seconds before next WiFi restart";
 
       Serial.println("\n========================================");
-      Serial.println("WiFi RESTART REQUEST REJECTED");
+      Serial.println("PERMINTAAN RESTART WIFI DITOLAK");
       Serial.println("========================================");
-      Serial.println("Reason: Too fast (debouncing active)");
-      Serial.printf("Waktu tunggu: %lu ms", waitTime);
+      Serial.println("ALASAN: TERLALU CEPAT (DEBOUNCING AKTIF)");
+      Serial.printf("WAKTU TUNGGU: %lu MS", waitTime);
       Serial.println("========================================\n");
 
       request -> send(429, "text/plain", msg);
@@ -2197,9 +2163,9 @@ void setupServerRoutes() {
       String newPassword = request -> getParam("password", true) -> value();
 
       Serial.println("\n========================================");
-      Serial.println("Simpan Kredensial WiFi");
+      Serial.println("SIMPAN KREDENSIAL WIFI");
       Serial.println("========================================");
-      Serial.println("SSID Baru: " + newSSID);
+      Serial.println("SSID BARU: " + newSSID);
 
       if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
         wifiConfig.routerSSID = newSSID;
@@ -2209,8 +2175,8 @@ void setupServerRoutes() {
 
       saveWiFiCredentials();
 
-      Serial.println("Credentials saved to LittleFS");
-      Serial.println("WiFi akan menghubungkan ulang dalam 3 detik...");
+      Serial.println("KREDENSIAL TERSIMPAN KE LITTLEFS");
+      Serial.println("WIFI AKAN MENGHUBUNGKAN ULANG DALAM 3 DETIK...");
       Serial.println("========================================\n");
 
       request -> send(200, "text/plain", "OK");
@@ -2233,7 +2199,7 @@ void setupServerRoutes() {
       unsigned long now = millis();
       if (now - lastAPRestartRequest < RESTART_DEBOUNCE_MS) {
           unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastAPRestartRequest);
-          request->send(429, "text/plain", "Please wait " + String(waitTime / 1000) + " detik");
+          request->send(429, "text/plain", "Please wait " + String(waitTime / 1000) + " DETIK");
           return;
       }
 
@@ -2248,8 +2214,8 @@ void setupServerRoutes() {
       Serial.println("========================================");
 
       if (updateNetworkConfig) {
-          Serial.println("Mode: Konfigurasi jaringan saja");
-          
+          Serial.println("MODE: KONFIGURASI JARINGAN SAJA");
+
           IPAddress newAPIP = wifiConfig.apIP;
           IPAddress newGateway = wifiConfig.apGateway;
           IPAddress newSubnet = wifiConfig.apSubnet;
@@ -2257,14 +2223,14 @@ void setupServerRoutes() {
           if (request->hasParam("apIP", true)) {
               String ipStr = request->getParam("apIP", true)->value();
               ipStr.trim();
-              
+
               if (ipStr.length() > 0) {
                   IPAddress tempIP;
                   if (tempIP.fromString(ipStr)) {
                       newAPIP = tempIP;
-                      Serial.println("IP AP Baru: " + newAPIP.toString());
+                      Serial.println("IP AP BARU: " + newAPIP.toString());
                   } else {
-                      Serial.println("Format IP tidak valid, mempertahankan: " + newAPIP.toString());
+                      Serial.println("FORMAT IP TIDAK VALID, MEMPERTAHANKAN: " + newAPIP.toString());
                   }
               }
           }
@@ -2272,14 +2238,14 @@ void setupServerRoutes() {
           if (request->hasParam("gateway", true)) {
               String gwStr = request->getParam("gateway", true)->value();
               gwStr.trim();
-              
+
               if (gwStr.length() > 0) {
                   IPAddress tempGW;
                   if (tempGW.fromString(gwStr)) {
                       newGateway = tempGW;
-                      Serial.println("Gateway Baru: " + newGateway.toString());
+                      Serial.println("GATEWAY BARU: " + newGateway.toString());
                   } else {
-                      Serial.println("Gateway tidak valid, mempertahankan: " + newGateway.toString());
+                      Serial.println("GATEWAY TIDAK VALID, MEMPERTAHANKAN: " + newGateway.toString());
                   }
               }
           }
@@ -2287,14 +2253,14 @@ void setupServerRoutes() {
           if (request->hasParam("subnet", true)) {
               String snStr = request->getParam("subnet", true)->value();
               snStr.trim();
-              
+
               if (snStr.length() > 0) {
                   IPAddress tempSN;
                   if (tempSN.fromString(snStr)) {
                       newSubnet = tempSN;
-                      Serial.println("Subnet Baru: " + newSubnet.toString());
+                      Serial.println("SUBNET BARU: " + newSubnet.toString());
                   } else {
-                      Serial.println("Subnet tidak valid, mempertahankan: " + newSubnet.toString());
+                      Serial.println("SUBNET TIDAK VALID, MEMPERTAHANKAN: " + newSubnet.toString());
                   }
               }
           }
@@ -2302,53 +2268,53 @@ void setupServerRoutes() {
           wifiConfig.apIP = newAPIP;
           wifiConfig.apGateway = newGateway;
           wifiConfig.apSubnet = newSubnet;
-          
+
           saveAPCredentials();
 
-          Serial.println("\nCONFIG SAVED:");
-          Serial.println("  IP: " + newAPIP.toString() + " (updated)");
-          Serial.println("  Gateway: " + newGateway.toString() + " (updated)");
-          Serial.println("  Subnet: " + newSubnet.toString() + " (updated)");
+          Serial.println("\nKONFIGURASI TERSIMPAN:");
+          Serial.println("  IP: " + newAPIP.toString() + " (DIPERBARUI)");
+          Serial.println("  GATEWAY: " + newGateway.toString() + " (DIPERBARUI)");
+          Serial.println("  SUBNET: " + newSubnet.toString() + " (DIPERBARUI)");
 
       } else {
-          Serial.println("Mode: SSID/Password saja");
-          Serial.println("Konfigurasi jaringan tidak akan berubah");
-          
+          Serial.println("MODE: SSID/PASSWORD SAJA");
+          Serial.println("KONFIGURASI JARINGAN TIDAK AKAN BERUBAH");
+
           if (!request->hasParam("ssid", true) || !request->hasParam("password", true)) {
-              Serial.println("ERROR: SSID atau password tidak ada");
+              Serial.println("ERROR: SSID ATAU PASSWORD TIDAK ADA");
               request->send(400, "text/plain", "Missing ssid or password");
               return;
           }
 
           String newSSID = request->getParam("ssid", true)->value();
           String newPass = request->getParam("password", true)->value();
-          
+
           newSSID.trim();
           newPass.trim();
 
           if (newSSID.length() == 0) {
-              Serial.println("ERROR: SSID tidak boleh kosong");
+              Serial.println("ERROR: SSID TIDAK BOLEH KOSONG");
               request->send(400, "text/plain", "SSID cannot be empty");
               return;
           }
 
           if (newPass.length() > 0 && newPass.length() < 8) {
-              Serial.println("ERROR: Password minimal 8 karakter");
+              Serial.println("ERROR: PASSWORD MINIMAL 8 KARAKTER");
               request->send(400, "text/plain", "Password minimal 8 karakter");
               return;
           }
 
           newSSID.toCharArray(wifiConfig.apSSID, 33);
           newPass.toCharArray(wifiConfig.apPassword, 65);
-          
+
           saveAPCredentials();
 
-          Serial.println("\nCONFIG SAVED:");
-          Serial.println("  SSID: " + String(wifiConfig.apSSID) + " (updated)");
-          Serial.println("  Password: ******** (updated)");
-          Serial.println("  IP: " + wifiConfig.apIP.toString() + " (unchanged)");
-          Serial.println("  Gateway: " + wifiConfig.apGateway.toString() + " (unchanged)");
-          Serial.println("  Subnet: " + wifiConfig.apSubnet.toString() + " (unchanged)");
+          Serial.println("\nKONFIGURASI TERSIMPAN:");
+          Serial.println("  SSID: " + String(wifiConfig.apSSID) + " (DIPERBARUI)");
+          Serial.println("  PASSWORD: ******** (DIPERBARUI)");
+          Serial.println("  IP: " + wifiConfig.apIP.toString() + " (TIDAK BERUBAH)");
+          Serial.println("  GATEWAY: " + wifiConfig.apGateway.toString() + " (TIDAK BERUBAH)");
+          Serial.println("  SUBNET: " + wifiConfig.apSubnet.toString() + " (TIDAK BERUBAH)");
       }
 
       Serial.println("========================================\n");
@@ -2356,32 +2322,32 @@ void setupServerRoutes() {
       IPAddress clientIP = request->client()->remoteIP();
       IPAddress apIP = WiFi.softAPIP();
       IPAddress apSubnet = WiFi.softAPSubnetMask();
-      
+
       IPAddress apNetwork(
           apIP[0] & apSubnet[0],
           apIP[1] & apSubnet[1],
           apIP[2] & apSubnet[2],
           apIP[3] & apSubnet[3]
       );
-      
+
       IPAddress clientNetwork(
           clientIP[0] & apSubnet[0],
           clientIP[1] & apSubnet[1],
           clientIP[2] & apSubnet[2],
           clientIP[3] & apSubnet[3]
       );
-      
+
       bool isLocalAP = (apNetwork == clientNetwork);
-      
-      Serial.println("CLIENT INFO:");
+
+      Serial.println("INFO KLIEN:");
       Serial.println("  IP: " + clientIP.toString());
-      Serial.println("  Access: " + String(isLocalAP ? "Local AP" : "Remote WiFi"));
+      Serial.println("  AKSES: " + String(isLocalAP ? "AP LOKAL" : "WIFI JARAK JAUH"));
 
       if (isLocalAP) {
           startCountdown("ap_restart", "Memulai Ulang Access Point", 60);
-          Serial.println("Countdown started (client on local AP)");
+          Serial.println("HITUNG MUNDUR DIMULAI (KLIEN DI AP LOKAL)");
       } else {
-          Serial.println("Client on remote network - no countdown needed");
+          Serial.println("KLIEN DI JARINGAN JARAK JAUH - TIDAK PERLU HITUNG MUNDUR");
       }
 
       Serial.println("========================================\n");
@@ -2440,7 +2406,7 @@ void setupServerRoutes() {
       Serial.println("\n========================================");
       Serial.println("SINKRONISASI WAKTU BROWSER");
       Serial.println("========================================");
-      Serial.printf("Diterima: %02d:%02d:%02d %02d/%02d/%04d\n", h, i, s, d, m, y);
+      Serial.printf("DITERIMA: %02d:%02d:%02d %02d/%02d/%04d\n", h, i, s, d, m, y);
 
       if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
         setTime(h, i, s, d, m, y);
@@ -2455,14 +2421,14 @@ void setupServerRoutes() {
       }
 
       if (rtcAvailable) {
-        Serial.println("\nMenyimpan waktu ke hardware RTC...");
+        Serial.println("\nMENYIMPAN WAKTU KE HARDWARE RTC...");
 
         saveTimeToRTC();
 
         delay(500);
 
         DateTime rtcNow = rtc.now();
-        Serial.println("RTC Verification:");
+        Serial.println("VERIFIKASI RTC:");
         Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d",
           rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
           rtcNow.day(), rtcNow.month(), rtcNow.year());
@@ -2474,14 +2440,14 @@ void setupServerRoutes() {
         );
 
         if (rtcValid) {
-          Serial.println("RTC saved successfully");
-          Serial.println("Waktu akan bertahan saat restart");
+          Serial.println("RTC BERHASIL DISIMPAN");
+          Serial.println("WAKTU AKAN BERTAHAN SAAT RESTART");
         } else {
-          Serial.println("Simpan RTC GAGAL - waktu tidak valid");
-          Serial.println("Periksa baterai RTC atau koneksi I2C");
+          Serial.println("SIMPAN RTC GAGAL - WAKTU TIDAK VALID");
+          Serial.println("PERIKSA BATERAI RTC ATAU KONEKSI I2C");
         }
       } else {
-        Serial.println("\nRTC tidak tersedia - waktu akan direset saat restart");
+        Serial.println("\nRTC TIDAK TERSEDIA - WAKTU AKAN DIRESET SAAT RESTART");
       }
 
       Serial.println("========================================\n");
@@ -2511,11 +2477,11 @@ void setupServerRoutes() {
 
   server.on("/settimezone", HTTP_POST, [](AsyncWebServerRequest * request) {
       Serial.println("\n========================================");
-      Serial.println("Simpan Timezone");
+      Serial.println("SIMPAN TIMEZONE");
       Serial.println("========================================");
 
       if (!request -> hasParam("offset", true)) {
-        Serial.println("ERROR: Parameter offset tidak ada");
+        Serial.println("ERROR: PARAMETER OFFSET TIDAK ADA");
         request -> send(400, "application/json",
           "{\"error\":\"Missing offset parameter\"}");
         return;
@@ -2526,21 +2492,21 @@ void setupServerRoutes() {
 
       int offset = offsetStr.toInt();
 
-      Serial.println("Received offset: " + String(offset));
+      Serial.println("OFFSET DITERIMA: " + String(offset));
 
       if (offset < -12 || offset > 14) {
-        Serial.println("ERROR: Offset timezone tidak valid");
+        Serial.println("ERROR: OFFSET TIMEZONE TIDAK VALID");
         request -> send(400, "application/json",
           "{\"error\":\"Invalid timezone offset (must be -12 to +14)\"}");
         return;
       }
 
-      Serial.println("Menyimpan ke memori dan file...");
+      Serial.println("MENYIMPAN KE MEMORI DAN FILE...");
 
       if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
         timezoneOffset = offset;
         xSemaphoreGive(settingsMutex);
-        Serial.println("Memory updated");
+        Serial.println("MEMORI DIPERBARUI");
       }
 
       bool ntpTriggered = false;
@@ -2550,19 +2516,19 @@ void setupServerRoutes() {
         Serial.println("\n========================================");
         Serial.println("MEMICU ULANG SINKRONISASI NTP OTOMATIS");
         Serial.println("========================================");
-        Serial.println("Reason: Timezone changed to UTC" + String(offset >= 0 ? "+" : "") + String(offset));
+        Serial.println("ALASAN: TIMEZONE DIUBAH KE UTC" + String(offset >= 0 ? "+" : "") + String(offset));
 
         if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-          Serial.println("Kota: " + prayerConfig.selectedCity);
-          Serial.println("Koordinat: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
+          Serial.println("KOTA: " + prayerConfig.selectedCity);
+          Serial.println("KOORDINAT: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
           Serial.println("");
-          Serial.println("Tugas NTP akan otomatis:");
-          Serial.println("  1. Sinkronisasi waktu dengan timezone baru");
-          Serial.println("  2. Perbarui waktu shalat dengan tanggal yang benar");
+          Serial.println("TUGAS NTP AKAN OTOMATIS:");
+          Serial.println("  1. SINKRONISASI WAKTU DENGAN TIMEZONE BARU");
+          Serial.println("  2. PERBARUI WAKTU SHALAT DENGAN TANGGAL YANG BENAR");
           prayerWillUpdate = true;
         } else {
-          Serial.println("Note: No city coordinates available");
-          Serial.println("Hanya waktu yang akan disinkronkan (tanpa pembaruan waktu shalat)");
+          Serial.println("CATATAN: TIDAK ADA KOORDINAT KOTA");
+          Serial.println("HANYA WAKTU YANG AKAN DISINKRONKAN (TANPA PEMBARUAN WAKTU SHALAT)");
         }
 
         if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
@@ -2573,18 +2539,18 @@ void setupServerRoutes() {
         xTaskNotifyGive(ntpTaskHandle);
         ntpTriggered = true;
 
-        Serial.println("Sinkronisasi ulang NTP berhasil dipicu");
+        Serial.println("SINKRONISASI ULANG NTP BERHASIL DIPICU");
         Serial.println("========================================\n");
 
       } else {
-        Serial.println("\nTidak dapat memicu sinkronisasi NTP:");
+        Serial.println("\nTIDAK DAPAT MEMICU SINKRONISASI NTP:");
         if (!wifiConfig.isConnected) {
-          Serial.println("Alasan: WiFi tidak terhubung");
+          Serial.println("ALASAN: WIFI TIDAK TERHUBUNG");
         }
         if (ntpTaskHandle == NULL) {
-          Serial.println("Alasan: Tugas NTP tidak berjalan");
+          Serial.println("ALASAN: TUGAS NTP TIDAK BERJALAN");
         }
-        Serial.println("Timezone akan diterapkan saat koneksi berikutnya\n");
+        Serial.println("TIMEZONE AKAN DITERAPKAN SAAT KONEKSI BERIKUTNYA\n");
       }
 
       String response = "{";
@@ -2595,20 +2561,20 @@ void setupServerRoutes() {
       response += "}";
 
       request -> send(200, "application/json", response);
-      
+
       vTaskDelay(pdMS_TO_TICKS(50));
-      
+
       saveTimezoneConfig();
-      
+
       Serial.println("========================================");
-      Serial.println("SUCCESS: Timezone saved");
-      Serial.println("Offset: UTC" + String(offset >= 0 ? "+" : "") + String(offset));
+      Serial.println("BERHASIL: TIMEZONE TERSIMPAN");
+      Serial.println("OFFSET: UTC" + String(offset >= 0 ? "+" : "") + String(offset));
       Serial.println("========================================\n");
   });
 
   server.on("/getcities", HTTP_GET, [](AsyncWebServerRequest * request) {
     if (!LittleFS.exists("/cities.json")) {
-      Serial.println("cities.json tidak ditemukan");
+      Serial.println("CITIES.JSON TIDAK DITEMUKAN");
       request -> send(404, "application/json", "[]");
       return;
     }
@@ -2635,7 +2601,7 @@ void setupServerRoutes() {
       json += "\"latitude\":\"" + prayerConfig.latitude + "\",";
       json += "\"longitude\":\"" + prayerConfig.longitude + "\",";
       json += "\"hasSelection\":" + String(hasSelection ? "true" : "false") + ",";
-      
+
       json += "\"tune\":{";
       json += "\"imsak\":" + String(prayerConfig.tuneImsak) + ",";
       json += "\"subuh\":" + String(prayerConfig.tuneSubuh) + ",";
@@ -2668,36 +2634,36 @@ void setupServerRoutes() {
       }
 
       String cityApi = request->getParam("city", true)->value();
-      String cityName = request->hasParam("cityName", true) 
-          ? request->getParam("cityName", true)->value() 
+      String cityName = request->hasParam("cityName", true)
+          ? request->getParam("cityName", true)->value()
           : cityApi;
-      String lat = request->hasParam("lat", true) 
-          ? request->getParam("lat", true)->value() 
+      String lat = request->hasParam("lat", true)
+          ? request->getParam("lat", true)->value()
           : "";
-      String lon = request->hasParam("lon", true) 
-          ? request->getParam("lon", true)->value() 
+      String lon = request->hasParam("lon", true)
+          ? request->getParam("lon", true)->value()
           : "";
 
-      int tuneImsak = request->hasParam("tuneImsak", true) 
-          ? request->getParam("tuneImsak", true)->value().toInt() 
+      int tuneImsak = request->hasParam("tuneImsak", true)
+          ? request->getParam("tuneImsak", true)->value().toInt()
           : 0;
-      int tuneSubuh = request->hasParam("tuneSubuh", true) 
-          ? request->getParam("tuneSubuh", true)->value().toInt() 
+      int tuneSubuh = request->hasParam("tuneSubuh", true)
+          ? request->getParam("tuneSubuh", true)->value().toInt()
           : 0;
-      int tuneTerbit = request->hasParam("tuneTerbit", true) 
-          ? request->getParam("tuneTerbit", true)->value().toInt() 
+      int tuneTerbit = request->hasParam("tuneTerbit", true)
+          ? request->getParam("tuneTerbit", true)->value().toInt()
           : 0;
-      int tuneZuhur = request->hasParam("tuneZuhur", true) 
-          ? request->getParam("tuneZuhur", true)->value().toInt() 
+      int tuneZuhur = request->hasParam("tuneZuhur", true)
+          ? request->getParam("tuneZuhur", true)->value().toInt()
           : 0;
-      int tuneAshar = request->hasParam("tuneAshar", true) 
-          ? request->getParam("tuneAshar", true)->value().toInt() 
+      int tuneAshar = request->hasParam("tuneAshar", true)
+          ? request->getParam("tuneAshar", true)->value().toInt()
           : 0;
-      int tuneMaghrib = request->hasParam("tuneMaghrib", true) 
-          ? request->getParam("tuneMaghrib", true)->value().toInt() 
+      int tuneMaghrib = request->hasParam("tuneMaghrib", true)
+          ? request->getParam("tuneMaghrib", true)->value().toInt()
           : 0;
-      int tuneIsya = request->hasParam("tuneIsya", true) 
-          ? request->getParam("tuneIsya", true)->value().toInt() 
+      int tuneIsya = request->hasParam("tuneIsya", true)
+          ? request->getParam("tuneIsya", true)->value().toInt()
           : 0;
 
       if (cityApi.length() > 100) cityApi = cityApi.substring(0, 100);
@@ -2731,7 +2697,7 @@ void setupServerRoutes() {
           prayerConfig.selectedCityName = cityName;
           prayerConfig.latitude = lat;
           prayerConfig.longitude = lon;
-          
+
           prayerConfig.tuneImsak = tuneImsak;
           prayerConfig.tuneSubuh = tuneSubuh;
           prayerConfig.tuneTerbit = tuneTerbit;
@@ -2739,7 +2705,7 @@ void setupServerRoutes() {
           prayerConfig.tuneAshar = tuneAshar;
           prayerConfig.tuneMaghrib = tuneMaghrib;
           prayerConfig.tuneIsya = tuneIsya;
-          
+
           xSemaphoreGive(settingsMutex);
       }
 
@@ -2747,13 +2713,13 @@ void setupServerRoutes() {
 
       if (willUpdate) {
           vTaskDelay(pdMS_TO_TICKS(100));
-          
+
           if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
               needPrayerUpdate = true;
               pendingPrayerLat = lat;
               pendingPrayerLon = lon;
               xSemaphoreGive(settingsMutex);
-              
+
               if (prayerTaskHandle != NULL) {
                   xTaskNotifyGive(prayerTaskHandle);
               }
@@ -2782,9 +2748,9 @@ void setupServerRoutes() {
           metaFile.println(citiesCountStr);
           metaFile.close();
 
-          Serial.println("Cities metadata saved:");
-          Serial.println("Ukuran JSON: " + jsonSizeStr + " bytes");
-          Serial.println("Cities Count: " + citiesCountStr);
+          Serial.println("METADATA KOTA TERSIMPAN:");
+          Serial.println("UKURAN JSON: " + jsonSizeStr + " BYTE");
+          Serial.println("JUMLAH KOTA: " + citiesCountStr);
         }
       }
 
@@ -2797,40 +2763,40 @@ void setupServerRoutes() {
 
       if (index == 0) {
         Serial.println("\n========================================");
-        Serial.println("CITIES.JSON UPLOAD STARTED");
+        Serial.println("UPLOAD CITIES.JSON DIMULAI");
         Serial.println("========================================");
-        Serial.printf("Nama file: %s", filename.c_str());
+        Serial.printf("NAMA FILE: %s", filename.c_str());
 
         if (filename != "cities.json") {
-          Serial.printf("Nama file tidak valid: %s (harus cities.json)", filename.c_str());
+          Serial.printf("NAMA FILE TIDAK VALID: %s (HARUS CITIES.JSON)", filename.c_str());
           return;
         }
 
         if (LittleFS.exists("/cities.json")) {
           LittleFS.remove("/cities.json");
-          Serial.println("cities.json lama dihapus");
+          Serial.println("CITIES.JSON LAMA DIHAPUS");
         }
 
         uploadFile = LittleFS.open("/cities.json", "w");
         if (!uploadFile) {
-          Serial.println("Gagal membuka file untuk ditulis");
+          Serial.println("GAGAL MEMBUKA FILE UNTUK DITULIS");
           return;
         }
 
         totalSize = 0;
         uploadStartTime = millis();
-        Serial.println("Writing to LittleFS...");
+        Serial.println("MENULIS KE LITTLEFS...");
       }
 
       if (uploadFile) {
         size_t written = uploadFile.write(data, len);
         if (written != len) {
-          Serial.printf("Ketidaksesuaian penulisan: %d/%d byte", written, len);
+          Serial.printf("KETIDAKSESUAIAN PENULISAN: %d/%d BYTE", written, len);
         }
         totalSize += written;
 
         if (totalSize % 5120 == 0 || final) {
-          Serial.printf("Progress: %d byte (%.1f KB)",
+          Serial.printf("PROGRESS: %d BYTE (%.1F KB)",
             totalSize, totalSize / 1024.0);
         }
       }
@@ -2842,10 +2808,10 @@ void setupServerRoutes() {
 
           unsigned long uploadDuration = millis() - uploadStartTime;
 
-          Serial.println("\nUpload complete");
-          Serial.printf("Ukuran total: %d byte (%.2f KB)",
+          Serial.println("\nUPLOAD SELESAI");
+          Serial.printf("UKURAN TOTAL: %d BYTE (%.2F KB)",
             totalSize, totalSize / 1024.0);
-          Serial.printf("Durasi: %lu ms", uploadDuration);
+          Serial.printf("DURASI: %lu MS", uploadDuration);
 
           vTaskDelay(pdMS_TO_TICKS(100));
 
@@ -2860,21 +2826,21 @@ void setupServerRoutes() {
 
               verifyFile.close();
 
-              Serial.printf("File terverifikasi: %d byte", fileSize);
-              Serial.println("First 100 chars:");
+              Serial.printf("FILE TERVERIFIKASI: %d BYTE", fileSize);
+              Serial.println("100 KARAKTER PERTAMA:");
               Serial.println(buffer);
 
               String preview(buffer);
               if (preview.indexOf('[') >= 0 && preview.indexOf('{') >= 0) {
-                Serial.println("JSON format looks valid");
+                Serial.println("FORMAT JSON TERLIHAT VALID");
               } else {
-                Serial.println("Peringatan: File mungkin bukan JSON yang valid");
+                Serial.println("PERINGATAN: FILE MUNGKIN BUKAN JSON YANG VALID");
               }
 
               Serial.println("========================================\n");
             }
           } else {
-            Serial.println("Verifikasi file gagal - file tidak ditemukan");
+            Serial.println("VERIFIKASI FILE GAGAL - FILE TIDAK DITEMUKAN");
             Serial.println("========================================\n");
           }
         }
@@ -2901,16 +2867,16 @@ void setupServerRoutes() {
 
   server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest * request) {
       Serial.println("\n========================================");
-      Serial.println("Simpan Metode Perhitungan");
-      Serial.print("IP Klien: ");
+      Serial.println("SIMPAN METODE PERHITUNGAN");
+      Serial.print("IP KLIEN: ");
       Serial.println(request -> client() -> remoteIP().toString());
       Serial.println("========================================");
 
       if (!request -> hasParam("methodId", true) || !request -> hasParam("methodName", true)) {
-        Serial.println("ERROR: Parameter tidak ada");
+        Serial.println("ERROR: PARAMETER TIDAK ADA");
 
         int params = request -> params();
-        Serial.printf("Parameter diterima (%d):", params);
+        Serial.printf("PARAMETER DITERIMA (%d):", params);
         for (int i = 0; i < params; i++) {
           const AsyncWebParameter * p = request -> getParam(i);
           Serial.printf("  %s = %s\n", p -> name().c_str(), p -> value().c_str());
@@ -2929,57 +2895,57 @@ void setupServerRoutes() {
 
       int methodId = methodIdStr.toInt();
 
-      Serial.println("Data diterima:");
-      Serial.println("Method ID: " + String(methodId));
-      Serial.println("Method Name: " + methodName);
+      Serial.println("DATA DITERIMA:");
+      Serial.println("ID METODE: " + String(methodId));
+      Serial.println("NAMA METODE: " + methodName);
 
       if (methodId < 0 || methodId > 20) {
-        Serial.println("ERROR: ID metode tidak valid");
+        Serial.println("ERROR: ID METODE TIDAK VALID");
         request -> send(400, "application/json",
           "{\"error\":\"Invalid method ID\"}");
         return;
       }
 
       if (methodName.length() == 0) {
-        Serial.println("ERROR: Nama metode kosong");
+        Serial.println("ERROR: NAMA METODE KOSONG");
         request -> send(400, "application/json",
           "{\"error\":\"Method name cannot be empty\"}");
         return;
       }
 
       if (methodName.length() > 100) {
-        Serial.println("ERROR: Nama metode terlalu panjang");
+        Serial.println("ERROR: NAMA METODE TERLALU PANJANG");
         request -> send(400, "application/json",
           "{\"error\":\"Method name too long (max 100 chars)\"}");
         return;
       }
 
-      Serial.println("Saving to memory...");
+      Serial.println("MENYIMPAN KE MEMORI...");
 
       if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
         methodConfig.methodId = methodId;
         methodConfig.methodName = methodName;
 
         xSemaphoreGive(settingsMutex);
-        Serial.println("Memory updated");
-        Serial.println("Method ID: " + String(methodConfig.methodId));
-        Serial.println("Method Name: " + methodConfig.methodName);
+        Serial.println("MEMORI DIPERBARUI");
+        Serial.println("ID METODE: " + String(methodConfig.methodId));
+        Serial.println("NAMA METODE: " + methodConfig.methodName);
       }
 
       bool willFetchPrayerTimes = false;
 
       if (WiFi.status() == WL_CONNECTED) {
           if (prayerConfig.latitude.length() > 0 && prayerConfig.longitude.length() > 0) {
-              Serial.println("Memicu pembaruan waktu shalat dengan metode baru...");
-              Serial.println("Kota: " + prayerConfig.selectedCity);
-              Serial.println("Method: " + methodName);
-              
+              Serial.println("MEMICU PEMBARUAN WAKTU SHALAT DENGAN METODE BARU...");
+              Serial.println("KOTA: " + prayerConfig.selectedCity);
+              Serial.println("METODE: " + methodName);
+
               willFetchPrayerTimes = true;
           } else {
-              Serial.println("No coordinates available");
+              Serial.println("TIDAK ADA KOORDINAT TERSEDIA");
           }
       } else {
-          Serial.println("WiFi tidak terhubung");
+          Serial.println("WIFI TIDAK TERHUBUNG");
       }
 
       String response = "{";
@@ -2990,41 +2956,41 @@ void setupServerRoutes() {
       response += "}";
 
       request -> send(200, "application/json", response);
-      
+
       vTaskDelay(pdMS_TO_TICKS(50));
-      
-      Serial.println("Writing to LittleFS...");
+
+      Serial.println("MENULIS KE LITTLEFS...");
       saveMethodSelection();
-      
+
       if (willFetchPrayerTimes) {
           vTaskDelay(pdMS_TO_TICKS(100));
-          
+
           if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
               needPrayerUpdate = true;
               pendingPrayerLat = prayerConfig.latitude;
               pendingPrayerLon = prayerConfig.longitude;
               xSemaphoreGive(settingsMutex);
-              
+
               if (prayerTaskHandle != NULL) {
                   xTaskNotifyGive(prayerTaskHandle);
-                  Serial.println("Tugas Shalat dipicu untuk perubahan metode");
+                  Serial.println("TUGAS SHALAT DIPICU UNTUK PERUBAHAN METODE");
               }
           }
 
-          Serial.println("Prayer times update initiated");
+          Serial.println("PEMBARUAN WAKTU SHALAT DIMULAI");
       }
 
       Serial.println("========================================");
-      Serial.println("SUCCESS: Method saved successfully");
-      Serial.println("Method: " + methodName);
+      Serial.println("BERHASIL: METODE TERSIMPAN");
+      Serial.println("METODE: " + methodName);
       if (willFetchPrayerTimes) {
-        Serial.println("Waktu shalat akan diperbarui sebentar lagi...");
+        Serial.println("WAKTU SHALAT AKAN DIPERBARUI SEBENTAR LAGI...");
       }
       Serial.println("========================================\n");
   });
 
   // ========================================
-  // TAB JADWAL - PRAYER TIMES & BUZZER
+  // TAB JADWAL - WAKTU SHALAT DAN BUZZER
   // ========================================
   server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest * request) {
     String json = "{";
@@ -3075,7 +3041,7 @@ void setupServerRoutes() {
     else if (prayer == "isya") buzzerConfig.isyaEnabled = enabled;
     else if (prayer == "alarm") {
       alarmConfig.alarmEnabled = enabled;
-      lastAlarmMinute = -1; // reset trigger guard
+      lastAlarmMinute = -1;
       saveAlarmConfig();
       request->send(200, "text/plain", "OK");
       return;
@@ -3112,10 +3078,10 @@ void setupServerRoutes() {
       if (volume > 100) volume = 100;
 
       Serial.println("\n========================================");
-      Serial.println("BUZZER TEST STARTED");
+      Serial.println("UJI BUZZER DIMULAI");
       Serial.println("========================================");
-      Serial.printf("Volume: %d%%", volume);
-      Serial.println("Durasi: Berhenti manual atau timeout 30 detik");
+      Serial.printf("VOLUME: %d%%", volume);
+      Serial.println("DURASI: BERHENTI MANUAL ATAU TIMEOUT 30 DETIK");
       Serial.println("========================================\n");
 
       if (buzzerTestTaskHandle != NULL) {
@@ -3131,28 +3097,28 @@ void setupServerRoutes() {
           [](void* param) {
               int vol = *((int*)param);
               int pwmValue = map(vol, 0, 100, 0, 255);
-              
+
               unsigned long startTime = millis();
               const unsigned long maxDuration = 30000;
-              
-              Serial.printf("Loop uji buzzer dimulai (PWM: %d)", pwmValue);
-              
+
+              Serial.printf("LOOP UJI BUZZER DIMULAI (PWM: %d)", pwmValue);
+
               while ((millis() - startTime) < maxDuration) {
                   if (buzzerTestTaskHandle == NULL) {
-                      Serial.println("Buzzer test stopped by user");
+                      Serial.println("UJI BUZZER DIHENTIKAN OLEH PENGGUNA");
                       break;
                   }
-                  
+
                   ledcWrite(BUZZER_CHANNEL, pwmValue);
                   vTaskDelay(pdMS_TO_TICKS(500));
-                  
+
                   ledcWrite(BUZZER_CHANNEL, 0);
                   vTaskDelay(pdMS_TO_TICKS(500));
               }
-              
+
               ledcWrite(BUZZER_CHANNEL, 0);
-              Serial.println("Buzzer test completed");
-              
+              Serial.println("UJI BUZZER SELESAI");
+
               buzzerTestTaskHandle = NULL;
               delete (int*)param;
               vTaskDelete(NULL);
@@ -3169,17 +3135,17 @@ void setupServerRoutes() {
       Serial.println("\n========================================");
       Serial.println("PERMINTAAN BERHENTI BUZZER");
       Serial.println("========================================\n");
-      
+
       ledcWrite(BUZZER_CHANNEL, 0);
-      
+
       if (buzzerTestTaskHandle != NULL) {
           vTaskDelete(buzzerTestTaskHandle);
           buzzerTestTaskHandle = NULL;
-          Serial.println("Tugas uji buzzer dihapus");
+          Serial.println("TUGAS UJI BUZZER DIHAPUS");
       }
-      
+
       request->send(200, "text/plain", "OK");
-      Serial.println("Buzzer stopped successfully\n");
+      Serial.println("BUZZER BERHASIL DIHENTIKAN\n");
   });
 
   // ========================================
@@ -3203,7 +3169,7 @@ void setupServerRoutes() {
         strncpy(alarmConfig.alarmTime, t.c_str(), 5);
         alarmConfig.alarmTime[5] = '\0';
         changed = true;
-        Serial.println("Alarm time set: " + t);
+        Serial.println("WAKTU ALARM DIATUR: " + t);
       }
     }
 
@@ -3211,8 +3177,7 @@ void setupServerRoutes() {
       String en = request->getParam("alarmEnabled", true)->value();
       alarmConfig.alarmEnabled = (en == "true" || en == "1");
       changed = true;
-      Serial.println("Alarm enabled: " + String(alarmConfig.alarmEnabled ? "ON" : "OFF"));
-      // Reset trigger guard saat setting diubah
+      Serial.println("ALARM DIAKTIFKAN: " + String(alarmConfig.alarmEnabled ? "ON" : "OFF"));
       lastAlarmMinute = -1;
     }
 
@@ -3229,9 +3194,9 @@ void setupServerRoutes() {
           resetTaskHandle = NULL;
           vTaskDelay(pdMS_TO_TICKS(100));
       }
-      
-      Serial.println("FACTORY RESET STARTED");
-      
+
+      Serial.println("RESET PABRIK DIMULAI");
+
       if (LittleFS.exists("/wifi_creds.txt"))       LittleFS.remove("/wifi_creds.txt");
       if (LittleFS.exists("/prayer_times.txt"))     LittleFS.remove("/prayer_times.txt");
       if (LittleFS.exists("/ap_creds.txt"))         LittleFS.remove("/ap_creds.txt");
@@ -3241,15 +3206,15 @@ void setupServerRoutes() {
       if (LittleFS.exists("/buzzer_config.txt"))    LittleFS.remove("/buzzer_config.txt");
       if (LittleFS.exists("/adzan_state.txt"))      LittleFS.remove("/adzan_state.txt");
       if (LittleFS.exists("/alarm_config.txt"))     LittleFS.remove("/alarm_config.txt");
-      
+
       if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
           methodConfig.methodId = 5;
           methodConfig.methodName = "Egyptian General Authority of Survey";
-          
+
           wifiConfig.routerSSID = "";
           wifiConfig.routerPassword = "";
           wifiConfig.isConnected = false;
-          
+
           prayerConfig.imsakTime = "00:00";
           prayerConfig.subuhTime = "00:00";
           prayerConfig.terbitTime = "00:00";
@@ -3269,75 +3234,74 @@ void setupServerRoutes() {
           prayerConfig.tuneAshar = 0;
           prayerConfig.tuneMaghrib = 0;
           prayerConfig.tuneIsya = 0;
-          
+
           DEFAULT_AP_SSID.toCharArray(wifiConfig.apSSID, 33);
           strcpy(wifiConfig.apPassword, DEFAULT_AP_PASSWORD);
           wifiConfig.apIP = IPAddress(192, 168, 100, 1);
           wifiConfig.apGateway = IPAddress(192, 168, 100, 1);
           wifiConfig.apSubnet = IPAddress(255, 255, 255, 0);
-          
+
           xSemaphoreGive(settingsMutex);
       }
-      
-      // Reset alarm ke default  ← TAMBAHAN
+
       strncpy(alarmConfig.alarmTime, "00:00", 5);
       alarmConfig.alarmTime[5] = '\0';
       alarmConfig.alarmEnabled = false;
       alarmState.isRinging = false;
       lastAlarmMinute = -1;
       ledcWrite(BUZZER_CHANNEL, 0);
-      
+
       timezoneOffset = 7;
-      
+
       if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
           const time_t EPOCH_2000 = 946684800;
           setTime(0, 0, 0, 1, 1, 2000);
           timeConfig.currentTime = EPOCH_2000;
           timeConfig.ntpSynced = false;
           timeConfig.ntpServer = "";
-          
+
           if (timeConfig.currentTime < EPOCH_2000) {
               timeConfig.currentTime = EPOCH_2000;
           }
-          
+
           DisplayUpdate update;
           update.type = DisplayUpdate::TIME_UPDATE;
           xQueueSend(displayQueue, &update, 0);
-          
+
           xSemaphoreGive(timeMutex);
       }
-      
+
       if (rtcAvailable) {
           saveTimeToRTC();
       }
-      
+
       updatePrayerDisplay();
       updateCityDisplay();
-      
+
       IPAddress clientIP = request->client()->remoteIP();
       IPAddress apIP = WiFi.softAPIP();
       IPAddress apSubnet = WiFi.softAPSubnetMask();
-      
+
       IPAddress apNetwork(
           apIP[0] & apSubnet[0],
           apIP[1] & apSubnet[1],
           apIP[2] & apSubnet[2],
           apIP[3] & apSubnet[3]
       );
-      
+
       IPAddress clientNetwork(
           clientIP[0] & apSubnet[0],
           clientIP[1] & apSubnet[1],
           clientIP[2] & apSubnet[2],
           clientIP[3] & apSubnet[3]
       );
-      
+
       bool isLocalAP = (apNetwork == clientNetwork);
-      
+
       startCountdown("factory_reset", "Pengaturan Ulang Perangkat", 60);
-      
+
       request->send(200, "text/plain", "OK");
-      
+
       xTaskCreate(
           [](void* param) {
               for (int i = 60; i > 0; i--) {
@@ -3346,7 +3310,7 @@ void setupServerRoutes() {
                       vTaskDelay(pdMS_TO_TICKS(500));
                       WiFi.mode(WIFI_OFF);
                       vTaskDelay(pdMS_TO_TICKS(500));
-                      
+
                       if (prayerTaskHandle != NULL) {
                           vTaskSuspend(prayerTaskHandle);
                       }
@@ -3357,18 +3321,18 @@ void setupServerRoutes() {
                           vTaskSuspend(wifiTaskHandle);
                       }
                       vTaskDelay(pdMS_TO_TICKS(1000));
-                      
+
                       server.end();
                       vTaskDelay(pdMS_TO_TICKS(500));
-                      
+
                       ledcWrite(TFT_BL, 0);
                       tft.fillScreen(TFT_BLACK);
                       vTaskDelay(pdMS_TO_TICKS(500));
                   }
-                  
+
                   vTaskDelay(pdMS_TO_TICKS(1000));
               }
-              
+
               Serial.flush();
               delay(1000);
               ESP.restart();
@@ -3494,7 +3458,7 @@ void setupServerRoutes() {
 
       if (countdownMutex != NULL && xSemaphoreTake(countdownMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         int remaining = getRemainingSeconds();
-        
+
         unsigned long serverMillis = millis();
 
         json += "\"active\":" + String(countdownState.isActive ? "true" : "false") + ",";
@@ -3551,7 +3515,7 @@ void setupServerRoutes() {
       String url = request -> url();
       IPAddress clientIP = request -> client() -> remoteIP();
 
-      Serial.printf("[404] Klien: %s | URL: %s",
+      Serial.printf("[404] KLIEN: %s | URL: %s",
         clientIP.toString().c_str(), url.c_str());
 
       if (url.startsWith("/css/") || url.endsWith(".css") || url.endsWith(".js") ||
@@ -3563,135 +3527,120 @@ void setupServerRoutes() {
         return;
       }
 
-      Serial.println("URL tidak valid, mengalihkan ke /notfound");
+      Serial.println("URL TIDAK VALID, MENGALIHKAN KE /NOTFOUND");
       request -> redirect("/notfound");
     });
   }
 
 // ============================================
-// Utility Functions
+// UTILITY FUNCTIONS
 // ============================================
 bool init_littlefs() {
-  Serial.println("Initializing LittleFS...");
+  Serial.println("MENGINISIALISASI LITTLEFS...");
   if (!LittleFS.begin(true)) {
-    Serial.println("LittleFS Mount Failed");
+    Serial.println("MOUNT LITTLEFS GAGAL");
     return false;
   }
-  Serial.println("LittleFS Mounted");
+  Serial.println("LITTLEFS TERPASANG");
   return true;
 }
 
 // ============================================
-// DEFAULT CONFIG FILES - Buat saat boot jika belum ada
+// FILE KONFIGURASI DEFAULT - DIBUAT SAAT BOOT JIKA BELUM ADA
 // ============================================
 void createDefaultConfigFiles() {
   Serial.println("\n========================================");
-  Serial.println("CEK DEFAULT CONFIG FILES");
+  Serial.println("CEK FILE KONFIGURASI DEFAULT");
   Serial.println("========================================");
 
-  // ----------------------------------------
-  // 1. /ap_creds.txt
-  // ----------------------------------------
   if (!LittleFS.exists("/ap_creds.txt")) {
     fs::File f = LittleFS.open("/ap_creds.txt", "w");
     if (f) {
-      f.println(DEFAULT_AP_SSID);          // SSID: JWS-<MAC>
-      f.println(DEFAULT_AP_PASSWORD);      // Password: 12345678
-      f.println("192.168.100.1");          // AP IP
-      f.println("192.168.100.1");          // AP Gateway
-      f.println("255.255.255.0");          // AP Subnet
+      f.println(DEFAULT_AP_SSID);
+      f.println(DEFAULT_AP_PASSWORD);
+      f.println("192.168.100.1");
+      f.println("192.168.100.1");
+      f.println("255.255.255.0");
       f.flush();
       f.close();
-      Serial.println("[DIBUAT] /ap_creds.txt");
+      Serial.println("[DIBUAT] /AP_CREDS.TXT");
       Serial.println("  SSID    : " + DEFAULT_AP_SSID);
-      Serial.println("  Password: " + String(DEFAULT_AP_PASSWORD));
+      Serial.println("  PASSWORD: " + String(DEFAULT_AP_PASSWORD));
       Serial.println("  IP      : 192.168.100.1");
     } else {
-      Serial.println("[ERROR] Gagal membuat /ap_creds.txt");
+      Serial.println("[ERROR] GAGAL MEMBUAT /AP_CREDS.TXT");
     }
   } else {
-    Serial.println("[ADA]   /ap_creds.txt - dilewati");
+    Serial.println("[ADA]   /AP_CREDS.TXT - DILEWATI");
   }
 
-  // ----------------------------------------
-  // 2. /timezone.txt
-  // ----------------------------------------
   if (!LittleFS.exists("/timezone.txt")) {
     fs::File f = LittleFS.open("/timezone.txt", "w");
     if (f) {
-      f.println("7");   // Default UTC+7 (WIB)
+      f.println("7");
       f.flush();
       f.close();
-      Serial.println("[DIBUAT] /timezone.txt");
-      Serial.println("  Timezone: UTC+7 (WIB)");
+      Serial.println("[DIBUAT] /TIMEZONE.TXT");
+      Serial.println("  TIMEZONE: UTC+7 (WIB)");
     } else {
-      Serial.println("[ERROR] Gagal membuat /timezone.txt");
+      Serial.println("[ERROR] GAGAL MEMBUAT /TIMEZONE.TXT");
     }
   } else {
-    Serial.println("[ADA]   /timezone.txt - dilewati");
+    Serial.println("[ADA]   /TIMEZONE.TXT - DILEWATI");
   }
 
-  // ----------------------------------------
-  // 3. /buzzer_config.txt
-  // ----------------------------------------
   if (!LittleFS.exists("/buzzer_config.txt")) {
     fs::File f = LittleFS.open("/buzzer_config.txt", "w");
     if (f) {
-      f.println("0");   // imsakEnabled  = OFF
-      f.println("0");   // subuhEnabled  = OFF
-      f.println("0");   // terbitEnabled = OFF
-      f.println("0");   // zuhurEnabled  = OFF
-      f.println("0");   // asharEnabled  = OFF
-      f.println("0");   // maghribEnabled= OFF
-      f.println("0");   // isyaEnabled   = OFF
-      f.println("50");  // volume        = 50
+      f.println("0");
+      f.println("0");
+      f.println("0");
+      f.println("0");
+      f.println("0");
+      f.println("0");
+      f.println("0");
+      f.println("50");
       f.flush();
       f.close();
-      Serial.println("[DIBUAT] /buzzer_config.txt");
-      Serial.println("  Semua notif: OFF | Volume: 50");
+      Serial.println("[DIBUAT] /BUZZER_CONFIG.TXT");
+      Serial.println("  SEMUA NOTIFIKASI: NONAKTIF | VOLUME: 50");
     } else {
-      Serial.println("[ERROR] Gagal membuat /buzzer_config.txt");
+      Serial.println("[ERROR] GAGAL MEMBUAT /BUZZER_CONFIG.TXT");
     }
   } else {
-    Serial.println("[ADA]   /buzzer_config.txt - dilewati");
+    Serial.println("[ADA]   /BUZZER_CONFIG.TXT - DILEWATI");
   }
 
-  // ----------------------------------------
-  // 4. /alarm_config.txt
-  // ----------------------------------------
   if (!LittleFS.exists("/alarm_config.txt")) {
     fs::File f = LittleFS.open("/alarm_config.txt", "w");
     if (f) {
-      f.println("00:00");  // alarmTime    = 00:00
-      f.println("0");      // alarmEnabled = OFF
+      f.println("00:00");
+      f.println("0");
       f.flush();
       f.close();
-      Serial.println("[DIBUAT] /alarm_config.txt");
-      Serial.println("  Alarm: 00:00 | Status: OFF");
+      Serial.println("[DIBUAT] /ALARM_CONFIG.TXT");
+      Serial.println("  ALARM: 00:00 | STATUS: NONAKTIF");
     } else {
-      Serial.println("[ERROR] Gagal membuat /alarm_config.txt");
+      Serial.println("[ERROR] GAGAL MEMBUAT /ALARM_CONFIG.TXT");
     }
   } else {
-    Serial.println("[ADA]   /alarm_config.txt - dilewati");
+    Serial.println("[ADA]   /ALARM_CONFIG.TXT - DILEWATI");
   }
 
-  // ----------------------------------------
-  // 5. /method_selection.txt
-  // ----------------------------------------
   if (!LittleFS.exists("/method_selection.txt")) {
     fs::File f = LittleFS.open("/method_selection.txt", "w");
     if (f) {
-      f.println("5");                                  // methodId   = 5
-      f.println("Egyptian General Authority of Survey"); // methodName
+      f.println("5");
+      f.println("Egyptian General Authority of Survey");
       f.flush();
       f.close();
-      Serial.println("[DIBUAT] /method_selection.txt");
-      Serial.println("  Method: 5 - Egyptian General Authority of Survey");
+      Serial.println("[DIBUAT] /METHOD_SELECTION.TXT");
+      Serial.println("  METODE: 5 - LEMBAGA SURVEI UMUM MESIR");
     } else {
-      Serial.println("[ERROR] Gagal membuat /method_selection.txt");
+      Serial.println("[ERROR] GAGAL MEMBUAT /METHOD_SELECTION.TXT");
     }
   } else {
-    Serial.println("[ADA]   /method_selection.txt - dilewati");
+    Serial.println("[ADA]   /METHOD_SELECTION.TXT - DILEWATI");
   }
 
   Serial.println("========================================\n");
@@ -3722,10 +3671,10 @@ void printStackReport() {
   uint32_t totalUsed = 0;
   uint32_t totalFree = 0;
 
-  for (int i = 0; i < 6; i++) { 
+  for (int i = 0; i < 6; i++) {
     if (tasks[i].handle) {
       UBaseType_t hwm = uxTaskGetStackHighWaterMark(tasks[i].handle);
-      
+
       uint32_t free = hwm * sizeof(StackType_t);
       uint32_t used = tasks[i].size - free;
       float percent = (used * 100.0) / tasks[i].size;
@@ -3734,30 +3683,30 @@ void printStackReport() {
       totalUsed += used;
       totalFree += free;
 
-      Serial.printf("%-10s: %5d/%5d (%5.1f%%) [Free: %5d] ",
+      Serial.printf("%-10s: %5d/%5d (%5.1f%%) [SISA: %5d] ",
                     tasks[i].name, used, tasks[i].size, percent, free);
 
-      if (percent < 40) Serial.println("BOROS - dapat dikurangi");
+      if (percent < 40) Serial.println("BOROS - DAPAT DIKURANGI");
       else if (percent < 60) Serial.println("OPTIMAL");
-      else if (percent < 75) Serial.println("FIT");
-      else if (percent < 90) Serial.println("HIGH - monitor continuously");
-      else if (percent < 95) Serial.println("DANGER - must be increased");
-      else Serial.println("CRITICAL - increase immediately");
+      else if (percent < 75) Serial.println("SESUAI");
+      else if (percent < 90) Serial.println("TINGGI - PANTAU TERUS");
+      else if (percent < 95) Serial.println("BERBAHAYA - HARUS DITAMBAH");
+      else Serial.println("KRITIS - TAMBAH SEGERA");
     } else {
-      Serial.printf("%-10s: TASK TIDAK BERJALAN", tasks[i].name);
+      Serial.printf("%-10s: TUGAS TIDAK BERJALAN", tasks[i].name);
     }
   }
 
   Serial.println("========================================");
-  Serial.printf("Total dialokasikan: %d byte (%.1f KB)",
+  Serial.printf("TOTAL DIALOKASIKAN: %d BYTE (%.1F KB)",
                 totalAllocated, totalAllocated / 1024.0);
-  Serial.printf("Total digunakan:    %d byte (%.1f KB)",
+  Serial.printf("TOTAL DIGUNAKAN:    %d BYTE (%.1F KB)",
                 totalUsed, totalUsed / 1024.0);
-  Serial.printf("Total tersisa:      %d byte (%.1f KB)",
+  Serial.printf("TOTAL TERSISA:      %d BYTE (%.1F KB)",
                 totalFree, totalFree / 1024.0);
-  Serial.printf("Efficiency:      %.1f%%\n",
+  Serial.printf("EFISIENSI:      %.1f%%\n",
                 (totalUsed * 100.0) / totalAllocated);
-  
+
   bool hasCritical = false;
   for (int i = 0; i < 6; i++) {
     if (tasks[i].handle) {
@@ -3765,28 +3714,28 @@ void printStackReport() {
       uint32_t free = hwm * sizeof(StackType_t);
       uint32_t used = tasks[i].size - free;
       float percent = (used * 100.0) / tasks[i].size;
-      
+
       if (percent >= 90) {
         if (!hasCritical) {
           Serial.println("========================================");
-          Serial.println("CRITICAL TASKS:");
+          Serial.println("TUGAS KRITIS:");
           hasCritical = true;
         }
-        Serial.printf("   %s: %.1f%% (tersisa: %d byte)", 
+        Serial.printf("   %s: %.1f%% (TERSISA: %d BYTE)",
                       tasks[i].name, percent, free);
       }
     }
   }
-  
+
   if (hasCritical) {
-    Serial.println("   TINDAKAN: Tambah ukuran stack segera");
+    Serial.println("   TINDAKAN: TAMBAH UKURAN STACK SEGERA");
   }
-  
+
   Serial.println("========================================\n");
 }
 
 // ============================================
-// LVGL Callback Functions
+// FUNGSI CALLBACK LVGL
 // ============================================
 void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
   if (spiMutex != NULL && xSemaphoreTake(spiMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
@@ -3822,9 +3771,9 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data) {
   bool irqActive = (digitalRead(TOUCH_IRQ) == LOW);
   if (irqActive) {
     delayMicroseconds(100);
-    
+
     bool validTouch = false;
-    
+
     if (spiMutex != NULL && xSemaphoreTake(spiMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
       if (touch.touched()) {
         TS_Point p = touch.getPoint();
@@ -3833,7 +3782,7 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data) {
           lastY = map(p.y, TS_MIN_Y, TS_MAX_Y, 0, SCREEN_HEIGHT);
           lastX = constrain(lastX, 0, SCREEN_WIDTH - 1);
           lastY = constrain(lastY, 0, SCREEN_HEIGHT - 1);
-          
+
           data->point.x = lastX;
           data->point.y = lastY;
           validTouch = true;
@@ -3844,11 +3793,10 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data) {
 
     if (validTouch && !touchPressed) {
       // ======================================
-      // PRIORITAS 1: Matikan alarm dengan sentuh LCD manapun
+      // PRIORITAS 1: MATIKAN ALARM DENGAN SENTUHAN LAYAR
       // ======================================
       if (alarmState.isRinging) {
         stopAlarm();
-        // Jangan proses sentuhan lain
         data->state = LV_INDEV_STATE_PR;
         touchPressed = true;
         return;
@@ -3863,57 +3811,57 @@ void my_touchpad_read(lv_indev_t *indev_driver, lv_indev_data_t *data) {
         {"maghrib", 200, 190, 310, 215},
         {"isya",    200, 220, 310, 240}
       };
-      
+
       for (int i = 0; i < 5; i++) {
         if (areas[i].name == adzanState.currentPrayer &&
             lastX >= areas[i].x1 && lastX <= areas[i].x2 &&
             lastY >= areas[i].y1 && lastY <= areas[i].y2) {
-          
-          Serial.println("TOUCH ADZAN: " + areas[i].name);
-          
+
+          Serial.println("SENTUH ADZAN: " + areas[i].name);
+
           if (audioTaskHandle != NULL) {
-            Serial.println("Audio system available - triggering playback");
-            
+            Serial.println("SISTEM AUDIO TERSEDIA - MEMULAI PEMUTARAN");
+
             adzanState.isPlaying = true;
             adzanState.canTouch = false;
-            
+
             xTaskNotifyGive(audioTaskHandle);
-            
+
           } else {
             Serial.println("========================================");
-            Serial.println("PERINGATAN: Sistem audio tidak tersedia");
+            Serial.println("PERINGATAN: SISTEM AUDIO TIDAK TERSEDIA");
             Serial.println("========================================");
-            Serial.println("Alasan: SD Card tidak terdeteksi atau audio dinonaktifkan");
-            Serial.println("Action: Clearing adzan state immediately");
+            Serial.println("ALASAN: SD CARD TIDAK TERDETEKSI ATAU AUDIO DINONAKTIFKAN");
+            Serial.println("AKSI: MENGHAPUS STATUS ADZAN SEGERA");
             Serial.println("========================================");
-            
+
             adzanState.isPlaying = false;
             adzanState.canTouch = false;
             adzanState.currentPrayer = "";
-            
+
             saveAdzanState();
-            
-            Serial.println("Status adzan dikosongkan - siap untuk waktu shalat berikutnya");
+
+            Serial.println("STATUS ADZAN DIKOSONGKAN - SIAP UNTUK WAKTU SHALAT BERIKUTNYA");
           }
-          
+
           break;
         }
       }
     }
-    
+
     if (validTouch) {
       data->state = LV_INDEV_STATE_PR;
       touchPressed = true;
       return;
     }
   }
-  
+
   data->state = LV_INDEV_STATE_REL;
   touchPressed = false;
 }
 
 // ============================================
-// FreeRTOS Task Functions
+// FUNGSI TASK FREERTOS
 // ============================================
 void uiTask(void *parameter) {
   TickType_t xLastWakeTime = xTaskGetTickCount();
@@ -3933,13 +3881,13 @@ void uiTask(void *parameter) {
 
         if (prayerConfig.subuhTime.length() > 0) {
           updatePrayerDisplay();
-          Serial.println("Initial prayer times displayed");
+          Serial.println("WAKTU SHALAT AWAL DITAMPILKAN");
         }
 
         if (!uiShown) {
           showAllUIElements();
           uiShown = true;
-          Serial.println("UI elements shown");
+          Serial.println("ELEMEN UI DITAMPILKAN");
         }
       }
 
@@ -3962,26 +3910,26 @@ void uiTask(void *parameter) {
         }
         xSemaphoreGive(displayMutex);
       }
-      
+
       if (update.type == DisplayUpdate::TIME_UPDATE) {
         checkPrayerTime();
         checkAlarmTime();
       }
     }
-    
+
     handleBlinking();
     handleAlarmBlink();
     handleRGBLed();
-    
+
     vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
 }
 
 void wifiTask(void *parameter) {
     esp_task_wdt_add(NULL);
-    
+
     Serial.println("\n========================================");
-    Serial.println("Tugas WiFi Dimulai - Mode Event-Driven");
+    Serial.println("TUGAS WIFI DIMULAI - MODE EVENT-DRIVEN");
     Serial.println("========================================\n");
 
     bool autoUpdateDone = false;
@@ -3991,7 +3939,7 @@ void wifiTask(void *parameter) {
         esp_task_wdt_reset();
 
         // ========================================
-        // WAIT FOR WIFI EVENTS (Event-driven)
+        // TUNGGU EVENT WIFI (EVENT-DRIVEN)
         // ========================================
         EventBits_t bits = xEventGroupWaitBits(
             wifiEventGroup,
@@ -4002,54 +3950,54 @@ void wifiTask(void *parameter) {
         );
 
         // ========================================
-        // EVENT: WiFi Disconnected
+        // EVENT: WIFI TERPUTUS
         // ========================================
         if (bits & WIFI_DISCONNECTED_BIT) {
             xEventGroupClearBits(wifiEventGroup, WIFI_DISCONNECTED_BIT);
-            
+
             Serial.println("\n========================================");
-            Serial.println("WiFi Disconnected Event");
+            Serial.println("EVENT WIFI TERPUTUS");
             Serial.println("========================================");
-            
+
             // ============================================
             // SAFETY: SKIP EVENTS DURING RESTART
             // ============================================
             if (wifiRestartInProgress || apRestartInProgress) {
-                Serial.println("WiFi/AP restart in progress - skipping auto-reconnect");
-                Serial.println("Alasan: Hindari konflik dengan operasi restart manual");
+                Serial.println("RESTART WIFI/AP SEDANG BERJALAN - MELEWATI AUTO-RECONNECT");
+                Serial.println("ALASAN: HINDARI KONFLIK DENGAN OPERASI RESTART MANUAL");
                 Serial.println("========================================\n");
                 vTaskDelay(pdMS_TO_TICKS(2000));
                 continue;
             }
-            
+
             if (autoUpdateDone) {
-                Serial.println("\n>>> RESET FLAG: autoUpdateDone = false <<<");
-                Serial.println("Reason: WiFi disconnected");
-                Serial.println("Efek: NTP & Shalat akan dipicu ulang saat koneksi berikutnya");
+                Serial.println("\n>>> RESET FLAG: AUTOUPDATEDONE = FALSE <<<");
+                Serial.println("ALASAN: WIFI TERPUTUS");
+                Serial.println("EFEK: NTP & SHALAT AKAN DIPICU ULANG SAAT KONEKSI BERIKUTNYA");
                 autoUpdateDone = false;
             }
-            
+
             IPAddress apIP = WiFi.softAPIP();
             if (apIP == IPAddress(0, 0, 0, 0)) {
-                Serial.println("WARNING: AP died during disconnect");
-                Serial.println("Restoring AP...");
-                
+                Serial.println("PERINGATAN: AP MATI SAAT PEMUTUSAN");
+                Serial.println("MEMULIHKAN AP...");
+
                 WiFi.softAPdisconnect(false);
                 vTaskDelay(pdMS_TO_TICKS(500));
-                
+
                 WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
                 WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
                 vTaskDelay(pdMS_TO_TICKS(500));
-                
-                Serial.println("AP restored: " + WiFi.softAPIP().toString());
+
+                Serial.println("AP DIPULIHKAN: " + WiFi.softAPIP().toString());
             } else {
-                Serial.println("AP still alive: " + apIP.toString());
+                Serial.println("AP MASIH AKTIF: " + apIP.toString());
             }
-            
+
             autoUpdateDone = false;
             ntpSyncInProgress = false;
             ntpSyncCompleted = false;
-            
+
             wifiDisconnectedTime = millis();
 
             if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -4057,19 +4005,18 @@ void wifiTask(void *parameter) {
                 wifiState = WIFI_IDLE;
                 xSemaphoreGive(wifiMutex);
             }
-            
+
             if (wifiConfig.routerSSID.length() > 0) {
                 reconnectAttempts++;
-                Serial.printf("Reconnect attempt %d/%d ke: %s\n",
+                Serial.printf("PERCOBAAN KONEKSI ULANG %d/%d KE: %s\n",
                     reconnectAttempts, MAX_RECONNECT_ATTEMPTS,
                     wifiConfig.routerSSID.c_str());
 
                 if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
-                    // Habis attempt → WIFI_FAILED, mulai exponential backoff
                     wifiRetryCount = 0;
-                    unsigned long firstRetry = 10000; // mulai dari 10 detik
-                    Serial.println("Max reconnect attempts tercapai → WIFI_FAILED");
-                    Serial.printf("Retry pertama dalam %lu detik\n", firstRetry / 1000);
+                    unsigned long firstRetry = 10000;
+                    Serial.println("MAKSIMUM PERCOBAAN KONEKSI TERCAPAI → WIFI_GAGAL");
+                    Serial.printf("PERCOBAAN PERTAMA DALAM %lu DETIK\n", firstRetry / 1000);
                     wifiState = WIFI_FAILED;
                     wifiFailedTime = millis();
                 } else {
@@ -4079,32 +4026,32 @@ void wifiTask(void *parameter) {
                     wifiState = WIFI_CONNECTING;
                 }
             }
-            
-            Serial.println("Akan mencoba menghubungkan kembali...");
+
+            Serial.println("AKAN MENCOBA MENGHUBUNGKAN KEMBALI...");
             Serial.println("========================================\n");
         }
 
         // ========================================
-        // EVENT: WiFi Got IP (Connected)
+        // EVENT: WIFI MENDAPAT IP (TERHUBUNG)
         // ========================================
         if (bits & WIFI_GOT_IP_BIT) {
             if (!autoUpdateDone && wifiConfig.isConnected) {
                 Serial.println("\n========================================");
-                Serial.println("AUTO-UPDATE SEQUENCE STARTED");
+                Serial.println("URUTAN AUTO-UPDATE DIMULAI");
                 Serial.println("========================================");
-                Serial.println("Trigger: WiFi just connected");
-                Serial.println("autoUpdateDone: false (siap sinkronisasi)");
-                
+                Serial.println("PEMICU: WIFI BARU TERHUBUNG");
+                Serial.println("AUTOUPDATEDONE: FALSE (SIAP SINKRONISASI)");
+
                 // ============================================
                 // WAIT FOR NTP SYNC START
                 // ============================================
                 if (!ntpSyncInProgress && !ntpSyncCompleted) {
-                    Serial.println("Menunggu Tugas NTP dimulai...");
+                    Serial.println("MENUNGGU TUGAS NTP DIMULAI...");
                     vTaskDelay(pdMS_TO_TICKS(1000));
-                    
+
                     if (!ntpSyncInProgress && !ntpSyncCompleted) {
-                        Serial.println("PERINGATAN: Sinkronisasi NTP belum dimulai");
-                        Serial.println("Waiting additional 2 seconds...");
+                        Serial.println("PERINGATAN: SINKRONISASI NTP BELUM DIMULAI");
+                        Serial.println("MENUNGGU TAMBAHAN 2 DETIK...");
                         vTaskDelay(pdMS_TO_TICKS(2000));
                     }
                     continue;
@@ -4117,26 +4064,26 @@ void wifiTask(void *parameter) {
                     int ntpWaitCounter = 0;
                     unsigned long waitStartTime = millis();
                     const unsigned long maxWaitTime = 30000;
-                    
-                    Serial.println("Menunggu sinkronisasi NTP selesai...");
-                    
+
+                    Serial.println("MENUNGGU SINKRONISASI NTP SELESAI...");
+
                     while (ntpSyncInProgress && (millis() - waitStartTime < maxWaitTime)) {
                         vTaskDelay(pdMS_TO_TICKS(500));
                         ntpWaitCounter++;
-                        
+
                         if (ntpWaitCounter % 10 == 0) {
-                            Serial.printf("Sinkronisasi NTP berjalan... (%lu ms berlalu)", 
+                            Serial.printf("SINKRONISASI NTP BERJALAN... (%lu MS BERLALU)",
                                         millis() - waitStartTime);
                             esp_task_wdt_reset();
                         }
-                        
+
                         esp_task_wdt_reset();
                     }
-                    
+
                     if (ntpSyncInProgress) {
-                        Serial.println("Timeout sinkronisasi NTP - melanjutkan");
+                        Serial.println("TIMEOUT SINKRONISASI NTP - MELANJUTKAN");
                     }
-                    
+
                     continue;
                 }
 
@@ -4147,13 +4094,13 @@ void wifiTask(void *parameter) {
                     Serial.println("\n========================================");
                     Serial.println("SINKRONISASI NTP SELESAI");
                     Serial.println("========================================");
-                    Serial.println("Berikutnya: Picu Pembaruan Waktu Shalat");
+                    Serial.println("BERIKUTNYA: PICU PEMBARUAN WAKTU SHALAT");
 
                     vTaskDelay(pdMS_TO_TICKS(2000));
 
-                    if (prayerConfig.latitude.length() > 0 && 
+                    if (prayerConfig.latitude.length() > 0 &&
                         prayerConfig.longitude.length() > 0) {
-                        
+
                         char timeStr[20], dateStr[20];
                         time_t now_t;
                         struct tm timeinfo;
@@ -4176,55 +4123,55 @@ void wifiTask(void *parameter) {
                                 timeinfo.tm_mon + 1,
                                 timeinfo.tm_year + 1900);
 
-                        Serial.println("Waktu Saat Ini: " + String(timeStr));
-                        Serial.println("Current Date: " + String(dateStr));
-                        
+                        Serial.println("WAKTU SAAT INI: " + String(timeStr));
+                        Serial.println("TANGGAL SAAT INI: " + String(dateStr));
+
                         if (timeinfo.tm_year + 1900 >= 2000) {
-                            Serial.println("Waktu VALID - memicu pembaruan shalat");
-                            Serial.println("Kota: " + prayerConfig.selectedCity);
-                            Serial.println("Koordinat: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
+                            Serial.println("WAKTU VALID - MEMICU PEMBARUAN SHALAT");
+                            Serial.println("KOTA: " + prayerConfig.selectedCity);
+                            Serial.println("KOORDINAT: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
                             Serial.println("");
-                            
+
                             if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                                 needPrayerUpdate = true;
                                 pendingPrayerLat = prayerConfig.latitude;
                                 pendingPrayerLon = prayerConfig.longitude;
                                 xSemaphoreGive(settingsMutex);
-                                
+
                                 if (prayerTaskHandle != NULL) {
                                     xTaskNotifyGive(prayerTaskHandle);
-                                    Serial.println("Tugas Shalat DIPICU");
-                                    Serial.println("Status: Update in background");
+                                    Serial.println("TUGAS SHALAT DIPICU");
+                                    Serial.println("STATUS: PEMBARUAN DI LATAR BELAKANG");
                                 } else {
-                                    Serial.println("ERROR: Handle Tugas Shalat NULL");
+                                    Serial.println("ERROR: HANDLE TUGAS SHALAT NULL");
                                 }
                             }
                         } else {
-                            Serial.println("ERROR: Waktu masih tidak valid (tahun < 2000)");
-                            Serial.println("Skipping prayer times update");
+                            Serial.println("ERROR: WAKTU MASIH TIDAK VALID (TAHUN < 2000)");
+                            Serial.println("MELEWATI PEMBARUAN WAKTU SHALAT");
                         }
-                        
+
                         Serial.println("========================================\n");
 
                     } else {
                         Serial.println("\n========================================");
-                        Serial.println("PRAYER UPDATE SKIPPED");
+                        Serial.println("PEMBARUAN WAKTU SHALAT DILEWATI");
                         Serial.println("========================================");
-                        Serial.println("Reason: No city coordinates available");
-                        Serial.println("Action: Configure city via web interface");
+                        Serial.println("ALASAN: TIDAK ADA KOORDINAT KOTA");
+                        Serial.println("AKSI: KONFIGURASI KOTA MELALUI ANTARMUKA WEB");
                         Serial.println("========================================\n");
                     }
 
                     autoUpdateDone = true;
-                    Serial.println(">>> autoUpdateDone = true <<<");
-                    Serial.println("Status: Auto-update cycle completed");
-                    Serial.println("Catatan: Akan direset saat pemutusan berikutnya\n");
+                    Serial.println(">>> AUTOUPDATEDONE = TRUE <<<");
+                    Serial.println("STATUS: SIKLUS AUTO-UPDATE SELESAI");
+                    Serial.println("CATATAN: AKAN DIRESET SAAT PEMUTUSAN BERIKUTNYA\n");
                 }
             }
 
             if (millis() - lastMonitor > 60000) {
                 lastMonitor = millis();
-                Serial.printf("[Monitor WiFi] Terhubung | RSSI: %d dBm | IP: %s",
+                Serial.printf("[MONITOR WIFI] TERHUBUNG | RSSI: %d DBM | IP: %s",
                             WiFi.RSSI(),
                             WiFi.localIP().toString().c_str());
             }
@@ -4235,14 +4182,14 @@ void wifiTask(void *parameter) {
         // ========================================
         if (wifiState == WIFI_IDLE && wifiConfig.routerSSID.length() > 0) {
             bool isConnected = (bits & WIFI_CONNECTED_BIT) != 0;
-            
+
             if (!isConnected) {
-                Serial.println("\n[Tugas WiFi] Percobaan koneksi awal");
+                Serial.println("\n[TUGAS WIFI] PERCOBAAN KONEKSI AWAL");
                 Serial.println("SSID: " + wifiConfig.routerSSID);
-                
+
                 esp_netif_set_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), hostname.c_str());
-                
-                WiFi.begin(wifiConfig.routerSSID.c_str(), 
+
+                WiFi.begin(wifiConfig.routerSSID.c_str(),
                           wifiConfig.routerPassword.c_str());
                 wifiState = WIFI_CONNECTING;
             }
@@ -4254,28 +4201,28 @@ void wifiTask(void *parameter) {
 
 void ntpTask(void *parameter) {
     esp_task_wdt_add(NULL);
-    
+
     while (true) {
         esp_task_wdt_reset();
-        
+
         uint32_t notifyValue = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(30000));
 
         esp_task_wdt_reset();
-        
+
         if (restartTaskHandle != NULL || resetTaskHandle != NULL) {
-            Serial.println("\n[Tugas NTP] Restart sistem terdeteksi - menangguhkan");
+            Serial.println("\n[TUGAS NTP] RESTART SISTEM TERDETEKSI - MENANGGUHKAN");
             vTaskSuspend(NULL);
             continue;
         }
-        
+
         if (notifyValue == 0) {
             esp_task_wdt_reset();
             continue;
         }
-        
+
         ntpSyncInProgress = true;
         ntpSyncCompleted = false;
-        
+
         Serial.println("\n========================================");
         Serial.println("SINKRONISASI NTP OTOMATIS DIMULAI");
         Serial.println("========================================");
@@ -4284,292 +4231,292 @@ void ntpTask(void *parameter) {
         time_t ntpTime = 0;
         String usedServer = "";
 
-        Serial.println("Menyinkronkan dengan server NTP (UTC+0)...");
-        Serial.println("Alasan: Dapatkan waktu UTC mentah dulu, terapkan timezone SETELAH berhasil");
+        Serial.println("MENYINKRONKAN DENGAN SERVER NTP (UTC+0)...");
+        Serial.println("ALASAN: DAPATKAN WAKTU UTC MENTAH DULU, TERAPKAN TIMEZONE SETELAH BERHASIL");
         Serial.println("");
-        
-        configTzTime("UTC0", 
-                     ntpServers[0], 
-                     ntpServers[1], 
+
+        configTzTime("UTC0",
+                     ntpServers[0],
+                     ntpServers[1],
                      ntpServers[2]);
-        
+
         time_t now = 0;
         struct tm timeinfo = {0};
         int retry = 0;
         const int retry_count = 40;
-        
+
         while (timeinfo.tm_year < (2000 - 1900) && ++retry < retry_count) {
             if (restartTaskHandle != NULL || resetTaskHandle != NULL) {
-                Serial.println("\n[Tugas NTP] Shutdown terdeteksi di tengah sinkronisasi - membatalkan");
+                Serial.println("\n[TUGAS NTP] SHUTDOWN TERDETEKSI DI TENGAH SINKRONISASI - MEMBATALKAN");
                 ntpSyncInProgress = false;
                 ntpSyncCompleted = false;
                 vTaskSuspend(NULL);
                 break;
             }
-            
+
             vTaskDelay(pdMS_TO_TICKS(250));
-            
+
             time(&now);
             gmtime_r(&now, &timeinfo);
-            
+
             esp_task_wdt_reset();
-            
+
             if (retry % 4 == 0) {
-                Serial.printf("Menunggu sinkronisasi NTP... (%d/%d) [%.1f detik]", 
+                Serial.printf("MENUNGGU SINKRONISASI NTP... (%d/%d) [%.1F DETIK]",
                              retry, retry_count, retry * 0.25);
             }
         }
 
         esp_task_wdt_reset();
-        
+
         syncSuccess = (timeinfo.tm_year >= (2000 - 1900));
-        
+
         if (syncSuccess) {
             ntpTime = now;
             usedServer = String(ntpServers[0]);
-            
+
             Serial.println("\n========================================");
             Serial.println("SINKRONISASI NTP SELESAI (UTC)");
             Serial.println("========================================");
-            Serial.printf("Waktu UTC: %02d:%02d:%02d %02d/%02d/%04d",
+            Serial.printf("WAKTU UTC: %02d:%02d:%02d %02d/%02d/%04d",
                         timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec,
                         timeinfo.tm_mday, timeinfo.tm_mon + 1, timeinfo.tm_year + 1900);
-            Serial.printf("Durasi sinkronisasi: %.1f detik", retry * 0.25);
-            Serial.printf("Server NTP: %s", usedServer.c_str());
+            Serial.printf("DURASI SINKRONISASI: %.1F DETIK", retry * 0.25);
+            Serial.printf("SERVER NTP: %s", usedServer.c_str());
             Serial.println("========================================");
-            
+
             Serial.println("\n========================================");
-            Serial.println("APPLYING TIMEZONE OFFSET");
+            Serial.println("MENERAPKAN OFFSET TIMEZONE");
             Serial.println("========================================");
-            
+
             int currentOffset;
             if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                 currentOffset = timezoneOffset;
                 xSemaphoreGive(settingsMutex);
             } else {
                 currentOffset = 7;
-                Serial.println("PERINGATAN: Tidak dapat mendapatkan timezone dari pengaturan, menggunakan default UTC+7");
+                Serial.println("PERINGATAN: TIDAK DAPAT MENDAPATKAN TIMEZONE DARI PENGATURAN, MENGGUNAKAN DEFAULT UTC+7");
             }
-            
-            Serial.printf("Pengaturan Timezone: UTC%+d", currentOffset);
-            Serial.printf("Offset: %+d jam (%+ld detik)", 
+
+            Serial.printf("PENGATURAN TIMEZONE: UTC%+d", currentOffset);
+            Serial.printf("OFFSET: %+d JAM (%+ld DETIK)",
                          currentOffset, (long)(currentOffset * 3600));
-            
+
             time_t localTime = ntpTime + (currentOffset * 3600);
-            
+
             struct tm localTimeinfo;
             localtime_r(&localTime, &localTimeinfo);
-            
+
             Serial.println("");
-            Serial.println("Konversi Waktu:");
-            Serial.printf("   Sebelum: %02d:%02d:%02d %02d/%02d/%04d (UTC+0)",
+            Serial.println("KONVERSI WAKTU:");
+            Serial.printf("   SEBELUM: %02d:%02d:%02d %02d/%02d/%04d (UTC+0)",
                         timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec,
                         timeinfo.tm_mday, timeinfo.tm_mon + 1, timeinfo.tm_year + 1900);
-            Serial.printf("   Sesudah: %02d:%02d:%02d %02d/%02d/%04d (UTC%+d)",
+            Serial.printf("   SESUDAH: %02d:%02d:%02d %02d/%02d/%04d (UTC%+d)",
                         localTimeinfo.tm_hour, localTimeinfo.tm_min, localTimeinfo.tm_sec,
                         localTimeinfo.tm_mday, localTimeinfo.tm_mon + 1, localTimeinfo.tm_year + 1900,
                         currentOffset);
             Serial.println("========================================");
-            
+
             ntpTime = localTime;
-            
+
         } else {
             Serial.println("\n========================================");
             Serial.println("SINKRONISASI NTP GAGAL");
             Serial.println("========================================");
-            Serial.printf("Timeout setelah %.1f detik\n", retry * 0.25);
-            Serial.println("Semua server NTP gagal merespons");
-            Serial.println("Kemungkinan penyebab:");
-            Serial.println("  1. Tidak ada koneksi internet");
-            Serial.println("  2. Firewall memblokir NTP (port 123)");
-            Serial.println("  3. Masalah DNS router");
-            Serial.println("  4. ISP memblokir NTP");
+            Serial.printf("TIMEOUT SETELAH %.1f DETIK\n", retry * 0.25);
+            Serial.println("SEMUA SERVER NTP GAGAL MERESPONS");
+            Serial.println("KEMUNGKINAN PENYEBAB:");
+            Serial.println("  1. TIDAK ADA KONEKSI INTERNET");
+            Serial.println("  2. FIREWALL MEMBLOKIR NTP (PORT 123)");
+            Serial.println("  3. MASALAH DNS ROUTER");
+            Serial.println("  4. ISP MEMBLOKIR NTP");
             Serial.println("");
-            Serial.println("Sistem akan melanjutkan dengan waktu saat ini");
+            Serial.println("SISTEM AKAN MELANJUTKAN DENGAN WAKTU SAAT INI");
             Serial.println("========================================");
         }
-        
+
         if (syncSuccess) {
             Serial.println("\n========================================");
             Serial.println("MENYIMPAN WAKTU KE SISTEM");
             Serial.println("========================================");
-            
+
             if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
                 timeConfig.currentTime = ntpTime;
                 setTime(timeConfig.currentTime);
                 timeConfig.ntpSynced = true;
                 timeConfig.ntpServer = usedServer;
                 xSemaphoreGive(timeMutex);
-                
-                Serial.println("Waktu tersimpan ke memori sistem");
-                
+
+                Serial.println("WAKTU TERSIMPAN KE MEMORI SISTEM");
+
                 DisplayUpdate update;
                 update.type = DisplayUpdate::TIME_UPDATE;
                 xQueueSend(displayQueue, &update, pdMS_TO_TICKS(100));
-                
-                Serial.println("Display update queued");
+
+                Serial.println("PEMBARUAN LAYAR DIANTREKAN");
             } else {
-                Serial.println("ERROR: Gagal mendapatkan timeMutex");
-                Serial.println("Waktu TIDAK tersimpan ke sistem");
+                Serial.println("ERROR: GAGAL MENDAPATKAN TIMEMUTEX");
+                Serial.println("WAKTU TIDAK TERSIMPAN KE SISTEM");
             }
-            
+
             Serial.println("========================================");
         }
-        
+
         if (rtcAvailable && syncSuccess) {
             Serial.println("\n========================================");
             Serial.println("MENYIMPAN WAKTU KE HARDWARE RTC");
             Serial.println("========================================");
-            
+
             if (isRTCValid()) {
-                Serial.println("Status RTC: VALID - Siap disimpan");
-                Serial.println("Menyimpan waktu NTP ke RTC...");
-                
+                Serial.println("STATUS RTC: VALID - SIAP DISIMPAN");
+                Serial.println("MENYIMPAN WAKTU NTP KE RTC...");
+
                 saveTimeToRTC();
-                
+
                 vTaskDelay(pdMS_TO_TICKS(500));
-                
+
                 if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
                     DateTime rtcNow = rtc.now();
                     xSemaphoreGive(i2cMutex);
-                    
+
                     Serial.println("");
-                    Serial.println("RTC Verification:");
-                    Serial.printf("   Waktu RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
+                    Serial.println("VERIFIKASI RTC:");
+                    Serial.printf("   WAKTU RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
                                 rtcNow.hour(), rtcNow.minute(), rtcNow.second(),
                                 rtcNow.day(), rtcNow.month(), rtcNow.year());
-                    
+
                     if (isRTCTimeValid(rtcNow)) {
-                        Serial.println("   Status: RTC saved successfully");
-                        Serial.println("   Waktu akan bertahan saat restart");
+                        Serial.println("   STATUS: RTC BERHASIL DISIMPAN");
+                        Serial.println("   WAKTU AKAN BERTAHAN SAAT RESTART");
                     } else {
-                        Serial.println("   Status: Simpan RTC GAGAL");
-                        Serial.println("   RTC hardware may be faulty");
+                        Serial.println("   STATUS: SIMPAN RTC GAGAL");
+                        Serial.println("   HARDWARE RTC MUNGKIN RUSAK");
                     }
                 } else {
-                    Serial.println("   Status: Cannot verify (I2C busy)");
+                    Serial.println("   STATUS: TIDAK DAPAT DIVERIFIKASI (I2C SIBUK)");
                 }
             } else {
-                Serial.println("Status RTC: TIDAK VALID - Tidak dapat disimpan");
-                Serial.println("Possible issues:");
-                Serial.println("  - Battery dead/disconnected");
-                Serial.println("  - Hardware failure");
-                Serial.println("  - Kerusakan waktu");
+                Serial.println("STATUS RTC: TIDAK VALID - TIDAK DAPAT DISIMPAN");
+                Serial.println("KEMUNGKINAN MASALAH:");
+                Serial.println("  - BATERAI HABIS/TERPUTUS");
+                Serial.println("  - KERUSAKAN HARDWARE");
+                Serial.println("  - KERUSAKAN DATA WAKTU");
                 Serial.println("");
-                Serial.println("Waktu NTP TIDAK akan disimpan ke RTC");
-                Serial.println("Waktu akan direset saat restart");
+                Serial.println("WAKTU NTP TIDAK AKAN DISIMPAN KE RTC");
+                Serial.println("WAKTU AKAN DIRESET SAAT RESTART");
             }
-            
+
             Serial.println("========================================");
         } else if (syncSuccess && !rtcAvailable) {
             Serial.println("\n========================================");
             Serial.println("RTC TIDAK TERSEDIA");
             Serial.println("========================================");
-            Serial.println("Hardware RTC tidak terdeteksi saat boot");
-            Serial.println("Waktu akan direset ke 01/01/2000 saat restart");
-            Serial.println("Consider installing DS3231 RTC module");
+            Serial.println("HARDWARE RTC TIDAK TERDETEKSI SAAT BOOT");
+            Serial.println("WAKTU AKAN DIRESET KE 01/01/2000 SAAT RESTART");
+            Serial.println("PERTIMBANGKAN MEMASANG MODUL RTC DS3231");
             Serial.println("========================================");
         }
 
         if (syncSuccess && wifiConfig.isConnected) {
             Serial.println("\n========================================");
-            Serial.println("AUTO PRAYER TIMES UPDATE - TRIGGER");
+            Serial.println("PEMICU PEMBARUAN WAKTU SHALAT OTOMATIS");
             Serial.println("========================================");
-            Serial.println("Alasan: Sinkronisasi NTP berhasil");
+            Serial.println("ALASAN: SINKRONISASI NTP BERHASIL");
             Serial.println("");
-            
-            if (prayerConfig.latitude.length() > 0 && 
+
+            if (prayerConfig.latitude.length() > 0 &&
                 prayerConfig.longitude.length() > 0) {
-                
-                Serial.println("City Configuration:");
-                Serial.println("   City: " + prayerConfig.selectedCity);
-                Serial.println("   Latitude: " + prayerConfig.latitude);
-                Serial.println("   Longitude: " + prayerConfig.longitude);
+
+                Serial.println("KONFIGURASI KOTA:");
+                Serial.println("   KOTA: " + prayerConfig.selectedCity);
+                Serial.println("   LINTANG: " + prayerConfig.latitude);
+                Serial.println("   BUJUR: " + prayerConfig.longitude);
                 Serial.println("");
-                
+
                 if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                     needPrayerUpdate = true;
                     pendingPrayerLat = prayerConfig.latitude;
                     pendingPrayerLon = prayerConfig.longitude;
                     xSemaphoreGive(settingsMutex);
-                    
-                    Serial.println("Memicu Tugas Shalat untuk pembaruan...");
-                    
+
+                    Serial.println("MEMICU TUGAS SHALAT UNTUK PEMBARUAN...");
+
                     if (prayerTaskHandle != NULL) {
                         xTaskNotifyGive(prayerTaskHandle);
-                        Serial.println("Tugas Shalat diberi tahu - akan diperbarui di latar belakang");
+                        Serial.println("TUGAS SHALAT DIBERI TAHU - AKAN DIPERBARUI DI LATAR BELAKANG");
                     } else {
-                        Serial.println("ERROR: Handle Tugas Shalat NULL");
+                        Serial.println("ERROR: HANDLE TUGAS SHALAT NULL");
                     }
                 }
-                
+
                 Serial.println("========================================");
-                
+
             } else {
-                Serial.println("SKIPPED: No city coordinates available");
+                Serial.println("DILEWATI: TIDAK ADA KOORDINAT KOTA");
                 Serial.println("========================================");
             }
         } else if (syncSuccess && !wifiConfig.isConnected) {
             Serial.println("\n========================================");
-            Serial.println("PRAYER TIMES UPDATE SKIPPED");
+            Serial.println("PEMBARUAN WAKTU SHALAT DILEWATI");
             Serial.println("========================================");
-            Serial.println("Alasan: WiFi tidak terhubung");
-            Serial.println("Waktu shalat akan diperbarui saat WiFi terhubung");
+            Serial.println("ALASAN: WIFI TIDAK TERHUBUNG");
+            Serial.println("WAKTU SHALAT AKAN DIPERBARUI SAAT WIFI TERHUBUNG");
             Serial.println("========================================");
         }
 
         Serial.println("\n========================================");
         Serial.println("SIKLUS TUGAS NTP SELESAI");
         Serial.println("========================================");
-        Serial.printf("Hasil: %s\n", syncSuccess ? "SUCCESS" : "FAILED");
+        Serial.printf("HASIL: %s\n", syncSuccess ? "BERHASIL" : "GAGAL");
         if (syncSuccess) {
-            Serial.printf("Waktu akhir: %02d:%02d:%02d %02d/%02d/%04d\n",
+            Serial.printf("WAKTU AKHIR: %02d:%02d:%02d %02d/%02d/%04d\n",
                         hour(ntpTime), minute(ntpTime), second(ntpTime),
                         day(ntpTime), month(ntpTime), year(ntpTime));
-            Serial.printf("Timezone: UTC%+d\n", timezoneOffset);
-            Serial.printf("Server NTP: %s\n", usedServer.c_str());
+            Serial.printf("TIMEZONE: UTC%+d\n", timezoneOffset);
+            Serial.printf("SERVER NTP: %s\n", usedServer.c_str());
         }
         Serial.println("========================================\n");
-        
+
         ntpSyncInProgress = false;
         ntpSyncCompleted = syncSuccess;
-        
+
         esp_task_wdt_reset();
     }
 }
 
 void webTask(void *parameter) {
   esp_task_wdt_add(NULL);
-  
+
   setupServerRoutes();
   server.begin();
-  
+
   unsigned long lastCleanup = 0;
   unsigned long lastMemCheck = 0;
   unsigned long lastStackReport = 0;
   unsigned long lastAPCheck = 0;
-  
+
   size_t initialHeap = ESP.getFreeHeap();
   size_t lowestHeap = initialHeap;
   size_t highestHeap = initialHeap;
-  
+
   while (true) {
     esp_task_wdt_reset();
-    
+
     vTaskDelay(pdMS_TO_TICKS(5000));
-    
+
     unsigned long now = millis();
-    
+
     if (now - lastCleanup > 300000) {
       lastCleanup = now;
-      
+
       if (restartTaskHandle != NULL) {
           eTaskState state = eTaskGetState(restartTaskHandle);
           if (state == eDeleted || state == eInvalid) {
               restartTaskHandle = NULL;
           }
       }
-      
+
       if (resetTaskHandle != NULL) {
           eTaskState state = eTaskGetState(resetTaskHandle);
           if (state == eDeleted || state == eInvalid) {
@@ -4577,74 +4524,74 @@ void webTask(void *parameter) {
           }
       }
     }
-    
+
     if (now - lastStackReport > 120000) {
       lastStackReport = now;
       printStackReport();
     }
-    
+
     if (now - lastMemCheck > 30000) {
       lastMemCheck = now;
-      
+
       size_t currentHeap = ESP.getFreeHeap();
-      
+
       if (currentHeap < lowestHeap) {
         lowestHeap = currentHeap;
       }
       if (currentHeap > highestHeap) {
         highestHeap = currentHeap;
       }
-      
+
       int32_t usedFromLowest = initialHeap - lowestHeap;
-      
+
       Serial.printf("STATUS MEMORI:\n");
-      Serial.printf("Awal:     %6d byte (%.2f KB)\n", 
+      Serial.printf("AWAL:     %6d BYTE (%.2F KB)\n",
                     initialHeap, initialHeap / 1024.0);
-      Serial.printf("Sekarang: %6d byte (%.2f KB)\n", 
+      Serial.printf("SEKARANG: %6d BYTE (%.2F KB)\n",
                     currentHeap, currentHeap / 1024.0);
-      Serial.printf("Terendah: %6d byte (%.2f KB)\n", 
+      Serial.printf("TERENDAH: %6d BYTE (%.2F KB)\n",
                     lowestHeap, lowestHeap / 1024.0);
-      Serial.printf("Tertinggi:%6d byte (%.2f KB)\n", 
+      Serial.printf("TERTINGGI:%6d BYTE (%.2F KB)\n",
                     highestHeap, highestHeap / 1024.0);
-      Serial.printf("Puncak:   %6d byte (%.2f KB)\n", 
+      Serial.printf("PUNCAK:   %6d BYTE (%.2F KB)\n",
                     usedFromLowest, usedFromLowest / 1024.0);
-      
+
       if (usedFromLowest > 35000) {
-        Serial.println("WARNING: High peak memory usage");
+        Serial.println("PERINGATAN: PENGGUNAAN MEMORI PUNCAK TINGGI");
       } else if (usedFromLowest > 25000) {
-        Serial.println("CAUTION: Moderate peak memory usage");
+        Serial.println("PERHATIAN: PENGGUNAAN MEMORI PUNCAK SEDANG");
       } else {
-        Serial.println("Memory status: Normal");
+        Serial.println("STATUS MEMORI: NORMAL");
       }
-      
+
       bool isCountdownActive = false;
       if (countdownMutex != NULL && xSemaphoreTake(countdownMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
         isCountdownActive = countdownState.isActive;
         xSemaphoreGive(countdownMutex);
       }
-      
+
       if (!isCountdownActive) {
         static size_t prevLowest = lowestHeap;
         if (prevLowest > lowestHeap && (prevLowest - lowestHeap) > 1000) {
           int32_t leaked = prevLowest - lowestHeap;
-          Serial.printf("KEBOCORAN: %d byte hilang sejak pengecekan terakhir\n", leaked);
+          Serial.printf("KEBOCORAN: %d BYTE HILANG SEJAK PENGECEKAN TERAKHIR\n", leaked);
         }
         prevLowest = lowestHeap;
       }
-      
+
       Serial.println();
     }
-    
+
     if (now - lastAPCheck > 5000) {
       lastAPCheck = now;
-      
+
       if (apRestartInProgress || wifiRestartInProgress) {
         continue;
       }
-      
+
       wifi_mode_t mode;
       esp_wifi_get_mode(&mode);
-      
+
       if (mode != WIFI_MODE_APSTA) {
         WiFi.mode(WIFI_AP_STA);
         delay(100);
@@ -4653,22 +4600,19 @@ void webTask(void *parameter) {
       }
     }
 
-    // Retry otomatis dari WIFI_FAILED dengan exponential backoff
     if (wifiState == WIFI_FAILED && wifiConfig.routerSSID.length() > 0) {
-      // Hitung interval: 10s, 20s, 40s, 60s, 120s (max)
       unsigned long backoff = 10000UL * (1UL << min(wifiRetryCount, 4));
       if (backoff > 120000UL) backoff = 120000UL;
 
       if (now - wifiFailedTime >= backoff) {
         wifiRetryCount++;
         Serial.println("\n========================================");
-        Serial.printf("WIFI_FAILED: Retry #%d (backoff %lus)\n",
+        Serial.printf("WIFI_GAGAL: PERCOBAAN #%d (BACKOFF %lu DETIK)\n",
             wifiRetryCount, backoff / 1000);
 
-        // Hitung interval berikutnya untuk info
         unsigned long nextBackoff = 10000UL * (1UL << min(wifiRetryCount, 4));
         if (nextBackoff > 120000UL) nextBackoff = 120000UL;
-        Serial.printf("Jika gagal lagi, retry berikutnya dalam %lus\n", nextBackoff / 1000);
+        Serial.printf("JIKA GAGAL LAGI, PERCOBAAN BERIKUTNYA DALAM %lu DETIK\n", nextBackoff / 1000);
         Serial.println("========================================");
 
         reconnectAttempts = 0;
@@ -4683,16 +4627,16 @@ void webTask(void *parameter) {
 
 void prayerTask(void *parameter) {
     esp_task_wdt_add(NULL);
-    
+
     Serial.println("\n========================================");
     Serial.println("TUGAS SHALAT DIMULAI");
     Serial.println("========================================");
-    Serial.println("Ukuran Stack: 12288 byte");
-    Serial.println("Menunggu pemicu...");
+    Serial.println("UKURAN STACK: 12288 BYTE");
+    Serial.println("MENUNGGU PEMICU...");
     Serial.println("========================================\n");
-    
+
     vTaskDelay(pdMS_TO_TICKS(5000));
-    
+
     static bool hasUpdatedToday = false;
     static int lastDay = -1;
     static bool waitingForMidnightNTP = false;
@@ -4700,34 +4644,34 @@ void prayerTask(void *parameter) {
 
     while (true) {
         esp_task_wdt_reset();
-        
+
         static unsigned long lastStackReport = 0;
-        
+
         if (millis() - lastStackReport > 60000) {
             lastStackReport = millis();
             UBaseType_t stackRemaining = uxTaskGetStackHighWaterMark(NULL);
-            Serial.printf("[Task Shalat] Stack tersisa: %d byte\n", stackRemaining * 4);
-            
+            Serial.printf("[TUGAS SHALAT] STACK TERSISA: %d BYTE\n", stackRemaining * 4);
+
             if (stackRemaining < 1000) {
-                Serial.println("PERINGATAN: Stack Tugas Shalat sangat rendah!");
+                Serial.println("PERINGATAN: STACK TUGAS SHALAT SANGAT RENDAH!");
             }
         }
-        
+
         ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(1000));
-        
+
         if (needPrayerUpdate && pendingPrayerLat.length() > 0 && pendingPrayerLon.length() > 0) {
             esp_task_wdt_reset();
-            
+
             if (WiFi.status() != WL_CONNECTED) {
-                Serial.println("Tugas Shalat: Dilewati - WiFi tidak terhubung");
-                
+                Serial.println("TUGAS SHALAT: DILEWATI - WIFI TIDAK TERHUBUNG");
+
                 if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                     needPrayerUpdate = false;
                     xSemaphoreGive(settingsMutex);
                 }
                 continue;
             }
-            
+
             time_t now_t;
             if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                 now_t = timeConfig.currentTime;
@@ -4735,45 +4679,45 @@ void prayerTask(void *parameter) {
             } else {
                 now_t = time(nullptr);
             }
-            
+
             if (now_t < 946684800) {
-                Serial.println("Tugas Shalat: Dilewati - Waktu sistem tidak valid");
-                Serial.printf("Timestamp saat ini: %ld (sebelum 01/01/2000)\n", now_t);
-                
+                Serial.println("TUGAS SHALAT: DILEWATI - WAKTU SISTEM TIDAK VALID");
+                Serial.printf("TIMESTAMP SAAT INI: %ld (SEBELUM 01/01/2000)\n", now_t);
+
                 if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                     needPrayerUpdate = false;
                     xSemaphoreGive(settingsMutex);
                 }
                 continue;
             }
-            
+
             Serial.println("\n========================================");
-            Serial.println("TUGAS SHALAT: Memproses Pembaruan");
+            Serial.println("TUGAS SHALAT: MEMPROSES PEMBARUAN");
             Serial.println("========================================");
-            Serial.printf("Stack sebelum HTTP: %d byte tersisa\n", uxTaskGetStackHighWaterMark(NULL) * 4);
-            Serial.println("Koordinat: " + pendingPrayerLat + ", " + pendingPrayerLon);
-            
+            Serial.printf("STACK SEBELUM HTTP: %d BYTE TERSISA\n", uxTaskGetStackHighWaterMark(NULL) * 4);
+            Serial.println("KOORDINAT: " + pendingPrayerLat + ", " + pendingPrayerLon);
+
             esp_task_wdt_reset();
-            
+
             String tempLat = pendingPrayerLat;
             String tempLon = pendingPrayerLon;
-            
+
             if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                 needPrayerUpdate = false;
                 pendingPrayerLat = "";
                 pendingPrayerLon = "";
                 xSemaphoreGive(settingsMutex);
             }
-            
+
             getPrayerTimesByCoordinates(tempLat, tempLon);
-            
+
             esp_task_wdt_reset();
-            
-            Serial.printf("Stack setelah HTTP: %d byte tersisa\n", uxTaskGetStackHighWaterMark(NULL) * 4);
-            Serial.println("Tugas Shalat: Pembaruan selesai");
+
+            Serial.printf("STACK SETELAH HTTP: %d BYTE TERSISA\n", uxTaskGetStackHighWaterMark(NULL) * 4);
+            Serial.println("TUGAS SHALAT: PEMBARUAN SELESAI");
             Serial.println("========================================\n");
         }
-        
+
         if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
             int currentHour = hour(timeConfig.currentTime);
             int currentMinute = minute(timeConfig.currentTime);
@@ -4790,36 +4734,36 @@ void prayerTask(void *parameter) {
                 waitingForMidnightNTP = false;
             }
 
-            if (currentHour == 0 && currentMinute < 5 && 
-                !hasUpdatedToday && 
+            if (currentHour == 0 && currentMinute < 5 &&
+                !hasUpdatedToday &&
                 !waitingForMidnightNTP &&
                 wifiConfig.isConnected) {
-                
+
                 Serial.println("\n========================================");
-                Serial.println("MIDNIGHT DETECTED - STARTING SEQUENCE");
+                Serial.println("TENGAH MALAM TERDETEKSI - MEMULAI URUTAN");
                 Serial.println("========================================");
-                Serial.printf("Waktu: %02d:%02d:%02d\n", currentHour, currentMinute, second(timeConfig.currentTime));
-                Serial.printf("Tanggal: %02d/%02d/%04d\n", currentDay, month(timeConfig.currentTime), currentYear);
+                Serial.printf("WAKTU: %02d:%02d:%02d\n", currentHour, currentMinute, second(timeConfig.currentTime));
+                Serial.printf("TANGGAL: %02d/%02d/%04d\n", currentDay, month(timeConfig.currentTime), currentYear);
                 Serial.println("");
-                
-                Serial.println("Memicu Sinkronisasi NTP...");
-                Serial.println("Alasan: Memastikan waktu akurat sebelum memperbarui");
-                
+
+                Serial.println("MEMICU SINKRONISASI NTP...");
+                Serial.println("ALASAN: MEMASTIKAN WAKTU AKURAT SEBELUM MEMPERBARUI");
+
                 if (ntpTaskHandle != NULL) {
                     ntpSyncInProgress = false;
                     ntpSyncCompleted = false;
-                    
+
                     xTaskNotifyGive(ntpTaskHandle);
-                    
+
                     waitingForMidnightNTP = true;
                     midnightNTPStartTime = millis();
-                    
-                    Serial.println("Sinkronisasi NTP berhasil dipicu");
-                    Serial.println("Menunggu sinkronisasi NTP selesai...");
+
+                    Serial.println("SINKRONISASI NTP BERHASIL DIPICU");
+                    Serial.println("MENUNGGU SINKRONISASI NTP SELESAI...");
                     Serial.println("========================================\n");
                 } else {
-                    Serial.println("ERROR: Handle Tugas NTP NULL");
-                    Serial.println("Skipping midnight update");
+                    Serial.println("ERROR: HANDLE TUGAS NTP NULL");
+                    Serial.println("MELEWATI PEMBARUAN TENGAH MALAM");
                     Serial.println("========================================\n");
                     hasUpdatedToday = true;
                 }
@@ -4832,12 +4776,12 @@ void prayerTask(void *parameter) {
                 if (waitTime % 5000 < 1000) {
                     esp_task_wdt_reset();
                 }
-                
+
                 if (ntpSyncCompleted) {
                     Serial.println("\n========================================");
                     Serial.println("SINKRONISASI NTP SELESAI");
                     Serial.println("========================================");
-                    
+
                     if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                         currentTimestamp = timeConfig.currentTime;
                         currentYear = year(timeConfig.currentTime);
@@ -4847,108 +4791,108 @@ void prayerTask(void *parameter) {
                         currentMinute = minute(timeConfig.currentTime);
                         int currentSecond = second(timeConfig.currentTime);
                         xSemaphoreGive(timeMutex);
-                        
-                        Serial.printf("Waktu baru: %02d:%02d:%02d\n", currentHour, currentMinute, currentSecond);
-                        Serial.printf("Tanggal baru: %02d/%02d/%04d\n", currentDay, currentMonth, currentYear);
-                        Serial.printf("Timestamp: %ld\n", currentTimestamp);
+
+                        Serial.printf("WAKTU BARU: %02d:%02d:%02d\n", currentHour, currentMinute, currentSecond);
+                        Serial.printf("TANGGAL BARU: %02d/%02d/%04d\n", currentDay, currentMonth, currentYear);
+                        Serial.printf("TIMESTAMP: %ld\n", currentTimestamp);
                         Serial.println("");
                     }
-                    
-                    if (prayerConfig.latitude.length() > 0 && 
+
+                    if (prayerConfig.latitude.length() > 0 &&
                         prayerConfig.longitude.length() > 0) {
-                        
+
                         if (currentYear >= 2000 && currentTimestamp >= 946684800) {
-                            Serial.println("Updating Prayer Times...");
-                            Serial.println("Status Waktu: VALID");
-                            Serial.println("Kota: " + prayerConfig.selectedCity);
-                            Serial.println("Coordinate: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
+                            Serial.println("MEMPERBARUI WAKTU SHALAT...");
+                            Serial.println("STATUS WAKTU: VALID");
+                            Serial.println("KOTA: " + prayerConfig.selectedCity);
+                            Serial.println("KOORDINAT: " + prayerConfig.latitude + ", " + prayerConfig.longitude);
                             Serial.println("");
-                            
+
                             esp_task_wdt_reset();
                             getPrayerTimesByCoordinates(
-                                prayerConfig.latitude, 
+                                prayerConfig.latitude,
                                 prayerConfig.longitude
                             );
                             esp_task_wdt_reset();
-                            
-                            Serial.println("\nMidnight update sequence COMPLETED");
+
+                            Serial.println("\nURUTAN PEMBARUAN TENGAH MALAM SELESAI");
                         } else {
-                            Serial.println("PERINGATAN: Waktu masih tidak valid setelah NTP");
-                            Serial.printf("   Tahun: %d (min: 2000)\n", currentYear);
-                            Serial.printf("   Timestamp: %ld (min: 946684800)\n", currentTimestamp);
-                            Serial.println("   Menggunakan waktu shalat yang ada");
+                            Serial.println("PERINGATAN: WAKTU MASIH TIDAK VALID SETELAH NTP");
+                            Serial.printf("   TAHUN: %d (MIN: 2000)\n", currentYear);
+                            Serial.printf("   TIMESTAMP: %ld (MIN: 946684800)\n", currentTimestamp);
+                            Serial.println("   MENGGUNAKAN WAKTU SHALAT YANG ADA");
                         }
                     } else {
-                        Serial.println("WARNING: No city coordinates");
-                        Serial.println("   Menggunakan waktu shalat yang ada");
+                        Serial.println("PERINGATAN: TIDAK ADA KOORDINAT KOTA");
+                        Serial.println("   MENGGUNAKAN WAKTU SHALAT YANG ADA");
                     }
-                    
+
                     Serial.println("========================================\n");
-                    
+
                     waitingForMidnightNTP = false;
                     hasUpdatedToday = true;
-                    
+
                 } else if (waitTime > MAX_WAIT_TIME) {
                     Serial.println("\n========================================");
                     Serial.println("TIMEOUT SINKRONISASI NTP");
                     Serial.println("========================================");
-                    Serial.printf("Waktu tunggu: %lu ms (maks: %lu ms)\n", waitTime, MAX_WAIT_TIME);
-                    Serial.println("Status NTP:");
-                    Serial.printf("   ntpSyncInProgress: %s\n", ntpSyncInProgress ? "true" : "false");
-                    Serial.printf("   ntpSyncCompleted: %s\n", ntpSyncCompleted ? "false" : "false");
+                    Serial.printf("WAKTU TUNGGU: %lu MS (MAKS: %lu MS)\n", waitTime, MAX_WAIT_TIME);
+                    Serial.println("STATUS NTP:");
+                    Serial.printf("   NTPSYNCINPROGRESS: %s\n", ntpSyncInProgress ? "true" : "false");
+                    Serial.printf("   NTPSYNCCOMPLETED: %s\n", ntpSyncCompleted ? "false" : "false");
                     Serial.println("");
-                    Serial.println("Keputusan: Gunakan waktu shalat yang ada");
-                    Serial.println("Jangan perbarui (waktu mungkin tidak akurat)");
+                    Serial.println("KEPUTUSAN: GUNAKAN WAKTU SHALAT YANG ADA");
+                    Serial.println("JANGAN PERBARUI (WAKTU MUNGKIN TIDAK AKURAT)");
                     Serial.println("========================================\n");
-                    
+
                     waitingForMidnightNTP = false;
                     hasUpdatedToday = true;
-                    
+
                 } else {
                     if (waitTime % 5000 < 1000) {
-                        Serial.printf("Menunggu sinkronisasi NTP... (%lu/%lu ms)\n",
+                        Serial.printf("MENUNGGU SINKRONISASI NTP... (%lu/%lu MS)\n",
                                      waitTime, MAX_WAIT_TIME);
                     }
                 }
             }
         }
-        
+
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
 
 void rtcSyncTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(60000); // Every 1 minute
-    
+    const TickType_t xFrequency = pdMS_TO_TICKS(60000);
+
     Serial.println("\n========================================");
     Serial.println("TUGAS SINKRONISASI RTC DIMULAI");
     Serial.println("========================================");
-    Serial.println("Fungsi: Sinkronisasi waktu sistem DARI RTC");
-    Serial.println("Interval: Every 1 minute");
-    Serial.println("Tujuan: Sumber waktu cadangan saat WiFi tidak tersedia");
+    Serial.println("FUNGSI: SINKRONISASI WAKTU SISTEM DARI RTC");
+    Serial.println("INTERVAL: SETIAP 1 MENIT");
+    Serial.println("TUJUAN: SUMBER WAKTU CADANGAN SAAT WIFI TIDAK TERSEDIA");
     Serial.println("========================================\n");
-    
+
     while (true) {
         if (rtcAvailable) {
             if (!isRTCValid()) {
-                Serial.println("\n[Sinkronisasi RTC] Dilewati - RTC tidak valid");
+                Serial.println("\n[SINKRONISASI RTC] DILEWATI - RTC TIDAK VALID");
                 vTaskDelayUntil(&xLastWakeTime, xFrequency);
                 continue;
             }
-            
+
             DateTime rtcTime;
             if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
                 rtcTime = rtc.now();
                 xSemaphoreGive(i2cMutex);
             } else {
-                Serial.println("\n[Sinkronisasi RTC] Dilewati - Tidak dapat mendapatkan mutex I2C");
+                Serial.println("\n[SINKRONISASI RTC] DILEWATI - TIDAK DAPAT MENDAPATKAN MUTEX I2C");
                 vTaskDelayUntil(&xLastWakeTime, xFrequency);
                 continue;
             }
 
             if (!isRTCTimeValid(rtcTime)) {
-                Serial.println("\n[Sinkronisasi RTC] Dilewati - Waktu RTC tidak valid");
+                Serial.println("\n[SINKRONISASI RTC] DILEWATI - WAKTU RTC TIDAK VALID");
                 Serial.printf("   RTC: %02d:%02d:%02d %02d/%02d/%04d\n",
                              rtcTime.hour(), rtcTime.minute(), rtcTime.second(),
                              rtcTime.day(), rtcTime.month(), rtcTime.year());
@@ -4958,7 +4902,7 @@ void rtcSyncTask(void *parameter) {
 
             time_t systemTime;
             bool ntpSynced;
-            
+
             if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                 systemTime = timeConfig.currentTime;
                 ntpSynced = timeConfig.ntpSynced;
@@ -4967,87 +4911,85 @@ void rtcSyncTask(void *parameter) {
                 vTaskDelayUntil(&xLastWakeTime, xFrequency);
                 continue;
             }
-            
+
             time_t rtcUnix = rtcTime.unixtime();
             int timeDiff = abs(systemTime - rtcUnix);
 
             bool shouldSync = false;
             String reason = "";
-            
+
             if (timeDiff <= 2) {
             } else if (!ntpSynced && timeDiff > 2) {
                 shouldSync = true;
                 reason = "NTP not synced, using RTC as primary source";
-                
+
             } else if (ntpSynced && systemTime > rtcUnix) {
                 shouldSync = false;
                 reason = "System time newer (from NTP), skip RTC sync";
-                
-                Serial.println("\n[Sinkronisasi RTC] Dilewati");
-                Serial.println("Alasan: " + reason);
-                Serial.printf("   Sistem: %02d:%02d:%02d %02d/%02d/%04d (dari NTP)\n",
+
+                Serial.println("\n[SINKRONISASI RTC] DILEWATI");
+                Serial.println("ALASAN: " + reason);
+                Serial.printf("   SISTEM: %02d:%02d:%02d %02d/%02d/%04d (DARI NTP)\n",
                              hour(systemTime), minute(systemTime), second(systemTime),
                              day(systemTime), month(systemTime), year(systemTime));
-                Serial.printf("   RTC:    %02d:%02d:%02d %02d/%02d/%04d (lebih lama)\n",
+                Serial.printf("   RTC:    %02d:%02d:%02d %02d/%02d/%04d (LEBIH LAMA)\n",
                              rtcTime.hour(), rtcTime.minute(), rtcTime.second(),
                              rtcTime.day(), rtcTime.month(), rtcTime.year());
-                Serial.println("   Aksi: RTC akan diperbarui pada sinkronisasi NTP berikutnya\n");
-                
+                Serial.println("   AKSI: RTC AKAN DIPERBARUI PADA SINKRONISASI NTP BERIKUTNYA\n");
+
             } else {
                 shouldSync = true;
                 reason = "RTC time more accurate, correcting system time";
             }
-            
+
             if (shouldSync) {
                 if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
                     timeConfig.currentTime = rtcUnix;
                     setTime(rtcUnix);
                     xSemaphoreGive(timeMutex);
-                    
+
                     DisplayUpdate update;
                     update.type = DisplayUpdate::TIME_UPDATE;
                     xQueueSend(displayQueue, &update, 0);
-                    
+
                     Serial.println("\n========================================");
                     Serial.println("WAKTU SISTEM DISINKRONKAN DARI RTC");
                     Serial.println("========================================");
-                    Serial.println("Alasan: " + reason);
-                    Serial.printf("Sistem lama: %02d:%02d:%02d %02d/%02d/%04d\n",
+                    Serial.println("ALASAN: " + reason);
+                    Serial.printf("SISTEM LAMA: %02d:%02d:%02d %02d/%02d/%04d\n",
                                  hour(systemTime), minute(systemTime), second(systemTime),
                                  day(systemTime), month(systemTime), year(systemTime));
-                    Serial.printf("Sistem baru: %02d:%02d:%02d %02d/%02d/%04d\n",
+                    Serial.printf("SISTEM BARU: %02d:%02d:%02d %02d/%02d/%04d\n",
                                  rtcTime.hour(), rtcTime.minute(), rtcTime.second(),
                                  rtcTime.day(), rtcTime.month(), rtcTime.year());
-                    Serial.printf("Selisih waktu: %d detik\n", timeDiff);
+                    Serial.printf("SELISIH WAKTU: %d DETIK\n", timeDiff);
                     Serial.println("========================================\n");
                 }
             }
         }
-        
+
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
 
 // ============================================
-// Internet Check Task - Cek koneksi internet setiap 30 detik
+// INTERNET CHECK TASK - CHECK INTERNET CONNECTION EVERY 30 SECONDS
 // ============================================
 void internetCheckTask(void *parameter) {
   const TickType_t checkInterval = pdMS_TO_TICKS(30000);
 
-  Serial.println("Internet Check Task dimulai (interval 30 detik)");
+  Serial.println("TUGAS CEK INTERNET DIMULAI (INTERVAL 30 DETIK)");
 
   while (true) {
     vTaskDelay(checkInterval);
 
-    // Hanya cek jika WiFi terkonek ke router
     if (wifiState != WIFI_CONNECTED) {
       internetAvailable = false;
       continue;
     }
 
-    // Cek internet via socket TCP ke 8.8.8.8:53 (DNS Google)
     WiFiClient client;
-    bool result = client.connect(IPAddress(8, 8, 8, 8), 53, 3000); // timeout 3 detik
+    bool result = client.connect(IPAddress(8, 8, 8, 8), 53, 3000);
     if (result) {
       client.stop();
     }
@@ -5064,35 +5006,35 @@ void internetCheckTask(void *parameter) {
 void clockTickTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xFrequency = pdMS_TO_TICKS(1000);
-    
-    static int autoSyncCounter = 0; 
-    
+
+    static int autoSyncCounter = 0;
+
     const time_t EPOCH_2000 = 946684800;
-    
+
     while (true) {
         if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-            if (timeConfig.currentTime < EPOCH_2000) { 
+            if (timeConfig.currentTime < EPOCH_2000) {
                 Serial.println("\nPERINGATAN TUGAS JAM:");
-                Serial.printf("  Timestamp tidak valid: %ld\n", timeConfig.currentTime);
-                Serial.println("  Ini sebelum 01/01/2000 00:00:00");
-                Serial.println("  Memaksa reset ke: 01/01/2000 00:00:00");
-                
+                Serial.printf("  TIMESTAMP TIDAK VALID: %ld\n", timeConfig.currentTime);
+                Serial.println("  INI SEBELUM 01/01/2000 00:00:00");
+                Serial.println("  MEMAKSA RESET KE: 01/01/2000 00:00:00");
+
                 setTime(0, 0, 0, 1, 1, 2000);
                 timeConfig.currentTime = now();
-                
+
                 if (timeConfig.currentTime < EPOCH_2000) {
-                    Serial.println("TimeLib.h issue - using hardcoded timestamp");
+                    Serial.println("MASALAH TIMELIB.H - MENGGUNAKAN TIMESTAMP HARDCODED");
                     timeConfig.currentTime = EPOCH_2000;
                 }
-                
-                Serial.printf("Waktu dikoreksi ke: %ld (01/01/2000 00:00:00)\n", 
+
+                Serial.printf("WAKTU DIKOREKSI KE: %ld (01/01/2000 00:00:00)\n",
                              timeConfig.currentTime);
             } else {
                 timeConfig.currentTime++;
             }
-            
+
             xSemaphoreGive(timeMutex);
-            
+
             DisplayUpdate update;
             update.type = DisplayUpdate::TIME_UPDATE;
             xQueueSend(displayQueue, &update, pdMS_TO_TICKS(100));
@@ -5103,7 +5045,7 @@ void clockTickTask(void *parameter) {
             if (autoSyncCounter >= 3600) {
                 autoSyncCounter = 0;
                 if (ntpTaskHandle != NULL) {
-                    Serial.println("\nSinkronisasi NTP otomatis (per jam)");
+                    Serial.println("\nSINKRONISASI NTP OTOMATIS (PER JAM)");
                     xTaskNotifyGive(ntpTaskHandle);
                 }
             }
@@ -5114,74 +5056,74 @@ void clockTickTask(void *parameter) {
 }
 
 // ============================================
-// WiFi & AP Restart Tasks
+// TASK RESTART WIFI DAN ACCESS POINT
 // ============================================
 void restartWiFiTask(void *parameter) {
     unsigned long now = millis();
     if (now - lastWiFiRestartRequest < RESTART_DEBOUNCE_MS) {
         unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastWiFiRestartRequest);
-        
+
         Serial.println("\n========================================");
-        Serial.println("WiFi RESTART REJECTED - TOO FAST");
+        Serial.println("RESTART WIFI DITOLAK - TERLALU CEPAT");
         Serial.println("========================================");
-        Serial.printf("Alasan: Restart terakhir %lu ms yang lalu\n", now - lastWiFiRestartRequest);
-        Serial.printf("Interval minimum: %lu ms\n", RESTART_DEBOUNCE_MS);
-        Serial.printf("Harap tunggu: %lu ms (%.1f detik)\n", waitTime, waitTime / 1000.0);
+        Serial.printf("ALASAN: RESTART TERAKHIR %lu MS YANG LALU\n", now - lastWiFiRestartRequest);
+        Serial.printf("INTERVAL MINIMUM: %lu MS\n", RESTART_DEBOUNCE_MS);
+        Serial.printf("HARAP TUNGGU: %lu MS (%.1F DETIK)\n", waitTime, waitTime / 1000.0);
         Serial.println("========================================\n");
-        
+
         vTaskDelete(NULL);
         return;
     }
-    
+
     lastWiFiRestartRequest = now;
-    
+
     if (wifiRestartMutex == NULL) {
         wifiRestartMutex = xSemaphoreCreateMutex();
         if (wifiRestartMutex == NULL) {
-            Serial.println("ERROR: Gagal membuat wifiRestartMutex");
+            Serial.println("ERROR: GAGAL MEMBUAT WIFIRESTARTMUTEX");
             vTaskDelete(NULL);
             return;
         }
     }
-    
+
     if (xSemaphoreTake(wifiRestartMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
         Serial.println("\n========================================");
-        Serial.println("WiFi RESTART BLOCKED");
+        Serial.println("RESTART WIFI DIBLOKIR");
         Serial.println("========================================");
-        Serial.println("Reason: Another WiFi/AP restart in progress");
-        Serial.println("Aksi: Permintaan diabaikan untuk keamanan");
+        Serial.println("ALASAN: RESTART WIFI/AP LAIN SEDANG BERJALAN");
+        Serial.println("AKSI: PERMINTAAN DIABAIKAN UNTUK KEAMANAN");
         Serial.println("========================================\n");
-        
+
         vTaskDelete(NULL);
         return;
     }
-    
+
     if (wifiRestartInProgress || apRestartInProgress) {
         Serial.println("\n========================================");
-        Serial.println("WiFi RESTART ABORTED");
+        Serial.println("RESTART WIFI DIBATALKAN");
         Serial.println("========================================");
-        Serial.printf("Restart WiFi sedang berjalan: %s\n", wifiRestartInProgress ? "YES" : "NO");
-        Serial.printf("Restart AP sedang berjalan: %s\n", apRestartInProgress ? "YES" : "NO");
+        Serial.printf("RESTART WIFI SEDANG BERJALAN: %s\n", wifiRestartInProgress ? "YES" : "NO");
+        Serial.printf("RESTART AP SEDANG BERJALAN: %s\n", apRestartInProgress ? "YES" : "NO");
         Serial.println("========================================\n");
-        
+
         xSemaphoreGive(wifiRestartMutex);
         vTaskDelete(NULL);
         return;
     }
-    
+
     wifiRestartInProgress = true;
-    
+
     Serial.println("\n========================================");
-    Serial.println("SAFE WiFi RESTART SEQUENCE STARTED");
+    Serial.println("URUTAN RESTART WIFI AMAN DIMULAI");
     Serial.println("========================================");
-    Serial.println("Protection: Debouncing + Mutex Lock Active");
-    Serial.println("Mode: Koneksi ulang aman (tanpa pergantian mode)");
+    Serial.println("PERLINDUNGAN: DEBOUNCING + MUTEX LOCK AKTIF");
+    Serial.println("MODE: KONEKSI ULANG AMAN (TANPA PERGANTIAN MODE)");
     Serial.println("========================================\n");
-    
+
     vTaskDelay(pdMS_TO_TICKS(3000));
-    
-    Serial.println("Mempersiapkan koneksi ulang...");
-    
+
+    Serial.println("MEMPERSIAPKAN KONEKSI ULANG...");
+
     String ssid, password;
     if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
         ssid = wifiConfig.routerSSID;
@@ -5190,78 +5132,78 @@ void restartWiFiTask(void *parameter) {
         wifiState = WIFI_IDLE;
         reconnectAttempts = 0;
         xSemaphoreGive(wifiMutex);
-        
-        Serial.println("   Kredensial dimuat dari memori");
+
+        Serial.println("   KREDENSIAL DIMUAT DARI MEMORI");
         Serial.println("   SSID: " + ssid);
-        Serial.println("   Connection state reset");
+        Serial.println("   STATUS KONEKSI DIRESET");
     } else {
-        Serial.println("   ERROR: Gagal mendapatkan wifiMutex");
+        Serial.println("   ERROR: GAGAL MENDAPATKAN WIFIMUTEX");
         wifiRestartInProgress = false;
         xSemaphoreGive(wifiRestartMutex);
         vTaskDelete(NULL);
         return;
     }
-    
-    Serial.println("\nMemutuskan WiFi lama...");
+
+    Serial.println("\nMEMUTUSKAN WIFI LAMA...");
     WiFi.disconnect(false, false);
     vTaskDelay(pdMS_TO_TICKS(1000));
-    Serial.println("   Disconnected (config preserved)");
-    
-    Serial.println("\nVerifying AP status...");
-    
+    Serial.println("   TERPUTUS (KONFIGURASI DIPERTAHANKAN)");
+
+    Serial.println("\nMEMVERIFIKASI STATUS AP...");
+
     IPAddress apIP = WiFi.softAPIP();
     if (apIP == IPAddress(0, 0, 0, 0)) {
-        Serial.println("   WARNING: AP died during disconnect");
-        Serial.println("   Restoring AP...");
-        
+        Serial.println("   PERINGATAN: AP MATI SAAT PEMUTUSAN");
+        Serial.println("   MEMULIHKAN AP...");
+
         WiFi.softAPdisconnect(false);
         vTaskDelay(pdMS_TO_TICKS(500));
-        
+
         WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
         bool apStarted = WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
         vTaskDelay(pdMS_TO_TICKS(1000));
-        
+
         if (apStarted) {
-            Serial.println("   AP restored successfully");
-            Serial.println("   AP IP: " + WiFi.softAPIP().toString());
+            Serial.println("   AP BERHASIL DIPULIHKAN");
+            Serial.println("   IP AP: " + WiFi.softAPIP().toString());
         } else {
-            Serial.println("   ERROR: Gagal memulihkan AP");
+            Serial.println("   ERROR: GAGAL MEMULIHKAN AP");
         }
     } else {
-        Serial.println("   AP still alive: " + apIP.toString());
+        Serial.println("   AP MASIH AKTIF: " + apIP.toString());
     }
-    
+
     if (ssid.length() > 0) {
-        Serial.println("\nReconnecting to WiFi...");
-        Serial.println("   Target SSID: " + ssid);
-        Serial.println("   Initiating connection...");
-        
+        Serial.println("\nMENGHUBUNGKAN ULANG KE WIFI...");
+        Serial.println("   TARGET SSID: " + ssid);
+        Serial.println("   MEMULAI KONEKSI...");
+
         WiFi.begin(ssid.c_str(), password.c_str());
-        
+
         Serial.println("\n========================================");
-        Serial.println("WiFi RECONNECT INITIATED");
+        Serial.println("KONEKSI ULANG WIFI DIMULAI");
         Serial.println("========================================");
-        Serial.println("Status: Connection request sent");
-        Serial.println("Monitor: Tugas WiFi akan menangani koneksi");
-        Serial.println("Expected: See WiFi events in serial log");
+        Serial.println("STATUS: PERMINTAAN KONEKSI DIKIRIM");
+        Serial.println("MONITOR: TUGAS WIFI AKAN MENANGANI KONEKSI");
+        Serial.println("DIHARAPKAN: LIHAT EVENT WIFI DI LOG SERIAL");
         Serial.println("========================================\n");
     } else {
         Serial.println("\n========================================");
-        Serial.println("WiFi RECONNECT FAILED");
+        Serial.println("KONEKSI ULANG WIFI GAGAL");
         Serial.println("========================================");
-        Serial.println("Reason: No SSID configured in memory");
-        Serial.println("Action: Configure WiFi via web interface");
+        Serial.println("ALASAN: TIDAK ADA SSID YANG DIKONFIGURASI DI MEMORI");
+        Serial.println("AKSI: KONFIGURASI WIFI MELALUI ANTARMUKA WEB");
         Serial.println("========================================\n");
     }
-    
+
     vTaskDelay(pdMS_TO_TICKS(1000));
-    
+
     wifiRestartInProgress = false;
     xSemaphoreGive(wifiRestartMutex);
-    
-    Serial.println("WiFi restart sequence completed");
-    Serial.println("Kunci dilepas - sistem siap untuk permintaan berikutnya\n");
-    
+
+    Serial.println("URUTAN RESTART WIFI SELESAI");
+    Serial.println("KUNCI DILEPAS - SISTEM SIAP UNTUK PERMINTAAN BERIKUTNYA\n");
+
     vTaskDelete(NULL);
 }
 
@@ -5269,88 +5211,88 @@ void restartAPTask(void *parameter) {
     unsigned long now = millis();
     if (now - lastAPRestartRequest < RESTART_DEBOUNCE_MS) {
         unsigned long waitTime = RESTART_DEBOUNCE_MS - (now - lastAPRestartRequest);
-        
+
         Serial.println("\n========================================");
-        Serial.println("AP RESTART REJECTED - TOO FAST");
+        Serial.println("RESTART AP DITOLAK - TERLALU CEPAT");
         Serial.println("========================================");
-        Serial.printf("Alasan: Restart terakhir %lu ms yang lalu\n", now - lastAPRestartRequest);
-        Serial.printf("Interval minimum: %lu ms\n", RESTART_DEBOUNCE_MS);
-        Serial.printf("Harap tunggu: %lu ms (%.1f detik)\n", waitTime, waitTime / 1000.0);
+        Serial.printf("ALASAN: RESTART TERAKHIR %lu MS YANG LALU\n", now - lastAPRestartRequest);
+        Serial.printf("INTERVAL MINIMUM: %lu MS\n", RESTART_DEBOUNCE_MS);
+        Serial.printf("HARAP TUNGGU: %lu MS (%.1F DETIK)\n", waitTime, waitTime / 1000.0);
         Serial.println("========================================\n");
-        
+
         vTaskDelete(NULL);
         return;
     }
-    
+
     lastAPRestartRequest = now;
-    
+
     if (wifiRestartMutex == NULL) {
         wifiRestartMutex = xSemaphoreCreateMutex();
         if (wifiRestartMutex == NULL) {
-            Serial.println("ERROR: Gagal membuat wifiRestartMutex");
+            Serial.println("ERROR: GAGAL MEMBUAT WIFIRESTARTMUTEX");
             vTaskDelete(NULL);
             return;
         }
     }
-    
+
     if (xSemaphoreTake(wifiRestartMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
         Serial.println("\n========================================");
-        Serial.println("AP RESTART BLOCKED");
+        Serial.println("RESTART AP DIBLOKIR");
         Serial.println("========================================");
-        Serial.println("Reason: Another WiFi/AP restart in progress");
-        Serial.println("Aksi: Permintaan diabaikan untuk keamanan");
+        Serial.println("ALASAN: RESTART WIFI/AP LAIN SEDANG BERJALAN");
+        Serial.println("AKSI: PERMINTAAN DIABAIKAN UNTUK KEAMANAN");
         Serial.println("========================================\n");
-        
+
         vTaskDelete(NULL);
         return;
     }
-    
+
     if (apRestartInProgress || wifiRestartInProgress) {
         Serial.println("\n========================================");
-        Serial.println("AP RESTART ABORTED");
+        Serial.println("RESTART AP DIBATALKAN");
         Serial.println("========================================");
-        Serial.printf("Restart WiFi sedang berjalan: %s\n", wifiRestartInProgress ? "YES" : "NO");
-        Serial.printf("Restart AP sedang berjalan: %s\n", apRestartInProgress ? "YES" : "NO");
+        Serial.printf("RESTART WIFI SEDANG BERJALAN: %s\n", wifiRestartInProgress ? "YES" : "NO");
+        Serial.printf("RESTART AP SEDANG BERJALAN: %s\n", apRestartInProgress ? "YES" : "NO");
         Serial.println("========================================\n");
-        
+
         xSemaphoreGive(wifiRestartMutex);
         vTaskDelete(NULL);
         return;
     }
-    
+
     apRestartInProgress = true;
-    
+
     Serial.println("\n========================================");
     Serial.println("TUGAS RESTART AP DIMULAI");
     Serial.println("========================================");
-    Serial.println("Countdown before AP shutdown");
+    Serial.println("HITUNG MUNDUR SEBELUM AP DIMATIKAN");
     Serial.println("========================================\n");
-    
+
     for (int i = 60; i > 0; i--) {
         if (i == 35) {
             Serial.println("\n========================================");
-            Serial.println("SHUTTING DOWN AP");
+            Serial.println("MEMATIKAN AP");
             Serial.println("========================================");
-            
+
             int clientsBefore = WiFi.softAPgetStationNum();
-            Serial.printf("Klien terhubung: %d\n", clientsBefore);
-            
+            Serial.printf("KLIEN TERHUBUNG: %d\n", clientsBefore);
+
             if (clientsBefore > 0) {
-                Serial.println("Disconnecting clients...");
+                Serial.println("MEMUTUSKAN KLIEN...");
                 esp_wifi_deauth_sta(0);
                 vTaskDelay(pdMS_TO_TICKS(1000));
             }
 
             WiFi.mode(WIFI_MODE_STA);
             WiFi.softAPdisconnect(true);
-            
-            Serial.println("AP shutdown complete");
-            Serial.println("Semua klien terputus");
+
+            Serial.println("AP BERHASIL DIMATIKAN");
+            Serial.println("SEMUA KLIEN TERPUTUS");
             Serial.println("========================================\n");
         }
-        
+
         if (i % 10 == 0 || i <= 5) {
-            Serial.printf("AP akan restart dalam %d detik...\n", i);
+            Serial.printf("AP AKAN RESTART DALAM %d DETIK...\n", i);
         }
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
@@ -5358,11 +5300,11 @@ void restartAPTask(void *parameter) {
     Serial.println("\n========================================");
     Serial.println("HITUNG MUNDUR SELESAI - MEMULAI AP BARU SEKARANG");
     Serial.println("========================================\n");
-  
+
     char savedSSID[33];
     char savedPassword[65];
     IPAddress savedAPIP, savedGateway, savedSubnet;
-    
+
     if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
         strncpy(savedSSID, wifiConfig.apSSID, sizeof(savedSSID));
         strncpy(savedPassword, wifiConfig.apPassword, sizeof(savedPassword));
@@ -5370,12 +5312,12 @@ void restartAPTask(void *parameter) {
         savedGateway = wifiConfig.apGateway;
         savedSubnet = wifiConfig.apSubnet;
         xSemaphoreGive(settingsMutex);
-        
-        Serial.println("Konfigurasi baru dimuat:");
+
+        Serial.println("KONFIGURASI BARU DIMUAT:");
         Serial.println("  SSID: " + String(savedSSID));
         Serial.println("  IP: " + savedAPIP.toString());
     } else {
-        Serial.println("ERROR: Tidak dapat memuat konfigurasi - menggunakan default");
+        Serial.println("ERROR: TIDAK DAPAT MEMUAT KONFIGURASI - MENGGUNAKAN DEFAULT");
         DEFAULT_AP_SSID.toCharArray(savedSSID, sizeof(savedSSID));
         strncpy(savedPassword, DEFAULT_AP_PASSWORD, sizeof(savedPassword));
         savedAPIP = IPAddress(192, 168, 100, 1);
@@ -5384,159 +5326,159 @@ void restartAPTask(void *parameter) {
     }
 
     WiFi.mode(WIFI_MODE_APSTA);
-    
-    Serial.println("\nMengonfigurasi jaringan AP baru...");
+
+    Serial.println("\nMENGKONFIGURASI JARINGAN AP BARU...");
     WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
     vTaskDelay(pdMS_TO_TICKS(500));
-    
-    Serial.println("Memulai siaran AP baru...");
+
+    Serial.println("MEMULAI SIARAN AP BARU...");
     bool apStarted = WiFi.softAP(savedSSID, savedPassword);
     vTaskDelay(pdMS_TO_TICKS(2000));
-    
+
     if (apStarted) {
         IPAddress newAPIP = WiFi.softAPIP();
         String currentSSID = WiFi.softAPSSID();
-        
+
         Serial.println("\n========================================");
-        Serial.println("AP RESTART SUCCESS");
+        Serial.println("RESTART AP BERHASIL");
         Serial.println("========================================");
-        Serial.println("SSID: \"" + currentSSID + "\" (ACTIVE)");
+        Serial.println("SSID: \"" + currentSSID + "\" (AKTIF)");
         Serial.println("IP: " + newAPIP.toString());
         Serial.println("MAC: " + WiFi.softAPmacAddress());
-        
+
         if (WiFi.status() == WL_CONNECTED) {
             Serial.println("");
-            Serial.println("WiFi Connection: PRESERVED");
-            Serial.println("Router SSID: " + WiFi.SSID());
-            Serial.println("Router IP: " + WiFi.localIP().toString());
+            Serial.println("KONEKSI WIFI: DIPERTAHANKAN");
+            Serial.println("SSID ROUTER: " + WiFi.SSID());
+            Serial.println("IP ROUTER: " + WiFi.localIP().toString());
         }
-        
+
         Serial.println("");
-        Serial.println("CLIENT ACTION REQUIRED:");
-        Serial.println("  1. Search for: \"" + currentSSID + "\"");
-        Serial.println("  2. Connect with password");
-        Serial.println("  3. Open: http://" + newAPIP.toString());
+        Serial.println("TINDAKAN KLIEN DIPERLUKAN:");
+        Serial.println("  1. CARI: \"" + currentSSID + "\"");
+        Serial.println("  2. HUBUNGKAN DENGAN PASSWORD");
+        Serial.println("  3. BUKA: http://" + newAPIP.toString());
         Serial.println("========================================\n");
-        
+
     } else {
         Serial.println("\n========================================");
-        Serial.println("AP RESTART FAILED");
+        Serial.println("RESTART AP GAGAL");
         Serial.println("========================================");
-        Serial.println("Rolling back to default AP...");
-        
+        Serial.println("MENGEMBALIKAN KE AP DEFAULT...");
+
         DEFAULT_AP_SSID.toCharArray(savedSSID, sizeof(savedSSID));
         strcpy(savedPassword, DEFAULT_AP_PASSWORD);
         savedAPIP = IPAddress(192, 168, 100, 1);
         savedGateway = IPAddress(192, 168, 100, 1);
         savedSubnet = IPAddress(255, 255, 255, 0);
-        
+
         WiFi.softAPConfig(savedAPIP, savedGateway, savedSubnet);
         vTaskDelay(pdMS_TO_TICKS(500));
-        
+
         WiFi.softAP(savedSSID, savedPassword);
         vTaskDelay(pdMS_TO_TICKS(2000));
-        
-        Serial.println("Rollback to: " + String(savedSSID));
+
+        Serial.println("KEMBALI KE: " + String(savedSSID));
         Serial.println("========================================\n");
     }
-    
+
     vTaskDelay(pdMS_TO_TICKS(2000));
-    
+
     apRestartInProgress = false;
     xSemaphoreGive(wifiRestartMutex);
-    
+
     Serial.println("\n========================================");
-    Serial.println("AP RESTART PROTECTION RELEASED");
+    Serial.println("PERLINDUNGAN RESTART AP DILEPAS");
     Serial.println("========================================");
-    Serial.println("apRestartInProgress: false");
-    Serial.println("webTask monitoring: ACTIVE again");
+    Serial.println("APRESTARTINPROGRESS: FALSE");
+    Serial.println("PEMANTAUAN WEBTASK: AKTIF KEMBALI");
     Serial.println("========================================\n");
-    
-    Serial.println("Tugas restart AP selesai\n");
+
+    Serial.println("TUGAS RESTART AP SELESAI\n");
     vTaskDelete(NULL);
 }
 
 bool initDFPlayer() {
   Serial.println("\n========================================");
-  Serial.println("INITIALIZING DFPlayer Mini");
+  Serial.println("INISIALISASI DFPLAYER MINI");
   Serial.println("========================================");
   Serial.println("UART2: TX=GPIO25, RX=GPIO32");
-  
+
   dfSerial.begin(9600, SERIAL_8N1, DFPLAYER_RX, DFPLAYER_TX);
   delay(500);
-  
+
   if (!dfPlayer.begin(dfSerial, true, true)) {
-    Serial.println("DFPlayer connection FAILED!");
-    Serial.println("Periksa koneksi kabel:");
-    Serial.println("  ESP32 TX (GPIO25) → DFPlayer RX");
-    Serial.println("  ESP32 RX (GPIO32) → DFPlayer TX");
+    Serial.println("KONEKSI DFPLAYER GAGAL!");
+    Serial.println("PERIKSA KONEKSI KABEL:");
+    Serial.println("  ESP32 TX (GPIO25) → DFPLAYER RX");
+    Serial.println("  ESP32 RX (GPIO32) → DFPLAYER TX");
     Serial.println("  VCC → 5V");
     Serial.println("  GND → GND");
-    Serial.println("  Speaker → SPK_1 & SPK_2 or Amplifier DAC_R & DAC_L");
+    Serial.println("  SPEAKER → SPK_1 & SPK_2 ATAU AMPLIFIER DAC_R & DAC_L");
     Serial.println("========================================\n");
     return false;
   }
-  
+
   delay(200);
-  
+
   dfPlayer.setTimeOut(500);
   dfPlayer.volume(15);
   dfPlayer.EQ(DFPLAYER_EQ_NORMAL);
   dfPlayer.outputDevice(DFPLAYER_DEVICE_SD);
-  
+
   delay(200);
-  
+
   int fileCount = dfPlayer.readFileCounts();
-  
-  Serial.println("DFPlayer initialized successfully!");
+
+  Serial.println("DFPLAYER BERHASIL DIINISIALISASI!");
   Serial.println("UART2: TX=GPIO25, RX=GPIO32");
-  Serial.println("Volume: 15/30");
-  Serial.println("Files on SD: " + String(fileCount));
+  Serial.println("VOLUME: 15/30");
+  Serial.println("FILE DI SD: " + String(fileCount));
   Serial.println("========================================\n");
-  
+
   return true;
 }
 
 void setDFPlayerVolume(int vol) {
   if (!dfPlayerAvailable) return;
-  
+
   int dfVol = map(vol, 0, 100, 0, 30);
   dfPlayer.volume(dfVol);
-  Serial.println("DFPlayer volume: " + String(dfVol) + "/30");
+  Serial.println("VOLUME DFPLAYER: " + String(dfVol) + "/30");
 }
 
 void playDFPlayerAdzan(String prayerName) {
   if (!dfPlayerAvailable) {
-    Serial.println("DFPlayer tidak tersedia");
+    Serial.println("DFPLAYER TIDAK TERSEDIA");
     return;
   }
-  
+
   int trackNumber = 0;
-  
+
   if (prayerName == "subuh") trackNumber = 1;
   else if (prayerName == "zuhur") trackNumber = 2;
   else if (prayerName == "ashar") trackNumber = 3;
   else if (prayerName == "maghrib") trackNumber = 4;
   else if (prayerName == "isya") trackNumber = 5;
-  
+
   if (trackNumber == 0) {
-    Serial.println("Nama shalat tidak valid: " + prayerName);
+    Serial.println("NAMA SHALAT TIDAK VALID: " + prayerName);
     return;
   }
-  
+
   Serial.println("\n========================================");
-  Serial.println("PLAYING ADZAN: " + prayerName);
+  Serial.println("MEMUTAR ADZAN: " + prayerName);
   Serial.println("========================================");
-  Serial.println("Track: " + String(trackNumber));
-  Serial.println("File: /000" + String(trackNumber) + ".mp3");
+  Serial.println("TRACK: " + String(trackNumber));
+  Serial.println("FILE: /000" + String(trackNumber) + ".mp3");
   Serial.println("========================================\n");
-  
+
   dfPlayer.play(trackNumber);
 }
 
 bool isDFPlayerPlaying() {
   if (!dfPlayerAvailable) return false;
-  
+
   int state = dfPlayer.readState();
   return (state == 1);
 }
@@ -5544,64 +5486,64 @@ bool isDFPlayerPlaying() {
 void audioTask(void *parameter) {
   while (true) {
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-    
+
     if (adzanState.isPlaying && adzanState.currentPrayer.length() > 0) {
-      Serial.println("Tugas audio dipicu untuk: " + adzanState.currentPrayer);
-      
+      Serial.println("TUGAS AUDIO DIPICU UNTUK: " + adzanState.currentPrayer);
+
       playDFPlayerAdzan(adzanState.currentPrayer);
-      
+
       unsigned long startTime = millis();
       const unsigned long maxDuration = 600000;
-      
+
       while (isDFPlayerPlaying() && (millis() - startTime < maxDuration)) {
         vTaskDelay(pdMS_TO_TICKS(500));
         esp_task_wdt_reset();
       }
-      
-      Serial.println("Adzan playback completed");
-      
+
+      Serial.println("PEMUTARAN ADZAN SELESAI");
+
       adzanState.isPlaying = false;
       adzanState.canTouch = false;
       adzanState.currentPrayer = "";
       saveAdzanState();
-      
-      Serial.println("Adzan state cleared");
+
+      Serial.println("STATUS ADZAN DIBERSIHKAN");
     }
   }
 }
 
 // ============================================
-// HTTP Task - Dedicated untuk API Requests
+// TASK HTTP - KHUSUS PERMINTAAN API
 // ============================================
 void httpTask(void *parameter) {
   esp_task_wdt_add(NULL);
-  
+
   Serial.println("\n========================================");
   Serial.println("TUGAS HTTP DIMULAI");
   Serial.println("========================================");
-  Serial.println("Ukuran Stack: 8192 byte");
-  Serial.println("Purpose: Handle prayer times API requests");
+  Serial.println("UKURAN STACK: 8192 BYTE");
+  Serial.println("TUJUAN: MENANGANI PERMINTAAN API WAKTU SHALAT");
   Serial.println("========================================\n");
-  
+
   HTTPRequest request;
-  
+
   while (true) {
     esp_task_wdt_reset();
-    
+
     if (xQueueReceive(httpQueue, &request, pdMS_TO_TICKS(10000)) == pdTRUE) {
       esp_task_wdt_reset();
-      
+
       if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("Tugas HTTP: WiFi tidak terhubung - melewati permintaan");
+        Serial.println("TUGAS HTTP: WIFI TIDAK TERHUBUNG - MELEWATI PERMINTAAN");
         vTaskDelay(pdMS_TO_TICKS(1000));
         continue;
       }
-      
+
       Serial.println("\n========================================");
-      Serial.println("TUGAS HTTP: Memproses Waktu Shalat");
+      Serial.println("TUGAS HTTP: MEMPROSES WAKTU SHALAT");
       Serial.println("========================================");
-      Serial.println("Koordinat: " + request.latitude + ", " + request.longitude);
-      
+      Serial.println("KOORDINAT: " + request.latitude + ", " + request.longitude);
+
       time_t now_t;
       if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         now_t = timeConfig.currentTime;
@@ -5609,61 +5551,61 @@ void httpTask(void *parameter) {
       } else {
         now_t = time(nullptr);
       }
-      
+
       if (now_t < 946684800) {
-        Serial.println("Waktu sistem tidak valid - dilewati");
+        Serial.println("WAKTU SISTEM TIDAK VALID - DILEWATI");
         continue;
       }
-      
+
       char dateStr[12];
       sprintf(dateStr, "%02d-%02d-%04d", day(now_t), month(now_t), year(now_t));
-      
-      int currentMethod = methodConfig.methodId;
-      String tuneParam = String(prayerConfig.tuneImsak) + "," +      // Imsak
-                        String(prayerConfig.tuneSubuh) + "," +       // Fajr
-                        String(prayerConfig.tuneTerbit) + "," +      // Sunrise
-                        String(prayerConfig.tuneZuhur) + "," +       // Dhuhr
-                        String(prayerConfig.tuneAshar) + "," +       // Asr
-                        String(prayerConfig.tuneMaghrib) + "," +     // Maghrib
-                        "0," +                                       // Sunset
-                        String(prayerConfig.tuneIsya) + "," +        // Isha
-                        "0";                                         // Midnight
 
-      String url = "http://api.aladhan.com/v1/timings/" + String(dateStr) + 
-                  "?latitude=" + request.latitude + 
-                  "&longitude=" + request.longitude + 
+      int currentMethod = methodConfig.methodId;
+      String tuneParam = String(prayerConfig.tuneImsak) + "," +
+                        String(prayerConfig.tuneSubuh) + "," +
+                        String(prayerConfig.tuneTerbit) + "," +
+                        String(prayerConfig.tuneZuhur) + "," +
+                        String(prayerConfig.tuneAshar) + "," +
+                        String(prayerConfig.tuneMaghrib) + "," +
+                        "0," +
+                        String(prayerConfig.tuneIsya) + "," +
+                        "0";
+
+      String url = "http://api.aladhan.com/v1/timings/" + String(dateStr) +
+                  "?latitude=" + request.latitude +
+                  "&longitude=" + request.longitude +
                   "&method=" + String(currentMethod) +
                   "&tune=" + tuneParam;
 
       Serial.println("URL: " + url);
-      
+
       HTTPClient http;
       WiFiClient client;
-      
+
       http.begin(client, url);
       http.setTimeout(20000);
-      
+
       esp_task_wdt_reset();
-      
+
       int httpResponseCode = http.GET();
-      
+
       esp_task_wdt_reset();
-      
-      Serial.println("Response code: " + String(httpResponseCode));
-      
+
+      Serial.println("KODE RESPONS: " + String(httpResponseCode));
+
       if (httpResponseCode == 200) {
         String payload = http.getString();
-        
+
         esp_task_wdt_reset();
-        
+
         JsonDocument doc;
         DeserializationError error = deserializeJson(doc, payload);
-        
+
         esp_task_wdt_reset();
-        
+
         if (!error) {
           JsonObject timings = doc["data"]["timings"];
-          
+
           String tempSubuh = timings["Fajr"].as<String>().substring(0, 5);
           String tempTerbit = timings["Sunrise"].as<String>().substring(0, 5);
           String tempZuhur = timings["Dhuhr"].as<String>().substring(0, 5);
@@ -5671,7 +5613,7 @@ void httpTask(void *parameter) {
           String tempMaghrib = timings["Maghrib"].as<String>().substring(0, 5);
           String tempIsya = timings["Isha"].as<String>().substring(0, 5);
           String tempImsak = timings["Imsak"].as<String>().substring(0, 5);
-          
+
           bool allValid = true;
           if (tempSubuh.length() != 5 || tempSubuh.indexOf(':') != 2) allValid = false;
           if (tempTerbit.length() != 5 || tempTerbit.indexOf(':') != 2) allValid = false;
@@ -5680,7 +5622,7 @@ void httpTask(void *parameter) {
           if (tempMaghrib.length() != 5 || tempMaghrib.indexOf(':') != 2) allValid = false;
           if (tempIsya.length() != 5 || tempIsya.indexOf(':') != 2) allValid = false;
           if (tempImsak.length() != 5 || tempImsak.indexOf(':') != 2) allValid = false;
-          
+
           if (allValid) {
             prayerConfig.subuhTime = tempSubuh;
             prayerConfig.terbitTime = tempTerbit;
@@ -5689,39 +5631,39 @@ void httpTask(void *parameter) {
             prayerConfig.maghribTime = tempMaghrib;
             prayerConfig.isyaTime = tempIsya;
             prayerConfig.imsakTime = tempImsak;
-            
-            Serial.println("Prayer times updated successfully");
+
+            Serial.println("WAKTU SHALAT BERHASIL DIPERBARUI");
             savePrayerTimes();
-            
+
             DisplayUpdate update;
             update.type = DisplayUpdate::PRAYER_UPDATE;
             xQueueSend(displayQueue, &update, pdMS_TO_TICKS(100));
           } else {
-            Serial.println("Data waktu shalat tidak valid");
+            Serial.println("DATA WAKTU SHALAT TIDAK VALID");
           }
         } else {
-          Serial.println("Error parse JSON: " + String(error.c_str()));
+          Serial.println("ERROR PARSE JSON: " + String(error.c_str()));
         }
       } else {
-        Serial.println("HTTP request failed: " + String(httpResponseCode));
+        Serial.println("PERMINTAAN HTTP GAGAL: " + String(httpResponseCode));
       }
-      
+
       http.end();
       client.stop();
-      
-      Serial.println("Tugas HTTP: Permintaan selesai");
+
+      Serial.println("TUGAS HTTP: PERMINTAAN SELESAI");
       Serial.println("========================================\n");
-      
+
       esp_task_wdt_reset();
     }
-    
+
     esp_task_wdt_reset();
     vTaskDelay(pdMS_TO_TICKS(100));
   }
 }
 
 // ================================
-// SETUP - ESP32 CORE 3.x
+// SETUP - ESP32 CORE 3.X
 // ================================
 void setup() {
 #if !PRODUCTION
@@ -5731,24 +5673,23 @@ void setup() {
 
   Serial.println("\n\n");
   Serial.println("========================================");
-  Serial.println("ESP32 Islamic Prayer Clock");
-  Serial.println("LVGL 9.2.0 + FreeRTOS");
-  Serial.println("CONCURRENT ACCESS OPTIMIZED");
+  Serial.println("ESP32 JAM SHALAT ISLAM");
+  Serial.println("LVGL 9.2.0 + FREERTOS");
+  Serial.println("AKSES BERSAMAAN DIOPTIMALKAN");
   Serial.println("VERSI 2.3 - TUGAS HTTP DIPISAHKAN");
   Serial.println("========================================\n");
 
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, LOW);
-  Serial.println("Backlight: OFF");
+  Serial.println("LAMPU LATAR: MATI");
 
-  // RGB LED init - mulai kedip merah (booting)
   pinMode(RGB_R_PIN, OUTPUT);
   pinMode(RGB_G_PIN, OUTPUT);
   pinMode(RGB_B_PIN, OUTPUT);
   rgbOff();
   rgbBootBlinking = true;
   xTaskCreate(rgbBootBlinkTask, "RGBBoot", 1024, NULL, 1, NULL);
-  Serial.println("RGB LED: Boot blink aktif (merah)");
+  Serial.println("RGB LED: KEDIP BOOT AKTIF (MERAH)");
 
   pinMode(TOUCH_IRQ, INPUT_PULLUP);
 
@@ -5756,7 +5697,7 @@ void setup() {
   tft.setRotation(1);
   tft.fillScreen(TFT_BLACK);
 
-  Serial.println("TFT initialized");
+  Serial.println("TFT DIINISIALISASI");
 
   displayMutex = xSemaphoreCreateMutex();
   timeMutex = xSemaphoreCreateMutex();
@@ -5769,38 +5710,38 @@ void setup() {
 
   displayQueue = xQueueCreate(20, sizeof(DisplayUpdate));
   httpQueue = xQueueCreate(5, sizeof(HTTPRequest));
-  
-  Serial.println("Semaphores & Queues created");
+
+  Serial.println("SEMAPHORE & ANTRIAN DIBUAT");
 
   dfPlayerAvailable = initDFPlayer();
 
   if (dfPlayerAvailable) {
     loadAdzanState();
-    
+
     xTaskCreatePinnedToCore(
-      audioTask, 
-      "Audio", 
-      AUDIO_TASK_STACK_SIZE, 
-      NULL, 
+      audioTask,
+      "Audio",
+      AUDIO_TASK_STACK_SIZE,
+      NULL,
       AUDIO_TASK_PRIORITY,
-      &audioTaskHandle, 
+      &audioTaskHandle,
       1
     );
-    Serial.println("Tugas Audio OK");
+    Serial.println("TUGAS AUDIO OK");
   } else {
-    Serial.println("DFPlayer DISABLED - no audio playback");
-    Serial.println("Clearing any pending adzan state...");
-    
+    Serial.println("DFPLAYER DINONAKTIFKAN - TIDAK ADA PEMUTARAN AUDIO");
+    Serial.println("MENGHAPUS STATUS ADZAN YANG TERTUNDA...");
+
     adzanState.isPlaying = false;
     adzanState.canTouch = false;
     adzanState.currentPrayer = "";
-    
+
     if (LittleFS.exists("/adzan_state.txt")) {
       LittleFS.remove("/adzan_state.txt");
-      Serial.println("File status adzan dihapus (tidak ada sistem audio)");
+      Serial.println("FILE STATUS ADZAN DIHAPUS (TIDAK ADA SISTEM AUDIO)");
     }
-    
-    Serial.println("Status adzan dibersihkan - mode hanya buzzer aktif");
+
+    Serial.println("STATUS ADZAN DIBERSIHKAN - MODE HANYA BUZZER AKTIF");
   }
 
   if (wifiConfig.apIP == IPAddress(0, 0, 0, 0)) {
@@ -5828,34 +5769,34 @@ void setup() {
   rtcAvailable = initRTC();
 
   if (rtcAvailable) {
-      Serial.println("\nRTC tersedia");
-      Serial.println("Waktu berhasil dimuat dari RTC");
-      Serial.println("Waktu akan bertahan saat restart");
+      Serial.println("\nRTC TERSEDIA");
+      Serial.println("WAKTU BERHASIL DIMUAT DARI RTC");
+      Serial.println("WAKTU AKAN BERTAHAN SAAT RESTART");
   } else {
-      Serial.println("\nRTC tidak tersedia - waktu akan direset saat restart");
-      
+      Serial.println("\nRTC TIDAK TERSEDIA - WAKTU AKAN DIRESET SAAT RESTART");
+
       if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
           const time_t EPOCH_2000 = 946684800;
           setTime(0, 0, 0, 1, 1, 2000);
           timeConfig.currentTime = EPOCH_2000;
-          
+
           if (timeConfig.currentTime < EPOCH_2000) {
               timeConfig.currentTime = EPOCH_2000;
           }
-          
+
           xSemaphoreGive(timeMutex);
-          Serial.printf("Waktu awal diatur: %ld (01/01/2000 00:00:00 UTC)\n", EPOCH_2000);
+          Serial.printf("WAKTU AWAL DIATUR: %ld (01/01/2000 00:00:00 UTC)\n", EPOCH_2000);
       }
   }
 
   touchSPI.begin(TOUCH_CLK, TOUCH_MISO, TOUCH_MOSI, TOUCH_CS);
   touch.begin(touchSPI);
   touch.setRotation(1);
-  Serial.println("Touch initialized");
+  Serial.println("LAYAR SENTUH DIINISIALISASI");
 
   ledcAttach(BUZZER_PIN, BUZZER_FREQ, BUZZER_RESOLUTION);
   ledcWrite(BUZZER_CHANNEL, 0);
-  Serial.println("Buzzer initialized (GPIO26)");
+  Serial.println("BUZZER DIINISIALISASI (GPIO26)");
 
   lv_init();
   lv_tick_set_cb([]() {
@@ -5871,13 +5812,13 @@ void setup() {
   lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
   lv_indev_set_read_cb(indev, my_touchpad_read);
 
-  Serial.println("LVGL initialized");
+  Serial.println("LVGL DIINISIALISASI");
 
   ui_init();
-  Serial.println("EEZ UI initialized");
+  Serial.println("EEZ UI DIINISIALISASI");
 
   hideAllUIElements();
-  Serial.println("UI elements hidden");
+  Serial.println("ELEMEN UI DISEMBUNYIKAN");
 
   delay(100);
   lv_timer_handler();
@@ -5887,16 +5828,16 @@ void setup() {
 
   tft.fillScreen(TFT_BLACK);
 
-  Serial.println("UI rendered (black screen)");
+  Serial.println("UI DIRENDER (LAYAR HITAM)");
 
-  Serial.println("Starting backlight...");
+  Serial.println("MEMULAI LAMPU LATAR...");
 
   ledcAttach(TFT_BL, TFT_BL_FREQ, TFT_BL_RESOLUTION);
   ledcWrite(TFT_BL, TFT_BL_BRIGHTNESS);
-  Serial.printf("Lampu latar ON: %d/255\n", TFT_BL_BRIGHTNESS);
+  Serial.printf("LAMPU LATAR MENYALA: %d/255\n", TFT_BL_BRIGHTNESS);
 
   Serial.println("\n========================================");
-  Serial.println("WIFI CONFIGURATION");
+  Serial.println("KONFIGURASI WIFI");
   Serial.println("========================================");
 
   setupWiFiEvents();
@@ -5907,49 +5848,49 @@ void setup() {
   esp_netif_t *sta_netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
   if (sta_netif != NULL) {
     esp_netif_set_hostname(sta_netif, hostname.c_str());
-    Serial.print("Hostname diatur via ESP-IDF: ");
+    Serial.print("HOSTNAME DIATUR VIA ESP-IDF: ");
     Serial.println(hostname.c_str());
   } else {
-    Serial.println("PERINGATAN: Tidak dapat mendapatkan handle STA netif");
+    Serial.println("PERINGATAN: TIDAK DAPAT MENDAPATKAN HANDLE STA NETIF");
   }
 
   WiFi.mode(WIFI_AP_STA);
   delay(100);
 
-  Serial.println("Menerapkan optimasi WiFi untuk akses router...");
+  Serial.println("MENERAPKAN OPTIMASI WIFI UNTUK AKSES ROUTER...");
 
   esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
   esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT40);
   WiFi.setTxPower(WIFI_POWER_19_5dBm);
 
-  Serial.println("  Protocol: 802.11 b/g/n");
-  Serial.println("  Bandwidth: 40MHz (HT40)");
-  Serial.println("  TX Power: 19.5dBm (max)");
+  Serial.println("  PROTOKOL: 802.11 B/G/N");
+  Serial.println("  BANDWIDTH: 40MHZ (HT40)");
+  Serial.println("  DAYA TX: 19.5DBM (MAKSIMUM)");
 
   WiFi.setSleep(WIFI_PS_NONE);
   esp_wifi_set_ps(WIFI_PS_NONE);
 
   esp_wifi_set_max_tx_power(78);
 
-  WiFi.setAutoReconnect(false); // Reconnect ditangani manual dengan setSortMethod
+  WiFi.setAutoReconnect(false);
   WiFi.persistent(false);
-  WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL); // Selalu pilih sinyal terkuat
+  WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
 
-  Serial.println("Mode WiFi: AP + STA");
-  Serial.println("WiFi Sleep: DOUBLE DISABLED");
-  Serial.println("  Arduino: WIFI_PS_NONE");
+  Serial.println("MODE WIFI: AP + STA");
+  Serial.println("SLEEP WIFI: GANDA DINONAKTIFKAN");
+  Serial.println("  ARDUINO: WIFI_PS_NONE");
   Serial.println("  ESP-IDF: WIFI_PS_NONE");
-  Serial.println("WiFi Power: Maximum (19.5dBm)");
-  Serial.println("Auto Reconnect: Enabled");
-  Serial.println("Persistent: Disabled");
+  Serial.println("DAYA WIFI: MAKSIMUM (19.5DBM)");
+  Serial.println("AUTO RECONNECT: DIAKTIFKAN");
+  Serial.println("PERSISTENT: DINONAKTIFKAN");
   Serial.println("========================================\n");
 
   WiFi.softAPConfig(wifiConfig.apIP, wifiConfig.apGateway, wifiConfig.apSubnet);
   WiFi.softAP(wifiConfig.apSSID, wifiConfig.apPassword);
   delay(100);
 
-  Serial.printf("AP Dimulai: %s\n", wifiConfig.apSSID);
-  Serial.printf("Password: %s\n", wifiConfig.apPassword);
+  Serial.printf("AP DIMULAI: %s\n", wifiConfig.apSSID);
+  Serial.printf("PASSWORD: %s\n", wifiConfig.apPassword);
   Serial.print("IP AP: ");
   Serial.println(WiFi.softAPIP());
   Serial.printf("MAC AP: %s\n", WiFi.softAPmacAddress().c_str());
@@ -5958,26 +5899,26 @@ void setup() {
   timeConfig.ntpSynced = false;
 
   if (prayerConfig.selectedCity.length() > 0) {
-    Serial.println("\nSelected City: " + prayerConfig.selectedCity);
-    Serial.println("\nLoaded Prayer Times:");
-    Serial.println("Kota: " + prayerConfig.selectedCity);
-    Serial.println("Imsak: " + prayerConfig.imsakTime);
-    Serial.println("Subuh: " + prayerConfig.subuhTime);
-    Serial.println("Terbit: " + prayerConfig.terbitTime);
-    Serial.println("Zuhur: " + prayerConfig.zuhurTime);
-    Serial.println("Ashar: " + prayerConfig.asharTime);
-    Serial.println("Maghrib: " + prayerConfig.maghribTime);
-    Serial.println("Isya: " + prayerConfig.isyaTime);
+    Serial.println("\nKOTA DIPILIH: " + prayerConfig.selectedCity);
+    Serial.println("\nWAKTU SHALAT DIMUAT:");
+    Serial.println("KOTA: " + prayerConfig.selectedCity);
+    Serial.println("IMSAK: " + prayerConfig.imsakTime);
+    Serial.println("SUBUH: " + prayerConfig.subuhTime);
+    Serial.println("TERBIT: " + prayerConfig.terbitTime);
+    Serial.println("ZUHUR: " + prayerConfig.zuhurTime);
+    Serial.println("ASHAR: " + prayerConfig.asharTime);
+    Serial.println("MAGHRIB: " + prayerConfig.maghribTime);
+    Serial.println("ISYA: " + prayerConfig.isyaTime);
 
     DisplayUpdate update;
     update.type = DisplayUpdate::PRAYER_UPDATE;
     xQueueSend(displayQueue, &update, pdMS_TO_TICKS(100));
   } else {
-    Serial.println("\nNo city selected");
-    Serial.println("Please select city via web interface");
+    Serial.println("\nTIDAK ADA KOTA DIPILIH");
+    Serial.println("SILAKAN PILIH KOTA MELALUI ANTARMUKA WEB");
   }
 
-  Serial.println("\nMengkonfigurasi Watchdog...");
+  Serial.println("\nMENGKONFIGURASI WATCHDOG...");
 
   esp_task_wdt_deinit();
 
@@ -5989,13 +5930,13 @@ void setup() {
 
   esp_err_t wdt_err = esp_task_wdt_init(&wdt_config);
   if (wdt_err == ESP_OK) {
-    Serial.println("Watchdog dikonfigurasi (timeout 100 detik)");
+    Serial.println("WATCHDOG DIKONFIGURASI (TIMEOUT 100 DETIK)");
   } else {
-    Serial.printf("Error inisialisasi Watchdog: %s\n", esp_err_to_name(wdt_err));
+    Serial.printf("ERROR INISIALISASI WATCHDOG: %s\n", esp_err_to_name(wdt_err));
   }
 
   Serial.println("\n========================================");
-  Serial.println("STARTING FREERTOS TASKS");
+  Serial.println("MEMULAI TUGAS FREERTOS");
   Serial.println("========================================");
 
   xTaskCreatePinnedToCore(
@@ -6005,9 +5946,9 @@ void setup() {
     NULL,
     UI_TASK_PRIORITY,
     &uiTaskHandle,
-    1  // Core 1
+    1
   );
-  Serial.printf("Task UI (Core 1) - Stack: %d byte\n", UI_TASK_STACK_SIZE);
+  Serial.printf("TUGAS UI (CORE 1) - STACK: %d BYTE\n", UI_TASK_STACK_SIZE);
 
   // ================================
   // WIFI TASK
@@ -6019,9 +5960,9 @@ void setup() {
     NULL,
     WIFI_TASK_PRIORITY,
     &wifiTaskHandle,
-    0  // Core 0
+    0
   );
-  Serial.printf("Task WiFi (Core 0) - Stack: %d byte\n", WIFI_TASK_STACK_SIZE);
+  Serial.printf("TUGAS WIFI (CORE 0) - STACK: %d BYTE\n", WIFI_TASK_STACK_SIZE);
 
   // ================================
   // NTP TASK
@@ -6033,9 +5974,9 @@ void setup() {
     NULL,
     NTP_TASK_PRIORITY,
     &ntpTaskHandle,
-    0  // Core 0
+    0
   );
-  Serial.printf("Task NTP (Core 0) - Stack: %d byte\n", NTP_TASK_STACK_SIZE);
+  Serial.printf("TUGAS NTP (CORE 0) - STACK: %d BYTE\n", NTP_TASK_STACK_SIZE);
 
   // ================================
   // WEB TASK
@@ -6047,9 +5988,9 @@ void setup() {
     NULL,
     WEB_TASK_PRIORITY,
     &webTaskHandle,
-    0  // Core 0
+    0
   );
-  Serial.printf("Task Web (Core 0) - Stack: %d byte\n", WEB_TASK_STACK_SIZE);
+  Serial.printf("TUGAS WEB (CORE 0) - STACK: %d BYTE\n", WEB_TASK_STACK_SIZE);
 
   // ================================
   // HTTP TASK
@@ -6061,13 +6002,13 @@ void setup() {
     NULL,
     0,
     &httpTaskHandle,
-    0 // Core 0
+    0
   );
-  Serial.printf("Task HTTP (Core 0) - Stack: 8192 byte\n");
-  
+  Serial.printf("TUGAS HTTP (CORE 0) - STACK: 8192 BYTE\n");
+
   if (httpTaskHandle) {
     esp_task_wdt_add(httpTaskHandle);
-    Serial.println("  Tugas HTTP WDT terdaftar");
+    Serial.println("  TUGAS HTTP WDT TERDAFTAR");
   }
 
   // ================================
@@ -6080,13 +6021,13 @@ void setup() {
     NULL,
     PRAYER_TASK_PRIORITY,
     &prayerTaskHandle,
-    0  // Core 0
+    0
   );
-  Serial.printf("Task Shalat (Core 0) - Stack: %d byte\n", PRAYER_TASK_STACK_SIZE);
+  Serial.printf("TUGAS SHALAT (CORE 0) - STACK: %d BYTE\n", PRAYER_TASK_STACK_SIZE);
 
   if (prayerTaskHandle) {
     esp_task_wdt_add(prayerTaskHandle);
-    Serial.println("  Tugas Shalat WDT terdaftar");
+    Serial.println("  TUGAS SHALAT WDT TERDAFTAR");
   }
 
   // ================================
@@ -6099,9 +6040,9 @@ void setup() {
     NULL,
     CLOCK_TASK_PRIORITY,
     NULL,
-    0  // Core 0
+    0
   );
-  Serial.printf("Task Jam (Core 0) - Stack: %d byte\n", CLOCK_TASK_STACK_SIZE);
+  Serial.printf("TUGAS JAM (CORE 0) - STACK: %d BYTE\n", CLOCK_TASK_STACK_SIZE);
 
   // ================================
   // INTERNET CHECK TASK
@@ -6114,7 +6055,7 @@ void setup() {
     1,
     NULL
   );
-  Serial.println("Task Internet Check (Core any) - Stack: 3072 byte");
+  Serial.println("TUGAS CEK INTERNET (CORE BEBAS) - STACK: 3072 BYTE");
 
   // ================================
   // RTC SYNC TASK
@@ -6123,13 +6064,13 @@ void setup() {
     xTaskCreatePinnedToCore(
       rtcSyncTask,
       "RTC Sync",
-      RTC_TASK_STACK_SIZE, 
+      RTC_TASK_STACK_SIZE,
       NULL,
       RTC_TASK_PRIORITY,
       &rtcTaskHandle,
-      0  // Core 0
+      0
     );
-    Serial.printf("Task Sinkronisasi RTC (Core 0) - Stack: %d byte\n", RTC_TASK_STACK_SIZE);
+    Serial.printf("TUGAS SINKRONISASI RTC (CORE 0) - STACK: %d BYTE\n", RTC_TASK_STACK_SIZE);
   }
 
   // ================================
@@ -6138,23 +6079,23 @@ void setup() {
   xTaskCreate(
     [](void* param) {
       const TickType_t checkInterval = pdMS_TO_TICKS(30000);
-      
-      Serial.println("Tugas Watchdog Shalat - Memantau setiap 30 detik");
-      
+
+      Serial.println("TUGAS WATCHDOG SHALAT - MEMANTAU SETIAP 30 DETIK");
+
       while (true) {
         vTaskDelay(checkInterval);
-        
+
         if (prayerTaskHandle != NULL) {
           eTaskState state = eTaskGetState(prayerTaskHandle);
-          
+
           if (state == eDeleted || state == eInvalid) {
             Serial.println("\n========================================");
             Serial.println("KRITIS: TUGAS SHALAT CRASH");
             Serial.println("========================================");
-            Serial.println("Detected state: " + String(state == eDeleted ? "DELETED" : "INVALID"));
-            Serial.println("Aksi: Memulai ulang tugas otomatis...");
+            Serial.println("STATUS TERDETEKSI: " + String(state == eDeleted ? "DELETED" : "INVALID"));
+            Serial.println("AKSI: MEMULAI ULANG TUGAS OTOMATIS...");
             Serial.println("========================================");
-            
+
             xTaskCreatePinnedToCore(
               prayerTask,
               "Prayer",
@@ -6164,23 +6105,23 @@ void setup() {
               &prayerTaskHandle,
               0
             );
-            
+
             if (prayerTaskHandle) {
               esp_task_wdt_add(prayerTaskHandle);
-              Serial.println("\nTugas Shalat berhasil dimulai ulang");
-              Serial.println("Stack: " + String(PRAYER_TASK_STACK_SIZE) + " bytes");
-              Serial.println("WDT: Re-registered");
+              Serial.println("\nTUGAS SHALAT BERHASIL DIMULAI ULANG");
+              Serial.println("STACK: " + String(PRAYER_TASK_STACK_SIZE) + " BYTE");
+              Serial.println("WDT: TERDAFTAR ULANG");
               Serial.println("========================================\n");
             } else {
-              Serial.println("\nGAGAL memulai ulang Tugas Shalat!");
-              Serial.println("System may be unstable");
+              Serial.println("\nGAGAL MEMULAI ULANG TUGAS SHALAT!");
+              Serial.println("SISTEM MUNGKIN TIDAK STABIL");
               Serial.println("========================================\n");
             }
           }
         } else {
-          Serial.println("\nPERINGATAN: Handle Tugas Shalat NULL");
-          Serial.println("Mencoba membuat tugas...");
-          
+          Serial.println("\nPERINGATAN: HANDLE TUGAS SHALAT NULL");
+          Serial.println("MENCOBA MEMBUAT TUGAS...");
+
           xTaskCreatePinnedToCore(
             prayerTask,
             "Prayer",
@@ -6190,10 +6131,10 @@ void setup() {
             &prayerTaskHandle,
             0
           );
-          
+
           if (prayerTaskHandle) {
             esp_task_wdt_add(prayerTaskHandle);
-            Serial.println("Tugas Shalat berhasil dibuat\n");
+            Serial.println("TUGAS SHALAT BERHASIL DIBUAT\n");
           }
         }
       }
@@ -6207,84 +6148,84 @@ void setup() {
 
   vTaskDelay(pdMS_TO_TICKS(500));
 
-  Serial.println("\nRegistering tasks to watchdog:");
-  
+  Serial.println("\nMENDAFTARKAN TUGAS KE WATCHDOG:");
+
   if (wifiTaskHandle) {
     esp_task_wdt_add(wifiTaskHandle);
-    Serial.println("  Tugas WiFi");
+    Serial.println("  TUGAS WIFI");
   }
   if (webTaskHandle) {
     esp_task_wdt_add(webTaskHandle);
-    Serial.println("  Tugas Web");
+    Serial.println("  TUGAS WEB");
   }
   if (ntpTaskHandle) {
     esp_task_wdt_add(ntpTaskHandle);
-    Serial.println("  Tugas NTP");
+    Serial.println("  TUGAS NTP");
   }
 
   Serial.println("========================================\n");
 
   Serial.println("========================================");
-  Serial.println("MEMORY REPORT");
+  Serial.println("LAPORAN MEMORI");
   Serial.println("========================================");
-  
+
   size_t freeHeap = ESP.getFreeHeap();
   size_t totalHeap = ESP.getHeapSize();
   size_t usedHeap = totalHeap - freeHeap;
-  
-  Serial.printf("Total Heap:  %d byte (%.2f KB)\n", totalHeap, totalHeap / 1024.0);
-  Serial.printf("Heap Terpakai: %d byte (%.2f KB)\n", usedHeap, usedHeap / 1024.0);
-  Serial.printf("Heap Tersisa: %d byte (%.2f KB)\n", freeHeap, freeHeap / 1024.0);
-  Serial.printf("Usage:       %.1f%%\n", (usedHeap * 100.0) / totalHeap);
-  
-  Serial.println("\nAlokasi Stack Tugas:");
-  uint32_t totalStack = UI_TASK_STACK_SIZE + WIFI_TASK_STACK_SIZE + 
-                        NTP_TASK_STACK_SIZE + WEB_TASK_STACK_SIZE + 
+
+  Serial.printf("TOTAL HEAP:  %d BYTE (%.2F KB)\n", totalHeap, totalHeap / 1024.0);
+  Serial.printf("HEAP TERPAKAI: %d BYTE (%.2F KB)\n", usedHeap, usedHeap / 1024.0);
+  Serial.printf("HEAP TERSISA: %d BYTE (%.2F KB)\n", freeHeap, freeHeap / 1024.0);
+  Serial.printf("PENGGUNAAN:       %.1f%%\n", (usedHeap * 100.0) / totalHeap);
+
+  Serial.println("\nALOKASI STACK TUGAS:");
+  uint32_t totalStack = UI_TASK_STACK_SIZE + WIFI_TASK_STACK_SIZE +
+                        NTP_TASK_STACK_SIZE + WEB_TASK_STACK_SIZE +
                         PRAYER_TASK_STACK_SIZE + CLOCK_TASK_STACK_SIZE +
                         8192;
   if (rtcAvailable) totalStack += RTC_TASK_STACK_SIZE;
-  
-  Serial.printf("Total:        %d byte (%.2f KB)\n", totalStack, totalStack / 1024.0);
-  Serial.printf("Task UI:      %d byte\n", UI_TASK_STACK_SIZE);
-  Serial.printf("Task Web:     %d byte\n", WEB_TASK_STACK_SIZE);
-  Serial.printf("Task HTTP:    8192 byte (BARU)\n");
-  Serial.printf("Task Shalat:  %d byte (dikurangi dari 16384)\n", PRAYER_TASK_STACK_SIZE);
+
+  Serial.printf("TOTAL:        %d BYTE (%.2F KB)\n", totalStack, totalStack / 1024.0);
+  Serial.printf("TUGAS UI:      %d BYTE\n", UI_TASK_STACK_SIZE);
+  Serial.printf("TUGAS WEB:     %d BYTE\n", WEB_TASK_STACK_SIZE);
+  Serial.printf("TUGAS HTTP:    8192 BYTE (BARU)\n");
+  Serial.printf("TUGAS SHALAT:  %d BYTE (DIKURANGI DARI 16384)\n", PRAYER_TASK_STACK_SIZE);
   Serial.println("========================================\n");
 
   Serial.println("========================================");
-  Serial.println("SYSTEM READY");
+  Serial.println("SISTEM SIAP");
   Serial.println("========================================");
-  Serial.println("Multi-client concurrent access enabled");
-  Serial.println("WiFi sleep dinonaktifkan untuk respons lebih baik");
-  Serial.println("Router optimization active (keep-alive)");
-  Serial.println("Pemulihan otomatis Tugas Shalat diaktifkan");
-  Serial.println("Tugas HTTP dipisahkan (non-blocking)");
-  Serial.println("Pemantauan stack aktif");
-  Serial.println("Memory optimized (saved ~8KB)");
+  Serial.println("AKSES BERSAMAAN MULTI-KLIEN DIAKTIFKAN");
+  Serial.println("SLEEP WIFI DINONAKTIFKAN UNTUK RESPONS LEBIH BAIK");
+  Serial.println("OPTIMASI ROUTER AKTIF (KEEP-ALIVE)");
+  Serial.println("PEMULIHAN OTOMATIS TUGAS SHALAT DIAKTIFKAN");
+  Serial.println("TUGAS HTTP DIPISAHKAN (NON-BLOCKING)");
+  Serial.println("PEMANTAUAN STACK AKTIF");
+  Serial.println("MEMORI DIOPTIMALKAN (HEMAT ~8KB)");
   Serial.println("========================================\n");
 
   if (wifiConfig.routerSSID.length() > 0) {
-    Serial.println("WiFi dikonfigurasi, akan auto-connect...");
+    Serial.println("WIFI DIKONFIGURASI, AKAN AUTO-CONNECT...");
     Serial.println("SSID: " + wifiConfig.routerSSID);
   } else {
-    Serial.println("Hubungkan ke AP untuk konfigurasi:");
-    Serial.println("1. WiFi: " + String(wifiConfig.apSSID));
-    Serial.println("2. Password: " + String(wifiConfig.apPassword));
-    Serial.println("3. Browser: http://192.168.100.1");
-    Serial.println("4. Atur WiFi & pilih kota");
+    Serial.println("HUBUNGKAN KE AP UNTUK KONFIGURASI:");
+    Serial.println("1. WIFI: " + String(wifiConfig.apSSID));
+    Serial.println("2. PASSWORD: " + String(wifiConfig.apPassword));
+    Serial.println("3. BROWSER: http://192.168.100.1");
+    Serial.println("4. ATUR WIFI & PILIH KOTA");
   }
 
   if (prayerConfig.selectedCity.length() == 0) {
-    Serial.println("\nREMINDER: Select city via web interface");
+    Serial.println("\nPENGINGAT: PILIH KOTA MELALUI ANTARMUKA WEB");
   }
 
-  Serial.println("\nBoot selesai - Siap menerima koneksi");
+  Serial.println("\nBOOT SELESAI - SIAP MENERIMA KONEKSI");
   rgbBootDone();
-  Serial.println("Log pemantauan akan muncul di bawah:");
-  Serial.println("  - Laporan penggunaan stack setiap 60 detik");
-  Serial.println("  - Pemeriksaan kesehatan Tugas Shalat setiap 30 detik");
-  Serial.println("  - Log pemrosesan Tugas HTTP");
-  Serial.println("  - Laporan memori setiap 30 detik (dari webTask)");
+  Serial.println("LOG PEMANTAUAN AKAN MUNCUL DI BAWAH:");
+  Serial.println("  - LAPORAN PENGGUNAAN STACK SETIAP 60 DETIK");
+  Serial.println("  - PEMERIKSAAN KESEHATAN TUGAS SHALAT SETIAP 30 DETIK");
+  Serial.println("  - LOG PEMROSESAN TUGAS HTTP");
+  Serial.println("  - LAPORAN MEMORI SETIAP 30 DETIK (DARI WEBTASK)");
   Serial.println("========================================\n");
 }
 
