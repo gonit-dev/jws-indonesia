@@ -28,7 +28,7 @@
 #include "src/fonts.h"
 
 // ================================
-// PIN DEFINITIONS
+// DEFINISI PIN
 // ================================
 #define TFT_BL 27
 #define TOUCH_CS 33
@@ -42,8 +42,8 @@
 //#define RTC_SDA    21
 //#define RTC_SCL    22
 
-#define DFPLAYER_TX 25  // ESP32 TX → DFPLAYER RX
-#define DFPLAYER_RX 32  // ESP32 RX → DFPLAYER TX
+#define DFPLAYER_TX 25  // ESP32 TX → RX DFPLAYER
+#define DFPLAYER_RX 32  // ESP32 RX → TX DFPLAYER
 
 #define BUZZER_PIN 26
 #define BUZZER_CHANNEL 1
@@ -66,7 +66,7 @@
 #define TS_MAX_Y 3600
 
 // ================================
-// RTOS CONFIGURATION
+// KONFIGURASI RTOS
 // ================================
 #define UI_TASK_STACK_SIZE 12288       // LVGL + EEZ RENDERING
 #define WIFI_TASK_STACK_SIZE 3072      // EVENT-DRIVEN + RECONNECT
@@ -110,7 +110,7 @@ QueueHandle_t displayQueue;
 QueueHandle_t httpQueue;
 
 // ================================
-// GLOBAL OBJECTS
+// OBJEK GLOBAL
 // ================================
 static lv_display_t *display;
 static lv_indev_t *indev;
@@ -124,7 +124,7 @@ RTC_DS3231 rtc;
 bool rtcAvailable = false;
 
 // ================================
-// DEFAULT AP CONFIGURATION
+// KONFIGURASI AP DEFAULT
 // ================================
 String DEFAULT_AP_SSID = "JWS-" + String(ESP.getEfuseMac(), HEX);
 #define DEFAULT_AP_PASSWORD "12345678"
@@ -140,7 +140,7 @@ EventGroupHandle_t wifiEventGroup;
 #define WIFI_GOT_IP_BIT       BIT2
 
 // ================================
-// NTP SERVER LIST (FALLBACK)
+// DAFTAR SERVER NTP (CADANGAN)
 // ================================
 const char *ntpServers[] = {
   "pool.ntp.org",
@@ -150,7 +150,7 @@ const char *ntpServers[] = {
 const int NTP_SERVER_COUNT = 3;
 
 // ================================
-// CONFIGURATION STRUCTURES
+// STRUKTUR KONFIGURASI
 // ================================
 struct WiFiConfig {
   char apSSID[33];
@@ -210,12 +210,12 @@ struct BuzzerConfig {
 };
 
 struct AlarmConfig {
-  char alarmTime[6]; // FORMAT "HH:MM"
+  char alarmTime[6]; // FORMAT "JJ:MM"
   bool alarmEnabled;
 };
 
 // ================================
-// ALARM STATE
+// STATUS ALARM
 // ================================
 struct AlarmState {
   bool isRinging;
@@ -302,7 +302,7 @@ unsigned long lastFastScan = 0;
 const unsigned long FAST_SCAN_INTERVAL = 3000;
 
 // ================================
-// DISPLAY UPDATE STRUCTURE
+// STRUKTUR PEMBARUAN LAYAR
 // ================================
 struct DisplayUpdate {
   enum Type {
@@ -314,7 +314,7 @@ struct DisplayUpdate {
 };
 
 // ================================
-// HTTP REQUEST STRUCTURE
+// STRUKTUR PERMINTAAN HTTP
 // ================================
 struct HTTPRequest {
   String latitude;
@@ -322,12 +322,12 @@ struct HTTPRequest {
 };
 
 // ================================
-// NETWORK OBJECTS
+// OBJEK JARINGAN
 // ================================
 AsyncWebServer server(80);
 
 // ================================
-// TOUCH VARIABLES
+// VARIABEL SENTUHAN
 // ================================
 bool touchPressed = false;
 int16_t lastX = 0;
@@ -335,7 +335,7 @@ int16_t lastY = 0;
 unsigned long lastTouchTime = 0;
 
 // ================================
-// STATE VARIABLES
+// VARIABEL STATUS
 // ================================
 bool displayNeedsUpdate = false;
 
@@ -353,7 +353,7 @@ TaskHandle_t restartTaskHandle = NULL;
 TaskHandle_t resetTaskHandle = NULL;
 
 // ================================
-// PRAYER TIME BLINK STATE
+// STATUS KEDIP WAKTU SHOLAT
 // ================================
 struct BlinkState {
   bool isBlinking;
@@ -375,12 +375,12 @@ const unsigned long BLINK_DURATION = 60000;
 const unsigned long BLINK_INTERVAL = 500;
 
 // ================================
-// BLINK TRIGGER GUARD
+// PENJAGA PEMICU KEDIP
 // ================================
 static int lastBlinkMinute = -1;
 
 // ================================
-// WIFI RESTART PROTECTION
+// PERLINDUNGAN RESTART WIFI
 // ================================
 static SemaphoreHandle_t wifiRestartMutex = NULL;
 static bool wifiRestartInProgress = false;
@@ -391,7 +391,7 @@ static unsigned long lastAPRestartRequest = 0;
 const unsigned long RESTART_DEBOUNCE_MS = 3000;
 
 // ================================
-// RGB LED STATE
+// STATUS LED RGB
 // ================================
 static bool rgbBootBlinking = true;
 static bool internetAvailable = false;
@@ -660,7 +660,7 @@ void showAllUIElements() {
 }
 
 // ============================================
-// COUNTDOWN HELPER FUNCTIONS
+// FUNGSI PEMBANTU HITUNG MUNDUR
 // ============================================
 void startCountdown(String reason, String message, int seconds) {
   if (countdownMutex == NULL) {
@@ -710,7 +710,7 @@ int getRemainingSeconds() {
 }
 
 // ============================================
-// PRAYER TIME BLINK FUNCTIONS
+// FUNGSI KEDIP WAKTU SHOLAT
 // ============================================
 void checkPrayerTime() {
   if (alarmState.isRinging) return;
@@ -1196,7 +1196,7 @@ void setupWiFiEvents() {
 }
 
 // ============================================
-// SETTINGS & CONFIGURATION FUNCTIONS
+// FUNGSI PENGATURAN & KONFIGURASI
 // ============================================
 void saveTimezoneConfig() {
   if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
@@ -1262,7 +1262,7 @@ void loadBuzzerConfig() {
 }
 
 // ============================================
-// ALARM CONFIG - SAVE / LOAD
+// KONFIGURASI ALARM - SIMPAN / MUAT
 // ============================================
 void saveAlarmConfig() {
   if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
@@ -1644,7 +1644,7 @@ void loadMethodSelection() {
 }
 
 // ============================================
-// RTC FUNCTIONS
+// FUNGSI RTC
 // ============================================
 bool initRTC() {
     Serial.println("\n========================================");
@@ -1915,7 +1915,7 @@ void sendJSONResponse(AsyncWebServerRequest *request, const String &json) {
 }
 
 // ============================================
-// WEB SERVER FUNCTIONS
+// FUNGSI SERVER WEB
 // ============================================
 void setupServerRoutes() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
@@ -3149,7 +3149,7 @@ void setupServerRoutes() {
   });
 
   // ========================================
-  // ALARM CONFIG ROUTES
+  // RUTE KONFIGURASI ALARM
   // ========================================
   server.on("/getalarmconfig", HTTP_GET, [](AsyncWebServerRequest *request) {
     String json = "{";
@@ -3186,7 +3186,7 @@ void setupServerRoutes() {
   });
 
   // ========================================
-  // TAB RESET - FACTORY RESET
+  // TAB RESET - RESET PABRIK
   // ========================================
   server.on("/reset", HTTP_POST, [](AsyncWebServerRequest * request) {
       if (resetTaskHandle != NULL) {
@@ -3533,7 +3533,7 @@ void setupServerRoutes() {
   }
 
 // ============================================
-// UTILITY FUNCTIONS
+// FUNGSI UTILITAS
 // ============================================
 bool init_littlefs() {
   Serial.println("MENGINISIALISASI LITTLEFS...");
@@ -3925,6 +3925,86 @@ void uiTask(void *parameter) {
   }
 }
 
+// ============================================
+// HELPER: ASYNC SCAN - TIDAK BLOCKING, AMAN WDT
+// ============================================
+int asyncScanNetworks() {
+    esp_task_wdt_reset();
+
+    WiFi.scanNetworks(true, false);
+
+    unsigned long scanStart = millis();
+    const unsigned long SCAN_TIMEOUT = 8000;
+
+    int result = WIFI_SCAN_RUNNING;
+    while (result == WIFI_SCAN_RUNNING) {
+        if (millis() - scanStart > SCAN_TIMEOUT) {
+            Serial.println("[WIFI] SCAN TIMEOUT (8 DETIK)");
+            WiFi.scanDelete();
+            return -1;
+        }
+        esp_task_wdt_reset();
+        vTaskDelay(pdMS_TO_TICKS(200));
+        result = WiFi.scanComplete();
+    }
+
+    return result;
+}
+
+// ============================================
+// KONEKSI KE AP TERKUAT (ASYNC SCAN + BSSID)
+// Dipanggil hanya saat: pertama nyala, koneksi terputus, percobaan ulang
+// ============================================
+void connectToBestAP() {
+    Serial.println("\n[WIFI] MEMINDAI AP TERKUAT (ASYNC)...");
+
+    int found = asyncScanNetworks();
+    if (found <= 0) {
+        Serial.println("[WIFI] TIDAK ADA JARINGAN DITEMUKAN, KONEK LANGSUNG...");
+        esp_netif_set_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), hostname.c_str());
+        WiFi.begin(wifiConfig.routerSSID.c_str(), wifiConfig.routerPassword.c_str());
+        return;
+    }
+
+    int bestIndex = -1;
+    int bestRSSI  = -999;
+
+    for (int i = 0; i < found; i++) {
+        if (WiFi.SSID(i) == wifiConfig.routerSSID) {
+            Serial.printf("  [%d] BSSID: %s | RSSI: %d dBm | CH: %d\n",
+                i, WiFi.BSSIDstr(i).c_str(), WiFi.RSSI(i), WiFi.channel(i));
+            if (WiFi.RSSI(i) > bestRSSI) {
+                bestRSSI  = WiFi.RSSI(i);
+                bestIndex = i;
+            }
+        }
+    }
+
+    uint8_t bestBSSID[6];
+    bool hasBSSID = false;
+    if (bestIndex >= 0) {
+        memcpy(bestBSSID, WiFi.BSSID(bestIndex), 6);
+        hasBSSID = true;
+    }
+
+    WiFi.scanDelete();
+
+    esp_netif_set_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), hostname.c_str());
+
+    if (hasBSSID) {
+        Serial.printf("[WIFI] AP TERPILIH: %02X:%02X:%02X:%02X:%02X:%02X | RSSI: %d dBm\n",
+            bestBSSID[0], bestBSSID[1], bestBSSID[2],
+            bestBSSID[3], bestBSSID[4], bestBSSID[5], bestRSSI);
+        WiFi.begin(wifiConfig.routerSSID.c_str(),
+                   wifiConfig.routerPassword.c_str(),
+                   0,
+                   bestBSSID);
+    } else {
+        Serial.println("[WIFI] SSID TIDAK DITEMUKAN DI SCAN, KONEK NORMAL...");
+        WiFi.begin(wifiConfig.routerSSID.c_str(), wifiConfig.routerPassword.c_str());
+    }
+}
+
 void wifiTask(void *parameter) {
     esp_task_wdt_add(NULL);
 
@@ -3960,7 +4040,7 @@ void wifiTask(void *parameter) {
             Serial.println("========================================");
 
             // ============================================
-            // SAFETY: SKIP EVENTS DURING RESTART
+            // KEAMANAN: LEWATI EVENT SAAT RESTART BERJALAN
             // ============================================
             if (wifiRestartInProgress || apRestartInProgress) {
                 Serial.println("RESTART WIFI/AP SEDANG BERJALAN - MELEWATI AUTO-RECONNECT");
@@ -4020,9 +4100,7 @@ void wifiTask(void *parameter) {
                     wifiState = WIFI_FAILED;
                     wifiFailedTime = millis();
                 } else {
-                    esp_netif_set_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), hostname.c_str());
-                    WiFi.begin(wifiConfig.routerSSID.c_str(),
-                              wifiConfig.routerPassword.c_str());
+                    connectToBestAP();
                     wifiState = WIFI_CONNECTING;
                 }
             }
@@ -4043,7 +4121,7 @@ void wifiTask(void *parameter) {
                 Serial.println("AUTOUPDATEDONE: FALSE (SIAP SINKRONISASI)");
 
                 // ============================================
-                // WAIT FOR NTP SYNC START
+                // TUNGGU HINGGA SINKRONISASI NTP DIMULAI
                 // ============================================
                 if (!ntpSyncInProgress && !ntpSyncCompleted) {
                     Serial.println("MENUNGGU TUGAS NTP DIMULAI...");
@@ -4058,7 +4136,7 @@ void wifiTask(void *parameter) {
                 }
 
                 // ============================================
-                // WAIT FOR NTP SYNC TO COMPLETE
+                // TUNGGU HINGGA SINKRONISASI NTP SELESAI
                 // ============================================
                 if (ntpSyncInProgress) {
                     int ntpWaitCounter = 0;
@@ -4088,7 +4166,7 @@ void wifiTask(void *parameter) {
                 }
 
                 // ============================================
-                // NTP COMPLETE, UPDATE PRAYER TIMES
+                // NTP SELESAI, PERBARUI WAKTU SHALAT
                 // ============================================
                 if (ntpSyncCompleted && timeConfig.ntpSynced) {
                     Serial.println("\n========================================");
@@ -4178,7 +4256,7 @@ void wifiTask(void *parameter) {
         }
 
         // ========================================
-        // CHECK FIRST-TIME CONNECTION
+        // PERIKSA KONEKSI PERTAMA KALI
         // ========================================
         if (wifiState == WIFI_IDLE && wifiConfig.routerSSID.length() > 0) {
             bool isConnected = (bits & WIFI_CONNECTED_BIT) != 0;
@@ -4187,10 +4265,7 @@ void wifiTask(void *parameter) {
                 Serial.println("\n[TUGAS WIFI] PERCOBAAN KONEKSI AWAL");
                 Serial.println("SSID: " + wifiConfig.routerSSID);
 
-                esp_netif_set_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), hostname.c_str());
-
-                WiFi.begin(wifiConfig.routerSSID.c_str(),
-                          wifiConfig.routerPassword.c_str());
+                connectToBestAP();
                 wifiState = WIFI_CONNECTING;
             }
         }
@@ -4617,7 +4692,7 @@ void webTask(void *parameter) {
 
         reconnectAttempts = 0;
         esp_netif_set_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), hostname.c_str());
-        WiFi.begin(wifiConfig.routerSSID.c_str(), wifiConfig.routerPassword.c_str());
+        connectToBestAP();
         wifiState = WIFI_CONNECTING;
         wifiFailedTime = now;
       }
@@ -4973,7 +5048,7 @@ void rtcSyncTask(void *parameter) {
 }
 
 // ============================================
-// INTERNET CHECK TASK - CHECK INTERNET CONNECTION EVERY 30 SECONDS
+// TUGAS PEMERIKSAAN INTERNET - PERIKSA KONEKSI INTERNET SETIAP 30 DETIK
 // ============================================
 void internetCheckTask(void *parameter) {
   const TickType_t checkInterval = pdMS_TO_TICKS(30000);
@@ -5176,9 +5251,9 @@ void restartWiFiTask(void *parameter) {
     if (ssid.length() > 0) {
         Serial.println("\nMENGHUBUNGKAN ULANG KE WIFI...");
         Serial.println("   TARGET SSID: " + ssid);
-        Serial.println("   MEMULAI KONEKSI...");
+        Serial.println("   MEMINDAI AP TERKUAT...");
 
-        WiFi.begin(ssid.c_str(), password.c_str());
+        connectToBestAP();
 
         Serial.println("\n========================================");
         Serial.println("KONEKSI ULANG WIFI DIMULAI");
@@ -5663,7 +5738,7 @@ void httpTask(void *parameter) {
 }
 
 // ================================
-// SETUP - ESP32 CORE 3.X
+// INISIALISASI - ESP32 CORE 3.X
 // ================================
 void setup() {
 #if !PRODUCTION
@@ -5875,6 +5950,7 @@ void setup() {
   WiFi.setAutoReconnect(false);
   WiFi.persistent(false);
   WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
+  WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
 
   Serial.println("MODE WIFI: AP + STA");
   Serial.println("SLEEP WIFI: GANDA DINONAKTIFKAN");
@@ -6230,7 +6306,7 @@ void setup() {
 }
 
 // ================================
-// LOOP
+// PERULANGAN UTAMA
 // ================================
 void loop() {
   vTaskDelay(pdMS_TO_TICKS(1000));
