@@ -369,8 +369,12 @@
                                                                 <span id="ipAddress">Tidak tersedia</span>
                                                             </p>
                                                             <p>
-                                                                <strong>Internet:</strong>
+                                                                <strong>Status WiFi:</strong>
                                                                 <span id="internetStatus" class="label warning">Menghubungkan…</span>
+                                                            </p>
+                                                            <p>
+                                                                <strong>Sinyal:</strong>
+                                                                <span id="rssiValue">-</span>
                                                             </p>
                                                         </div>
                                                         <div class="small-12 medium-6 large-6 cell text-left">
@@ -1723,13 +1727,41 @@
                 if (document.getElementById('ntpServerUsed')) {
                     document.getElementById('ntpServerUsed').textContent = data.ntpServer || '';
                 }
+
+                // Status WiFi berdasarkan wifiState
                 const statusBadge = document.getElementById('internetStatus');
-                if (isOnline) {
-                    statusBadge.textContent = 'Terhubung';
-                    statusBadge.className = 'label success';
-                } else {
-                    statusBadge.textContent = 'Tidak terhubung';
-                    statusBadge.className = 'label alert';
+                switch (data.wifiState) {
+                    case 'connected':
+                        statusBadge.textContent = 'Terhubung';
+                        statusBadge.className = 'label success';
+                        break;
+                    case 'connecting':
+                        statusBadge.textContent = 'Menghubungkan...';
+                        statusBadge.className = 'label warning';
+                        break;
+                    case 'failed':
+                        statusBadge.textContent = 'Gagal';
+                        statusBadge.className = 'label alert';
+                        break;
+                    case 'idle':
+                        statusBadge.textContent = 'Tidak terkonfigurasi';
+                        statusBadge.className = 'label secondary';
+                        break;
+                    default:
+                        statusBadge.textContent = data.connected ? 'Terhubung' : 'Tidak terhubung';
+                        statusBadge.className = data.connected ? 'label success' : 'label alert';
+                }
+
+                // Kekuatan sinyal
+                const rssiEl = document.getElementById('rssiValue');
+                if (rssiEl) {
+                    if (data.rssi && data.rssi !== 0) {
+                        const rssi = data.rssi;
+                        const quality = rssi >= -50 ? 'Sangat Baik' : rssi >= -60 ? 'Baik' : rssi >= -70 ? 'Cukup' : 'Lemah';
+                        rssiEl.textContent = rssi + ' dBm (' + quality + ')';
+                    } else {
+                        rssiEl.textContent = '-';
+                    }
                 }
                 // ================================
                 // UPDATE TIME & DATE FROM SERVER
@@ -1749,8 +1781,11 @@
                 }
             } catch (error) {
                 isOnline = false;
-                document.getElementById('internetStatus').textContent = 'Terjadi kesalahan';
-                document.getElementById('internetStatus').className = 'label alert';
+                const statusBadge = document.getElementById('internetStatus');
+                statusBadge.textContent = 'Terjadi kesalahan';
+                statusBadge.className = 'label alert';
+                const rssiEl = document.getElementById('rssiValue');
+                if (rssiEl) rssiEl.textContent = '-';
             } finally {
                 isLoadingDeviceStatus = false;
             }

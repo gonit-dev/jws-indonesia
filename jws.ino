@@ -54,9 +54,9 @@
 #define BUZZER_RESOLUTION 8
 
 // RGB LED Pins (Common Anode / Active LOW)
-#define RGB_R_PIN      4
-#define RGB_G_PIN      16
-#define RGB_B_PIN      17
+#define RGB_R_PIN      17
+#define RGB_G_PIN      4
+#define RGB_B_PIN      16
 
 // PWM Backlight Configuration
 #define TFT_BL_CHANNEL 0
@@ -2015,13 +2015,26 @@ void setupServerRoutes() {
 
     String ssid = isWiFiConnected ? WiFi.SSID() : "";
     String ip = isWiFiConnected ? wifiConfig.localIP.toString() : "0.0.0.0";
+    int rssi = isWiFiConnected ? WiFi.RSSI() : 0;
 
-    char jsonBuffer[512];
+    // Terjemahkan wifiState ke string
+    String wifiStateStr;
+    switch (wifiState) {
+      case WIFI_IDLE:       wifiStateStr = "idle"; break;
+      case WIFI_CONNECTING: wifiStateStr = "connecting"; break;
+      case WIFI_CONNECTED:  wifiStateStr = "connected"; break;
+      case WIFI_FAILED:     wifiStateStr = "failed"; break;
+      default:              wifiStateStr = "unknown"; break;
+    }
+
+    char jsonBuffer[768];
     snprintf(jsonBuffer, sizeof(jsonBuffer),
       "{"
       "\"connected\":%s,"
+      "\"wifiState\":\"%s\","
       "\"ssid\":\"%s\","
       "\"ip\":\"%s\","
+      "\"rssi\":%d,"
       "\"ntpSynced\":%s,"
       "\"ntpServer\":\"%s\","
       "\"currentTime\":\"%s\","
@@ -2030,8 +2043,10 @@ void setupServerRoutes() {
       "\"freeHeap\":\"%d\""
       "}",
       isWiFiConnected ? "true" : "false",
+      wifiStateStr.c_str(),
       ssid.c_str(),
       ip.c_str(),
+      rssi,
       timeConfig.ntpSynced ? "true" : "false",
       timeConfig.ntpServer.c_str(),
       timeStr,
@@ -3403,6 +3418,16 @@ void setupServerRoutes() {
     strcpy(dayStr, dayNames[timeinfo.tm_wday]);
 
     bool isWiFiConnected = (WiFi.status() == WL_CONNECTED && wifiConfig.isConnected);
+    int apiRssi = isWiFiConnected ? WiFi.RSSI() : 0;
+
+    String apiWifiStateStr;
+    switch (wifiState) {
+      case WIFI_IDLE:       apiWifiStateStr = "idle"; break;
+      case WIFI_CONNECTING: apiWifiStateStr = "connecting"; break;
+      case WIFI_CONNECTED:  apiWifiStateStr = "connected"; break;
+      case WIFI_FAILED:     apiWifiStateStr = "failed"; break;
+      default:              apiWifiStateStr = "unknown"; break;
+    }
 
     char jsonBuffer[1024];
     snprintf(jsonBuffer, sizeof(jsonBuffer),
@@ -3429,6 +3454,8 @@ void setupServerRoutes() {
       "},"
       "\"device\":{"
       "\"wifiConnected\":%s,"
+      "\"wifiState\":\"%s\","
+      "\"rssi\":%d,"
       "\"apIP\":\"%s\","
       "\"ntpSynced\":%s,"
       "\"ntpServer\":\"%s\","
@@ -3450,6 +3477,8 @@ void setupServerRoutes() {
       prayerConfig.latitude.c_str(),
       prayerConfig.longitude.c_str(),
       isWiFiConnected ? "true" : "false",
+      apiWifiStateStr.c_str(),
+      apiRssi,
       WiFi.softAPIP().toString().c_str(),
       timeConfig.ntpSynced ? "true" : "false",
       timeConfig.ntpServer.c_str(),
