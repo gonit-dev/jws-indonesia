@@ -2102,15 +2102,14 @@ void setupServerRoutes() {
   });
 
   server.on("/getwificonfig", HTTP_GET, [](AsyncWebServerRequest * request) {
-    String json = "{";
+    char buf[512];
+    char routerSSID[64] = "";
+    char routerPassword[64] = "";
 
     if (xSemaphoreTake(wifiMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-      json += "\"routerSSID\":\"" + wifiConfig.routerSSID + "\",";
-      json += "\"routerPassword\":\"" + wifiConfig.routerPassword + "\",";
+      strncpy(routerSSID,     wifiConfig.routerSSID.c_str(),     sizeof(routerSSID) - 1);
+      strncpy(routerPassword, wifiConfig.routerPassword.c_str(), sizeof(routerPassword) - 1);
       xSemaphoreGive(wifiMutex);
-    } else {
-      json += "\"routerSSID\":\"\",";
-      json += "\"routerPassword\":\"\",";
     }
 
     String currentAPSSID = WiFi.softAPSSID();
@@ -2126,16 +2125,20 @@ void setupServerRoutes() {
       apPassword = DEFAULT_AP_PASSWORD;
     }
 
-    json += "\"apSSID\":\"" + currentAPSSID + "\",";
-    json += "\"apPassword\":\"" + apPassword + "\",";
+    snprintf(buf, sizeof(buf),
+      "{\"routerSSID\":\"%s\",\"routerPassword\":\"%s\","
+      "\"apSSID\":\"%s\",\"apPassword\":\"%s\","
+      "\"apIP\":\"%s\",\"apGateway\":\"%s\",\"apSubnet\":\"%s\"}",
+      routerSSID,
+      routerPassword,
+      currentAPSSID.c_str(),
+      apPassword.c_str(),
+      wifiConfig.apIP.toString().c_str(),
+      wifiConfig.apGateway.toString().c_str(),
+      wifiConfig.apSubnet.toString().c_str()
+    );
 
-    json += "\"apIP\":\"" + wifiConfig.apIP.toString() + "\",";
-    json += "\"apGateway\":\"" + wifiConfig.apGateway.toString() + "\",";
-    json += "\"apSubnet\":\"" + wifiConfig.apSubnet.toString() + "\"";
-
-    json += "}";
-
-    sendJSONResponse(request, json);
+    sendJSONResponse(request, String(buf));
   });
 
   server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest * request) {
@@ -2408,7 +2411,7 @@ void setupServerRoutes() {
       Serial.println("========================================");
       Serial.printf("DITERIMA: %02d:%02d:%02d %02d/%02d/%04d\n", h, i, s, d, m, y);
 
-      if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+      if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
         setTime(h, i, s, d, m, y);
         timeConfig.currentTime = now();
         timeConfig.ntpSynced = true;
@@ -2461,18 +2464,16 @@ void setupServerRoutes() {
   });
 
   server.on("/gettimezone", HTTP_GET, [](AsyncWebServerRequest * request) {
-    String json = "{";
+    char buf[32];
 
     if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-      json += "\"offset\":" + String(timezoneOffset);
+      snprintf(buf, sizeof(buf), "{\"offset\":%d}", timezoneOffset);
       xSemaphoreGive(settingsMutex);
     } else {
-      json += "\"offset\":7";
+      snprintf(buf, sizeof(buf), "{\"offset\":7}");
     }
 
-    json += "}";
-
-    sendJSONResponse(request, json);
+    sendJSONResponse(request, String(buf));
   });
 
   server.on("/settimezone", HTTP_POST, [](AsyncWebServerRequest * request) {
@@ -2503,7 +2504,7 @@ void setupServerRoutes() {
 
       Serial.println("MENYIMPAN KE MEMORI DAN FILE...");
 
-      if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+      if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
         timezoneOffset = offset;
         xSemaphoreGive(settingsMutex);
         Serial.println("MEMORI DIPERBARUI");
@@ -2586,45 +2587,52 @@ void setupServerRoutes() {
 
     response -> addHeader("Access-Control-Allow-Origin", "*");
     response -> addHeader("Cache-Control", "public, max-age=3600");
-    response -> setContentLength(LittleFS.open("/cities.json", "r").size());
+    {
+      fs::File f = LittleFS.open("/cities.json", "r");
+      if (f) {
+        response -> setContentLength(f.size());
+        f.close();
+      }
+    }
     request -> send(response);
   });
 
   server.on("/getcityinfo", HTTP_GET, [](AsyncWebServerRequest * request) {
-    String json = "{";
+    char buf[512];
 
     if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
       bool hasSelection = (prayerConfig.selectedCity.length() > 0);
-
-      json += "\"selectedCity\":\"" + prayerConfig.selectedCity + "\",";
-      json += "\"selectedCityApi\":\"" + prayerConfig.selectedCity + "\",";
-      json += "\"latitude\":\"" + prayerConfig.latitude + "\",";
-      json += "\"longitude\":\"" + prayerConfig.longitude + "\",";
-      json += "\"hasSelection\":" + String(hasSelection ? "true" : "false") + ",";
-
-      json += "\"tune\":{";
-      json += "\"imsak\":" + String(prayerConfig.tuneImsak) + ",";
-      json += "\"subuh\":" + String(prayerConfig.tuneSubuh) + ",";
-      json += "\"terbit\":" + String(prayerConfig.tuneTerbit) + ",";
-      json += "\"zuhur\":" + String(prayerConfig.tuneZuhur) + ",";
-      json += "\"ashar\":" + String(prayerConfig.tuneAshar) + ",";
-      json += "\"maghrib\":" + String(prayerConfig.tuneMaghrib) + ",";
-      json += "\"isya\":" + String(prayerConfig.tuneIsya);
-      json += "}";
-
+      snprintf(buf, sizeof(buf),
+        "{\"selectedCity\":\"%s\",\"selectedCityApi\":\"%s\","
+        "\"latitude\":\"%s\",\"longitude\":\"%s\","
+        "\"hasSelection\":%s,"
+        "\"tune\":{\"imsak\":%d,\"subuh\":%d,\"terbit\":%d,"
+        "\"zuhur\":%d,\"ashar\":%d,\"maghrib\":%d,\"isya\":%d}}",
+        prayerConfig.selectedCity.c_str(),
+        prayerConfig.selectedCity.c_str(),
+        prayerConfig.latitude.c_str(),
+        prayerConfig.longitude.c_str(),
+        hasSelection ? "true" : "false",
+        prayerConfig.tuneImsak,
+        prayerConfig.tuneSubuh,
+        prayerConfig.tuneTerbit,
+        prayerConfig.tuneZuhur,
+        prayerConfig.tuneAshar,
+        prayerConfig.tuneMaghrib,
+        prayerConfig.tuneIsya
+      );
       xSemaphoreGive(settingsMutex);
     } else {
-      json += "\"selectedCity\":\"\",";
-      json += "\"selectedCityApi\":\"\",";
-      json += "\"latitude\":\"\",";
-      json += "\"longitude\":\"\",";
-      json += "\"hasSelection\":false,";
-      json += "\"tune\":{\"imsak\":0,\"subuh\":0,\"terbit\":0,\"zuhur\":0,\"ashar\":0,\"maghrib\":0,\"isya\":0}";
+      snprintf(buf, sizeof(buf),
+        "{\"selectedCity\":\"\",\"selectedCityApi\":\"\","
+        "\"latitude\":\"\",\"longitude\":\"\","
+        "\"hasSelection\":false,"
+        "\"tune\":{\"imsak\":0,\"subuh\":0,\"terbit\":0,"
+        "\"zuhur\":0,\"ashar\":0,\"maghrib\":0,\"isya\":0}}"
+      );
     }
 
-    json += "}";
-
-    sendJSONResponse(request, json);
+    sendJSONResponse(request, String(buf));
   });
 
   server.on("/setcity", HTTP_POST, [](AsyncWebServerRequest * request) {
@@ -2849,20 +2857,22 @@ void setupServerRoutes() {
   );
 
   server.on("/getmethod", HTTP_GET, [](AsyncWebServerRequest * request) {
-    String json = "{";
+    char buf[256];
 
     if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-      json += "\"methodId\":" + String(methodConfig.methodId) + ",";
-      json += "\"methodName\":\"" + methodConfig.methodName + "\"";
+      snprintf(buf, sizeof(buf),
+        "{\"methodId\":%d,\"methodName\":\"%s\"}",
+        methodConfig.methodId,
+        methodConfig.methodName.c_str()
+      );
       xSemaphoreGive(settingsMutex);
     } else {
-      json += "\"methodId\":5,";
-      json += "\"methodName\":\"Egyptian General Authority of Survey\"";
+      snprintf(buf, sizeof(buf),
+        "{\"methodId\":5,\"methodName\":\"Egyptian General Authority of Survey\"}"
+      );
     }
 
-    json += "}";
-
-    sendJSONResponse(request, json);
+    sendJSONResponse(request, String(buf));
   });
 
   server.on("/setmethod", HTTP_POST, [](AsyncWebServerRequest * request) {
@@ -2922,7 +2932,7 @@ void setupServerRoutes() {
 
       Serial.println("MENYIMPAN KE MEMORI...");
 
-      if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+      if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
         methodConfig.methodId = methodId;
         methodConfig.methodName = methodName;
 
@@ -2993,34 +3003,39 @@ void setupServerRoutes() {
   // TAB JADWAL - WAKTU SHALAT DAN BUZZER
   // ========================================
   server.on("/getprayertimes", HTTP_GET, [](AsyncWebServerRequest * request) {
-    String json = "{";
-    json += "\"imsak\":\"" + prayerConfig.imsakTime + "\",";
-    json += "\"subuh\":\"" + prayerConfig.subuhTime + "\",";
-    json += "\"terbit\":\"" + prayerConfig.terbitTime + "\",";
-    json += "\"zuhur\":\"" + prayerConfig.zuhurTime + "\",";
-    json += "\"ashar\":\"" + prayerConfig.asharTime + "\",";
-    json += "\"maghrib\":\"" + prayerConfig.maghribTime + "\",";
-    json += "\"isya\":\"" + prayerConfig.isyaTime + "\"";
-    json += "}";
-
-    sendJSONResponse(request, json);
+    char buf[256];
+    snprintf(buf, sizeof(buf),
+      "{\"imsak\":\"%s\",\"subuh\":\"%s\",\"terbit\":\"%s\","
+      "\"zuhur\":\"%s\",\"ashar\":\"%s\",\"maghrib\":\"%s\",\"isya\":\"%s\"}",
+      prayerConfig.imsakTime.c_str(),
+      prayerConfig.subuhTime.c_str(),
+      prayerConfig.terbitTime.c_str(),
+      prayerConfig.zuhurTime.c_str(),
+      prayerConfig.asharTime.c_str(),
+      prayerConfig.maghribTime.c_str(),
+      prayerConfig.isyaTime.c_str()
+    );
+    sendJSONResponse(request, String(buf));
   });
 
   server.on("/getbuzzerconfig", HTTP_GET, [](AsyncWebServerRequest * request) {
-    String json = "{";
-    json += "\"imsak\":" + String(buzzerConfig.imsakEnabled ? "true" : "false") + ",";
-    json += "\"subuh\":" + String(buzzerConfig.subuhEnabled ? "true" : "false") + ",";
-    json += "\"terbit\":" + String(buzzerConfig.terbitEnabled ? "true" : "false") + ",";
-    json += "\"zuhur\":" + String(buzzerConfig.zuhurEnabled ? "true" : "false") + ",";
-    json += "\"ashar\":" + String(buzzerConfig.asharEnabled ? "true" : "false") + ",";
-    json += "\"maghrib\":" + String(buzzerConfig.maghribEnabled ? "true" : "false") + ",";
-    json += "\"isya\":" + String(buzzerConfig.isyaEnabled ? "true" : "false") + ",";
-    json += "\"alarm\":" + String(alarmConfig.alarmEnabled ? "true" : "false") + ",";
-    json += "\"alarmTime\":\"" + String(alarmConfig.alarmTime) + "\",";
-    json += "\"volume\":" + String(buzzerConfig.volume);
-    json += "}";
-
-    sendJSONResponse(request, json);
+    char buf[256];
+    snprintf(buf, sizeof(buf),
+      "{\"imsak\":%s,\"subuh\":%s,\"terbit\":%s,\"zuhur\":%s,"
+      "\"ashar\":%s,\"maghrib\":%s,\"isya\":%s,"
+      "\"alarm\":%s,\"alarmTime\":\"%s\",\"volume\":%d}",
+      buzzerConfig.imsakEnabled   ? "true" : "false",
+      buzzerConfig.subuhEnabled   ? "true" : "false",
+      buzzerConfig.terbitEnabled  ? "true" : "false",
+      buzzerConfig.zuhurEnabled   ? "true" : "false",
+      buzzerConfig.asharEnabled   ? "true" : "false",
+      buzzerConfig.maghribEnabled ? "true" : "false",
+      buzzerConfig.isyaEnabled    ? "true" : "false",
+      alarmConfig.alarmEnabled    ? "true" : "false",
+      alarmConfig.alarmTime,
+      buzzerConfig.volume
+    );
+    sendJSONResponse(request, String(buf));
   });
 
   server.on("/setbuzzertoggle", HTTP_POST, [](AsyncWebServerRequest * request) {
@@ -3207,7 +3222,7 @@ void setupServerRoutes() {
       if (LittleFS.exists("/adzan_state.txt"))      LittleFS.remove("/adzan_state.txt");
       if (LittleFS.exists("/alarm_config.txt"))     LittleFS.remove("/alarm_config.txt");
 
-      if (xSemaphoreTake(settingsMutex, portMAX_DELAY) == pdTRUE) {
+      if (xSemaphoreTake(settingsMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
           methodConfig.methodId = 5;
           methodConfig.methodName = "Egyptian General Authority of Survey";
 
@@ -3253,7 +3268,7 @@ void setupServerRoutes() {
 
       timezoneOffset = 7;
 
-      if (xSemaphoreTake(timeMutex, portMAX_DELAY) == pdTRUE) {
+      if (xSemaphoreTake(timeMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
           const time_t EPOCH_2000 = 946684800;
           setTime(0, 0, 0, 1, 1, 2000);
           timeConfig.currentTime = EPOCH_2000;
