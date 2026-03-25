@@ -2381,14 +2381,15 @@ void setupServerRoutes() {
 
     bool isLocalAP = (apNetwork == clientNetwork);
 
-    String json = "{";
-    json += "\"isLocalAP\":" + String(isLocalAP ? "true" : "false") + ",";
-    json += "\"clientIP\":\"" + clientIP.toString() + "\",";
-    json += "\"apIP\":\"" + apIP.toString() + "\",";
-    json += "\"apSubnet\":\"" + apSubnet.toString() + "\"";
-    json += "}";
-
-    sendJSONResponse(request, json);
+    char buf[192];
+    snprintf(buf, sizeof(buf),
+      "{\"isLocalAP\":%s,\"clientIP\":\"%s\",\"apIP\":\"%s\",\"apSubnet\":\"%s\"}",
+      isLocalAP ? "true" : "false",
+      clientIP.toString().c_str(),
+      apIP.toString().c_str(),
+      apSubnet.toString().c_str()
+    );
+    sendJSONResponse(request, String(buf));
   });
 
   server.on("/synctime", HTTP_POST, [](AsyncWebServerRequest * request) {
@@ -2554,14 +2555,14 @@ void setupServerRoutes() {
         Serial.println("TIMEZONE AKAN DITERAPKAN SAAT KONEKSI BERIKUTNYA\n");
       }
 
-      String response = "{";
-      response += "\"success\":true,";
-      response += "\"offset\":" + String(offset) + ",";
-      response += "\"ntpTriggered\":" + String(ntpTriggered ? "true" : "false") + ",";
-      response += "\"prayerTimesWillUpdate\":" + String(prayerWillUpdate ? "true" : "false");
-      response += "}";
-
-      request -> send(200, "application/json", response);
+      char respBuf[128];
+      snprintf(respBuf, sizeof(respBuf),
+        "{\"success\":true,\"offset\":%d,\"ntpTriggered\":%s,\"prayerTimesWillUpdate\":%s}",
+        offset,
+        ntpTriggered ? "true" : "false",
+        prayerWillUpdate ? "true" : "false"
+      );
+      request -> send(200, "application/json", respBuf);
 
       vTaskDelay(pdMS_TO_TICKS(50));
 
@@ -2958,14 +2959,14 @@ void setupServerRoutes() {
           Serial.println("WIFI TIDAK TERHUBUNG");
       }
 
-      String response = "{";
-      response += "\"success\":true,";
-      response += "\"methodId\":" + String(methodId) + ",";
-      response += "\"methodName\":\"" + methodName + "\",";
-      response += "\"prayerTimesUpdating\":" + String(willFetchPrayerTimes ? "true" : "false");
-      response += "}";
-
-      request -> send(200, "application/json", response);
+      char respBuf[128];
+      snprintf(respBuf, sizeof(respBuf),
+        "{\"success\":true,\"methodId\":%d,\"methodName\":\"%s\",\"prayerTimesUpdating\":%s}",
+        methodId,
+        methodName.c_str(),
+        willFetchPrayerTimes ? "true" : "false"
+      );
+      request -> send(200, "application/json", respBuf);
 
       vTaskDelay(pdMS_TO_TICKS(50));
 
@@ -3167,11 +3168,13 @@ void setupServerRoutes() {
   // RUTE KONFIGURASI ALARM
   // ========================================
   server.on("/getalarmconfig", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String json = "{";
-    json += "\"alarmTime\":\"" + String(alarmConfig.alarmTime) + "\",";
-    json += "\"alarmEnabled\":" + String(alarmConfig.alarmEnabled ? "true" : "false");
-    json += "}";
-    sendJSONResponse(request, json);
+    char buf[64];
+    snprintf(buf, sizeof(buf),
+      "{\"alarmTime\":\"%s\",\"alarmEnabled\":%s}",
+      alarmConfig.alarmTime,
+      alarmConfig.alarmEnabled ? "true" : "false"
+    );
+    sendJSONResponse(request, String(buf));
   });
 
   server.on("/setalarmconfig", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -3469,61 +3472,59 @@ void setupServerRoutes() {
   });
 
   server.on("/api/countdown", HTTP_GET, [](AsyncWebServerRequest * request) {
-      String json = "{";
+      char buf[256];
 
       if (countdownMutex != NULL && xSemaphoreTake(countdownMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         int remaining = getRemainingSeconds();
-
-        unsigned long serverMillis = millis();
-
-        json += "\"active\":" + String(countdownState.isActive ? "true" : "false") + ",";
-        json += "\"remaining\":" + String(remaining) + ",";
-        json += "\"total\":" + String(countdownState.totalSeconds) + ",";
-        json += "\"message\":\"" + countdownState.message + "\",";
-        json += "\"reason\":\"" + countdownState.reason + "\",";
-        json += "\"serverTime\":" + String(serverMillis);
-
+        snprintf(buf, sizeof(buf),
+          "{\"active\":%s,\"remaining\":%d,\"total\":%d,"
+          "\"message\":\"%s\",\"reason\":\"%s\",\"serverTime\":%lu}",
+          countdownState.isActive ? "true" : "false",
+          remaining,
+          countdownState.totalSeconds,
+          countdownState.message.c_str(),
+          countdownState.reason.c_str(),
+          millis()
+        );
         xSemaphoreGive(countdownMutex);
       } else {
-        json += "\"active\":false,";
-        json += "\"remaining\":0,";
-        json += "\"total\":0,";
-        json += "\"message\":\"\",";
-        json += "\"reason\":\"\",";
-        json += "\"serverTime\":" + String(millis());
+        snprintf(buf, sizeof(buf),
+          "{\"active\":false,\"remaining\":0,\"total\":0,"
+          "\"message\":\"\",\"reason\":\"\",\"serverTime\":%lu}",
+          millis()
+        );
       }
 
-      json += "}";
-
-      sendJSONResponse(request, json);
+      sendJSONResponse(request, String(buf));
     });
 
     server.on("/notfound", HTTP_GET, [](AsyncWebServerRequest * request) {
-      String html = "<!DOCTYPE html><html><head>";
-      html += "<meta charset='UTF-8'>";
-      html += "<meta name='viewport' content='width=device-width,initial-scale=1.0'>";
-      html += "<title>404 - Halaman Tidak Ditemukan</title>";
-      html += "<style>";
-      html += "*{box-sizing:border-box;margin:0;padding:0}";
-      html += "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;min-height:100vh;display:flex;align-items:center;justify-content:center}";
-      html += ".wrap{display:flex;align-items:center;justify-content:center;padding:40px 20px}";
-      html += ".card{background:#fff;border-radius:16px;padding:50px 40px;max-width:480px;width:100%;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.08)}";
-      html += ".code{font-size:80px;font-weight:700;color:#4a90d9;line-height:1;margin-bottom:16px}";
-      html += ".divider{width:60px;height:3px;background:#4a90d9;border-radius:2px;margin:0 auto 20px}";
-      html += "h2{font-size:20px;color:#333;font-weight:600;margin-bottom:10px}";
-      html += "p{font-size:14px;color:#888;line-height:1.7;margin-bottom:30px}";
-      html += ".btn{display:inline-block;padding:11px 36px;background:#4a90d9;color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500;transition:background 0.2s}";
-      html += ".btn:hover{background:#357abd}";
-      html += "</style></head><body>";
-      html += "<div class='wrap'><div class='card'>";
-      html += "<div class='code'>404</div>";
-      html += "<div class='divider'></div>";
-      html += "<h2>Halaman Tidak Ditemukan</h2>";
-      html += "<p>Halaman yang Anda cari tidak tersedia atau tidak memiliki izin untuk diakses. Silakan kembali ke halaman utama.</p>";
-      html += "<a href='/' class='btn'>Kembali ke Beranda</a>";
-      html += "</div></div>";
-      html += "</body></html>";
-      request->send(404, "text/html", html);
+    request->send(404, "text/html",
+      "<!DOCTYPE html><html><head>"
+      "<meta charset='UTF-8'>"
+      "<meta name='viewport' content='width=device-width,initial-scale=1.0'>"
+      "<title>404 - Halaman Tidak Ditemukan</title>"
+      "<style>"
+      "*{box-sizing:border-box;margin:0;padding:0}"
+      "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;min-height:100vh;display:flex;align-items:center;justify-content:center}"
+      ".wrap{display:flex;align-items:center;justify-content:center;padding:40px 20px}"
+      ".card{background:#fff;border-radius:16px;padding:50px 40px;max-width:480px;width:100%;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.08)}"
+      ".code{font-size:80px;font-weight:700;color:#4a90d9;line-height:1;margin-bottom:16px}"
+      ".divider{width:60px;height:3px;background:#4a90d9;border-radius:2px;margin:0 auto 20px}"
+      "h2{font-size:20px;color:#333;font-weight:600;margin-bottom:10px}"
+      "p{font-size:14px;color:#888;line-height:1.7;margin-bottom:30px}"
+      ".btn{display:inline-block;padding:11px 36px;background:#4a90d9;color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500;transition:background 0.2s}"
+      ".btn:hover{background:#357abd}"
+      "</style></head><body>"
+      "<div class='wrap'><div class='card'>"
+      "<div class='code'>404</div>"
+      "<div class='divider'></div>"
+      "<h2>Halaman Tidak Ditemukan</h2>"
+      "<p>Halaman yang Anda cari tidak tersedia atau tidak memiliki izin untuk diakses. Silakan kembali ke halaman utama.</p>"
+      "<a href='/' class='btn'>Kembali ke Beranda</a>"
+      "</div></div>"
+      "</body></html>"
+    );
     });
 
     server.onNotFound([](AsyncWebServerRequest * request) {
