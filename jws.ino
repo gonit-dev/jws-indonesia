@@ -2057,21 +2057,36 @@ void setupServerRoutes() {
 
       xTaskCreate(
           [](void* param) {
-              for (int i = 60; i > 0; i--) {
-                  if (i == 35) {
-                      WiFi.mode(WIFI_OFF);
-                      vTaskDelay(pdMS_TO_TICKS(500));
+              // Register task ini ke WDT agar tidak di-kick sebelum countdown selesai
+              esp_task_wdt_add(NULL);
 
-                      if (prayerTaskHandle != NULL) {
-                          vTaskSuspend(prayerTaskHandle);
-                      }
-                      if (ntpTaskHandle != NULL) {
-                          vTaskSuspend(ntpTaskHandle);
-                      }
+              for (int i = 60; i > 0; i--) {
+                  esp_task_wdt_reset(); // Reset WDT setiap detik selama countdown
+
+                  if (i == 35) {
+                      // PENTING: Unregister task dari WDT SEBELUM di-suspend,
+                      // supaya WDT tidak timeout karena task ter-register tidak bisa reset
                       if (wifiTaskHandle != NULL) {
+                          esp_task_wdt_delete(wifiTaskHandle);
                           vTaskSuspend(wifiTaskHandle);
                       }
-                      vTaskDelay(pdMS_TO_TICKS(1000));
+                      if (ntpTaskHandle != NULL) {
+                          esp_task_wdt_delete(ntpTaskHandle);
+                          vTaskSuspend(ntpTaskHandle);
+                      }
+                      if (prayerTaskHandle != NULL) {
+                          esp_task_wdt_delete(prayerTaskHandle);
+                          vTaskSuspend(prayerTaskHandle);
+                      }
+                      if (webTaskHandle != NULL) {
+                          esp_task_wdt_delete(webTaskHandle);
+                      }
+                      if (httpTaskHandle != NULL) {
+                          esp_task_wdt_delete(httpTaskHandle);
+                      }
+
+                      WiFi.mode(WIFI_OFF);
+                      vTaskDelay(pdMS_TO_TICKS(500));
 
                       server.end();
                       vTaskDelay(pdMS_TO_TICKS(500));
@@ -2089,6 +2104,7 @@ void setupServerRoutes() {
                   vTaskDelay(pdMS_TO_TICKS(1000));
               }
 
+              esp_task_wdt_delete(NULL); // Unregister sebelum restart
               Serial.flush();
               delay(1000);
               ESP.restart();
@@ -3322,23 +3338,38 @@ void setupServerRoutes() {
 
       xTaskCreate(
           [](void* param) {
+              // Register task ini ke WDT agar tidak di-kick sebelum countdown selesai
+              esp_task_wdt_add(NULL);
+
               for (int i = 60; i > 0; i--) {
+                  esp_task_wdt_reset(); // Reset WDT setiap detik selama countdown
+
                   if (i == 35) {
+                      // PENTING: Unregister task dari WDT SEBELUM di-suspend,
+                      // supaya WDT tidak timeout karena task ter-register tidak bisa reset
+                      if (wifiTaskHandle != NULL) {
+                          esp_task_wdt_delete(wifiTaskHandle);
+                          vTaskSuspend(wifiTaskHandle);
+                      }
+                      if (ntpTaskHandle != NULL) {
+                          esp_task_wdt_delete(ntpTaskHandle);
+                          vTaskSuspend(ntpTaskHandle);
+                      }
+                      if (prayerTaskHandle != NULL) {
+                          esp_task_wdt_delete(prayerTaskHandle);
+                          vTaskSuspend(prayerTaskHandle);
+                      }
+                      if (webTaskHandle != NULL) {
+                          esp_task_wdt_delete(webTaskHandle);
+                      }
+                      if (httpTaskHandle != NULL) {
+                          esp_task_wdt_delete(httpTaskHandle);
+                      }
+
                       WiFi.disconnect(true);
                       vTaskDelay(pdMS_TO_TICKS(500));
                       WiFi.mode(WIFI_OFF);
                       vTaskDelay(pdMS_TO_TICKS(500));
-
-                      if (prayerTaskHandle != NULL) {
-                          vTaskSuspend(prayerTaskHandle);
-                      }
-                      if (ntpTaskHandle != NULL) {
-                          vTaskSuspend(ntpTaskHandle);
-                      }
-                      if (wifiTaskHandle != NULL) {
-                          vTaskSuspend(wifiTaskHandle);
-                      }
-                      vTaskDelay(pdMS_TO_TICKS(1000));
 
                       server.end();
                       vTaskDelay(pdMS_TO_TICKS(500));
@@ -3351,6 +3382,7 @@ void setupServerRoutes() {
                   vTaskDelay(pdMS_TO_TICKS(1000));
               }
 
+              esp_task_wdt_delete(NULL); // Unregister sebelum restart
               Serial.flush();
               delay(1000);
               ESP.restart();
