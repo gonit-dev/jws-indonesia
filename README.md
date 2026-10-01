@@ -9,12 +9,12 @@
 ## 📸 Preview
 
 <div align="center">
-<img width="250" height= "100" src="https://github.com/user-attachments/assets/734da9e8-efeb-4bae-b0e4-07221976d3ab" />
-<img width="250" height= "100" src="https://github.com/user-attachments/assets/e769b542-6f93-498c-8e5e-7e797fb66ed1" />
-<img width="250" height= "100" src="https://github.com/user-attachments/assets/8a1992b6-167f-4c7f-b73a-44a8e97e4fd6" />
-<img width="250" height= "100" src="https://github.com/user-attachments/assets/006afab9-db2d-48d8-924a-3e8af70637c2" />
-<img width="250" height= "100" src="https://github.com/user-attachments/assets/8d868967-0f09-4dcf-a712-5e53ea7de482" />
-<img width="250" height= "100" src="https://github.com/user-attachments/assets/0fe80198-d629-43bb-b748-19a1aafea05e" />
+<img width="250" height= "100" src="https://github.com/user-attachments/assets/314f2170-f974-437e-b25c-d3b0ab16f5b4" />
+<img width="250" height= "100" src="https://github.com/user-attachments/assets/a6373950-064f-4077-b3e8-d4735495deca" />
+<img width="250" height= "100" src="https://github.com/user-attachments/assets/cc51f0c8-428b-4f21-a8c4-f49c094c2508" />
+<img width="250" height= "100" src="https://github.com/user-attachments/assets/31295edf-8d37-45af-9122-61247d06587d" />
+<img width="250" height= "100" src="https://github.com/user-attachments/assets/db638753-c1f3-4d7d-a5c4-16884b9b8b2e" />
+<img width="250" height= "100" src="https://github.com/user-attachments/assets/94f9eda9-615f-4cbb-862c-4ac089c82b89" />
 </div>
 
 ---
