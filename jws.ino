@@ -1935,23 +1935,6 @@ void setupServerRoutes() {
     request -> send(response);
   });
 
-  server.on("/css/foundation.min.css", HTTP_GET, [](AsyncWebServerRequest * request) {
-    if (!LittleFS.exists("/css/foundation.min.css")) {
-      request -> send(404, "text/plain", "CSS not found");
-      return;
-    }
-
-    AsyncWebServerResponse * response = request -> beginResponse(
-      LittleFS, "/css/foundation.min.css", "text/css");
-
-    response -> addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    response -> addHeader("Pragma", "no-cache");
-    response -> addHeader("Expires", "0");
-    response -> addHeader("Content-Type", "text/css; charset=utf-8");
-
-    request -> send(response);
-  });
-
   server.on("/devicestatus", HTTP_GET, [](AsyncWebServerRequest * request) {
     char timeStr[20];
     char dateStr[20];
