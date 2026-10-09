@@ -249,7 +249,6 @@ Edit `Arduino/libraries/TFT_eSPI/User_Setup.h` sesuai board ESP32-2432S024 Anda:
 1. Buat folder `data/` di root sketch
 2. Copy files:
    - `index.html`
-   - `css/foundation.min.css`
    - `cities.json`
 3. Tools → ESP32 Sketch Data Upload
 
